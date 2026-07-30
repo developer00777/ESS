@@ -14,6 +14,8 @@ const ARGON2_OPTS = { memoryCost: 19456, timeCost: 2, parallelism: 1 };
 
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? 'admin@champ-hr.local';
 const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD ?? 'ChangeMe!123';
+const TEAM_LEAD_EMAIL = process.env.TEAM_LEAD_EMAIL ?? 'lead@champ-hr.local';
+const TEAM_LEAD_PASSWORD = process.env.TEAM_LEAD_PASSWORD ?? 'ChangeMe!123';
 const EMPLOYEE_EMAIL = process.env.EMPLOYEE_EMAIL ?? 'employee@champ-hr.local';
 const EMPLOYEE_PASSWORD = process.env.EMPLOYEE_PASSWORD ?? 'ChangeMe!123';
 
@@ -57,11 +59,11 @@ async function seed() {
 		})
 		.returning();
 
-	const leadPasswordHash = await hash('ChangeMe!123', ARGON2_OPTS);
+	const leadPasswordHash = await hash(TEAM_LEAD_PASSWORD, ARGON2_OPTS);
 	const [lead] = await db
 		.insert(schema.users)
 		.values({
-			email: 'lead@champ-hr.local',
+			email: TEAM_LEAD_EMAIL.toLowerCase(),
 			passwordHash: leadPasswordHash,
 			role: 'team_lead',
 			fullName: 'Aditi Sharma',
@@ -121,7 +123,7 @@ async function seed() {
 	console.log('Seed complete:');
 	console.log(`  Super Admin: ${SUPER_ADMIN_EMAIL} / ${SUPER_ADMIN_PASSWORD}`);
 	console.log('  Admin:       hr-admin@champ-hr.local / ChangeMe!123 (must change password on first login)');
-	console.log('  Team Lead:   lead@champ-hr.local / ChangeMe!123');
+	console.log(`  Team Lead:   ${TEAM_LEAD_EMAIL} / ${TEAM_LEAD_PASSWORD}`);
 	console.log(`  Employee:    ${EMPLOYEE_EMAIL} / ${EMPLOYEE_PASSWORD}`);
 
 	await pool.end();
