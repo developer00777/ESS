@@ -34,7 +34,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		}
 	}
 
-	const types = await db.select().from(leaveTypes);
+	const types = await db.select().from(leaveTypes).where(eq(leaveTypes.isActive, true));
 
 	return {
 		hasShiftAssignment: Boolean(profile?.shiftGroupId),

@@ -174,7 +174,8 @@ export const leaveTypes = pgTable('leave_types', {
 	notes: text('notes'),
 	sourceDocumentId: text('source_document_id'), // Mongo policy_documents._id this rule was extracted from
 	policyVersion: integer('policy_version').default(1).notNull(),
-	effectiveFrom: date('effective_from')
+	effectiveFrom: date('effective_from'),
+	isActive: boolean('is_active').default(true).notNull()
 });
 
 // --- Holiday Calendar (Super Admin publishes; resolved per employee's shift group) ---

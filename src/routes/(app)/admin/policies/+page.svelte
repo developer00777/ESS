@@ -37,9 +37,43 @@
 	let calendarYear = $state(new Date().getFullYear() + 1);
 	let effectiveFrom = $state(`${new Date().getFullYear() + 1}-01-01`);
 
+	let archivingId = $state<string | null>(null);
+
 	function onFileChange(e: Event) {
 		const input = e.target as HTMLInputElement;
 		file = input.files?.[0] ?? null;
+	}
+
+	async function archiveCalendar(calendarId: string) {
+		if (!confirm('Archive this holiday calendar? Employees will stop resolving to it immediately.')) return;
+		archivingId = calendarId;
+		try {
+			const res = await fetch(`/api/admin/holiday-calendars/${calendarId}/archive`, { method: 'POST' });
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				errorMsg = body.message ?? 'Could not archive calendar';
+				return;
+			}
+			location.reload();
+		} finally {
+			archivingId = null;
+		}
+	}
+
+	async function archiveLeaveType(leaveTypeId: string) {
+		if (!confirm('Archive this leave type? It will no longer be selectable when employees apply for leave.')) return;
+		archivingId = leaveTypeId;
+		try {
+			const res = await fetch(`/api/admin/leave-types/${leaveTypeId}/archive`, { method: 'POST' });
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				errorMsg = body.message ?? 'Could not archive leave type';
+				return;
+			}
+			location.reload();
+		} finally {
+			archivingId = null;
+		}
 	}
 
 	async function handleUpload(e: SubmitEvent) {
@@ -268,12 +302,20 @@
 {/if}
 
 <div class="current-state">
-	<h2>Currently published</h2>
+	<h2>Currently published holiday calendars</h2>
 	<div class="current-grid">
 		{#each data.publishedCalendars as cal (cal.id)}
 			<div class="current-card">
-				<strong>{cal.year} · v{cal.version}</strong>
+				<strong>{cal.shiftGroupName} · {cal.year} · v{cal.version}</strong>
 				<span>{cal.holidays.length} holidays</span>
+				<button
+					type="button"
+					class="link-danger archive-btn"
+					onclick={() => archiveCalendar(cal.id)}
+					disabled={archivingId === cal.id}
+				>
+					{archivingId === cal.id ? 'Archiving…' : 'Archive'}
+				</button>
 			</div>
 		{/each}
 		{#if data.publishedCalendars.length === 0}
@@ -281,13 +323,25 @@
 		{/if}
 	</div>
 
+	<h2>Currently published leave types</h2>
 	<div class="current-grid">
 		{#each data.leaveTypes as lt (lt.id)}
 			<div class="current-card">
 				<strong>{lt.code ?? lt.name}</strong>
 				<span>{lt.name} · v{lt.policyVersion}</span>
+				<button
+					type="button"
+					class="link-danger archive-btn"
+					onclick={() => archiveLeaveType(lt.id)}
+					disabled={archivingId === lt.id}
+				>
+					{archivingId === lt.id ? 'Archiving…' : 'Archive'}
+				</button>
 			</div>
 		{/each}
+		{#if data.leaveTypes.length === 0}
+			<p class="empty">No leave policy published yet.</p>
+		{/if}
 	</div>
 </div>
 
@@ -519,6 +573,15 @@
 		background: var(--ess-surface);
 	}
 
+	.current-state h2 {
+		font-size: 1rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.current-state h2:not(:first-child) {
+		margin-top: 1.5rem;
+	}
+
 	.current-grid {
 		display: flex;
 		flex-wrap: wrap;
@@ -535,6 +598,16 @@
 		gap: 0.2rem;
 		font-size: 0.8rem;
 		min-width: 140px;
+	}
+
+	.archive-btn {
+		align-self: flex-start;
+		margin-top: 0.2rem;
+	}
+
+	.archive-btn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
 	}
 
 	.empty {

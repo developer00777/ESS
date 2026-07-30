@@ -99,8 +99,29 @@
 		{:else}
 			<input type="hidden" name="role" value={data.creatableRoles[0]} />
 		{/if}
-		<button type="submit" class="ess-btn ess-btn--primary">Create Login</button>
+		<label class="ess-field">
+			<span class="ess-label">Shift Group</span>
+			{#if data.shiftGroups.length > 0}
+				<select class="ess-select" name="shiftGroupId" required>
+					{#each data.shiftGroups as group (group.id)}
+						<option value={group.id}>{group.name}</option>
+					{/each}
+				</select>
+			{:else}
+				<select class="ess-select" disabled>
+					<option>No published holiday calendar yet</option>
+				</select>
+			{/if}
+		</label>
+		<button type="submit" class="ess-btn ess-btn--primary" disabled={data.shiftGroups.length === 0}>
+			Create Login
+		</button>
 	</form>
+	{#if data.shiftGroups.length === 0}
+		<p class="ess-error section-gap">
+			Publish a holiday calendar for at least one shift group before creating logins.
+		</p>
+	{/if}
 	{#if form?.success}
 		<p class="temp-pass">
 			Created {form.email} — temporary password: <code>{form.tempPassword}</code>
@@ -179,6 +200,7 @@
 		border-radius: var(--ess-radius-md);
 		padding: 1.25rem;
 		display: flex;
+		flex-wrap: wrap;
 		gap: 1rem;
 		align-items: end;
 		margin-bottom: 1rem;
@@ -186,6 +208,12 @@
 
 	.create-card .ess-field {
 		flex: 1;
+		min-width: 160px;
+	}
+
+	.section-gap {
+		display: block;
+		margin-bottom: 1rem;
 	}
 
 	.temp-pass {

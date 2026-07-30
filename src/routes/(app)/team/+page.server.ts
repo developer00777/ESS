@@ -1,7 +1,16 @@
 import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db/postgres';
-import { users, teams, attendance, leaveApplications, leaveAllocations } from '$lib/server/db/schema';
+import {
+	users,
+	teams,
+	attendance,
+	leaveApplications,
+	leaveAllocations,
+	shiftGroups,
+	holidayCalendars,
+	employeeProfiles
+} from '$lib/server/db/schema';
 import { eq, and, inArray, lte, gte } from 'drizzle-orm';
 import { hashPassword } from '$lib/server/auth';
 import { randomBytes } from 'node:crypto';
@@ -71,6 +80,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 				? ['team_lead', 'employee']
 				: ['employee'];
 
+	// Only shift groups with a currently-published holiday calendar are offered when
+	// creating a login, so every new employee resolves to a real calendar immediately.
+	const groupsWithPublishedCalendar = await db
+		.selectDistinct({ id: shiftGroups.id, name: shiftGroups.name })
+		.from(shiftGroups)
+		.innerJoin(holidayCalendars, eq(holidayCalendars.shiftGroupId, shiftGroups.id))
+		.where(eq(holidayCalendars.status, 'published'));
+
 	const rosterWithStatus = roster.map((r) => ({
 		id: r.id,
 		fullName: r.fullName,
@@ -91,7 +108,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		presentNow: rosterWithStatus.filter((r) => r.status === 'present').length,
 		onLeave: new Set(onLeaveToday.map((r) => r.userId)).size,
 		pendingApprovals: pendingApprovalRows.length,
-		creatableRoles
+		creatableRoles,
+		shiftGroups: groupsWithPublishedCalendar
 	};
 };
 
@@ -103,9 +121,14 @@ export const actions: Actions = {
 		const email = String(form.get('email') ?? '').toLowerCase();
 		const fullName = String(form.get('fullName') ?? '');
 		const requestedRole = (String(form.get('role') ?? 'employee') || 'employee') as Role;
+		const shiftGroupId = String(form.get('shiftGroupId') ?? '');
 
 		if (!email || !fullName) {
 			return { success: false, message: 'Email and name are required' };
+		}
+
+		if (!shiftGroupId) {
+			return { success: false, message: 'Shift group is required' };
 		}
 
 		if (!canCreateRole(actor, requestedRole)) {
@@ -117,6 +140,17 @@ export const actions: Actions = {
 			if (!team?.canCreateEmployeeLogins) {
 				return { success: false, message: 'This Team Lead does not have permission to create employee logins' };
 			}
+		}
+
+		const [eligibleGroup] = await db
+			.select({ id: shiftGroups.id })
+			.from(shiftGroups)
+			.innerJoin(holidayCalendars, eq(holidayCalendars.shiftGroupId, shiftGroups.id))
+			.where(and(eq(shiftGroups.id, shiftGroupId), eq(holidayCalendars.status, 'published')))
+			.limit(1);
+
+		if (!eligibleGroup) {
+			return { success: false, message: 'Selected shift group has no published holiday calendar' };
 		}
 
 		const tempPassword = randomBytes(9).toString('base64url');
@@ -136,12 +170,17 @@ export const actions: Actions = {
 			})
 			.returning();
 
+		await db.insert(employeeProfiles).values({
+			userId: created.id,
+			shiftGroupId
+		});
+
 		await logActivity({
 			actorUserId: actor.id,
 			action: 'user.create',
 			targetType: 'user',
 			targetId: created.id,
-			details: { role: requestedRole }
+			details: { role: requestedRole, shiftGroupId }
 		});
 
 		return { success: true, tempPassword, email };
