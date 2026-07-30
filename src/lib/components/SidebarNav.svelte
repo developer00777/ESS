@@ -7,6 +7,8 @@
 	import Users from '@lucide/svelte/icons/users';
 	import UploadCloud from '@lucide/svelte/icons/upload-cloud';
 	import LogOut from '@lucide/svelte/icons/log-out';
+	import Sun from '@lucide/svelte/icons/sun';
+	import Moon from '@lucide/svelte/icons/moon';
 	import type { Role } from '$lib/server/auth';
 
 	interface Props {
@@ -16,6 +18,22 @@
 	}
 
 	let { activePath, role, fullName }: Props = $props();
+
+	let theme = $state<'light' | 'dark'>('light');
+
+	$effect(() => {
+		theme = document.documentElement.getAttribute('data-ess-theme') === 'dark' ? 'dark' : 'light';
+	});
+
+	function setTheme(next: 'light' | 'dark') {
+		theme = next;
+		if (next === 'dark') {
+			document.documentElement.setAttribute('data-ess-theme', 'dark');
+		} else {
+			document.documentElement.removeAttribute('data-ess-theme');
+		}
+		localStorage.setItem('essTheme', next);
+	}
 
 	const navItems = [
 		{ href: '/dashboard', label: 'Home', icon: LayoutDashboard },
@@ -42,6 +60,27 @@
 			<strong>Champ HR</strong>
 			<span>ESS Portal</span>
 		</div>
+	</div>
+
+	<div class="theme-toggle" role="group" aria-label="Theme">
+		<button
+			type="button"
+			class="theme-btn"
+			aria-pressed={theme === 'light'}
+			onclick={() => setTheme('light')}
+		>
+			<Sun size={14} />
+			Light
+		</button>
+		<button
+			type="button"
+			class="theme-btn"
+			aria-pressed={theme === 'dark'}
+			onclick={() => setTheme('dark')}
+		>
+			<Moon size={14} />
+			Dark
+		</button>
 	</div>
 
 	<ul class="nav-list">
@@ -121,6 +160,36 @@
 	.brand-text span {
 		font-size: var(--ess-fs-caption);
 		color: var(--ess-text-inverse-secondary);
+	}
+
+	.theme-toggle {
+		display: flex;
+		gap: 2px;
+		padding: 3px;
+		margin-bottom: 14px;
+		background: rgba(255, 255, 255, 0.08);
+		border-radius: var(--ess-radius-sm);
+	}
+
+	.theme-btn {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		border: none;
+		border-radius: 6px;
+		padding: 6px 0;
+		background: transparent;
+		color: var(--ess-text-inverse-secondary);
+		font-size: 12px;
+		font-weight: 700;
+		cursor: pointer;
+	}
+
+	.theme-btn[aria-pressed='true'] {
+		background: var(--ess-green-400);
+		color: var(--ess-teal-900);
 	}
 
 	.nav-list {
