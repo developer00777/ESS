@@ -12,6 +12,11 @@ const db = drizzle(pool, { schema });
 
 const ARGON2_OPTS = { memoryCost: 19456, timeCost: 2, parallelism: 1 };
 
+const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? 'admin@champ-hr.local';
+const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD ?? 'ChangeMe!123';
+const EMPLOYEE_EMAIL = process.env.EMPLOYEE_EMAIL ?? 'employee@champ-hr.local';
+const EMPLOYEE_PASSWORD = process.env.EMPLOYEE_PASSWORD ?? 'ChangeMe!123';
+
 async function seed() {
 	console.log('Seeding Champ HR ESS Portal...');
 
@@ -25,11 +30,11 @@ async function seed() {
 		.values({ name: 'Champ HR Core Team', departmentId: dept.id })
 		.returning();
 
-	const superAdminPasswordHash = await hash('ChangeMe!123', ARGON2_OPTS);
+	const superAdminPasswordHash = await hash(SUPER_ADMIN_PASSWORD, ARGON2_OPTS);
 	const [superAdmin] = await db
 		.insert(schema.users)
 		.values({
-			email: 'admin@champ-hr.local',
+			email: SUPER_ADMIN_EMAIL.toLowerCase(),
 			passwordHash: superAdminPasswordHash,
 			role: 'super_admin',
 			fullName: 'Prasanna Kumar',
@@ -69,11 +74,11 @@ async function seed() {
 
 	await db.update(schema.teams).set({ teamLeadId: lead.id }).where(eq(schema.teams.id, team.id));
 
-	const empPasswordHash = await hash('ChangeMe!123', ARGON2_OPTS);
+	const empPasswordHash = await hash(EMPLOYEE_PASSWORD, ARGON2_OPTS);
 	const [employee] = await db
 		.insert(schema.users)
 		.values({
-			email: 'employee@champ-hr.local',
+			email: EMPLOYEE_EMAIL.toLowerCase(),
 			passwordHash: empPasswordHash,
 			role: 'employee',
 			fullName: 'Ravi Verma',
@@ -114,10 +119,10 @@ async function seed() {
 	}
 
 	console.log('Seed complete:');
-	console.log('  Super Admin: admin@champ-hr.local / ChangeMe!123');
+	console.log(`  Super Admin: ${SUPER_ADMIN_EMAIL} / ${SUPER_ADMIN_PASSWORD}`);
 	console.log('  Admin:       hr-admin@champ-hr.local / ChangeMe!123 (must change password on first login)');
 	console.log('  Team Lead:   lead@champ-hr.local / ChangeMe!123');
-	console.log('  Employee:    employee@champ-hr.local / ChangeMe!123');
+	console.log(`  Employee:    ${EMPLOYEE_EMAIL} / ${EMPLOYEE_PASSWORD}`);
 
 	await pool.end();
 }
