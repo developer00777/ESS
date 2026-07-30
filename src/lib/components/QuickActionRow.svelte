@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
+	import IconChip from './IconChip.svelte';
 
 	interface Props {
 		icon: Component;
@@ -8,13 +9,11 @@
 		onclick?: () => void;
 	}
 
-	let { icon: Icon, label, href, onclick }: Props = $props();
+	let { icon, label, href, onclick }: Props = $props();
 </script>
 
 {#snippet content()}
-	<span class="ico-chip">
-		<Icon size={16} />
-	</span>
+	<IconChip {icon} size="sm" />
 	<span class="label">{label}</span>
 {/snippet}
 
@@ -32,34 +31,22 @@
 	.row {
 		display: flex;
 		align-items: center;
-		gap: 0.85rem;
-		padding: 0.55rem 0.6rem;
-		border-radius: var(--radius-sm);
+		gap: 12px;
+		padding: 9px 10px;
+		border-radius: var(--ess-radius-sm);
 		text-decoration: none;
-		color: var(--color-text);
+		color: var(--ess-text);
 		background: transparent;
 		border: none;
 		width: 100%;
 		text-align: left;
-		font-size: 0.92rem;
+		font-size: var(--ess-fs-body);
 		font-weight: 500;
 		cursor: pointer;
-		transition: background 0.12s ease;
+		transition: background var(--ess-t-fast);
 	}
 
 	.row:hover {
-		background: var(--color-mint);
-	}
-
-	.ico-chip {
-		width: 32px;
-		height: 32px;
-		border-radius: var(--radius-sm);
-		background: var(--color-mint);
-		color: var(--color-primary);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
+		background: var(--ess-sunken);
 	}
 </style>

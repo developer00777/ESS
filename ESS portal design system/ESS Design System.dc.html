@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="_ds/lakeb2b-multi-brand-design-system-a7756ad4-e926-40eb-bde0-02b956396313/colors_and_type.css">
+  <script src="_ds/lakeb2b-multi-brand-design-system-a7756ad4-e926-40eb-bde0-02b956396313/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="ess-tokens.css">
+  <style>
+    body { margin: 0; background: var(--ess-canvas); }
+    @keyframes ess-shimmer { 0% { background-position: -180px 0; } 100% { background-position: 180px 0; } }
+    a { color: var(--ess-primary); text-decoration: none; }
+    a:hover { color: var(--ess-primary-hover); }
+  </style>
+</helmet>
+
+<div data-ess-theme="{{ theme }}" style="background:var(--ess-canvas);color:var(--ess-text);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.55;min-height:100vh;transition:background 220ms cubic-bezier(.4,0,.2,1)">
+
+  <header style="position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:20px;padding:14px 32px;background:var(--ess-inverse);color:var(--ess-text-inverse);border-bottom:1px solid var(--ess-border-inverse)">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="display:grid;place-items:center;width:36px;height:36px;border-radius:8px;background:var(--ess-green-400);color:var(--ess-teal-900);font-weight:800;font-size:13px;letter-spacing:-.02em">ESS</div>
+      <div style="display:flex;flex-direction:column;line-height:1.2">
+        <strong style="font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700;letter-spacing:-.01em">ESS Design System</strong>
+        <span style="font-size:11px;color:var(--ess-text-inverse-secondary)">Champ HR · Employee Self-Service Portal</span>
+      </div>
+    </div>
+    <span style="margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-inverse-secondary)">v1.0</span>
+    <div style="display:inline-flex;gap:2px;padding:3px;background:rgba(255,255,255,.08);border-radius:8px">
+      <button type="button" onClick="{{ setLight }}" style="{{ lightBtn }}">Light</button>
+      <button type="button" onClick="{{ setDark }}" style="{{ darkBtn }}">Dark</button>
+    </div>
+  </header>
+
+  <div style="max-width:1240px;margin:0 auto;padding:40px 32px 96px">
+
+    <section style="margin-bottom:56px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-primary)">Foundation</span>
+      <h1 style="font-family:'Montserrat',sans-serif;font-size:40px;font-weight:800;letter-spacing:-.025em;line-height:1.1;margin:10px 0 14px;color:var(--ess-text);max-width:22ch">One system for every ESS surface.</h1>
+      <p style="font-size:16px;color:var(--ess-text-secondary);max-width:70ch;text-wrap:pretty;margin-bottom:28px">ESS is a brand skin on the shared multi-brand skeleton: spacing, type scale, elevation and motion are inherited, the teal identity is ours. Every colour, size and radius below is a token — change the token, every screen follows.</p>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:18px">
+          <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-danger)">Fixed</span>
+          <h3 style="font-size:16px;font-weight:700;margin:8px 0 6px">The two-slab dashboard</h3>
+          <p style="font-size:13px;color:var(--ess-text-secondary)">A dark column beside a white column read as two apps. Dark is now one horizontal band at the top of the page only.</p>
+        </div>
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:18px">
+          <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-danger)">Fixed</span>
+          <h3 style="font-size:16px;font-weight:700;margin:8px 0 6px">Random card surfaces</h3>
+          <p style="font-size:13px;color:var(--ess-text-secondary)">Mint, white and dark were used interchangeably. Now four named surface roles, each with a rule for when it applies.</p>
+        </div>
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:18px">
+          <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-danger)">Fixed</span>
+          <h3 style="font-size:16px;font-weight:700;margin:8px 0 6px">Hand-rolled rows</h3>
+          <p style="font-size:13px;color:var(--ess-text-secondary)">Attendance, roster and policies each invented their own grid. One table pattern now covers all three.</p>
+        </div>
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:18px">
+          <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-danger)">Fixed</span>
+          <h3 style="font-size:16px;font-weight:700;margin:8px 0 6px">Flat hierarchy</h3>
+          <p style="font-size:13px;color:var(--ess-text-secondary)">Everything sat between 0.8–0.95rem. The scale now spans 11 → 40px with one role per step.</p>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-bottom:56px">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px">
+        <h2 style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:700;letter-spacing:-.01em">Colour</h2>
+        <span style="font-size:12px;color:var(--ess-text-muted)">01</span>
+      </div>
+      <p style="font-size:14px;color:var(--ess-text-secondary);max-width:70ch;margin-bottom:20px">Teal carries the product; green marks status and identity; neutrals are teal-tinted so nothing looks foreign next to them. Accent is used sparingly — actions, active nav, stat emphasis.</p>
+
+      <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary);margin-bottom:10px">Teal — primary</span>
+      <div style="display:grid;grid-template-columns:repeat(11,1fr);gap:6px;margin-bottom:24px">
+        <div><div style="height:64px;border-radius:8px;background:var(--ess-teal-950)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">950</div><div style="font-size:10px;color:var(--ess-text-muted);font-family:'JetBrains Mono',monospace">011c1e</div></div>
+        <div><div style="height:64px;border-radius:8px;background:var(--ess-teal-900)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">900</div><div style="font-size:10px;color:var(--ess-text-muted);font-family:'JetBrains Mono',monospace">023436</div></div>
+        <div><div style="height:64px;border-radius:8px;background:var(--ess-teal-800)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">800</div><div style="font-size:10px;color:var(--ess-text-muted);font-family:'JetBrains Mono',monospace">053c40</div></div>
+        <div><div style="height:64px;border-radius:8px;background:var(--ess-teal-700)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">700</div><div style="font-size:10px;color:var(--ess-text-muted);font-family:'JetBrains Mono',monospace">04565e</div></div>
+        <div><div style="height:64px;border-radius:8px;background:var(--ess-teal-600);outline:2px solid var(--ess-primary);outline-offset:2px"></div><div style="font-size:10px;font-weight:700;margin-top:6px">600</div><div style="font-size:10px;color:var(--ess-text-muted);font-family:'JetBrains Mono',monospace">028090</div></div>
+        <div><div style="height:64px;border-radius:8px;background:var(--ess-teal-500)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">500</div><div style="font-size:10px;color:var(--ess-text-muted);font-family:'JetBrains Mono',monospace">0b98a8</div></div>
+        <div><div style="height:64px;border-radius:8px;background:var(--ess-teal-400)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">400</div><div style="font-size:10px;color:var(--ess-text-muted);font-family:'JetBrains Mono',monospace">35b3c0</div></div>
+        <div><div style="height:64px;border-radius:8px;background:var(--ess-teal-300)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">300</div><div style="font-size:10px;color:var(--ess-text-muted);font-family:'JetBrains Mono',monospace">7fd0d8</div></div>
+        <div><div style="height:64px;border-radius:8px;background:var(--ess-teal-200)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">200</div><div style="font-size:10px;color:var(--ess-text-muted);font-family:'JetBrains Mono',monospace">b6e5e9</div></div>
+        <div><div style="height:64px;border-radius:8px;background:var(--ess-teal-100)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">100</div><div style="font-size:10px;color:var(--ess-text-muted);font-family:'JetBrains Mono',monospace">dbf2f4</div></div>
+        <div><div style="height:64px;border-radius:8px;background:var(--ess-teal-50);border:1px solid var(--ess-border)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">50</div><div style="font-size:10px;color:var(--ess-text-muted);font-family:'JetBrains Mono',monospace">f0f9fa</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
+        <div>
+          <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary);margin-bottom:10px">Green — accent &amp; status</span>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-green-700)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">700</div></div>
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-green-600)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">600</div></div>
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-green-500)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">500</div></div>
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-green-400)"></div><div style="font-size:10px;font-weight:700;margin-top:6px">400</div></div>
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-green-200)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">200</div></div>
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-green-50);border:1px solid var(--ess-border)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">50</div></div>
+          </div>
+        </div>
+        <div>
+          <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary);margin-bottom:10px">Neutrals — teal-tinted</span>
+          <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:6px">
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-n-0);border:1px solid var(--ess-border)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">0</div></div>
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-n-25);border:1px solid var(--ess-border)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">25</div></div>
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-n-50);border:1px solid var(--ess-border)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">50</div></div>
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-n-100)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">100</div></div>
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-n-200)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">200</div></div>
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-n-300)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">300</div></div>
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-n-400)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">400</div></div>
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-n-500)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">500</div></div>
+            <div><div style="height:52px;border-radius:8px;background:var(--ess-n-900)"></div><div style="font-size:10px;font-weight:600;margin-top:6px">900</div></div>
+          </div>
+        </div>
+      </div>
+
+      <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary);margin-bottom:10px">Status pairs</span>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+        <div style="background:var(--ess-success-bg);color:var(--ess-success);border-radius:10px;padding:14px"><strong style="display:block;font-size:13px">Success</strong><span style="font-size:11px;opacity:.85">approved · present</span></div>
+        <div style="background:var(--ess-warning-bg);color:var(--ess-warning);border-radius:10px;padding:14px"><strong style="display:block;font-size:13px">Warning</strong><span style="font-size:11px;opacity:.85">pending · late</span></div>
+        <div style="background:var(--ess-danger-bg);color:var(--ess-danger);border-radius:10px;padding:14px"><strong style="display:block;font-size:13px">Danger</strong><span style="font-size:11px;opacity:.85">rejected · absent</span></div>
+        <div style="background:var(--ess-info-bg);color:var(--ess-info);border-radius:10px;padding:14px"><strong style="display:block;font-size:13px">Info</strong><span style="font-size:11px;opacity:.85">escalated</span></div>
+        <div style="background:var(--ess-neutral-bg);color:var(--ess-neutral);border-radius:10px;padding:14px"><strong style="display:block;font-size:13px">Neutral</strong><span style="font-size:11px;opacity:.85">cancelled · checked out</span></div>
+      </div>
+    </section>
+
+    <section style="margin-bottom:56px">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px">
+        <h2 style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:700;letter-spacing:-.01em">Surfaces</h2>
+        <span style="font-size:12px;color:var(--ess-text-muted)">02</span>
+      </div>
+      <p style="font-size:14px;color:var(--ess-text-secondary);max-width:70ch;margin-bottom:20px">Four roles. Every panel in the portal maps to exactly one — that rule is what removes the mint/white/dark ambiguity.</p>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+        <div style="border:1px solid var(--ess-border);border-radius:14px;overflow:hidden">
+          <div style="height:96px;background:var(--ess-canvas);border-bottom:1px solid var(--ess-border)"></div>
+          <div style="padding:14px">
+            <strong style="display:block;font-size:14px">canvas</strong>
+            <code style="font-size:11px;color:var(--ess-primary);font-family:'JetBrains Mono',monospace">--ess-canvas</code>
+            <p style="font-size:12px;color:var(--ess-text-secondary);margin-top:6px">The page. Never used for a card.</p>
+          </div>
+        </div>
+        <div style="border:1px solid var(--ess-border);border-radius:14px;overflow:hidden">
+          <div style="height:96px;background:var(--ess-surface);border-bottom:1px solid var(--ess-border)"></div>
+          <div style="padding:14px">
+            <strong style="display:block;font-size:14px">surface</strong>
+            <code style="font-size:11px;color:var(--ess-primary);font-family:'JetBrains Mono',monospace">--ess-surface</code>
+            <p style="font-size:12px;color:var(--ess-text-secondary);margin-top:6px">Default card, table, panel. 1px border, no shadow.</p>
+          </div>
+        </div>
+        <div style="border:1px solid var(--ess-border);border-radius:14px;overflow:hidden">
+          <div style="height:96px;background:var(--ess-sunken);border-bottom:1px solid var(--ess-border)"></div>
+          <div style="padding:14px">
+            <strong style="display:block;font-size:14px">sunken</strong>
+            <code style="font-size:11px;color:var(--ess-primary);font-family:'JetBrains Mono',monospace">--ess-sunken</code>
+            <p style="font-size:12px;color:var(--ess-text-secondary);margin-top:6px">Inset inside a surface: table head, meta, empty states.</p>
+          </div>
+        </div>
+        <div style="border:1px solid var(--ess-border);border-radius:14px;overflow:hidden">
+          <div style="height:96px;background:var(--ess-inverse);border-bottom:1px solid var(--ess-border)"></div>
+          <div style="padding:14px">
+            <strong style="display:block;font-size:14px">inverse</strong>
+            <code style="font-size:11px;color:var(--ess-primary);font-family:'JetBrains Mono',monospace">--ess-inverse</code>
+            <p style="font-size:12px;color:var(--ess-text-secondary);margin-top:6px">Nav rail and one hero band. Nothing else.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px">
+        <div style="border:1px solid var(--ess-danger);border-radius:14px;padding:18px;background:var(--ess-surface)">
+          <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-danger)">Don't</span>
+          <div style="display:flex;gap:10px;margin:12px 0 10px;height:88px">
+            <div style="flex:1.6;background:var(--ess-teal-900);border-radius:10px"></div>
+            <div style="flex:1;background:var(--ess-n-0);border:1px solid var(--ess-border);border-radius:10px"></div>
+          </div>
+          <p style="font-size:13px;color:var(--ess-text-secondary)">Split the page into a dark column and a light column. The eye reads two unrelated products.</p>
+        </div>
+        <div style="border:1px solid var(--ess-success);border-radius:14px;padding:18px;background:var(--ess-surface)">
+          <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-success)">Do</span>
+          <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0 10px;height:88px">
+            <div style="height:38px;background:var(--ess-teal-900);border-radius:10px"></div>
+            <div style="flex:1;display:flex;gap:8px">
+              <div style="flex:1;background:var(--ess-n-0);border:1px solid var(--ess-border);border-radius:10px"></div>
+              <div style="flex:1;background:var(--ess-n-0);border:1px solid var(--ess-border);border-radius:10px"></div>
+              <div style="flex:1;background:var(--ess-n-0);border:1px solid var(--ess-border);border-radius:10px"></div>
+            </div>
+          </div>
+          <p style="font-size:13px;color:var(--ess-text-secondary)">One dark band across the top, light content below it. Dark becomes emphasis, not a region.</p>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-bottom:56px">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px">
+        <h2 style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:700;letter-spacing:-.01em">Type</h2>
+        <span style="font-size:12px;color:var(--ess-text-muted)">03</span>
+      </div>
+      <p style="font-size:14px;color:var(--ess-text-secondary);max-width:70ch;margin-bottom:20px">Montserrat for display and page titles, Inter for everything else, JetBrains Mono for IDs and times. Eight steps, one role each — if a new size is needed, a role is missing.</p>
+
+      <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:1fr 220px;gap:20px;align-items:baseline;padding:18px 20px;border-bottom:1px solid var(--ess-border-subtle)">
+          <span style="font-family:'Montserrat',sans-serif;font-size:40px;font-weight:800;letter-spacing:-.025em;line-height:1.1">Login marquee</span>
+          <code style="font-size:11px;color:var(--ess-text-secondary);font-family:'JetBrains Mono',monospace">display · 40/800/-.025em</code>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 220px;gap:20px;align-items:baseline;padding:18px 20px;border-bottom:1px solid var(--ess-border-subtle)">
+          <span style="font-family:'Montserrat',sans-serif;font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1.2">Leave Management</span>
+          <code style="font-size:11px;color:var(--ess-text-secondary);font-family:'JetBrains Mono',monospace">page-title · 28/800</code>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 220px;gap:20px;align-items:baseline;padding:18px 20px;border-bottom:1px solid var(--ess-border-subtle)">
+          <span style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:700;letter-spacing:-.01em">Approval workflow</span>
+          <code style="font-size:11px;color:var(--ess-text-secondary);font-family:'JetBrains Mono',monospace">h2 · 20/700</code>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 220px;gap:20px;align-items:baseline;padding:18px 20px;border-bottom:1px solid var(--ess-border-subtle)">
+          <span style="font-size:16px;font-weight:700">Casual leave balance</span>
+          <code style="font-size:11px;color:var(--ess-text-secondary);font-family:'JetBrains Mono',monospace">h3 · 16/700</code>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 220px;gap:20px;align-items:baseline;padding:18px 20px;border-bottom:1px solid var(--ess-border-subtle)">
+          <span style="font-size:16px;color:var(--ess-text-secondary)">Page subtitle and long-form policy body copy.</span>
+          <code style="font-size:11px;color:var(--ess-text-secondary);font-family:'JetBrains Mono',monospace">body-lg · 16/400</code>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 220px;gap:20px;align-items:baseline;padding:18px 20px;border-bottom:1px solid var(--ess-border-subtle)">
+          <span style="font-size:14px">Default UI text — table cells, labels, buttons, nav.</span>
+          <code style="font-size:11px;color:var(--ess-text-secondary);font-family:'JetBrains Mono',monospace">body · 14/400</code>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 220px;gap:20px;align-items:baseline;padding:18px 20px;border-bottom:1px solid var(--ess-border-subtle)">
+          <span style="font-size:12px;color:var(--ess-text-secondary)">Secondary meta, help text, timestamps.</span>
+          <code style="font-size:11px;color:var(--ess-text-secondary);font-family:'JetBrains Mono',monospace">caption · 12/400</code>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 220px;gap:20px;align-items:baseline;padding:18px 20px">
+          <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary)">Section eyebrow</span>
+          <code style="font-size:11px;color:var(--ess-text-secondary);font-family:'JetBrains Mono',monospace">eyebrow · 11/700/.1em</code>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-bottom:56px">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px">
+        <h2 style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:700;letter-spacing:-.01em">Space, radius, elevation</h2>
+        <span style="font-size:12px;color:var(--ess-text-muted)">04</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:16px;margin-top:16px">
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:18px">
+          <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary);margin-bottom:14px">Space · 4px base</span>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:10px"><div style="height:10px;width:4px;background:var(--ess-primary);border-radius:2px"></div><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">1 · 4px</code></div>
+            <div style="display:flex;align-items:center;gap:10px"><div style="height:10px;width:8px;background:var(--ess-primary);border-radius:2px"></div><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">2 · 8px — icon↔label</code></div>
+            <div style="display:flex;align-items:center;gap:10px"><div style="height:10px;width:12px;background:var(--ess-primary);border-radius:2px"></div><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">3 · 12px</code></div>
+            <div style="display:flex;align-items:center;gap:10px"><div style="height:10px;width:16px;background:var(--ess-primary);border-radius:2px"></div><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">4 · 16px — table cell</code></div>
+            <div style="display:flex;align-items:center;gap:10px"><div style="height:10px;width:20px;background:var(--ess-primary);border-radius:2px"></div><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">5 · 20px — card pad</code></div>
+            <div style="display:flex;align-items:center;gap:10px"><div style="height:10px;width:24px;background:var(--ess-primary);border-radius:2px"></div><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">6 · 24px — panel pad</code></div>
+            <div style="display:flex;align-items:center;gap:10px"><div style="height:10px;width:32px;background:var(--ess-primary);border-radius:2px"></div><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">8 · 32px — page pad</code></div>
+            <div style="display:flex;align-items:center;gap:10px"><div style="height:10px;width:56px;background:var(--ess-primary);border-radius:2px"></div><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">14 · 56px — section gap</code></div>
+          </div>
+        </div>
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:18px">
+          <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary);margin-bottom:14px">Radius</span>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px"><div style="width:44px;height:32px;background:var(--ess-sunken);border:1px solid var(--ess-border);border-radius:8px"></div><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">sm 8 · input, button</code></div>
+            <div style="display:flex;align-items:center;gap:10px"><div style="width:44px;height:32px;background:var(--ess-sunken);border:1px solid var(--ess-border);border-radius:14px"></div><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">md 14 · card</code></div>
+            <div style="display:flex;align-items:center;gap:10px"><div style="width:44px;height:32px;background:var(--ess-sunken);border:1px solid var(--ess-border);border-radius:20px"></div><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">lg 20 · panel</code></div>
+            <div style="display:flex;align-items:center;gap:10px"><div style="width:44px;height:22px;background:var(--ess-sunken);border:1px solid var(--ess-border);border-radius:999px"></div><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">pill · badge</code></div>
+          </div>
+        </div>
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:18px">
+          <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary);margin-bottom:14px">Elevation</span>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="height:34px;background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:10px;display:flex;align-items:center;padding:0 12px"><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">0 · border only (default)</code></div>
+            <div style="height:34px;background:var(--ess-surface);border-radius:10px;box-shadow:var(--ess-elev-2);display:flex;align-items:center;padding:0 12px"><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">2 · raised card</code></div>
+            <div style="height:34px;background:var(--ess-surface);border-radius:10px;box-shadow:var(--ess-elev-3);display:flex;align-items:center;padding:0 12px"><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">3 · hover lift</code></div>
+            <div style="height:34px;background:var(--ess-surface);border-radius:10px;box-shadow:var(--ess-elev-4);display:flex;align-items:center;padding:0 12px"><code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-secondary)">4 · modal, toast</code></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-bottom:56px">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px">
+        <h2 style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:700;letter-spacing:-.01em">Components</h2>
+        <span style="font-size:12px;color:var(--ess-text-muted)">05</span>
+      </div>
+      <p style="font-size:14px;color:var(--ess-text-secondary);max-width:70ch;margin-bottom:20px">Class names match <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ess-primary)">ess-components.css</code>, ready to drop into the SvelteKit app.</p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:20px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px">
+            <h3 style="font-size:16px;font-weight:700">Buttons</h3>
+            <code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-muted)">.ess-btn</code>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+            <button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border:1px solid transparent;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:var(--ess-primary);color:var(--ess-text-on-primary)" style-hover="background:var(--ess-primary-hover)">Apply leave</button>
+            <button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border:1px solid var(--ess-border-strong);border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:var(--ess-surface);color:var(--ess-text)" style-hover="background:var(--ess-sunken)">Secondary</button>
+            <button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border:1px solid transparent;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:var(--ess-text-secondary)" style-hover="background:var(--ess-sunken);color:var(--ess-text)">Ghost</button>
+            <button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border:1px solid transparent;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:var(--ess-danger);color:#fff">Reject</button>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+            <button type="button" style="height:32px;padding:0 12px;border:1px solid var(--ess-border-strong);border-radius:8px;background:var(--ess-surface);color:var(--ess-text);font-size:12px;font-weight:600;cursor:pointer">Small</button>
+            <button type="button" style="height:46px;padding:0 22px;border:1px solid transparent;border-radius:8px;background:var(--ess-primary);color:var(--ess-text-on-primary);font-size:16px;font-weight:600;cursor:pointer">Large</button>
+            <button type="button" disabled="disabled" style="height:38px;padding:0 16px;border:1px solid transparent;border-radius:8px;background:var(--ess-primary);color:var(--ess-text-on-primary);font-size:14px;font-weight:600;opacity:.45;cursor:not-allowed">Disabled</button>
+          </div>
+        </div>
+
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:20px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px">
+            <h3 style="font-size:16px;font-weight:700">Form fields</h3>
+            <code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-muted)">.ess-field</code>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600">Leave type</span><select style="width:100%;background:var(--ess-surface);border:1px solid var(--ess-border-strong);border-radius:8px;padding:9px 12px;font-size:14px;color:var(--ess-text)"><option>Casual leave</option><option>Sick leave</option></select></label>
+            <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600">Start date</span><input type="date" value="2026-08-03" style="width:100%;background:var(--ess-surface);border:1px solid var(--ess-border-strong);border-radius:8px;padding:9px 12px;font-size:14px;color:var(--ess-text);font-family:inherit"></label>
+            <label style="display:flex;flex-direction:column;gap:6px;grid-column:span 2"><span style="font-size:12px;font-weight:600">Reason</span><textarea rows="2" placeholder="Optional context for your approver" style="width:100%;background:var(--ess-surface);border:1px solid var(--ess-border-strong);border-radius:8px;padding:9px 12px;font-size:14px;color:var(--ess-text);font-family:inherit;resize:vertical"></textarea><span style="font-size:12px;color:var(--ess-text-secondary)">Visible to your manager and HR.</span></label>
+            <label style="display:flex;flex-direction:column;gap:6px;grid-column:span 2"><span style="font-size:12px;font-weight:600">Handover contact</span><input value="" placeholder="Name" style="width:100%;background:var(--ess-surface);border:1px solid var(--ess-danger);border-radius:8px;padding:9px 12px;font-size:14px;color:var(--ess-text)"><span style="font-size:12px;color:var(--ess-danger);font-weight:500">Required for leave longer than 3 days.</span></label>
+          </div>
+        </div>
+
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:20px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px">
+            <h3 style="font-size:16px;font-weight:700">Status badges</h3>
+            <code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-muted)">.ess-badge</code>
+          </div>
+          <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary);margin-bottom:10px">Leave</span>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-warning-bg);color:var(--ess-warning)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Pending</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-success-bg);color:var(--ess-success)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Approved</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-danger-bg);color:var(--ess-danger)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Rejected</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-info-bg);color:var(--ess-info)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Escalated</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-neutral-bg);color:var(--ess-neutral)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Cancelled</span>
+          </div>
+          <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary);margin-bottom:10px">Attendance &amp; holidays</span>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-success-bg);color:var(--ess-success)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Present</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-warning-bg);color:var(--ess-warning)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Late</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-neutral-bg);color:var(--ess-neutral)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Checked out</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-danger-bg);color:var(--ess-danger)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Absent</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-success-bg);color:var(--ess-success)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Public</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-warning-bg);color:var(--ess-warning)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Restricted</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-neutral-bg);color:var(--ess-neutral)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Optional</span>
+          </div>
+        </div>
+
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:20px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px">
+            <h3 style="font-size:16px;font-weight:700">Avatar &amp; user chip</h3>
+            <code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-muted)">.ess-avatar</code>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+            <div style="display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--ess-green-400);color:var(--ess-teal-900);font-size:10px;font-weight:700">HR</div>
+            <div style="display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--ess-green-400);color:var(--ess-teal-900);font-size:12px;font-weight:700">HR</div>
+            <div style="display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:var(--ess-green-400);color:var(--ess-teal-900);font-size:20px;font-weight:700">HR</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--ess-sunken)">
+              <div style="display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--ess-green-400);color:var(--ess-teal-900);font-size:12px;font-weight:700">HR</div>
+              <div style="display:flex;flex-direction:column;line-height:1.25;min-width:0">
+                <span style="font-size:14px;font-weight:600">Hemang Raval</span>
+                <span style="font-size:12px;color:var(--ess-text-secondary);text-transform:capitalize">super admin</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--ess-inverse)">
+              <div style="display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--ess-green-400);color:var(--ess-teal-900);font-size:12px;font-weight:700">PK</div>
+              <div style="display:flex;flex-direction:column;line-height:1.25;min-width:0">
+                <span style="font-size:14px;font-weight:600;color:var(--ess-text-inverse)">Priya Kulkarni</span>
+                <span style="font-size:12px;color:var(--ess-text-inverse-secondary);text-transform:capitalize">team lead</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:20px;grid-column:span 2">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px">
+            <h3 style="font-size:16px;font-weight:700">Data table — one pattern for attendance, roster and policies</h3>
+            <code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-muted)">.ess-table-shell</code>
+          </div>
+          <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;overflow:hidden">
+            <div style="display:grid;grid-template-columns:1.4fr 1.6fr .9fr .9fr .8fr;padding:10px 16px;background:var(--ess-sunken);border-bottom:1px solid var(--ess-border);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ess-text-secondary)">
+              <span style="display:inline-flex;align-items:center;gap:5px;color:var(--ess-text)">Name <span style="font-size:9px">▲</span></span>
+              <span>Email</span>
+              <span>Role</span>
+              <span>Status</span>
+              <span style="text-align:right">Leave left</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1.4fr 1.6fr .9fr .9fr .8fr;align-items:center;padding:12px 16px;border-bottom:1px solid var(--ess-border-subtle);font-size:14px">
+              <span style="font-weight:500">Aditi Sharma</span>
+              <span style="color:var(--ess-text-secondary)">aditi@champ-hr.local</span>
+              <span style="color:var(--ess-text-secondary);text-transform:capitalize">employee</span>
+              <span><span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-success-bg);color:var(--ess-success)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Present</span></span>
+              <span style="text-align:right;font-variant-numeric:tabular-nums">12.5</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1.4fr 1.6fr .9fr .9fr .8fr;align-items:center;padding:12px 16px;border-bottom:1px solid var(--ess-border-subtle);font-size:14px;background:var(--ess-surface-hover)">
+              <span style="font-weight:500">Rohit Menon</span>
+              <span style="color:var(--ess-text-secondary)">rohit@champ-hr.local</span>
+              <span style="color:var(--ess-text-secondary);text-transform:capitalize">team lead</span>
+              <span><span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-neutral-bg);color:var(--ess-neutral)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Checked out</span></span>
+              <span style="text-align:right;font-variant-numeric:tabular-nums">6.0</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1.4fr 1.6fr .9fr .9fr .8fr;align-items:center;padding:12px 16px;border-bottom:1px solid var(--ess-border-subtle);font-size:14px">
+              <span style="font-weight:500">Sana Qureshi</span>
+              <span style="color:var(--ess-text-secondary)">sana@champ-hr.local</span>
+              <span style="color:var(--ess-text-secondary);text-transform:capitalize">employee</span>
+              <span><span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-danger-bg);color:var(--ess-danger)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Absent</span></span>
+              <span style="text-align:right;font-variant-numeric:tabular-nums">18.0</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;border-top:1px solid var(--ess-border);background:var(--ess-sunken);font-size:12px;color:var(--ess-text-secondary)">
+              <span>3 of 27 employees</span>
+              <div style="display:flex;gap:6px">
+                <button type="button" style="height:26px;padding:0 10px;border:1px solid var(--ess-border-strong);border-radius:6px;background:var(--ess-surface);color:var(--ess-text-secondary);font-size:12px;font-weight:600;cursor:pointer">Previous</button>
+                <button type="button" style="height:26px;padding:0 10px;border:1px solid var(--ess-border-strong);border-radius:6px;background:var(--ess-surface);color:var(--ess-text);font-size:12px;font-weight:600;cursor:pointer">Next</button>
+              </div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+            <div style="border:1px solid var(--ess-border);border-radius:14px;overflow:hidden">
+              <div style="padding:10px 16px;background:var(--ess-sunken);border-bottom:1px solid var(--ess-border);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ess-text-secondary)">Empty state</div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:36px 24px;text-align:center">
+                <div style="display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--ess-sunken);color:var(--ess-text-muted);font-size:18px">▢</div>
+                <strong style="font-size:16px">No leave applications yet</strong>
+                <span style="font-size:13px;color:var(--ess-text-secondary);max-width:34ch">When you apply, requests and their approval status appear here.</span>
+                <button type="button" style="margin-top:6px;height:32px;padding:0 12px;border:1px solid transparent;border-radius:8px;background:var(--ess-primary);color:var(--ess-text-on-primary);font-size:12px;font-weight:600;cursor:pointer">Apply leave</button>
+              </div>
+            </div>
+            <div style="border:1px solid var(--ess-border);border-radius:14px;overflow:hidden">
+              <div style="padding:10px 16px;background:var(--ess-sunken);border-bottom:1px solid var(--ess-border);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ess-text-secondary)">Loading — skeleton</div>
+              <div style="padding:14px 16px;display:flex;flex-direction:column;gap:14px">
+                <div style="display:grid;grid-template-columns:1.4fr 1.6fr .9fr;gap:14px;align-items:center"><div style="height:12px;border-radius:6px;background:linear-gradient(90deg,var(--ess-sunken) 0%,var(--ess-border-subtle) 50%,var(--ess-sunken) 100%);background-size:360px 100%;animation:ess-shimmer 1.2s infinite linear"></div><div style="height:12px;border-radius:6px;background:linear-gradient(90deg,var(--ess-sunken) 0%,var(--ess-border-subtle) 50%,var(--ess-sunken) 100%);background-size:360px 100%;animation:ess-shimmer 1.2s infinite linear"></div><div style="height:12px;width:60%;border-radius:6px;background:linear-gradient(90deg,var(--ess-sunken) 0%,var(--ess-border-subtle) 50%,var(--ess-sunken) 100%);background-size:360px 100%;animation:ess-shimmer 1.2s infinite linear"></div></div>
+                <div style="display:grid;grid-template-columns:1.4fr 1.6fr .9fr;gap:14px;align-items:center"><div style="height:12px;border-radius:6px;background:linear-gradient(90deg,var(--ess-sunken) 0%,var(--ess-border-subtle) 50%,var(--ess-sunken) 100%);background-size:360px 100%;animation:ess-shimmer 1.2s infinite linear"></div><div style="height:12px;width:80%;border-radius:6px;background:linear-gradient(90deg,var(--ess-sunken) 0%,var(--ess-border-subtle) 50%,var(--ess-sunken) 100%);background-size:360px 100%;animation:ess-shimmer 1.2s infinite linear"></div><div style="height:12px;width:45%;border-radius:6px;background:linear-gradient(90deg,var(--ess-sunken) 0%,var(--ess-border-subtle) 50%,var(--ess-sunken) 100%);background-size:360px 100%;animation:ess-shimmer 1.2s infinite linear"></div></div>
+                <div style="display:grid;grid-template-columns:1.4fr 1.6fr .9fr;gap:14px;align-items:center"><div style="height:12px;width:70%;border-radius:6px;background:linear-gradient(90deg,var(--ess-sunken) 0%,var(--ess-border-subtle) 50%,var(--ess-sunken) 100%);background-size:360px 100%;animation:ess-shimmer 1.2s infinite linear"></div><div style="height:12px;border-radius:6px;background:linear-gradient(90deg,var(--ess-sunken) 0%,var(--ess-border-subtle) 50%,var(--ess-sunken) 100%);background-size:360px 100%;animation:ess-shimmer 1.2s infinite linear"></div><div style="height:12px;width:55%;border-radius:6px;background:linear-gradient(90deg,var(--ess-sunken) 0%,var(--ess-border-subtle) 50%,var(--ess-sunken) 100%);background-size:360px 100%;animation:ess-shimmer 1.2s infinite linear"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:20px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px">
+            <h3 style="font-size:16px;font-weight:700">Tabs &amp; segmented</h3>
+            <code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-muted)">.ess-tabs</code>
+          </div>
+          <div style="display:flex;gap:4px;border-bottom:1px solid var(--ess-border);margin-bottom:18px">
+            <button type="button" style="background:none;border:none;border-bottom:2px solid var(--ess-primary);padding:10px 14px;font-size:14px;font-weight:600;color:var(--ess-primary);cursor:pointer">My leave</button>
+            <button type="button" style="background:none;border:none;border-bottom:2px solid transparent;padding:10px 14px;font-size:14px;font-weight:600;color:var(--ess-text-secondary);cursor:pointer" style-hover="color:var(--ess-text)">Team calendar</button>
+            <button type="button" style="background:none;border:none;border-bottom:2px solid transparent;padding:10px 14px;font-size:14px;font-weight:600;color:var(--ess-text-secondary);cursor:pointer" style-hover="color:var(--ess-text)">Approvals <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:4px;border-radius:999px;background:var(--ess-warning-bg);color:var(--ess-warning);font-size:10px">3</span></button>
+          </div>
+          <div style="display:inline-flex;gap:2px;padding:3px;background:var(--ess-sunken);border-radius:8px">
+            <button type="button" style="background:var(--ess-surface);border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--ess-text);box-shadow:var(--ess-elev-1);cursor:pointer">Month</button>
+            <button type="button" style="background:none;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--ess-text-secondary);cursor:pointer">Quarter</button>
+            <button type="button" style="background:none;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--ess-text-secondary);cursor:pointer">Year</button>
+          </div>
+        </div>
+
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:20px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px">
+            <h3 style="font-size:16px;font-weight:700">Alerts &amp; toast</h3>
+            <code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-muted)">.ess-alert</code>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:8px;background:var(--ess-info-bg);color:var(--ess-info);font-size:14px"><span>ⓘ</span><span>Your shift group isn't set yet — ask HR to assign one so your holiday calendar appears here.</span></div>
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:8px;background:var(--ess-success-bg);color:var(--ess-success);font-size:14px"><span>✓</span><span>Leave approved by Rohit Menon · 2 days deducted from Casual.</span></div>
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:8px;background:var(--ess-warning-bg);color:var(--ess-warning);font-size:14px"><span>!</span><span>You have 3 pending approvals older than 48 hours.</span></div>
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:8px;background:var(--ess-danger-bg);color:var(--ess-danger);font-size:14px"><span>×</span><span>Could not check in — location permission denied.</span></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;margin-top:6px;border-radius:8px;background:var(--ess-inverse);color:var(--ess-text-inverse);box-shadow:var(--ess-elev-4);font-size:14px">
+              <span style="color:var(--ess-green-400)">✓</span><span>Checked in at 09:42 AM</span>
+              <button type="button" style="margin-left:auto;background:none;border:none;color:var(--ess-text-inverse-secondary);font-size:14px;cursor:pointer">Undo</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:20px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px">
+            <h3 style="font-size:16px;font-weight:700">Approval timeline</h3>
+            <code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-muted)">.ess-timeline</code>
+          </div>
+          <p style="font-size:12px;color:var(--ess-text-secondary);margin-bottom:16px">Replaces StepTracker. Reads as one connected flow instead of four stacked blocks, and carries actor + timestamp.</p>
+          <div style="display:flex;flex-direction:column">
+            <div style="display:grid;grid-template-columns:26px 1fr;gap:12px;position:relative;padding-bottom:18px">
+              <div style="position:absolute;left:12px;top:26px;bottom:0;width:2px;background:var(--ess-primary)"></div>
+              <div style="display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--ess-primary);border:2px solid var(--ess-primary);color:var(--ess-text-on-primary);font-size:11px;font-weight:700;z-index:1">✓</div>
+              <div><div style="font-size:14px;font-weight:600">Request submitted</div><div style="font-size:12px;color:var(--ess-text-secondary)">Aditi Sharma · 28 Jul, 10:14</div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:26px 1fr;gap:12px;position:relative;padding-bottom:18px">
+              <div style="position:absolute;left:12px;top:26px;bottom:0;width:2px;background:var(--ess-border)"></div>
+              <div style="display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--ess-surface);border:2px solid var(--ess-primary);color:var(--ess-primary);font-size:11px;font-weight:700;z-index:1;box-shadow:var(--ess-focus-ring)">2</div>
+              <div><div style="font-size:14px;font-weight:600">Manager approval</div><div style="font-size:12px;color:var(--ess-primary);font-weight:500">Waiting on Rohit Menon</div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:26px 1fr;gap:12px;position:relative;padding-bottom:18px">
+              <div style="position:absolute;left:12px;top:26px;bottom:0;width:2px;background:var(--ess-border)"></div>
+              <div style="display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--ess-surface);border:2px solid var(--ess-border);color:var(--ess-text-muted);font-size:11px;font-weight:700;z-index:1">3</div>
+              <div><div style="font-size:14px;font-weight:600;color:var(--ess-text-muted)">HR verification</div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:26px 1fr;gap:12px">
+              <div style="display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--ess-surface);border:2px solid var(--ess-border);color:var(--ess-text-muted);font-size:11px;font-weight:700">4</div>
+              <div><div style="font-size:14px;font-weight:600;color:var(--ess-text-muted)">Balance updated</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:20px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px">
+            <h3 style="font-size:16px;font-weight:700">Stat card &amp; quick action</h3>
+            <code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-muted)">.ess-stat</code>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+            <div style="display:flex;flex-direction:column;gap:6px;background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:16px 18px">
+              <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary)">Leave balance</span>
+              <span style="font-family:'Montserrat',sans-serif;font-size:32px;font-weight:800;line-height:1.05;letter-spacing:-.02em;font-variant-numeric:tabular-nums">12.5</span>
+              <span style="font-size:12px;color:var(--ess-text-secondary)">days across 4 types</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:16px 18px">
+              <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary)">Attendance</span>
+              <span style="font-family:'Montserrat',sans-serif;font-size:32px;font-weight:800;line-height:1.05;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ess-success)">96%</span>
+              <span style="font-size:12px;color:var(--ess-text-secondary)">this month</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <a href="#" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;color:var(--ess-text);font-size:14px;font-weight:500" style-hover="background:var(--ess-sunken)"><span style="display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--ess-primary-soft);color:var(--ess-primary);font-size:14px">◷</span>Mark attendance</a>
+            <a href="#" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;color:var(--ess-text);font-size:14px;font-weight:500" style-hover="background:var(--ess-sunken)"><span style="display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--ess-primary-soft);color:var(--ess-primary);font-size:14px">▤</span>View payslip</a>
+            <a href="#" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;color:var(--ess-text);font-size:14px;font-weight:500" style-hover="background:var(--ess-sunken)"><span style="display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--ess-primary-soft);color:var(--ess-primary);font-size:14px">◍</span>Update profile</a>
+          </div>
+        </div>
+
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:20px;grid-column:span 2">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px">
+            <h3 style="font-size:16px;font-weight:700">Modal &amp; drawer</h3>
+            <code style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ess-text-muted)">.ess-modal · .ess-drawer</code>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div style="position:relative;border-radius:14px;overflow:hidden;background:var(--ess-sunken);padding:24px;display:grid;place-items:center">
+              <div style="position:absolute;inset:0;background:rgba(2,52,54,.5)"></div>
+              <div style="position:relative;width:100%;max-width:400px;background:var(--ess-surface);border-radius:20px;box-shadow:var(--ess-elev-4);overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--ess-border)">
+                  <strong style="font-size:16px">Reject this request?</strong>
+                  <button type="button" style="background:none;border:none;color:var(--ess-text-secondary);font-size:16px;cursor:pointer">×</button>
+                </div>
+                <div style="padding:20px;font-size:14px;color:var(--ess-text-secondary)">Aditi Sharma · Casual leave · 3–5 Aug (3 days). A reason is sent to the employee.</div>
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:16px 20px;border-top:1px solid var(--ess-border);background:var(--ess-sunken)">
+                  <button type="button" style="height:38px;padding:0 16px;border:1px solid var(--ess-border-strong);border-radius:8px;background:var(--ess-surface);color:var(--ess-text);font-size:14px;font-weight:600;cursor:pointer">Cancel</button>
+                  <button type="button" style="height:38px;padding:0 16px;border:1px solid transparent;border-radius:8px;background:var(--ess-danger);color:#fff;font-size:14px;font-weight:600;cursor:pointer">Reject</button>
+                </div>
+              </div>
+            </div>
+            <div style="position:relative;border-radius:14px;overflow:hidden;background:var(--ess-sunken);height:260px">
+              <div style="position:absolute;inset:0;background:rgba(2,52,54,.5)"></div>
+              <div style="position:absolute;top:0;right:0;bottom:0;width:66%;background:var(--ess-surface);box-shadow:var(--ess-elev-4);display:flex;flex-direction:column">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--ess-border)">
+                  <strong style="font-size:16px">Leave details</strong>
+                  <button type="button" style="background:none;border:none;color:var(--ess-text-secondary);font-size:16px;cursor:pointer">×</button>
+                </div>
+                <div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+                  <div><span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary)">Type</span><div style="font-size:14px;font-weight:600">Casual leave</div></div>
+                  <div><span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary)">Dates</span><div style="font-size:14px;font-weight:600;font-variant-numeric:tabular-nums">03 – 05 Aug · 3 days</div></div>
+                  <div><span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-secondary)">Status</span><div style="margin-top:4px"><span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ess-warning-bg);color:var(--ess-warning)"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Pending</span></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p style="font-size:12px;color:var(--ess-text-secondary);margin-top:14px">Modal for a decision that blocks (confirm, reject). Drawer for detail you read alongside the list. Never nest one in the other.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <section style="margin-bottom:56px">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px">
+        <h2 style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:700;letter-spacing:-.01em">Navigation rail</h2>
+        <span style="font-size:12px;color:var(--ess-text-muted)">06</span>
+      </div>
+      <p style="font-size:14px;color:var(--ess-text-secondary);max-width:70ch;margin-bottom:20px">264px, sticky, always inverse. Items are role-filtered; the account block sits at the bottom with an explicit sign-out.</p>
+      <div style="display:flex;gap:20px;align-items:flex-start">
+        <nav style="width:264px;flex-shrink:0;background:var(--ess-inverse);color:var(--ess-text-inverse);border-radius:20px;padding:20px 14px;display:flex;flex-direction:column;gap:16px;border:1px solid var(--ess-border-inverse)">
+          <div style="display:flex;align-items:center;gap:12px;padding:0 8px 16px;border-bottom:1px solid var(--ess-border-inverse)">
+            <div style="display:grid;place-items:center;width:38px;height:38px;border-radius:8px;background:var(--ess-green-400);color:var(--ess-teal-900);font-weight:800;font-size:13px">CH</div>
+            <div style="display:flex;flex-direction:column;line-height:1.25">
+              <strong style="font-size:15px">Champ HR</strong>
+              <span style="font-size:11px;color:var(--ess-text-inverse-secondary)">ESS Portal</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-inverse-secondary);padding:0 12px 4px">Me</span>
+            <a href="#" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:8px;background:var(--ess-primary);color:#fff;font-size:14px;font-weight:600"><span style="width:18px;text-align:center">▤</span>Home</a>
+            <a href="#" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:8px;color:var(--ess-text-inverse-secondary);font-size:14px;font-weight:500" style-hover="background:rgba(255,255,255,.06);color:var(--ess-text-inverse)"><span style="width:18px;text-align:center">◍</span>My Profile</a>
+            <a href="#" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:8px;color:var(--ess-text-inverse-secondary);font-size:14px;font-weight:500" style-hover="background:rgba(255,255,255,.06);color:var(--ess-text-inverse)"><span style="width:18px;text-align:center">▦</span>Leave<span style="margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--ess-green-400);color:var(--ess-teal-900);font-size:10px;font-weight:700">2</span></a>
+            <a href="#" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:8px;color:var(--ess-text-inverse-secondary);font-size:14px;font-weight:500" style-hover="background:rgba(255,255,255,.06);color:var(--ess-text-inverse)"><span style="width:18px;text-align:center">◷</span>Attendance</a>
+            <a href="#" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:8px;color:var(--ess-text-inverse-secondary);font-size:14px;font-weight:500" style-hover="background:rgba(255,255,255,.06);color:var(--ess-text-inverse)"><span style="width:18px;text-align:center">◫</span>Payroll</a>
+            <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-text-inverse-secondary);padding:12px 12px 4px">Manage</span>
+            <a href="#" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:8px;color:var(--ess-text-inverse-secondary);font-size:14px;font-weight:500" style-hover="background:rgba(255,255,255,.06);color:var(--ess-text-inverse)"><span style="width:18px;text-align:center">◎</span>Team</a>
+            <a href="#" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:8px;color:var(--ess-text-inverse-secondary);font-size:14px;font-weight:500" style-hover="background:rgba(255,255,255,.06);color:var(--ess-text-inverse)"><span style="width:18px;text-align:center">⇧</span>Publish Policies</a>
+          </div>
+          <div style="margin-top:auto;padding-top:14px;border-top:1px solid var(--ess-border-inverse);display:flex;align-items:center;gap:10px">
+            <div style="display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--ess-green-400);color:var(--ess-teal-900);font-size:12px;font-weight:700">HR</div>
+            <div style="display:flex;flex-direction:column;line-height:1.25;min-width:0">
+              <span style="font-size:14px;font-weight:600">Hemang Raval</span>
+              <span style="font-size:11px;color:var(--ess-text-inverse-secondary);text-transform:capitalize">super admin</span>
+            </div>
+            <button type="button" style="margin-left:auto;background:none;border:none;color:var(--ess-text-inverse-secondary);font-size:14px;cursor:pointer;padding:6px;border-radius:8px" style-hover="background:rgba(255,255,255,.08);color:var(--ess-text-inverse)">⏻</button>
+          </div>
+        </nav>
+        <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+          <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:18px">
+            <strong style="display:block;font-size:14px;margin-bottom:6px">Grouped by ownership</strong>
+            <p style="font-size:13px;color:var(--ess-text-secondary)">The flat 5–7 item list gains two group labels — <em>Me</em> and <em>Manage</em> — so a team lead can tell personal actions from managerial ones at a glance.</p>
+          </div>
+          <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:18px">
+            <strong style="display:block;font-size:14px;margin-bottom:6px">Counts live in the rail</strong>
+            <p style="font-size:13px;color:var(--ess-text-secondary)">Pending approvals and open requests are surfaced as a pill on the nav item, so the dashboard is no longer the only place they appear.</p>
+          </div>
+          <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;padding:18px">
+            <strong style="display:block;font-size:14px;margin-bottom:6px">Active state is the only accent</strong>
+            <p style="font-size:13px;color:var(--ess-text-secondary)">One teal-600 fill marks the current page. Hover is a 6% white wash — never a second accent colour.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px">
+        <h2 style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:700;letter-spacing:-.01em">Rules &amp; migration</h2>
+        <span style="font-size:12px;color:var(--ess-text-muted)">07</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;overflow:hidden">
+          <div style="padding:12px 18px;background:var(--ess-success-bg);color:var(--ess-success);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">Do</div>
+          <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--ess-text-secondary)">
+            <span>Reference tokens: <code style="font-family:'JetBrains Mono',monospace;color:var(--ess-primary)">var(--ess-surface)</code>, never <code style="font-family:'JetBrains Mono',monospace">#fff</code>.</span>
+            <span>Start every card at border-only elevation; add shadow only when it floats.</span>
+            <span>Give every list an empty state and a skeleton before shipping it.</span>
+            <span>Use tabular numerals for days, times and balances.</span>
+            <span>Keep one primary action per screen region.</span>
+          </div>
+        </div>
+        <div style="background:var(--ess-surface);border:1px solid var(--ess-border);border-radius:14px;overflow:hidden">
+          <div style="padding:12px 18px;background:var(--ess-danger-bg);color:var(--ess-danger);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">Don't</div>
+          <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--ess-text-secondary)">
+            <span>Introduce a new grey, teal or radius — add a token or reuse one.</span>
+            <span>Put dark cards inside a dark panel (the old stat grid).</span>
+            <span>Build a new row layout per page; extend the table pattern.</span>
+            <span>Use backdrop blur or decorative gradients.</span>
+            <span>Ship a size between the eight type steps.</span>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--ess-inverse);color:var(--ess-text-inverse);border-radius:20px;padding:24px;margin-top:16px">
+        <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ess-green-400)">Migration into the SvelteKit app</span>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:16px">
+          <div><strong style="display:block;font-size:14px;margin-bottom:6px">1 · Tokens</strong><p style="font-size:13px;color:var(--ess-text-inverse-secondary)">Drop <code style="font-family:'JetBrains Mono',monospace;color:var(--ess-green-400)">ess-tokens.css</code> in <code style="font-family:'JetBrains Mono',monospace">src/lib/styles/</code> and import it first in <code style="font-family:'JetBrains Mono',monospace">app.css</code>. Old <code style="font-family:'JetBrains Mono',monospace">--color-*</code> names can alias to the new ones during transition.</p></div>
+          <div><strong style="display:block;font-size:14px;margin-bottom:6px">2 · Components</strong><p style="font-size:13px;color:var(--ess-text-inverse-secondary)">Replace the component block of <code style="font-family:'JetBrains Mono',monospace">app.css</code> with <code style="font-family:'JetBrains Mono',monospace;color:var(--ess-green-400)">ess-components.css</code>. <code style="font-family:'JetBrains Mono',monospace">.btn</code> → <code style="font-family:'JetBrains Mono',monospace">.ess-btn</code>, <code style="font-family:'JetBrains Mono',monospace">.card</code> → <code style="font-family:'JetBrains Mono',monospace">.ess-card</code>.</p></div>
+          <div><strong style="display:block;font-size:14px;margin-bottom:6px">3 · Rewire</strong><p style="font-size:13px;color:var(--ess-text-inverse-secondary)">StatCard, StepTracker and SidebarNav lose their scoped colour rules and use tokens. Attendance, Team and Policies share one Table component.</p></div>
+          <div><strong style="display:block;font-size:14px;margin-bottom:6px">4 · Dark mode</strong><p style="font-size:13px;color:var(--ess-text-inverse-secondary)">Set <code style="font-family:'JetBrains Mono',monospace">data-ess-theme</code> on <code style="font-family:'JetBrains Mono',monospace">&lt;html&gt;</code> from a user preference. No component changes needed.</p></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light' | 'dark'&quot;,&quot;section&quot;:&quot;Theme&quot;}}">
+class Component extends DCLogic {
+  state = { theme: null };
+
+  get theme() {
+    return this.state.theme ?? this.props.theme ?? 'light';
+  }
+
+  seg(active) {
+    return 'background:' + (active ? 'var(--ess-green-400)' : 'transparent')
+      + ';color:' + (active ? 'var(--ess-teal-900)' : 'var(--ess-text-inverse-secondary)')
+      + ';border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit';
+  }
+
+  renderVals() {
+    const t = this.theme;
+    return {
+      theme: t,
+      lightBtn: this.seg(t === 'light'),
+      darkBtn: this.seg(t === 'dark'),
+      setLight: () => this.setState({ theme: 'light' }),
+      setDark: () => this.setState({ theme: 'dark' })
+    };
+  }
+}
+</script>
+</body>
+</html>

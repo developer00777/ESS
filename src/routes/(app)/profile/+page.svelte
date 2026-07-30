@@ -38,8 +38,8 @@
 </svelte:head>
 
 <header class="page-header">
-	<h1 class="section-title">Employee Profile</h1>
-	<p class="section-subtitle">"My Profile" — a single source of truth for personal data</p>
+	<h1 class="ess-page-title">Employee Profile</h1>
+	<p class="ess-page-sub">"My Profile" — a single source of truth for personal data</p>
 </header>
 
 <form
@@ -136,10 +136,10 @@
 
 	<div class="edit-actions">
 		{#if editing}
-			<button type="submit" class="btn btn-primary">Save Changes</button>
-			<button type="button" class="btn btn-ghost" onclick={() => (editing = false)}>Cancel</button>
+			<button type="submit" class="ess-btn ess-btn--primary">Save Changes</button>
+			<button type="button" class="ess-btn ess-btn--ghost" onclick={() => (editing = false)}>Cancel</button>
 		{:else}
-			<button type="button" class="btn btn-primary" onclick={() => (editing = true)}>
+			<button type="button" class="ess-btn ess-btn--primary" onclick={() => (editing = true)}>
 				Edit My Details
 			</button>
 		{/if}
@@ -181,21 +181,24 @@
 	}
 
 	.profile-grid input {
-		border: 1px solid #d7e6e4;
-		border-radius: var(--radius-sm);
+		border: 1px solid var(--ess-border-strong);
+		border-radius: var(--ess-radius-sm);
 		padding: 0.4rem 0.55rem;
 		font-size: 0.85rem;
+		font-family: inherit;
+		color: var(--ess-text);
+		background: var(--ess-surface);
 	}
 
 	.hr-locked {
 		font-size: 0.72rem;
-		color: var(--color-muted);
+		color: var(--ess-text-muted);
 		font-style: italic;
 	}
 
 	.muted {
 		font-size: 0.78rem;
-		color: var(--color-muted);
+		color: var(--ess-text-muted);
 	}
 
 	.edit-actions {
@@ -206,8 +209,8 @@
 
 	.benefit-banner {
 		margin-top: 2rem;
-		background: var(--color-ink);
-		border-radius: var(--radius-lg);
+		background: var(--ess-inverse);
+		border-radius: var(--ess-radius-lg);
 		padding: 1.5rem 2rem;
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
@@ -218,7 +221,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		color: var(--color-text-inverse);
+		color: var(--ess-text-inverse);
 		font-weight: 600;
 		font-size: 0.9rem;
 	}
@@ -228,8 +231,8 @@
 		height: 36px;
 		flex-shrink: 0;
 		border-radius: 50%;
-		background: var(--color-accent);
-		color: var(--color-ink);
+		background: var(--ess-green-400);
+		color: var(--ess-teal-900);
 		display: flex;
 		align-items: center;
 		justify-content: center;

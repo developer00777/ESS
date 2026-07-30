@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Headset from '@lucide/svelte/icons/headset';
 	import Mail from '@lucide/svelte/icons/mail';
+	import IconChip from '$lib/components/IconChip.svelte';
 
 	let { data } = $props();
 
@@ -16,14 +17,14 @@
 </svelte:head>
 
 <header class="page-header">
-	<h1 class="section-title">HR Contacts</h1>
-	<p class="section-subtitle">Direct line to the right HR representative</p>
+	<h1 class="ess-page-title">HR Contacts</h1>
+	<p class="ess-page-sub">Direct line to the right HR representative</p>
 </header>
 
 <div class="contacts-grid">
 	{#each data.contacts as contact (contact.id)}
 		<div class="contact-card">
-			<div class="contact-icon"><Headset size={20} /></div>
+			<IconChip icon={Headset} size="lg" />
 			<div class="contact-body">
 				<strong>{contact.fullName}</strong>
 				<span class="role">{contact.designation || roleLabel[contact.role]}</span>
@@ -54,23 +55,12 @@
 	}
 
 	.contact-card {
-		background: var(--color-mint);
-		border-radius: var(--radius-md);
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
 		padding: 1.25rem;
 		display: flex;
 		gap: 1rem;
-	}
-
-	.contact-icon {
-		width: 44px;
-		height: 44px;
-		flex-shrink: 0;
-		border-radius: var(--radius-sm);
-		background: var(--color-white);
-		color: var(--color-primary);
-		display: flex;
-		align-items: center;
-		justify-content: center;
 	}
 
 	.contact-body {
@@ -82,12 +72,12 @@
 
 	.contact-body strong {
 		font-size: 0.95rem;
-		color: var(--color-ink);
+		color: var(--ess-text);
 	}
 
 	.role {
 		font-size: 0.78rem;
-		color: var(--color-text-soft);
+		color: var(--ess-text-secondary);
 	}
 
 	.email-link {
@@ -95,7 +85,7 @@
 		align-items: center;
 		gap: 0.35rem;
 		font-size: 0.82rem;
-		color: var(--color-primary);
+		color: var(--ess-primary);
 		text-decoration: none;
 		margin-top: 0.25rem;
 	}
@@ -106,12 +96,12 @@
 
 	.timings {
 		font-size: 0.75rem;
-		color: var(--color-muted);
+		color: var(--ess-text-muted);
 		margin-top: 0.1rem;
 	}
 
 	.empty {
-		color: var(--color-text-soft);
+		color: var(--ess-text-secondary);
 		font-size: 0.9rem;
 	}
 </style>

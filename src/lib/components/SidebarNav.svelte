@@ -73,38 +73,39 @@
 
 <style>
 	.rail {
-		width: var(--sidebar-width);
+		width: var(--ess-rail-width);
 		flex-shrink: 0;
-		background: var(--color-ink);
-		color: var(--color-text-inverse);
+		background: var(--ess-inverse);
+		color: var(--ess-text-inverse);
 		display: flex;
 		flex-direction: column;
 		height: 100vh;
 		position: sticky;
 		top: 0;
-		padding: 1.5rem 1rem;
+		padding: 20px 14px;
+		border-right: 1px solid var(--ess-border-inverse);
 	}
 
 	.brand {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		padding: 0.5rem 0.5rem 1.5rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-		margin-bottom: 1rem;
+		gap: 12px;
+		padding: 8px 8px 16px;
+		border-bottom: 1px solid var(--ess-border-inverse);
+		margin-bottom: 14px;
 	}
 
 	.brand-mark {
-		width: 40px;
-		height: 40px;
-		border-radius: var(--radius-sm);
-		background: var(--color-accent);
-		color: var(--color-ink);
+		width: 38px;
+		height: 38px;
+		border-radius: var(--ess-radius-sm);
+		background: var(--ess-green-400);
+		color: var(--ess-teal-900);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		font-weight: 800;
-		font-size: 0.85rem;
+		font-size: 13px;
 	}
 
 	.brand-text {
@@ -114,12 +115,12 @@
 	}
 
 	.brand-text strong {
-		font-size: 1rem;
+		font-size: 15px;
 	}
 
 	.brand-text span {
-		font-size: 0.72rem;
-		color: rgba(242, 248, 247, 0.6);
+		font-size: var(--ess-fs-caption);
+		color: var(--ess-text-inverse-secondary);
 	}
 
 	.nav-list {
@@ -128,47 +129,48 @@
 		padding: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 0.35rem;
+		gap: 3px;
 		flex: 1;
 	}
 
 	.nav-list a {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		padding: 0.7rem 0.9rem;
-		border-radius: var(--radius-sm);
+		gap: 12px;
+		height: 40px;
+		padding: 0 12px;
+		border-radius: var(--ess-radius-sm);
 		text-decoration: none;
-		color: rgba(242, 248, 247, 0.75);
-		font-size: 0.92rem;
+		color: var(--ess-text-inverse-secondary);
+		font-size: var(--ess-fs-body);
 		font-weight: 500;
-		transition: background 0.15s ease;
+		transition: background var(--ess-t-fast), color var(--ess-t-fast);
 	}
 
 	.nav-list a:hover {
 		background: rgba(255, 255, 255, 0.06);
-		color: var(--color-text-inverse);
+		color: var(--ess-text-inverse);
 	}
 
 	.nav-list a.active {
-		background: var(--color-primary);
-		color: var(--color-white);
+		background: var(--ess-primary);
+		color: #fff;
 		font-weight: 600;
 	}
 
 	.rail-foot {
-		border-top: 1px solid rgba(255, 255, 255, 0.08);
-		padding-top: 1rem;
+		border-top: 1px solid var(--ess-border-inverse);
+		padding-top: 14px;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.5rem;
+		gap: 8px;
 	}
 
 	.foot-user {
 		display: flex;
 		align-items: center;
-		gap: 0.6rem;
+		gap: 10px;
 		min-width: 0;
 	}
 
@@ -176,8 +178,8 @@
 		width: 34px;
 		height: 34px;
 		border-radius: 50%;
-		background: var(--color-accent);
-		color: var(--color-ink);
+		background: var(--ess-green-400);
+		color: var(--ess-teal-900);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -193,30 +195,30 @@
 	}
 
 	.foot-info strong {
-		font-size: 0.85rem;
+		font-size: var(--ess-fs-body);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
 
 	.foot-info span {
-		font-size: 0.7rem;
-		color: rgba(242, 248, 247, 0.55);
+		font-size: var(--ess-fs-caption);
+		color: var(--ess-text-inverse-secondary);
 		text-transform: capitalize;
 	}
 
 	.logout-btn {
 		background: transparent;
 		border: none;
-		color: rgba(242, 248, 247, 0.6);
+		color: var(--ess-text-inverse-secondary);
 		cursor: pointer;
-		padding: 0.4rem;
-		border-radius: var(--radius-sm);
+		padding: 6px;
+		border-radius: var(--ess-radius-sm);
 		display: flex;
 	}
 
 	.logout-btn:hover {
 		background: rgba(255, 255, 255, 0.08);
-		color: var(--color-text-inverse);
+		color: var(--ess-text-inverse);
 	}
 </style>

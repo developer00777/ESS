@@ -1,0 +1,214 @@
+/* ============================================================
+   ESS Design System — Tokens
+   Champ HR Employee Self-Service Portal
+   ============================================================
+   Built as a brand skin on the LakeB2B Multi-Brand skeleton:
+   spacing, type scale, elevation and motion tokens are inherited;
+   ESS owns the teal identity extracted from Champ_HR_ESS_Portal.pptx
+   and already present in src/app.css.
+
+   Usage in the SvelteKit app:
+     @import './ess-tokens.css';
+     <body class="brand-ess">            (light)
+     <body class="brand-ess" data-ess-theme="dark">
+   ============================================================ */
+
+.brand-ess,
+:root {
+	/* ---------- ESS teal ramp (primary) ---------- */
+	--ess-teal-950: #011c1e;
+	--ess-teal-900: #023436; /* ink — nav rail, inverse surfaces */
+	--ess-teal-800: #053c40; /* panel — cards on ink */
+	--ess-teal-700: #04565e;
+	--ess-teal-600: #028090; /* primary action */
+	--ess-teal-500: #0b98a8;
+	--ess-teal-400: #35b3c0; /* primary on dark surfaces */
+	--ess-teal-300: #7fd0d8;
+	--ess-teal-200: #b6e5e9;
+	--ess-teal-100: #dbf2f4;
+	--ess-teal-50: #f0f9fa;
+
+	/* ---------- ESS green accent (badges, highlights) ---------- */
+	--ess-green-700: #016b5a;
+	--ess-green-600: #00806c;
+	--ess-green-500: #00a896;
+	--ess-green-400: #02c39a;
+	--ess-green-200: #a7ead9;
+	--ess-green-50: #e7f8f2;
+
+	/* ---------- Teal-tinted neutrals ---------- */
+	--ess-n-0: #ffffff;
+	--ess-n-25: #f7faf9;
+	--ess-n-50: #f2f8f7; /* mint — canvas */
+	--ess-n-100: #e7efee;
+	--ess-n-200: #d7e3e1;
+	--ess-n-300: #b9c9c7;
+	--ess-n-400: #8ba5a3;
+	--ess-n-500: #5b7876; /* secondary text — 4.6:1 on white */
+	--ess-n-700: #2e4a48;
+	--ess-n-900: #0c2a2c; /* primary text */
+
+	/* ---------- Semantic surfaces (light) ----------
+	   Four roles only. Every panel in the portal must map to one.
+	   canvas   → the page itself
+	   surface  → default card / table / panel
+	   sunken   → inset areas inside a surface (empty states, code, meta)
+	   inverse  → deliberate dark emphasis (hero band, nav rail)         */
+	--ess-canvas: var(--ess-n-50);
+	--ess-surface: var(--ess-n-0);
+	--ess-surface-hover: var(--ess-n-25);
+	--ess-sunken: var(--ess-n-50);
+	--ess-inverse: var(--ess-teal-900);
+	--ess-inverse-raised: var(--ess-teal-800);
+
+	--ess-border: var(--ess-n-200);
+	--ess-border-subtle: var(--ess-n-100);
+	--ess-border-strong: var(--ess-n-300);
+	--ess-border-inverse: rgba(255, 255, 255, 0.1);
+
+	/* ---------- Semantic text ---------- */
+	--ess-text: var(--ess-n-900);
+	--ess-text-secondary: var(--ess-n-500);
+	--ess-text-muted: var(--ess-n-400);
+	--ess-text-on-primary: #ffffff;
+	--ess-text-inverse: #f2f8f7;
+	--ess-text-inverse-secondary: rgba(242, 248, 247, 0.68);
+
+	/* Alias the inherited skeleton's foreground tokens so its global
+	   h1–h6 / p rules follow the ESS theme instead of near-black. */
+	--fg-1: var(--ess-text);
+	--fg-2: var(--ess-text-secondary);
+	--fg-3: var(--ess-text-muted);
+	--fg-4: var(--ess-text-muted);
+
+	/* ---------- Interactive ---------- */
+	--ess-primary: var(--ess-teal-600);
+	--ess-primary-hover: #026e7c;
+	--ess-primary-press: #02616e;
+	--ess-primary-soft: var(--ess-teal-100);
+	--ess-primary-ring: rgba(2, 128, 144, 0.3);
+	--ess-focus-ring: 0 0 0 3px var(--ess-primary-ring);
+
+	/* ---------- Status (fg / bg pairs, AA on their own bg) ---------- */
+	--ess-success: #027a5f;
+	--ess-success-bg: #d5f5ec;
+	--ess-warning: #8a5205;
+	--ess-warning-bg: #fdf0d5;
+	--ess-danger: #b3271b;
+	--ess-danger-bg: #fbe0e0;
+	--ess-info: #026e7c;
+	--ess-info-bg: var(--ess-teal-100);
+	--ess-neutral: var(--ess-n-500);
+	--ess-neutral-bg: var(--ess-n-100);
+
+	/* ---------- Radius ---------- */
+	--ess-radius-xs: 6px;
+	--ess-radius-sm: 8px; /* inputs, buttons, chips */
+	--ess-radius-md: 14px; /* cards, table shells */
+	--ess-radius-lg: 20px; /* page panels, hero bands */
+	--ess-radius-pill: 999px;
+
+	/* ---------- Elevation — used sparingly, border-first ---------- */
+	--ess-elev-0: none;
+	--ess-elev-1: 0 1px 2px rgba(2, 52, 54, 0.06);
+	--ess-elev-2: 0 1px 2px rgba(2, 52, 54, 0.06), 0 4px 16px rgba(2, 52, 54, 0.06);
+	--ess-elev-3: 0 8px 28px -8px rgba(2, 52, 54, 0.18);
+	--ess-elev-4: 0 24px 60px -16px rgba(2, 52, 54, 0.32);
+
+	/* ---------- Spacing (4px base) ---------- */
+	--ess-space-1: 4px;
+	--ess-space-2: 8px;
+	--ess-space-3: 12px;
+	--ess-space-4: 16px;
+	--ess-space-5: 20px;
+	--ess-space-6: 24px;
+	--ess-space-8: 32px;
+	--ess-space-10: 40px;
+	--ess-space-14: 56px;
+
+	/* ---------- Type ---------- */
+	--ess-font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--ess-font-display: 'Montserrat', 'Inter', sans-serif;
+	--ess-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+	/* Portal scale — deliberately wider than the old 0.8–0.95rem band */
+	--ess-fs-display: 40px; /* login marquee */
+	--ess-fs-title: 28px; /* page title */
+	--ess-fs-h2: 20px; /* section heading */
+	--ess-fs-h3: 16px; /* card heading */
+	--ess-fs-body-lg: 16px;
+	--ess-fs-body: 14px; /* dense UI default */
+	--ess-fs-caption: 12px;
+	--ess-fs-eyebrow: 11px;
+	--ess-fs-stat: 32px; /* stat card value */
+
+	/* ---------- Layout ---------- */
+	--ess-rail-width: 264px;
+	--ess-rail-width-collapsed: 76px;
+	--ess-content-max: 1240px;
+	--ess-page-pad-x: 32px;
+	--ess-page-pad-y: 28px;
+
+	/* ---------- Motion ---------- */
+	--ess-t-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+	--ess-t: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+	--ess-t-slow: 380ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================
+   DARK THEME — same tokens, remapped. Nothing else changes.
+   ============================================================ */
+
+[data-ess-theme='dark'] {
+	--ess-canvas: #011c1e;
+	--ess-surface: #04292c;
+	--ess-surface-hover: #053437;
+	--ess-sunken: #012123;
+	--ess-inverse: #04292c;
+	--ess-inverse-raised: #053c40;
+
+	--ess-border: rgba(255, 255, 255, 0.1);
+	--ess-border-subtle: rgba(255, 255, 255, 0.06);
+	--ess-border-strong: rgba(255, 255, 255, 0.18);
+	--ess-border-inverse: rgba(255, 255, 255, 0.1);
+
+	--ess-text: #e8f3f2;
+	--ess-text-secondary: #9db5b3;
+	--ess-text-muted: #6f8b89;
+	--ess-text-on-primary: #011c1e;
+	--ess-text-inverse: #e8f3f2;
+	--ess-text-inverse-secondary: rgba(232, 243, 242, 0.68);
+
+	--fg-1: var(--ess-text);
+	--fg-2: var(--ess-text-secondary);
+	--fg-3: var(--ess-text-muted);
+	--fg-4: var(--ess-text-muted);
+
+	--ess-primary: var(--ess-teal-400);
+	--ess-primary-hover: #4fc2ce;
+	--ess-primary-press: #7fd0d8;
+	--ess-primary-soft: rgba(53, 179, 192, 0.16);
+	--ess-primary-ring: rgba(53, 179, 192, 0.38);
+
+	--ess-success: #6fe0c0;
+	--ess-success-bg: rgba(2, 195, 154, 0.16);
+	--ess-warning: #f0c46a;
+	--ess-warning-bg: rgba(214, 158, 46, 0.18);
+	--ess-danger: #ff9c93;
+	--ess-danger-bg: rgba(192, 57, 43, 0.22);
+	--ess-info: var(--ess-teal-300);
+	--ess-info-bg: rgba(53, 179, 192, 0.16);
+	--ess-neutral: #9db5b3;
+	--ess-neutral-bg: rgba(255, 255, 255, 0.08);
+
+	--ess-elev-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+	--ess-elev-2: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.32);
+	--ess-elev-3: 0 8px 28px -8px rgba(0, 0, 0, 0.55);
+	--ess-elev-4: 0 24px 60px -16px rgba(0, 0, 0, 0.7);
+}
+
+/* Keep the document background in step with the theme when the themed
+   element is nested inside body (overscroll, short viewports). */
+body:has([data-ess-theme='dark']) {
+	background: #011c1e;
+}

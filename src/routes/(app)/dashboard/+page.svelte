@@ -10,6 +10,7 @@
 	import Headset from '@lucide/svelte/icons/headset';
 	import StatCard from '$lib/components/StatCard.svelte';
 	import QuickActionRow from '$lib/components/QuickActionRow.svelte';
+	import IconChip from '$lib/components/IconChip.svelte';
 
 	let { data } = $props();
 </script>
@@ -18,177 +19,166 @@
 	<title>Dashboard — Champ HR ESS Portal</title>
 </svelte:head>
 
-<div class="dashboard-grid">
-	<section class="left">
-		<div class="welcome-bar">
-			<h1>Welcome back, {data.user.fullName.split(' ')[0]}</h1>
-			<div class="bell-chip"><Bell size={18} /></div>
-		</div>
+<div class="dashboard">
+	<div class="welcome-bar">
+		<h1 class="ess-page-title">Welcome back, {data.user.fullName.split(' ')[0]}</h1>
+		<div class="bell-chip"><Bell size={18} /></div>
+	</div>
 
-		<div class="stat-grid">
-			<StatCard icon={Calendar} label="Leave Balance" value="{data.leaveBalance} Days" />
-			<StatCard icon={Clock} label="Attendance" value="{data.attendancePct}%" />
-			<StatCard icon={Wallet} label="Latest Payslip" value="Not yet generated" />
-			<StatCard icon={Clipboard} label="Pending Requests" value="{data.pendingCount} Open" />
-		</div>
+	<div class="dashboard-grid">
+		<section class="left">
+			<div class="stat-grid">
+				<StatCard icon={Calendar} label="Leave Balance" value="{data.leaveBalance} Days" />
+				<StatCard icon={Clock} label="Attendance" value="{data.attendancePct}%" />
+				<StatCard icon={Wallet} label="Latest Payslip" value="Not yet generated" />
+				<StatCard icon={Clipboard} label="Pending Requests" value="{data.pendingCount} Open" />
+			</div>
 
-		<div class="quick-links">
-			<span class="eyebrow eyebrow-light">Quick Links</span>
-			<a href="/policies" class="link-card">
-				<span class="link-icon"><BookOpen size={20} /></span>
-				<span class="link-text">
-					<strong>Company Policies</strong>
-					<span>Centralized access to every HR policy document</span>
-				</span>
-			</a>
-			<a href="/hr-contacts" class="link-card">
-				<span class="link-icon"><Headset size={20} /></span>
-				<span class="link-text">
-					<strong>HR Contacts</strong>
-					<span>Direct line to the right HR representative</span>
-				</span>
-			</a>
-		</div>
-	</section>
+			<div class="quick-links">
+				<span class="ess-eyebrow">Quick Links</span>
+				<a href="/policies" class="link-card">
+					<IconChip icon={BookOpen} size="md" />
+					<span class="link-text">
+						<strong>Company Policies</strong>
+						<span>Centralized access to every HR policy document</span>
+					</span>
+				</a>
+				<a href="/hr-contacts" class="link-card">
+					<IconChip icon={Headset} size="md" />
+					<span class="link-text">
+						<strong>HR Contacts</strong>
+						<span>Direct line to the right HR representative</span>
+					</span>
+				</a>
+			</div>
+		</section>
 
-	<aside class="right">
-		<span class="eyebrow">Quick Actions</span>
-		<div class="action-list">
-			<QuickActionRow icon={Calendar} label="Apply Leave" href="/leave/apply" />
-			<QuickActionRow icon={Clock} label="Mark Attendance" href="/attendance" />
-			<QuickActionRow icon={Wallet} label="View Payslip" href="/payroll" />
-			<QuickActionRow icon={User} label="Update Profile" href="/profile" />
-		</div>
+		<aside class="right">
+			<span class="ess-eyebrow">Quick Actions</span>
+			<div class="action-list">
+				<QuickActionRow icon={Calendar} label="Apply Leave" href="/leave/apply" />
+				<QuickActionRow icon={Clock} label="Mark Attendance" href="/attendance" />
+				<QuickActionRow icon={Wallet} label="View Payslip" href="/payroll" />
+				<QuickActionRow icon={User} label="Update Profile" href="/profile" />
+			</div>
 
-		<span class="eyebrow also-visible">Also Visible</span>
-		<div class="action-list">
-			<QuickActionRow icon={Megaphone} label="Company Announcements" />
-			<QuickActionRow icon={Bell} label="HR Notifications" />
-		</div>
-	</aside>
+			<span class="ess-eyebrow also-visible">Also Visible</span>
+			<div class="action-list">
+				<QuickActionRow icon={Megaphone} label="Company Announcements" />
+				<QuickActionRow icon={Bell} label="HR Notifications" />
+			</div>
+		</aside>
+	</div>
 </div>
 
 <style>
-	.dashboard-grid {
-		display: grid;
-		grid-template-columns: 1.6fr 1fr;
-		gap: 1.75rem;
-		align-items: start;
-	}
-
-	.left {
-		background: var(--color-ink);
-		border-radius: var(--radius-lg);
-		padding: 1.5rem;
+	.dashboard {
 		display: flex;
 		flex-direction: column;
-		gap: 1.5rem;
+		gap: 20px;
 	}
 
 	.welcome-bar {
-		background: var(--color-panel);
-		border-radius: var(--radius-md);
-		padding: 1rem 1.25rem;
+		background: var(--ess-inverse);
+		border-radius: var(--ess-radius-lg);
+		padding: 20px 22px;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 	}
 
-	.welcome-bar h1 {
-		font-size: 1.2rem;
-		font-weight: 700;
-		color: var(--color-text-inverse);
+	.welcome-bar :global(h1) {
+		color: var(--ess-text-inverse);
 	}
 
 	.bell-chip {
 		width: 34px;
 		height: 34px;
-		border-radius: var(--radius-sm);
-		background: var(--color-primary);
-		color: var(--color-white);
+		border-radius: var(--ess-radius-sm);
+		background: var(--ess-primary);
+		color: var(--ess-text-on-primary);
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.dashboard-grid {
+		display: grid;
+		grid-template-columns: 1.6fr 1fr;
+		gap: 20px;
+		align-items: start;
+	}
+
+	.left {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
 	}
 
 	.stat-grid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: 1rem;
+		gap: 14px;
 	}
 
 	.quick-links {
 		display: flex;
 		flex-direction: column;
-		gap: 0.6rem;
-	}
-
-	.eyebrow-light {
-		color: rgba(242, 248, 247, 0.6);
+		gap: 10px;
 	}
 
 	.link-card {
 		display: flex;
 		align-items: center;
-		gap: 0.9rem;
-		background: var(--color-panel);
-		border-radius: var(--radius-md);
-		padding: 0.9rem 1.1rem;
+		gap: 14px;
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
+		padding: 16px 18px;
 		text-decoration: none;
-		transition: background 0.15s ease;
+		transition: border-color var(--ess-t-fast);
 	}
 
 	.link-card:hover {
-		background: #064a4f;
-	}
-
-	.link-icon {
-		width: 40px;
-		height: 40px;
-		flex-shrink: 0;
-		border-radius: var(--radius-sm);
-		background: var(--color-white);
-		color: var(--color-primary);
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		border-color: var(--ess-border-strong);
 	}
 
 	.link-text {
 		display: flex;
 		flex-direction: column;
-		gap: 0.15rem;
+		gap: 2px;
 	}
 
 	.link-text strong {
-		font-size: 0.92rem;
-		color: var(--color-text-inverse);
+		font-size: var(--ess-fs-body);
+		color: var(--ess-text);
 	}
 
 	.link-text span {
-		font-size: 0.78rem;
-		color: rgba(242, 248, 247, 0.65);
+		font-size: var(--ess-fs-caption);
+		color: var(--ess-text-secondary);
 	}
 
 	.right {
-		background: var(--color-white);
-		border-radius: var(--radius-lg);
-		padding: 1.5rem;
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
+		padding: 18px;
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
-		box-shadow: var(--shadow-card);
+		gap: 10px;
 	}
 
 	.action-list {
 		display: flex;
 		flex-direction: column;
-		gap: 0.15rem;
-		margin-bottom: 0.5rem;
+		gap: 2px;
+		margin-bottom: 8px;
 	}
 
 	.also-visible {
-		margin-top: 0.5rem;
+		margin-top: 8px;
 	}
 
 	@media (max-width: 980px) {

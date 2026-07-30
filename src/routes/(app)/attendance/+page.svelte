@@ -80,8 +80,8 @@
 </svelte:head>
 
 <header class="page-header">
-	<h1 class="section-title">Attendance Management</h1>
-	<p class="section-subtitle">Accurate, real-time attendance without manual chasing</p>
+	<h1 class="ess-page-title">Attendance Management</h1>
+	<p class="ess-page-sub">Accurate, real-time attendance without manual chasing</p>
 </header>
 
 <div class="action-cards">
@@ -89,7 +89,7 @@
 		<div class="card-icon"><Clock size={22} /></div>
 		<h3>Check In</h3>
 		<p>{today?.checkInAt ? `Checked in at ${formatTime(today.checkInAt)}` : 'Not checked in yet'}</p>
-		<button class="btn btn-ghost" onclick={checkIn} disabled={busy || !!today?.checkInAt}>
+		<button class="ess-btn action-btn" onclick={checkIn} disabled={busy || !!today?.checkInAt}>
 			Check In
 		</button>
 	</div>
@@ -99,7 +99,7 @@
 		<h3>Check Out</h3>
 		<p>{today?.checkOutAt ? `Checked out at ${formatTime(today.checkOutAt)}` : 'Not checked out yet'}</p>
 		<button
-			class="btn btn-ghost"
+			class="ess-btn action-btn"
 			onclick={checkOut}
 			disabled={busy || !today?.checkInAt || !!today?.checkOutAt}
 		>
@@ -109,11 +109,11 @@
 </div>
 
 {#if error}
-	<p class="error">{error}</p>
+	<p class="ess-error section-gap">{error}</p>
 {/if}
 
-<span class="eyebrow section-gap">This Month</span>
-<div class="history-table">
+<span class="ess-eyebrow section-gap">This Month</span>
+<div class="ess-table-shell">
 	<div class="history-row history-head">
 		<span>Date</span>
 		<span>Check In</span>
@@ -126,7 +126,7 @@
 			<span>{formatTime(row.checkOutAt)}</span>
 		</div>
 	{:else}
-		<p class="empty">No attendance recorded yet this month.</p>
+		<p class="ess-empty">No attendance recorded yet this month.</p>
 	{/each}
 </div>
 
@@ -143,10 +143,10 @@
 	}
 
 	.action-card {
-		background: var(--color-primary);
-		border-radius: var(--radius-lg);
+		background: var(--ess-primary);
+		border-radius: var(--ess-radius-lg);
 		padding: 1.5rem;
-		color: var(--color-white);
+		color: var(--ess-text-on-primary);
 		display: flex;
 		flex-direction: column;
 		gap: 0.6rem;
@@ -155,9 +155,9 @@
 	.card-icon {
 		width: 48px;
 		height: 48px;
-		border-radius: var(--radius-sm);
-		background: var(--color-white);
-		color: var(--color-primary);
+		border-radius: var(--ess-radius-sm);
+		background: var(--ess-text-on-primary);
+		color: var(--ess-primary);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -174,21 +174,14 @@
 		min-height: 2.2em;
 	}
 
-	.action-card .btn {
-		background: var(--color-white);
-		color: var(--color-ink);
+	.action-btn {
+		background: var(--ess-text-on-primary);
+		color: var(--ess-text);
 		justify-content: center;
 	}
 
-	.action-card .btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.error {
-		color: var(--color-danger);
-		font-size: 0.85rem;
-		margin-bottom: 1rem;
+	.action-btn:hover:not(:disabled) {
+		background: var(--ess-n-100);
 	}
 
 	.section-gap {
@@ -196,35 +189,24 @@
 		margin-bottom: 0.75rem;
 	}
 
-	.history-table {
-		background: var(--color-white);
-		border-radius: var(--radius-md);
-		box-shadow: var(--shadow-card);
-		overflow: hidden;
-	}
-
 	.history-row {
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
-		padding: 0.75rem 1.1rem;
-		font-size: 0.88rem;
+		padding: 12px 16px;
+		font-size: var(--ess-fs-body);
 	}
 
 	.history-row:not(:last-child) {
-		border-bottom: 1px solid var(--color-mint);
+		border-bottom: 1px solid var(--ess-border-subtle);
 	}
 
 	.history-head {
 		font-weight: 700;
-		color: var(--color-text-soft);
-		font-size: 0.78rem;
+		color: var(--ess-text-secondary);
+		font-size: var(--ess-fs-eyebrow);
 		text-transform: uppercase;
-		letter-spacing: 0.04em;
-	}
-
-	.empty {
-		padding: 1rem 1.1rem;
-		color: var(--color-text-soft);
-		font-size: 0.9rem;
+		letter-spacing: 0.08em;
+		background: var(--ess-sunken);
+		border-bottom: 1px solid var(--ess-border);
 	}
 </style>

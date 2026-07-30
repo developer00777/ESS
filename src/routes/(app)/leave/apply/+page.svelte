@@ -37,8 +37,8 @@
 </svelte:head>
 
 <header class="page-header">
-	<h1 class="section-title">Apply for Leave</h1>
-	<p class="section-subtitle">Submit a request — it routes to your manager automatically</p>
+	<h1 class="ess-page-title">Apply for Leave</h1>
+	<p class="ess-page-sub">Submit a request — it routes to your manager automatically</p>
 </header>
 
 <form class="apply-card" onsubmit={handleSubmit}>
@@ -68,14 +68,14 @@
 	</label>
 
 	{#if error}
-		<p class="error">{error}</p>
+		<p class="ess-error">{error}</p>
 	{/if}
 
 	<div class="actions">
-		<button type="submit" class="btn btn-primary" disabled={submitting}>
+		<button type="submit" class="ess-btn ess-btn--primary" disabled={submitting}>
 			{submitting ? 'Submitting…' : 'Submit Request'}
 		</button>
-		<a href="/leave" class="btn btn-ghost">Cancel</a>
+		<a href="/leave" class="ess-btn ess-btn--ghost">Cancel</a>
 	</div>
 </form>
 
@@ -85,9 +85,9 @@
 	}
 
 	.apply-card {
-		background: var(--color-white);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-card);
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-lg);
 		padding: 1.75rem;
 		max-width: 560px;
 		display: flex;
@@ -101,7 +101,7 @@
 		gap: 0.4rem;
 		font-size: 0.85rem;
 		font-weight: 600;
-		color: var(--color-ink);
+		color: var(--ess-text);
 	}
 
 	.date-row {
@@ -113,20 +113,17 @@
 	input,
 	select,
 	textarea {
-		border: 1px solid #d7e6e4;
-		border-radius: var(--radius-sm);
+		border: 1px solid var(--ess-border-strong);
+		border-radius: var(--ess-radius-sm);
 		padding: 0.6rem 0.75rem;
 		font-size: 0.9rem;
 		font-family: inherit;
+		color: var(--ess-text);
+		background: var(--ess-surface);
 	}
 
 	textarea {
 		resize: vertical;
-	}
-
-	.error {
-		color: var(--color-danger);
-		font-size: 0.85rem;
 	}
 
 	.actions {

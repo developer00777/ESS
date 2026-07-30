@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Component, Snippet } from 'svelte';
+	import IconChip from './IconChip.svelte';
 
 	interface Props {
 		icon: Component;
@@ -7,13 +8,11 @@
 		children: Snippet;
 	}
 
-	let { icon: Icon, title, children }: Props = $props();
+	let { icon, title, children }: Props = $props();
 </script>
 
 <div class="profile-card">
-	<div class="card-icon">
-		<Icon size={18} />
-	</div>
+	<IconChip {icon} size="sm" />
 	<h3>{title}</h3>
 	<div class="card-body">
 		{@render children()}
@@ -22,37 +21,27 @@
 
 <style>
 	.profile-card {
-		background: var(--color-mint);
-		border-radius: var(--radius-md);
-		padding: 1.1rem;
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
+		padding: 20px;
 		display: flex;
 		flex-direction: column;
-		gap: 0.6rem;
+		gap: 12px;
 		min-height: 100%;
 	}
 
-	.card-icon {
-		width: 36px;
-		height: 36px;
-		border-radius: var(--radius-sm);
-		background: var(--color-white);
-		color: var(--color-primary);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
 	h3 {
-		font-size: 0.95rem;
+		font-size: var(--ess-fs-h3);
 		font-weight: 700;
-		color: var(--color-ink);
+		color: var(--ess-text);
 	}
 
 	.card-body {
-		font-size: 0.85rem;
-		color: var(--color-text-soft);
+		font-size: var(--ess-fs-body);
+		color: var(--ess-text-secondary);
 		display: flex;
 		flex-direction: column;
-		gap: 0.3rem;
+		gap: 12px;
 	}
 </style>

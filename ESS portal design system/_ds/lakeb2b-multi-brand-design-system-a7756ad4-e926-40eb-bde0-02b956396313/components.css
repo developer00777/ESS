@@ -1,0 +1,213 @@
+/* ============================================================
+   LakeB2B Multi-Brand Design System — Components
+   Requires colors_and_type.css
+   ============================================================ */
+
+/* ---- Container ---- */
+.container { max-width: 1200px; margin: 0 auto; padding: 0 var(--space-6); }
+.container-wide { max-width: 1360px; margin: 0 auto; padding: 0 var(--space-6); }
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 12px 22px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  user-select: none;
+  background: transparent;
+  color: inherit;
+}
+.btn:focus-visible { outline: none; box-shadow: var(--ring); }
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--fg-on-accent);
+  border-color: var(--accent);
+  box-shadow: var(--elev-1);
+}
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); box-shadow: var(--elev-2); }
+.btn-primary:active { background: var(--accent-press); transform: translateY(1px); box-shadow: var(--elev-1); }
+
+.btn-secondary {
+  background: var(--bg-0);
+  color: var(--fg-1);
+  border-color: var(--border-2);
+}
+.btn-secondary:hover { background: var(--bg-2); border-color: var(--border-strong); }
+
+.btn-ghost { background: transparent; color: var(--fg-1); }
+.btn-ghost:hover { background: var(--bg-2); }
+
+.btn-dark {
+  background: var(--brand-dark);
+  color: var(--fg-on-accent);
+  border-color: var(--brand-dark);
+}
+.btn-dark:hover { background: var(--brand-dark-2); }
+
+.btn-lg { padding: 16px 28px; font-size: var(--fs-base); border-radius: var(--radius-md); }
+.btn-sm { padding: 8px 14px; font-size: var(--fs-xs); }
+.btn-pill { border-radius: var(--radius-pill); }
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+.card {
+  background: var(--bg-0);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  transition: all var(--transition);
+}
+.card-elevated { box-shadow: var(--elev-2); border-color: transparent; }
+.card-hover:hover { transform: translateY(-2px); box-shadow: var(--elev-3); border-color: var(--border-2); }
+.card-dark {
+  background: var(--brand-dark);
+  color: var(--fg-on-accent);
+  border-color: transparent;
+}
+
+/* Stat card (shared pattern across all 4 brands) */
+.stat {
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--bg-0);
+  border: 1px solid var(--border-1);
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: var(--fs-4xl);
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: var(--letter-tight);
+  line-height: 1;
+}
+.stat-label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-caps);
+  color: var(--fg-3);
+  font-weight: 600;
+  margin-top: var(--space-2);
+}
+
+/* ============================================================
+   FORM FIELDS
+   ============================================================ */
+.field-label {
+  display: block;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--fg-2);
+  margin-bottom: var(--space-2);
+}
+.input, .select, .textarea {
+  width: 100%;
+  padding: 10px 14px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--fg-1);
+  background: var(--bg-0);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+.input:hover, .select:hover, .textarea:hover { border-color: var(--border-strong); }
+.input:focus, .select:focus, .textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+.input::placeholder { color: var(--fg-4); }
+.textarea { min-height: 96px; resize: vertical; }
+
+/* ============================================================
+   BADGES & PILLS
+   ============================================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent-press);
+  letter-spacing: 0.01em;
+}
+.badge-neutral { background: var(--bg-3); color: var(--fg-2); }
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-danger  { background: var(--danger-bg);  color: var(--danger); }
+.badge-info    { background: var(--info-bg);    color: var(--info); }
+
+.badge-dot::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+}
+
+/* ============================================================
+   SECTIONS / LAYOUT
+   ============================================================ */
+.section { padding: var(--space-24) 0; }
+.section-sm { padding: var(--space-16) 0; }
+.section-dark {
+  background: var(--brand-dark);
+  color: var(--n-0);
+}
+.section-dark h1, .section-dark h2, .section-dark h3, .section-dark h4 { color: var(--n-0); }
+.section-dark p { color: var(--n-300); }
+.section-dark .eyebrow { color: var(--accent); }
+
+/* ============================================================
+   NAV
+   ============================================================ */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border-1);
+  background: var(--bg-0);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.nav-links { display: flex; gap: var(--space-6); align-items: center; }
+.nav-link {
+  color: var(--fg-2);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  transition: color var(--transition-fast);
+}
+.nav-link:hover { color: var(--fg-1); }
+
+/* ============================================================
+   UTILS
+   ============================================================ */
+.row { display: flex; }
+.col { display: flex; flex-direction: column; }
+.gap-2 { gap: var(--space-2); } .gap-3 { gap: var(--space-3); }
+.gap-4 { gap: var(--space-4); } .gap-6 { gap: var(--space-6); }
+.gap-8 { gap: var(--space-8); } .gap-12 { gap: var(--space-12); }
+.items-center { align-items: center; } .items-start { align-items: flex-start; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.grid { display: grid; }

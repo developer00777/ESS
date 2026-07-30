@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
+	import IconChip from './IconChip.svelte';
 
 	interface Props {
 		icon: Component;
@@ -7,47 +8,42 @@
 		value: string;
 	}
 
-	let { icon: Icon, label, value }: Props = $props();
+	let { icon, label, value }: Props = $props();
 </script>
 
 <div class="stat-card">
-	<div class="stat-icon">
-		<Icon size={18} />
-	</div>
+	<IconChip {icon} size="sm" />
 	<div class="stat-label">{label}</div>
 	<div class="stat-value">{value}</div>
 </div>
 
 <style>
 	.stat-card {
-		background: var(--color-panel);
-		border-radius: var(--radius-md);
-		padding: 1.1rem 1.25rem;
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
+		padding: 16px 18px;
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.stat-icon {
-		width: 36px;
-		height: 36px;
-		border-radius: var(--radius-sm);
-		background: var(--color-accent);
-		color: var(--color-ink);
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		gap: 6px;
 	}
 
 	.stat-label {
-		font-size: 0.8rem;
-		color: rgba(242, 248, 247, 0.7);
-		font-weight: 500;
+		font-size: var(--ess-fs-eyebrow);
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--ess-text-secondary);
+		margin-top: 4px;
 	}
 
 	.stat-value {
-		font-size: 1.4rem;
-		font-weight: 700;
-		color: var(--color-text-inverse);
+		font-family: var(--ess-font-display);
+		font-size: var(--ess-fs-stat);
+		font-weight: 800;
+		letter-spacing: -0.02em;
+		line-height: 1.05;
+		color: var(--ess-text);
+		font-variant-numeric: tabular-nums;
 	}
 </style>

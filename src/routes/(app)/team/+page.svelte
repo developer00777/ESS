@@ -18,20 +18,20 @@
 </svelte:head>
 
 <header class="page-header">
-	<h1 class="section-title">Team Roster</h1>
-	<p class="section-subtitle">Live status and pending approvals for your team</p>
+	<h1 class="ess-page-title">Team Roster</h1>
+	<p class="ess-page-sub">Live status and pending approvals for your team</p>
 </header>
 
 <div class="summary-row">
 	<div class="summary-card">
-		<span class="eyebrow">Team Size</span>
+		<span class="ess-eyebrow">Team Size</span>
 		<span class="summary-value">{data.roster.length}</span>
 	</div>
 	<div class="summary-card">
-		<span class="eyebrow">Pending Approvals</span>
+		<span class="ess-eyebrow">Pending Approvals</span>
 		<span class="summary-value">{data.pendingApprovals}</span>
 	</div>
-	<button class="btn btn-primary create-btn" onclick={() => (showCreateForm = !showCreateForm)}>
+	<button class="ess-btn ess-btn--primary create-btn" onclick={() => (showCreateForm = !showCreateForm)}>
 		<Users size={16} />
 		Add Employee
 	</button>
@@ -44,18 +44,18 @@
 		use:enhance
 		class="create-card"
 	>
-		<label>
-			<span>Full Name</span>
-			<input name="fullName" required />
+		<label class="ess-field">
+			<span class="ess-label">Full Name</span>
+			<input class="ess-input" name="fullName" required />
 		</label>
-		<label>
-			<span>Email</span>
-			<input name="email" type="email" required />
+		<label class="ess-field">
+			<span class="ess-label">Email</span>
+			<input class="ess-input" name="email" type="email" required />
 		</label>
 		{#if data.creatableRoles.length > 1}
-			<label>
-				<span>Role</span>
-				<select name="role">
+			<label class="ess-field">
+				<span class="ess-label">Role</span>
+				<select class="ess-select" name="role">
 					{#each data.creatableRoles as role (role)}
 						<option value={role}>{role.replace('_', ' ')}</option>
 					{/each}
@@ -64,18 +64,18 @@
 		{:else}
 			<input type="hidden" name="role" value={data.creatableRoles[0]} />
 		{/if}
-		<button type="submit" class="btn btn-primary">Create Login</button>
+		<button type="submit" class="ess-btn ess-btn--primary">Create Login</button>
 	</form>
 	{#if form?.success}
 		<p class="temp-pass">
 			Created {form.email} — temporary password: <code>{form.tempPassword}</code>
 		</p>
 	{:else if form?.message}
-		<p class="error">{form.message}</p>
+		<p class="ess-error">{form.message}</p>
 	{/if}
 {/if}
 
-<div class="roster-table">
+<div class="ess-table-shell">
 	<div class="roster-row roster-head">
 		<span>Name</span>
 		<span>Email</span>
@@ -87,7 +87,7 @@
 			<span>{person.fullName}</span>
 			<span>{person.email}</span>
 			<span class="role">{person.role.replace('_', ' ')}</span>
-			<span class="status-pill status-{person.status}">{statusLabel[person.status]}</span>
+			<span class="ess-badge ess-badge--{person.status}">{statusLabel[person.status]}</span>
 		</div>
 	{/each}
 </div>
@@ -105,8 +105,9 @@
 	}
 
 	.summary-card {
-		background: var(--color-mint);
-		border-radius: var(--radius-md);
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
 		padding: 1rem 1.5rem;
 		display: flex;
 		flex-direction: column;
@@ -115,9 +116,10 @@
 	}
 
 	.summary-value {
+		font-family: var(--ess-font-display);
 		font-size: 1.4rem;
 		font-weight: 700;
-		color: var(--color-ink);
+		color: var(--ess-text);
 	}
 
 	.create-btn {
@@ -125,9 +127,9 @@
 	}
 
 	.create-card {
-		background: var(--color-white);
-		border-radius: var(--radius-md);
-		box-shadow: var(--shadow-card);
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
 		padding: 1.25rem;
 		display: flex;
 		gap: 1rem;
@@ -135,87 +137,43 @@
 		margin-bottom: 1rem;
 	}
 
-	.create-card label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-		font-size: 0.8rem;
-		font-weight: 600;
+	.create-card .ess-field {
 		flex: 1;
 	}
 
-	.create-card input {
-		border: 1px solid #d7e6e4;
-		border-radius: var(--radius-sm);
-		padding: 0.55rem 0.7rem;
-	}
-
 	.temp-pass {
-		background: var(--color-mint);
-		border-radius: var(--radius-sm);
+		background: var(--ess-success-bg);
+		color: var(--ess-success);
+		border-radius: var(--ess-radius-sm);
 		padding: 0.75rem 1rem;
 		font-size: 0.85rem;
 		margin-bottom: 1rem;
-	}
-
-	.error {
-		color: var(--color-danger);
-		font-size: 0.85rem;
-		margin-bottom: 1rem;
-	}
-
-	.roster-table {
-		background: var(--color-white);
-		border-radius: var(--radius-md);
-		box-shadow: var(--shadow-card);
-		overflow: hidden;
 	}
 
 	.roster-row {
 		display: grid;
 		grid-template-columns: 1.2fr 1.5fr 0.8fr 0.8fr;
 		padding: 0.8rem 1.1rem;
-		font-size: 0.88rem;
+		font-size: var(--ess-fs-body);
 		align-items: center;
 	}
 
 	.roster-row:not(:last-child) {
-		border-bottom: 1px solid var(--color-mint);
+		border-bottom: 1px solid var(--ess-border-subtle);
 	}
 
 	.roster-head {
 		font-weight: 700;
-		color: var(--color-text-soft);
-		font-size: 0.75rem;
+		color: var(--ess-text-secondary);
+		font-size: var(--ess-fs-eyebrow);
 		text-transform: uppercase;
-		letter-spacing: 0.04em;
+		letter-spacing: 0.08em;
+		background: var(--ess-sunken);
+		border-bottom: 1px solid var(--ess-border);
 	}
 
 	.role {
 		text-transform: capitalize;
-		color: var(--color-text-soft);
-	}
-
-	.status-pill {
-		font-size: 0.75rem;
-		font-weight: 700;
-		padding: 0.25rem 0.6rem;
-		border-radius: 999px;
-		width: fit-content;
-	}
-
-	.status-present {
-		background: #d5f5ec;
-		color: #027a5f;
-	}
-
-	.status-left {
-		background: var(--color-mint);
-		color: var(--color-text-soft);
-	}
-
-	.status-absent {
-		background: #fbe0e0;
-		color: #c0392b;
+		color: var(--ess-text-secondary);
 	}
 </style>

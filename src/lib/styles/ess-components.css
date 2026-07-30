@@ -1,0 +1,847 @@
+/* ============================================================
+   ESS Design System — Components
+   Drop-in replacement layer for src/app.css component styles.
+   Requires ess-tokens.css.
+   ============================================================
+   Every rule here is expressed in ESS tokens. Changing a token
+   changes every screen; do not hard-code colors in .svelte files.
+   ============================================================ */
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+}
+
+body {
+	font-family: var(--ess-font-sans);
+	font-size: var(--ess-fs-body);
+	line-height: 1.55;
+	color: var(--ess-text);
+	background: var(--ess-canvas);
+	-webkit-font-smoothing: antialiased;
+	transition: background var(--ess-t), color var(--ess-t);
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+	margin: 0;
+}
+
+a {
+	color: var(--ess-primary);
+	text-decoration: none;
+	transition: color var(--ess-t-fast);
+}
+a:hover {
+	color: var(--ess-primary-hover);
+}
+
+button,
+input,
+select,
+textarea {
+	font-family: inherit;
+	font-size: inherit;
+}
+
+:focus-visible {
+	outline: none;
+	box-shadow: var(--ess-focus-ring);
+	border-radius: var(--ess-radius-sm);
+}
+
+/* ------------------------------------------------------------
+   TYPE ROLES
+------------------------------------------------------------ */
+
+.ess-page-title {
+	font-family: var(--ess-font-display);
+	font-size: var(--ess-fs-title);
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	line-height: 1.2;
+	color: var(--ess-text);
+}
+
+.ess-page-sub {
+	font-size: var(--ess-fs-body-lg);
+	color: var(--ess-text-secondary);
+	margin-top: 6px;
+	max-width: 68ch;
+	text-wrap: pretty;
+}
+
+.ess-h2 {
+	font-family: var(--ess-font-display);
+	font-size: var(--ess-fs-h2);
+	font-weight: 700;
+	letter-spacing: -0.01em;
+	color: var(--ess-text);
+}
+
+.ess-h3 {
+	font-size: var(--ess-fs-h3);
+	font-weight: 700;
+	color: var(--ess-text);
+}
+
+.ess-eyebrow {
+	font-size: var(--ess-fs-eyebrow);
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--ess-text-secondary);
+}
+
+.ess-caption {
+	font-size: var(--ess-fs-caption);
+	color: var(--ess-text-secondary);
+}
+
+.ess-num {
+	font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------
+   SURFACES — four roles, no exceptions
+------------------------------------------------------------ */
+
+.ess-card {
+	background: var(--ess-surface);
+	border: 1px solid var(--ess-border);
+	border-radius: var(--ess-radius-md);
+	padding: var(--ess-space-5);
+}
+
+.ess-card--raised {
+	border-color: transparent;
+	box-shadow: var(--ess-elev-2);
+}
+
+.ess-card--interactive {
+	transition:
+		transform var(--ess-t-fast),
+		box-shadow var(--ess-t-fast),
+		border-color var(--ess-t-fast);
+}
+.ess-card--interactive:hover {
+	transform: translateY(-2px);
+	box-shadow: var(--ess-elev-3);
+	border-color: var(--ess-border-strong);
+}
+
+.ess-panel {
+	background: var(--ess-surface);
+	border: 1px solid var(--ess-border);
+	border-radius: var(--ess-radius-lg);
+	padding: var(--ess-space-6);
+}
+
+.ess-sunken {
+	background: var(--ess-sunken);
+	border-radius: var(--ess-radius-md);
+	padding: var(--ess-space-4);
+}
+
+.ess-inverse {
+	background: var(--ess-inverse);
+	color: var(--ess-text-inverse);
+	border-radius: var(--ess-radius-lg);
+}
+
+/* ------------------------------------------------------------
+   BUTTONS
+------------------------------------------------------------ */
+
+.ess-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	height: 38px;
+	padding: 0 16px;
+	border: 1px solid transparent;
+	border-radius: var(--ess-radius-sm);
+	font-size: var(--ess-fs-body);
+	font-weight: 600;
+	cursor: pointer;
+	white-space: nowrap;
+	transition:
+		background var(--ess-t-fast),
+		border-color var(--ess-t-fast),
+		color var(--ess-t-fast),
+		transform 60ms ease;
+}
+
+.ess-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
+.ess-btn--sm {
+	height: 32px;
+	padding: 0 12px;
+	font-size: var(--ess-fs-caption);
+}
+.ess-btn--lg {
+	height: 46px;
+	padding: 0 22px;
+	font-size: var(--ess-fs-body-lg);
+}
+
+.ess-btn--primary {
+	background: var(--ess-primary);
+	color: var(--ess-text-on-primary);
+}
+.ess-btn--primary:hover:not(:disabled) {
+	background: var(--ess-primary-hover);
+}
+.ess-btn--primary:active:not(:disabled) {
+	background: var(--ess-primary-press);
+	transform: translateY(1px);
+}
+
+.ess-btn--secondary {
+	background: var(--ess-surface);
+	border-color: var(--ess-border-strong);
+	color: var(--ess-text);
+}
+.ess-btn--secondary:hover:not(:disabled) {
+	background: var(--ess-sunken);
+}
+
+.ess-btn--ghost {
+	background: transparent;
+	color: var(--ess-text-secondary);
+}
+.ess-btn--ghost:hover:not(:disabled) {
+	background: var(--ess-sunken);
+	color: var(--ess-text);
+}
+
+.ess-btn--danger {
+	background: var(--ess-danger);
+	color: #fff;
+}
+
+/* ------------------------------------------------------------
+   FORM FIELDS
+------------------------------------------------------------ */
+
+.ess-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.ess-label {
+	font-size: var(--ess-fs-caption);
+	font-weight: 600;
+	color: var(--ess-text);
+}
+
+.ess-input,
+.ess-select,
+.ess-textarea {
+	width: 100%;
+	background: var(--ess-surface);
+	border: 1px solid var(--ess-border-strong);
+	border-radius: var(--ess-radius-sm);
+	padding: 9px 12px;
+	font-size: var(--ess-fs-body);
+	color: var(--ess-text);
+	transition:
+		border-color var(--ess-t-fast),
+		box-shadow var(--ess-t-fast);
+}
+
+.ess-input::placeholder,
+.ess-textarea::placeholder {
+	color: var(--ess-text-muted);
+}
+
+.ess-input:focus,
+.ess-select:focus,
+.ess-textarea:focus {
+	outline: none;
+	border-color: var(--ess-primary);
+	box-shadow: var(--ess-focus-ring);
+}
+
+.ess-input--invalid {
+	border-color: var(--ess-danger);
+}
+
+.ess-help {
+	font-size: var(--ess-fs-caption);
+	color: var(--ess-text-secondary);
+}
+
+.ess-error {
+	font-size: var(--ess-fs-caption);
+	color: var(--ess-danger);
+	font-weight: 500;
+}
+
+/* ------------------------------------------------------------
+   BADGES / STATUS PILLS
+------------------------------------------------------------ */
+
+.ess-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 22px;
+	padding: 0 10px;
+	border-radius: var(--ess-radius-pill);
+	font-size: var(--ess-fs-eyebrow);
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: capitalize;
+	white-space: nowrap;
+}
+
+.ess-badge::before {
+	content: '';
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+.ess-badge--approved,
+.ess-badge--present,
+.ess-badge--public {
+	background: var(--ess-success-bg);
+	color: var(--ess-success);
+}
+.ess-badge--pending,
+.ess-badge--restricted,
+.ess-badge--late {
+	background: var(--ess-warning-bg);
+	color: var(--ess-warning);
+}
+.ess-badge--rejected,
+.ess-badge--absent {
+	background: var(--ess-danger-bg);
+	color: var(--ess-danger);
+}
+.ess-badge--escalated,
+.ess-badge--info {
+	background: var(--ess-info-bg);
+	color: var(--ess-info);
+}
+.ess-badge--cancelled,
+.ess-badge--left,
+.ess-badge--optional {
+	background: var(--ess-neutral-bg);
+	color: var(--ess-neutral);
+}
+
+/* ------------------------------------------------------------
+   DATA TABLE — one pattern for attendance / roster / policies
+------------------------------------------------------------ */
+
+.ess-table-shell {
+	background: var(--ess-surface);
+	border: 1px solid var(--ess-border);
+	border-radius: var(--ess-radius-md);
+	overflow: hidden;
+}
+
+.ess-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--ess-fs-body);
+}
+
+.ess-table th {
+	text-align: left;
+	padding: 10px 16px;
+	background: var(--ess-sunken);
+	border-bottom: 1px solid var(--ess-border);
+	font-size: var(--ess-fs-eyebrow);
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--ess-text-secondary);
+	white-space: nowrap;
+}
+
+.ess-table th[aria-sort] {
+	cursor: pointer;
+	user-select: none;
+}
+.ess-table th[aria-sort]:hover {
+	color: var(--ess-text);
+}
+
+.ess-table td {
+	padding: 12px 16px;
+	border-bottom: 1px solid var(--ess-border-subtle);
+	color: var(--ess-text);
+	vertical-align: middle;
+}
+
+.ess-table tbody tr:last-child td {
+	border-bottom: none;
+}
+.ess-table tbody tr:hover td {
+	background: var(--ess-surface-hover);
+}
+
+.ess-table td.ess-num,
+.ess-table th.ess-num {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.ess-table-foot {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 10px 16px;
+	border-top: 1px solid var(--ess-border);
+	background: var(--ess-sunken);
+	font-size: var(--ess-fs-caption);
+	color: var(--ess-text-secondary);
+}
+
+/* ------------------------------------------------------------
+   EMPTY STATE
+------------------------------------------------------------ */
+
+.ess-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 44px 24px;
+	text-align: center;
+	color: var(--ess-text-secondary);
+}
+
+.ess-empty__icon {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	border-radius: var(--ess-radius-md);
+	background: var(--ess-sunken);
+	color: var(--ess-text-muted);
+	margin-bottom: 4px;
+}
+
+.ess-empty__title {
+	font-size: var(--ess-fs-h3);
+	font-weight: 700;
+	color: var(--ess-text);
+}
+
+/* ------------------------------------------------------------
+   TABS / SEGMENTED CONTROL
+------------------------------------------------------------ */
+
+.ess-tabs {
+	display: flex;
+	gap: 4px;
+	border-bottom: 1px solid var(--ess-border);
+}
+
+.ess-tab {
+	background: none;
+	border: none;
+	border-bottom: 2px solid transparent;
+	padding: 10px 14px;
+	font-size: var(--ess-fs-body);
+	font-weight: 600;
+	color: var(--ess-text-secondary);
+	cursor: pointer;
+	transition:
+		color var(--ess-t-fast),
+		border-color var(--ess-t-fast);
+}
+.ess-tab:hover {
+	color: var(--ess-text);
+}
+.ess-tab[aria-selected='true'] {
+	color: var(--ess-primary);
+	border-bottom-color: var(--ess-primary);
+}
+
+.ess-segmented {
+	display: inline-flex;
+	gap: 2px;
+	padding: 3px;
+	background: var(--ess-sunken);
+	border-radius: var(--ess-radius-sm);
+}
+
+.ess-segmented button {
+	background: none;
+	border: none;
+	border-radius: 6px;
+	padding: 5px 12px;
+	font-size: var(--ess-fs-caption);
+	font-weight: 600;
+	color: var(--ess-text-secondary);
+	cursor: pointer;
+}
+.ess-segmented button[aria-pressed='true'] {
+	background: var(--ess-surface);
+	color: var(--ess-text);
+	box-shadow: var(--ess-elev-1);
+}
+
+/* ------------------------------------------------------------
+   ALERTS & TOASTS
+------------------------------------------------------------ */
+
+.ess-alert {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 12px 14px;
+	border-radius: var(--ess-radius-sm);
+	border: 1px solid transparent;
+	font-size: var(--ess-fs-body);
+}
+
+.ess-alert--info {
+	background: var(--ess-info-bg);
+	color: var(--ess-info);
+}
+.ess-alert--success {
+	background: var(--ess-success-bg);
+	color: var(--ess-success);
+}
+.ess-alert--warning {
+	background: var(--ess-warning-bg);
+	color: var(--ess-warning);
+}
+.ess-alert--danger {
+	background: var(--ess-danger-bg);
+	color: var(--ess-danger);
+}
+
+.ess-toast {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 14px;
+	background: var(--ess-inverse);
+	color: var(--ess-text-inverse);
+	border-radius: var(--ess-radius-sm);
+	box-shadow: var(--ess-elev-4);
+	font-size: var(--ess-fs-body);
+}
+
+/* ------------------------------------------------------------
+   AVATAR / USER CHIP
+------------------------------------------------------------ */
+
+.ess-avatar {
+	display: grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border-radius: 50%;
+	background: var(--ess-green-400);
+	color: var(--ess-teal-900);
+	font-size: var(--ess-fs-caption);
+	font-weight: 700;
+	flex-shrink: 0;
+}
+
+.ess-avatar--sm {
+	width: 26px;
+	height: 26px;
+	font-size: 10px;
+}
+.ess-avatar--lg {
+	width: 56px;
+	height: 56px;
+	font-size: var(--ess-fs-h2);
+}
+
+.ess-user-chip {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+
+.ess-user-chip__name {
+	font-size: var(--ess-fs-body);
+	font-weight: 600;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.ess-user-chip__meta {
+	font-size: var(--ess-fs-caption);
+	color: var(--ess-text-secondary);
+	text-transform: capitalize;
+}
+
+/* ------------------------------------------------------------
+   APPROVAL TIMELINE (replaces StepTracker)
+------------------------------------------------------------ */
+
+.ess-timeline {
+	display: flex;
+	flex-direction: column;
+}
+
+.ess-tl-step {
+	display: grid;
+	grid-template-columns: 26px 1fr;
+	gap: 12px;
+	position: relative;
+	padding-bottom: 18px;
+}
+
+.ess-tl-step:not(:last-child)::before {
+	content: '';
+	position: absolute;
+	left: 12px;
+	top: 26px;
+	bottom: 0;
+	width: 2px;
+	background: var(--ess-border);
+}
+
+.ess-tl-step[data-state='done']:not(:last-child)::before {
+	background: var(--ess-primary);
+}
+
+.ess-tl-dot {
+	display: grid;
+	place-items: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	border: 2px solid var(--ess-border);
+	background: var(--ess-surface);
+	color: var(--ess-text-muted);
+	font-size: var(--ess-fs-eyebrow);
+	font-weight: 700;
+	z-index: 1;
+}
+
+.ess-tl-step[data-state='done'] .ess-tl-dot {
+	background: var(--ess-primary);
+	border-color: var(--ess-primary);
+	color: var(--ess-text-on-primary);
+}
+
+.ess-tl-step[data-state='current'] .ess-tl-dot {
+	border-color: var(--ess-primary);
+	color: var(--ess-primary);
+	box-shadow: var(--ess-focus-ring);
+}
+
+.ess-tl-label {
+	font-size: var(--ess-fs-body);
+	font-weight: 600;
+	color: var(--ess-text);
+}
+
+.ess-tl-meta {
+	font-size: var(--ess-fs-caption);
+	color: var(--ess-text-secondary);
+}
+
+/* ------------------------------------------------------------
+   MODAL / DRAWER
+------------------------------------------------------------ */
+
+.ess-scrim {
+	position: fixed;
+	inset: 0;
+	background: rgba(2, 52, 54, 0.5);
+}
+
+.ess-modal {
+	background: var(--ess-surface);
+	border-radius: var(--ess-radius-lg);
+	box-shadow: var(--ess-elev-4);
+	width: min(520px, calc(100vw - 32px));
+	overflow: hidden;
+}
+
+.ess-modal__head,
+.ess-modal__foot {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 16px 20px;
+}
+.ess-modal__head {
+	border-bottom: 1px solid var(--ess-border);
+	justify-content: space-between;
+}
+.ess-modal__foot {
+	border-top: 1px solid var(--ess-border);
+	background: var(--ess-sunken);
+	justify-content: flex-end;
+}
+.ess-modal__body {
+	padding: 20px;
+}
+
+.ess-drawer {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	width: min(440px, 100vw);
+	background: var(--ess-surface);
+	box-shadow: var(--ess-elev-4);
+	display: flex;
+	flex-direction: column;
+}
+
+/* ------------------------------------------------------------
+   SKELETON
+------------------------------------------------------------ */
+
+@keyframes ess-shimmer {
+	0% {
+		background-position: -180px 0;
+	}
+	100% {
+		background-position: 180px 0;
+	}
+}
+
+.ess-skeleton {
+	height: 12px;
+	border-radius: 6px;
+	background: linear-gradient(
+		90deg,
+		var(--ess-sunken) 0%,
+		var(--ess-border-subtle) 50%,
+		var(--ess-sunken) 100%
+	);
+	background-size: 360px 100%;
+	animation: ess-shimmer 1.2s infinite linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ess-skeleton {
+		animation: none;
+	}
+}
+
+/* ------------------------------------------------------------
+   NAV RAIL
+------------------------------------------------------------ */
+
+.ess-rail {
+	width: var(--ess-rail-width);
+	flex-shrink: 0;
+	height: 100vh;
+	position: sticky;
+	top: 0;
+	background: var(--ess-inverse);
+	color: var(--ess-text-inverse);
+	display: flex;
+	flex-direction: column;
+	padding: 20px 14px;
+	border-right: 1px solid var(--ess-border-inverse);
+}
+
+.ess-nav-item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	height: 40px;
+	padding: 0 12px;
+	border-radius: var(--ess-radius-sm);
+	color: var(--ess-text-inverse-secondary);
+	font-size: var(--ess-fs-body);
+	font-weight: 500;
+	transition: background var(--ess-t-fast), color var(--ess-t-fast);
+}
+.ess-nav-item:hover {
+	background: rgba(255, 255, 255, 0.06);
+	color: var(--ess-text-inverse);
+}
+.ess-nav-item[aria-current='page'] {
+	background: var(--ess-primary);
+	color: #fff;
+	font-weight: 600;
+}
+
+/* ------------------------------------------------------------
+   STAT CARD — light surface, accent value (was dark-on-dark)
+------------------------------------------------------------ */
+
+.ess-stat {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	background: var(--ess-surface);
+	border: 1px solid var(--ess-border);
+	border-radius: var(--ess-radius-md);
+	padding: 16px 18px;
+}
+
+.ess-stat__label {
+	font-size: var(--ess-fs-eyebrow);
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--ess-text-secondary);
+}
+
+.ess-stat__value {
+	font-family: var(--ess-font-display);
+	font-size: var(--ess-fs-stat);
+	font-weight: 800;
+	line-height: 1.05;
+	letter-spacing: -0.02em;
+	color: var(--ess-text);
+	font-variant-numeric: tabular-nums;
+}
+
+.ess-stat__meta {
+	font-size: var(--ess-fs-caption);
+	color: var(--ess-text-secondary);
+}
+
+/* ------------------------------------------------------------
+   PAGE SHELL
+------------------------------------------------------------ */
+
+.ess-shell {
+	display: flex;
+	min-height: 100vh;
+	background: var(--ess-canvas);
+}
+
+.ess-main {
+	flex: 1;
+	min-width: 0;
+	padding: var(--ess-page-pad-y) var(--ess-page-pad-x);
+}
+
+.ess-page-head {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 20px;
+	margin-bottom: var(--ess-space-6);
+}

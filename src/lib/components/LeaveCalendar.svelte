@@ -220,9 +220,9 @@
 
 <style>
 	.calendar-box {
-		background: var(--color-white);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-card);
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-lg);
 		padding: 1.5rem 1.75rem;
 	}
 
@@ -240,9 +240,10 @@
 	}
 
 	.month-label {
+		font-family: var(--ess-font-display);
 		font-size: 1.15rem;
 		font-weight: 700;
-		color: var(--color-ink);
+		color: var(--ess-text);
 		min-width: 11rem;
 		text-align: center;
 	}
@@ -253,31 +254,31 @@
 		justify-content: center;
 		width: 2rem;
 		height: 2rem;
-		border-radius: 999px;
+		border-radius: var(--ess-radius-pill);
 		border: none;
-		background: var(--color-mint);
-		color: var(--color-ink);
+		background: var(--ess-sunken);
+		color: var(--ess-text);
 		cursor: pointer;
 	}
 
 	.nav-btn:hover {
-		background: var(--color-accent);
-		color: var(--color-white);
+		background: var(--ess-primary);
+		color: #fff;
 	}
 
 	.today-btn {
-		border: 1px solid var(--color-mint);
-		background: var(--color-white);
-		color: var(--color-primary);
+		border: 1px solid var(--ess-border-strong);
+		background: var(--ess-surface);
+		color: var(--ess-primary);
 		font-weight: 600;
 		font-size: 0.85rem;
 		padding: 0.4rem 0.9rem;
-		border-radius: var(--radius-sm);
+		border-radius: var(--ess-radius-sm);
 		cursor: pointer;
 	}
 
 	.today-btn:hover {
-		background: var(--color-mint);
+		background: var(--ess-sunken);
 	}
 
 	.legend {
@@ -292,27 +293,27 @@
 		align-items: center;
 		gap: 0.4rem;
 		font-size: 0.8rem;
-		color: var(--color-text-soft);
+		color: var(--ess-text-secondary);
 	}
 
 	.dot {
 		display: inline-block;
 		width: 0.55rem;
 		height: 0.55rem;
-		border-radius: 999px;
+		border-radius: var(--ess-radius-pill);
 		flex-shrink: 0;
 	}
 
 	.dot-holiday {
-		background: var(--color-primary);
+		background: var(--ess-primary);
 	}
 
 	.dot-approved {
-		background: #027a5f;
+		background: var(--ess-success);
 	}
 
 	.dot-pending {
-		background: #a16207;
+		background: var(--ess-warning);
 	}
 
 	.weekday-row {
@@ -325,7 +326,7 @@
 		text-align: center;
 		font-size: 0.75rem;
 		font-weight: 700;
-		color: var(--color-text-soft);
+		color: var(--ess-text-secondary);
 		text-transform: uppercase;
 	}
 
@@ -338,9 +339,9 @@
 	.day-cell {
 		aspect-ratio: 1 / 0.85;
 		min-height: 4.5rem;
-		border-radius: var(--radius-sm);
+		border-radius: var(--ess-radius-sm);
 		border: 1px solid transparent;
-		background: var(--color-mint);
+		background: var(--ess-sunken);
 		padding: 0.4rem;
 		display: flex;
 		flex-direction: column;
@@ -352,7 +353,7 @@
 	}
 
 	.day-cell:hover {
-		border-color: var(--color-accent);
+		border-color: var(--ess-border-strong);
 	}
 
 	.day-cell.out-of-month {
@@ -361,22 +362,22 @@
 	}
 
 	.day-cell.is-today {
-		background: var(--color-primary);
+		background: var(--ess-primary);
 	}
 
 	.day-cell.is-today .day-number {
-		color: var(--color-white);
+		color: var(--ess-text-on-primary);
 	}
 
 	.day-cell.is-selected {
-		border-color: var(--color-primary);
+		border-color: var(--ess-primary);
 		border-width: 2px;
 	}
 
 	.day-number {
 		font-size: 0.85rem;
 		font-weight: 700;
-		color: var(--color-ink);
+		color: var(--ess-text);
 	}
 
 	.day-tag {
@@ -384,8 +385,8 @@
 		font-weight: 600;
 		padding: 0.1rem 0.35rem;
 		border-radius: 6px;
-		background: var(--color-white);
-		color: var(--color-text-soft);
+		background: var(--ess-surface);
+		color: var(--ess-text-secondary);
 		max-width: 100%;
 		white-space: nowrap;
 		overflow: hidden;
@@ -393,18 +394,18 @@
 	}
 
 	.tag-holiday {
-		background: #dbe9f7;
-		color: var(--color-primary);
+		background: var(--ess-info-bg);
+		color: var(--ess-primary);
 	}
 
 	.tag-approved {
-		background: #d5f5ec;
-		color: #027a5f;
+		background: var(--ess-success-bg);
+		color: var(--ess-success);
 	}
 
 	.tag-pending {
-		background: #fdf0d5;
-		color: #a16207;
+		background: var(--ess-warning-bg);
+		color: var(--ess-warning);
 	}
 
 	.day-dots {
@@ -415,7 +416,7 @@
 	.day-detail {
 		margin-top: 1rem;
 		padding-top: 1rem;
-		border-top: 1px solid var(--color-mint);
+		border-top: 1px solid var(--ess-border);
 		display: flex;
 		flex-direction: column;
 		gap: 0.4rem;
@@ -426,14 +427,14 @@
 		align-items: center;
 		gap: 0.5rem;
 		font-size: 0.85rem;
-		color: var(--color-text);
+		color: var(--ess-text);
 	}
 
 	.detail-type {
 		margin-left: auto;
 		font-size: 0.7rem;
 		text-transform: capitalize;
-		color: var(--color-text-soft);
+		color: var(--ess-text-secondary);
 	}
 
 	@media (max-width: 700px) {
@@ -491,7 +492,7 @@
 		min-height: 8rem;
 		padding: 0.7rem;
 		gap: 0.4rem;
-		border-radius: var(--radius-md);
+		border-radius: var(--ess-radius-md);
 	}
 
 	.calendar-box.large .day-number {

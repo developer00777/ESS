@@ -136,8 +136,8 @@
 </svelte:head>
 
 <header class="page-header">
-	<h1 class="section-title">Publish Holiday Calendar &amp; Leave Policy</h1>
-	<p class="section-subtitle">
+	<h1 class="ess-page-title">Publish Holiday Calendar &amp; Leave Policy</h1>
+	<p class="ess-page-sub">
 		Upload the source document once — it's parsed automatically and, after your review, becomes the
 		live calendar/policy every employee sees, resolved by their own shift assignment.
 	</p>
@@ -300,8 +300,8 @@
 	.upload-card,
 	.review-card,
 	.current-state {
-		background: var(--color-mint);
-		border-radius: var(--radius-lg);
+		background: var(--ess-sunken);
+		border-radius: var(--ess-radius-lg);
 		padding: 1.5rem;
 		margin-bottom: 1.5rem;
 		max-width: 780px;
@@ -318,16 +318,16 @@
 		align-items: center;
 		gap: 0.4rem;
 		padding: 0.5rem 1rem;
-		border-radius: var(--radius-md);
+		border-radius: var(--ess-radius-md);
 		border: 1px solid transparent;
-		background: var(--color-white);
+		background: var(--ess-surface);
 		cursor: pointer;
 		font-size: 0.85rem;
 	}
 
 	.kind-tabs button.active {
-		border-color: var(--color-primary);
-		color: var(--color-primary);
+		border-color: var(--ess-primary);
+		color: var(--ess-primary);
 		font-weight: 700;
 	}
 
@@ -343,9 +343,9 @@
 		align-items: center;
 		gap: 0.75rem;
 		padding: 1rem;
-		border: 1px dashed var(--color-text-soft);
-		border-radius: var(--radius-md);
-		background: var(--color-white);
+		border: 1px dashed var(--ess-border-strong);
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-surface);
 		cursor: pointer;
 		font-size: 0.85rem;
 	}
@@ -355,11 +355,11 @@
 	}
 
 	button.primary {
-		background: var(--color-primary);
-		color: var(--color-white);
+		background: var(--ess-primary);
+		color: var(--ess-text-on-primary);
 		border: none;
 		padding: 0.7rem 1.25rem;
-		border-radius: var(--radius-md);
+		border-radius: var(--ess-radius-md);
 		cursor: pointer;
 		font-weight: 600;
 		white-space: nowrap;
@@ -371,7 +371,7 @@
 	}
 
 	.error {
-		color: #c0392b;
+		color: var(--ess-danger);
 		margin-top: 0.75rem;
 		font-size: 0.85rem;
 	}
@@ -380,14 +380,14 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-		color: #1a7f37;
+		color: var(--ess-success);
 		margin-top: 0.75rem;
 		font-size: 0.85rem;
 	}
 
 	.hint {
 		font-size: 0.8rem;
-		color: var(--color-text-soft);
+		color: var(--ess-text-secondary);
 		margin-bottom: 1rem;
 	}
 
@@ -407,8 +407,8 @@
 	}
 
 	.table-block {
-		background: var(--color-white);
-		border-radius: var(--radius-md);
+		background: var(--ess-surface);
+		border-radius: var(--ess-radius-md);
 		padding: 1rem;
 		margin-bottom: 1rem;
 	}
@@ -429,8 +429,8 @@
 
 	.table-head code {
 		font-size: 0.7rem;
-		color: var(--color-text-soft);
-		background: var(--color-mint);
+		color: var(--ess-text-secondary);
+		background: var(--ess-sunken);
 		padding: 0.15rem 0.4rem;
 		border-radius: 4px;
 	}
@@ -443,7 +443,7 @@
 
 	th {
 		text-align: left;
-		color: var(--color-text-soft);
+		color: var(--ess-text-secondary);
 		font-weight: 600;
 		padding: 0.3rem;
 	}
@@ -455,7 +455,7 @@
 	td input,
 	td select {
 		width: 100%;
-		border: 1px solid #e2e2e2;
+		border: 1px solid var(--ess-border-strong);
 		border-radius: 4px;
 		padding: 0.3rem;
 	}
@@ -470,16 +470,16 @@
 	}
 
 	.link {
-		color: var(--color-primary);
+		color: var(--ess-primary);
 	}
 
 	.link-danger {
-		color: #c0392b;
+		color: var(--ess-danger);
 	}
 
 	.leave-type-block {
-		background: var(--color-white);
-		border-radius: var(--radius-md);
+		background: var(--ess-surface);
+		border-radius: var(--ess-radius-md);
 		padding: 1rem;
 		margin-bottom: 1rem;
 		display: flex;
@@ -514,7 +514,9 @@
 		font-family: inherit;
 		padding: 0.45rem;
 		border-radius: 6px;
-		border: 1px solid #e2e2e2;
+		border: 1px solid var(--ess-border-strong);
+		color: var(--ess-text);
+		background: var(--ess-surface);
 	}
 
 	.current-grid {
@@ -525,8 +527,8 @@
 	}
 
 	.current-card {
-		background: var(--color-white);
-		border-radius: var(--radius-md);
+		background: var(--ess-surface);
+		border-radius: var(--ess-radius-md);
 		padding: 0.75rem 1rem;
 		display: flex;
 		flex-direction: column;
@@ -537,6 +539,6 @@
 
 	.empty {
 		font-size: 0.82rem;
-		color: var(--color-text-soft);
+		color: var(--ess-text-secondary);
 	}
 </style>

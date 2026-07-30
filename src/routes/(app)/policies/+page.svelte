@@ -6,9 +6,9 @@
 	let { data } = $props();
 
 	const typeBadge: Record<string, string> = {
-		PUBLIC: 'badge-public',
-		RESTRICTED: 'badge-restricted',
-		OPTIONAL: 'badge-optional'
+		PUBLIC: 'ess-badge--public',
+		RESTRICTED: 'ess-badge--restricted',
+		OPTIONAL: 'ess-badge--optional'
 	};
 
 	function formatDate(d: string) {
@@ -25,8 +25,8 @@
 </svelte:head>
 
 <header class="page-header">
-	<h1 class="section-title">Company Policies</h1>
-	<p class="section-subtitle">Your holiday calendar and leave policy — resolved for your own shift assignment</p>
+	<h1 class="ess-page-title">Company Policies</h1>
+	<p class="ess-page-sub">Your holiday calendar and leave policy — resolved for your own shift assignment</p>
 </header>
 
 <section class="block">
@@ -47,20 +47,22 @@
 			Showing <strong>{data.resolvedCalendar.year}</strong> holidays for
 			<strong>{data.resolvedCalendar.shiftGroupName}</strong>
 		</p>
-		<table>
-			<thead>
-				<tr><th>Date</th><th>Holiday</th><th>Type</th></tr>
-			</thead>
-			<tbody>
-				{#each data.resolvedCalendar.holidays.sort((a, b) => a.date.localeCompare(b.date)) as h (h.id)}
-					<tr>
-						<td>{formatDate(h.date)}</td>
-						<td>{h.name}</td>
-						<td><span class="badge {typeBadge[h.type] ?? 'badge-public'}">{h.type}</span></td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+		<div class="ess-table-shell">
+			<table class="ess-table">
+				<thead>
+					<tr><th>Date</th><th>Holiday</th><th>Type</th></tr>
+				</thead>
+				<tbody>
+					{#each data.resolvedCalendar.holidays.sort((a, b) => a.date.localeCompare(b.date)) as h (h.id)}
+						<tr>
+							<td>{formatDate(h.date)}</td>
+							<td>{h.name}</td>
+							<td><span class="ess-badge {typeBadge[h.type] ?? 'ess-badge--public'}">{h.type}</span></td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{/if}
 </section>
 
@@ -99,8 +101,8 @@
 	}
 
 	.block {
-		background: var(--color-mint);
-		border-radius: var(--radius-lg);
+		background: var(--ess-sunken);
+		border-radius: var(--ess-radius-lg);
 		padding: 1.5rem;
 		margin-bottom: 1.5rem;
 		max-width: 780px;
@@ -112,68 +114,25 @@
 		gap: 0.5rem;
 		font-size: 1.05rem;
 		margin-bottom: 1rem;
-		color: var(--color-ink);
+		color: var(--ess-text);
 	}
 
 	.notice {
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
-		background: var(--color-white);
-		border-radius: var(--radius-md);
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
 		padding: 0.9rem 1rem;
 		font-size: 0.85rem;
-		color: var(--color-text-soft);
+		color: var(--ess-text-secondary);
 	}
 
 	.calendar-meta {
 		font-size: 0.85rem;
-		color: var(--color-text-soft);
+		color: var(--ess-text-secondary);
 		margin-bottom: 0.75rem;
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		background: var(--color-white);
-		border-radius: var(--radius-md);
-		overflow: hidden;
-		font-size: 0.85rem;
-	}
-
-	th {
-		text-align: left;
-		padding: 0.6rem 0.9rem;
-		color: var(--color-text-soft);
-		font-weight: 600;
-		border-bottom: 1px solid #eee;
-	}
-
-	td {
-		padding: 0.55rem 0.9rem;
-		border-bottom: 1px solid #f3f3f3;
-	}
-
-	.badge {
-		font-size: 0.7rem;
-		padding: 0.15rem 0.5rem;
-		border-radius: 999px;
-		font-weight: 600;
-	}
-
-	.badge-public {
-		background: #e6f4ea;
-		color: #1a7f37;
-	}
-
-	.badge-restricted {
-		background: #fff4e5;
-		color: #b26a00;
-	}
-
-	.badge-optional {
-		background: #eef1f5;
-		color: #555;
 	}
 
 	.leave-grid {
@@ -183,8 +142,9 @@
 	}
 
 	.leave-card {
-		background: var(--color-white);
-		border-radius: var(--radius-md);
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
 		padding: 0.9rem 1rem;
 		display: flex;
 		flex-direction: column;
@@ -199,12 +159,12 @@
 	}
 
 	.muted {
-		color: var(--color-text-soft);
+		color: var(--ess-text-secondary);
 		font-size: 0.75rem;
 	}
 
 	.empty {
 		font-size: 0.85rem;
-		color: var(--color-text-soft);
+		color: var(--ess-text-secondary);
 	}
 </style>
