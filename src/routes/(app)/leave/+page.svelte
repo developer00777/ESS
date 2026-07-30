@@ -100,7 +100,12 @@
 
 	<div class="layout">
 		<section>
-			<span class="ess-eyebrow">My Applications</span>
+			<span class="ess-eyebrow">
+				{new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+			</span>
+			<LeaveCalendar holidays={data.calendarHolidays} leaveEvents={calendarLeaveEvents} showNames={false} />
+
+			<span class="ess-eyebrow section-gap">My Applications</span>
 			<div class="applications-list">
 				{#each data.myApplications as row (row.application.id)}
 					<div class="application-row">
@@ -190,6 +195,12 @@
 
 	.calendar-section {
 		margin-bottom: 2.5rem;
+	}
+
+	.section-gap {
+		display: block;
+		margin-top: 1.5rem;
+		margin-bottom: 0.75rem;
 	}
 
 	.approvals-section .ess-eyebrow {
