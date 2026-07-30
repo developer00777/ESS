@@ -1,12 +1,9 @@
 <script lang="ts">
-	import Clock from '@lucide/svelte/icons/clock';
-	import LogOut from '@lucide/svelte/icons/log-out';
-
 	let { data } = $props();
 
-	let today = $state(data.today);
 	let busy = $state(false);
 	let error = $state('');
+	let today = $state(data.today);
 
 	function getPosition(): Promise<GeolocationPosition | null> {
 		return new Promise((resolve) => {
@@ -73,6 +70,22 @@
 		if (!value) return '—';
 		return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 	}
+
+	function elapsedSince(value: string | Date | null | undefined) {
+		if (!value) return null;
+		const ms = Date.now() - new Date(value).getTime();
+		const hrs = Math.floor(ms / 3_600_000);
+		const mins = Math.floor((ms % 3_600_000) / 60_000);
+		return `${hrs}h ${mins}m elapsed`;
+	}
+
+	function formatHours(hrs: number) {
+		const h = Math.floor(hrs);
+		const m = Math.round((hrs - h) * 60);
+		return `${h}h ${m}m`;
+	}
+
+	const hasLocation = $derived(!!today?.checkInLat);
 </script>
 
 <svelte:head>
@@ -84,27 +97,40 @@
 	<p class="ess-page-sub">Accurate, real-time attendance without manual chasing</p>
 </header>
 
-<div class="action-cards">
-	<div class="action-card">
-		<div class="card-icon"><Clock size={22} /></div>
-		<h3>Check In</h3>
-		<p>{today?.checkInAt ? `Checked in at ${formatTime(today.checkInAt)}` : 'Not checked in yet'}</p>
-		<button class="ess-btn action-btn" onclick={checkIn} disabled={busy || !!today?.checkInAt}>
-			Check In
-		</button>
+<div class="top-grid">
+	<div class="today-card">
+		<span class="today-eyebrow">Today · {new Date().toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</span>
+		<div class="today-time-row">
+			<span class="today-time">{today?.checkInAt ? formatTime(today.checkInAt) : '—'}</span>
+			<span class="today-label">{today?.checkOutAt ? 'checked out' : today?.checkInAt ? 'checked in' : 'not checked in'}</span>
+		</div>
+		<p class="today-meta">
+			{#if hasLocation}location verified · {/if}{elapsedSince(today?.checkInAt) ?? 'no activity yet today'}
+		</p>
+		<div class="today-actions">
+			<button class="ess-btn action-btn" onclick={checkIn} disabled={busy || !!today?.checkInAt}>
+				Check In
+			</button>
+			<button
+				class="ess-btn action-btn-outline"
+				onclick={checkOut}
+				disabled={busy || !today?.checkInAt || !!today?.checkOutAt}
+			>
+				Check Out
+			</button>
+		</div>
 	</div>
 
-	<div class="action-card">
-		<div class="card-icon"><LogOut size={22} /></div>
-		<h3>Check Out</h3>
-		<p>{today?.checkOutAt ? `Checked out at ${formatTime(today.checkOutAt)}` : 'Not checked out yet'}</p>
-		<button
-			class="ess-btn action-btn"
-			onclick={checkOut}
-			disabled={busy || !today?.checkInAt || !!today?.checkOutAt}
-		>
-			Check Out
-		</button>
+	<div class="ess-stat">
+		<span class="ess-stat__label">Present days</span>
+		<span class="ess-stat__value">{data.presentDays} <span class="stat-of">/ {data.businessDaysSoFar}</span></span>
+		<span class="ess-stat__meta">this month</span>
+	</div>
+
+	<div class="ess-stat">
+		<span class="ess-stat__label">Avg hours</span>
+		<span class="ess-stat__value">{formatHours(data.avgHours)}</span>
+		<span class="ess-stat__meta">per completed shift</span>
 	</div>
 </div>
 
@@ -118,12 +144,19 @@
 		<span>Date</span>
 		<span>Check In</span>
 		<span>Check Out</span>
+		<span class="align-right">Status</span>
 	</div>
 	{#each data.history as row (row.id)}
+		{@const status = row.checkOutAt ? 'checked-out' : row.checkInAt ? 'present' : 'absent'}
 		<div class="history-row">
 			<span>{row.date}</span>
 			<span>{formatTime(row.checkInAt)}</span>
 			<span>{formatTime(row.checkOutAt)}</span>
+			<span class="align-right">
+				<span class="ess-badge ess-badge--{status === 'present' ? 'present' : status === 'checked-out' ? 'cancelled' : 'absent'}">
+					{status === 'present' ? 'Present' : status === 'checked-out' ? 'Checked out' : 'Absent'}
+				</span>
+			</span>
 		</div>
 	{:else}
 		<p class="ess-empty">No attendance recorded yet this month.</p>
@@ -135,53 +168,99 @@
 		margin-bottom: 1.75rem;
 	}
 
-	.action-cards {
+	.top-grid {
 		display: grid;
-		grid-template-columns: repeat(2, minmax(220px, 320px));
-		gap: 1.25rem;
+		grid-template-columns: 1.2fr 1fr 1fr;
+		gap: 14px;
 		margin-bottom: 2rem;
 	}
 
-	.action-card {
-		background: var(--ess-primary);
+	.today-card {
+		background: var(--ess-inverse);
+		color: var(--ess-text-inverse);
 		border-radius: var(--ess-radius-lg);
-		padding: 1.5rem;
-		color: var(--ess-text-on-primary);
+		padding: 22px 24px;
 		display: flex;
 		flex-direction: column;
-		gap: 0.6rem;
+		gap: 4px;
 	}
 
-	.card-icon {
-		width: 48px;
-		height: 48px;
-		border-radius: var(--ess-radius-sm);
-		background: var(--ess-text-on-primary);
-		color: var(--ess-primary);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.action-card h3 {
-		font-size: 1.05rem;
+	.today-eyebrow {
+		font-size: 11px;
 		font-weight: 700;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--ess-green-400);
 	}
 
-	.action-card p {
-		font-size: 0.82rem;
-		color: rgba(255, 255, 255, 0.85);
-		min-height: 2.2em;
+	.today-time-row {
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
+		margin-top: 6px;
+	}
+
+	.today-time {
+		font-family: var(--ess-font-display);
+		font-size: 2.5rem;
+		font-weight: 800;
+		letter-spacing: -0.025em;
+		line-height: 1;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.today-label {
+		font-size: 14px;
+		color: var(--ess-text-inverse-secondary);
+	}
+
+	.today-meta {
+		font-size: 12px;
+		color: var(--ess-text-inverse-secondary);
+		margin-top: 6px;
+	}
+
+	.today-actions {
+		display: flex;
+		gap: 10px;
+		margin-top: 16px;
 	}
 
 	.action-btn {
-		background: var(--ess-text-on-primary);
-		color: var(--ess-text);
-		justify-content: center;
+		background: var(--ess-green-400);
+		color: var(--ess-teal-900);
 	}
 
 	.action-btn:hover:not(:disabled) {
-		background: var(--ess-n-100);
+		background: #00d9a5;
+	}
+
+	.action-btn:disabled {
+		opacity: 1;
+		background: rgba(255, 255, 255, 0.35);
+		color: rgba(255, 255, 255, 0.9);
+	}
+
+	.action-btn-outline {
+		background: transparent;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		color: var(--ess-text-inverse);
+	}
+
+	.action-btn-outline:hover:not(:disabled) {
+		background: rgba(255, 255, 255, 0.08);
+	}
+
+	.action-btn-outline:disabled {
+		opacity: 1;
+		color: rgba(255, 255, 255, 0.5);
+		border-color: rgba(255, 255, 255, 0.1);
+	}
+
+	.stat-of {
+		font-size: 16px;
+		color: var(--ess-text-secondary);
+		font-weight: 600;
 	}
 
 	.section-gap {
@@ -191,9 +270,10 @@
 
 	.history-row {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
+		grid-template-columns: repeat(3, 1fr) 1fr;
 		padding: 12px 16px;
 		font-size: var(--ess-fs-body);
+		align-items: center;
 	}
 
 	.history-row:not(:last-child) {
@@ -208,5 +288,15 @@
 		letter-spacing: 0.08em;
 		background: var(--ess-sunken);
 		border-bottom: 1px solid var(--ess-border);
+	}
+
+	.align-right {
+		text-align: right;
+	}
+
+	@media (max-width: 980px) {
+		.top-grid {
+			grid-template-columns: 1fr;
+		}
 	}
 </style>

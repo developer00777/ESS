@@ -1,7 +1,16 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db/postgres';
-import { leaveAllocations, leaveApplications, attendance } from '$lib/server/db/schema';
-import { eq, and, gte, sql } from 'drizzle-orm';
+import {
+	leaveAllocations,
+	leaveApplications,
+	attendance,
+	leaveTypes,
+	users,
+	employeeProfiles,
+	holidayCalendars,
+	holidays
+} from '$lib/server/db/schema';
+import { eq, and, gte, sql, desc } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = locals.user!;
@@ -36,9 +45,82 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const attendancePct =
 		businessDaysSoFar > 0 ? Math.round((daysWithCheckIn / businessDaysSoFar) * 100) : 0;
 
+	const applicantColumns = { id: users.id, fullName: users.fullName, teamId: users.teamId };
+
+	let approvalQueue: Array<{
+		application: typeof leaveApplications.$inferSelect;
+		type: typeof leaveTypes.$inferSelect;
+		applicant: { id: string; fullName: string; teamId: string | null };
+	}> = [];
+
+	if (user.role === 'team_lead' || user.role === 'super_admin') {
+		const base = db
+			.select({ application: leaveApplications, type: leaveTypes, applicant: applicantColumns })
+			.from(leaveApplications)
+			.innerJoin(leaveTypes, eq(leaveApplications.leaveTypeId, leaveTypes.id))
+			.innerJoin(users, eq(leaveApplications.userId, users.id));
+
+		approvalQueue =
+			user.role === 'super_admin'
+				? await base.where(eq(leaveApplications.status, 'pending')).orderBy(desc(leaveApplications.createdAt))
+				: await base.where(
+						and(eq(leaveApplications.status, 'pending'), eq(users.teamId, user.teamId ?? ''))
+					).orderBy(desc(leaveApplications.createdAt));
+	}
+
+	const today = new Date().toISOString().slice(0, 10);
+	let upcomingHolidays: (typeof holidays.$inferSelect)[] = [];
+
+	if (user.role === 'super_admin') {
+		const publishedCalendars = await db
+			.select({ id: holidayCalendars.id })
+			.from(holidayCalendars)
+			.where(eq(holidayCalendars.status, 'published'));
+		if (publishedCalendars.length > 0) {
+			upcomingHolidays = await db
+				.select()
+				.from(holidays)
+				.where(
+					and(
+						sql`${holidays.calendarId} in ${publishedCalendars.map((c) => c.id)}`,
+						gte(holidays.date, today)
+					)
+				)
+				.orderBy(holidays.date)
+				.limit(2);
+		}
+	} else {
+		const [profile] = await db
+			.select()
+			.from(employeeProfiles)
+			.where(eq(employeeProfiles.userId, user.id))
+			.limit(1);
+
+		if (profile?.shiftGroupId) {
+			const [calendar] = await db
+				.select()
+				.from(holidayCalendars)
+				.where(
+					and(eq(holidayCalendars.shiftGroupId, profile.shiftGroupId), eq(holidayCalendars.status, 'published'))
+				)
+				.orderBy(desc(holidayCalendars.year))
+				.limit(1);
+			if (calendar) {
+				upcomingHolidays = await db
+					.select()
+					.from(holidays)
+					.where(and(eq(holidays.calendarId, calendar.id), gte(holidays.date, today)))
+					.orderBy(holidays.date)
+					.limit(2);
+			}
+		}
+	}
+
 	return {
 		leaveBalance,
 		attendancePct,
-		pendingCount: Number(pendingLeaveCount[0]?.count ?? 0)
+		pendingCount: Number(pendingLeaveCount[0]?.count ?? 0),
+		approvalQueue,
+		upcomingHolidays
 	};
 };

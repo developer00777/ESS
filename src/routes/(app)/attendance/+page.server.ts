@@ -22,5 +22,23 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.where(and(eq(attendance.userId, user.id), gte(attendance.date, monthStart)))
 		.orderBy(desc(attendance.date));
 
-	return { today: todayRow ?? null, history };
+	const presentDays = history.filter((r) => r.checkInAt).length;
+	const businessDaysSoFar = new Date().getDate();
+
+	const completedShifts = history.filter((r) => r.checkInAt && r.checkOutAt);
+	const avgHours =
+		completedShifts.length > 0
+			? completedShifts.reduce((sum, r) => {
+					const hrs = (new Date(r.checkOutAt!).getTime() - new Date(r.checkInAt!).getTime()) / 3_600_000;
+					return sum + hrs;
+				}, 0) / completedShifts.length
+			: 0;
+
+	return {
+		today: todayRow ?? null,
+		history,
+		presentDays,
+		businessDaysSoFar,
+		avgHours
+	};
 };

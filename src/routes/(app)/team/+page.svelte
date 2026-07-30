@@ -5,12 +5,35 @@
 	let { data, form } = $props();
 
 	let showCreateForm = $state(false);
+	let search = $state('');
+	let filter = $state<'all' | 'present' | 'absent'>('all');
 
 	const statusLabel: Record<string, string> = {
 		present: 'Present',
 		left: 'Checked out',
 		absent: 'Absent'
 	};
+
+	function initials(name: string) {
+		return name
+			.split(' ')
+			.map((p) => p[0])
+			.slice(0, 2)
+			.join('')
+			.toUpperCase();
+	}
+
+	const filteredRoster = $derived(
+		data.roster.filter((person) => {
+			const q = search.trim().toLowerCase();
+			if (q && !person.fullName.toLowerCase().includes(q) && !person.email.toLowerCase().includes(q)) {
+				return false;
+			}
+			if (filter === 'present' && person.status !== 'present') return false;
+			if (filter === 'absent' && person.status !== 'absent') return false;
+			return true;
+		})
+	);
 </script>
 
 <svelte:head>
@@ -22,14 +45,31 @@
 	<p class="ess-page-sub">Live status and pending approvals for your team</p>
 </header>
 
-<div class="summary-row">
-	<div class="summary-card">
-		<span class="ess-eyebrow">Team Size</span>
-		<span class="summary-value">{data.roster.length}</span>
+<div class="stat-grid">
+	<div class="ess-stat">
+		<span class="ess-stat__label">Team size</span>
+		<span class="ess-stat__value">{data.teamSize}</span>
 	</div>
-	<div class="summary-card">
-		<span class="ess-eyebrow">Pending Approvals</span>
-		<span class="summary-value">{data.pendingApprovals}</span>
+	<div class="ess-stat">
+		<span class="ess-stat__label">Present now</span>
+		<span class="ess-stat__value stat-success">{data.presentNow}</span>
+	</div>
+	<div class="ess-stat">
+		<span class="ess-stat__label">On leave</span>
+		<span class="ess-stat__value">{data.onLeave}</span>
+	</div>
+	<div class="ess-stat">
+		<span class="ess-stat__label">Pending approvals</span>
+		<span class="ess-stat__value stat-warning">{data.pendingApprovals}</span>
+	</div>
+</div>
+
+<div class="toolbar">
+	<input class="ess-input search-input" placeholder="Search name or email" bind:value={search} />
+	<div class="ess-segmented">
+		<button type="button" aria-pressed={filter === 'all'} onclick={() => (filter = 'all')}>All</button>
+		<button type="button" aria-pressed={filter === 'present'} onclick={() => (filter = 'present')}>Present</button>
+		<button type="button" aria-pressed={filter === 'absent'} onclick={() => (filter = 'absent')}>On leave</button>
 	</div>
 	<button class="ess-btn ess-btn--primary create-btn" onclick={() => (showCreateForm = !showCreateForm)}>
 		<Users size={16} />
@@ -38,12 +78,7 @@
 </div>
 
 {#if showCreateForm}
-	<form
-		method="POST"
-		action="?/createEmployee"
-		use:enhance
-		class="create-card"
-	>
+	<form method="POST" action="?/createEmployee" use:enhance class="create-card">
 		<label class="ess-field">
 			<span class="ess-label">Full Name</span>
 			<input class="ess-input" name="fullName" required />
@@ -81,15 +116,25 @@
 		<span>Email</span>
 		<span>Role</span>
 		<span>Status</span>
+		<span class="align-right">Leave left</span>
 	</div>
-	{#each data.roster as person (person.id)}
+	{#each filteredRoster as person (person.id)}
 		<div class="roster-row">
-			<span>{person.fullName}</span>
-			<span>{person.email}</span>
+			<span class="name-cell">
+				<span class="avatar">{initials(person.fullName)}</span>
+				{person.fullName}
+			</span>
+			<span class="email-cell">{person.email}</span>
 			<span class="role">{person.role.replace('_', ' ')}</span>
-			<span class="ess-badge ess-badge--{person.status}">{statusLabel[person.status]}</span>
+			<span><span class="ess-badge ess-badge--{person.status}">{statusLabel[person.status]}</span></span>
+			<span class="align-right">{person.leaveLeft}</span>
 		</div>
+	{:else}
+		<p class="ess-empty">No employees match this search.</p>
 	{/each}
+	<div class="table-foot">
+		<span>{filteredRoster.length} of {data.teamSize} employees</span>
+	</div>
 </div>
 
 <style>
@@ -97,29 +142,31 @@
 		margin-bottom: 1.5rem;
 	}
 
-	.summary-row {
-		display: flex;
-		gap: 1rem;
-		align-items: stretch;
+	.stat-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 14px;
 		margin-bottom: 1.5rem;
 	}
 
-	.summary-card {
-		background: var(--ess-surface);
-		border: 1px solid var(--ess-border);
-		border-radius: var(--ess-radius-md);
-		padding: 1rem 1.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-		min-width: 160px;
+	.stat-success {
+		color: var(--ess-success);
 	}
 
-	.summary-value {
-		font-family: var(--ess-font-display);
-		font-size: 1.4rem;
-		font-weight: 700;
-		color: var(--ess-text);
+	.stat-warning {
+		color: var(--ess-warning);
+	}
+
+	.toolbar {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 1rem;
+	}
+
+	.search-input {
+		flex: 1;
+		max-width: 280px;
 	}
 
 	.create-btn {
@@ -152,8 +199,8 @@
 
 	.roster-row {
 		display: grid;
-		grid-template-columns: 1.2fr 1.5fr 0.8fr 0.8fr;
-		padding: 0.8rem 1.1rem;
+		grid-template-columns: 1.5fr 1.6fr 0.9fr 1fr 0.8fr;
+		padding: 0.7rem 1.1rem;
 		font-size: var(--ess-fs-body);
 		align-items: center;
 	}
@@ -172,8 +219,52 @@
 		border-bottom: 1px solid var(--ess-border);
 	}
 
+	.name-cell {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		font-weight: 500;
+	}
+
+	.avatar {
+		width: 26px;
+		height: 26px;
+		flex-shrink: 0;
+		border-radius: 50%;
+		background: var(--ess-green-400);
+		color: var(--ess-teal-900);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 10px;
+		font-weight: 700;
+	}
+
+	.email-cell {
+		color: var(--ess-text-secondary);
+	}
+
 	.role {
 		text-transform: capitalize;
 		color: var(--ess-text-secondary);
+	}
+
+	.align-right {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.table-foot {
+		padding: 10px 16px;
+		border-top: 1px solid var(--ess-border);
+		background: var(--ess-sunken);
+		font-size: var(--ess-fs-caption);
+		color: var(--ess-text-secondary);
+	}
+
+	@media (max-width: 980px) {
+		.stat-grid {
+			grid-template-columns: 1fr 1fr;
+		}
 	}
 </style>

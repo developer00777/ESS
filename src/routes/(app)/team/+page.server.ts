@@ -1,8 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db/postgres';
-import { users, teams, attendance, leaveApplications } from '$lib/server/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { users, teams, attendance, leaveApplications, leaveAllocations } from '$lib/server/db/schema';
+import { eq, and, inArray, lte, gte } from 'drizzle-orm';
 import { hashPassword } from '$lib/server/auth';
 import { randomBytes } from 'node:crypto';
 import { logActivity } from '$lib/server/db/mongo';
@@ -24,7 +24,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const todaysAttendance = await db.select().from(attendance).where(eq(attendance.date, today));
 	const attendanceByUser = new Map(todaysAttendance.map((a) => [a.userId, a]));
 
-	const pendingApprovals = await db
+	const pendingApprovalRows = await db
 		.select({ application: leaveApplications, applicant: users })
 		.from(leaveApplications)
 		.innerJoin(users, eq(leaveApplications.userId, users.id))
@@ -34,6 +34,36 @@ export const load: PageServerLoad = async ({ locals }) => {
 				: and(eq(leaveApplications.status, 'pending'), eq(users.teamId, user.teamId ?? ''))
 		);
 
+	const year = new Date().getFullYear();
+	const rosterIds = roster.map((r) => r.id);
+	const allocations =
+		rosterIds.length > 0
+			? await db
+					.select()
+					.from(leaveAllocations)
+					.where(and(inArray(leaveAllocations.userId, rosterIds), eq(leaveAllocations.year, year)))
+			: [];
+	const balanceByUser = new Map<string, number>();
+	for (const a of allocations) {
+		const remaining = Number(a.allocatedDays) - Number(a.usedDays);
+		balanceByUser.set(a.userId, (balanceByUser.get(a.userId) ?? 0) + remaining);
+	}
+
+	const onLeaveToday =
+		rosterIds.length > 0
+			? await db
+					.select({ userId: leaveApplications.userId })
+					.from(leaveApplications)
+					.where(
+						and(
+							inArray(leaveApplications.userId, rosterIds),
+							eq(leaveApplications.status, 'approved'),
+							lte(leaveApplications.startDate, today),
+							gte(leaveApplications.endDate, today)
+						)
+					)
+			: [];
+
 	const creatableRoles: Role[] =
 		user.role === 'super_admin'
 			? ['super_admin', 'admin', 'team_lead', 'employee']
@@ -41,20 +71,26 @@ export const load: PageServerLoad = async ({ locals }) => {
 				? ['team_lead', 'employee']
 				: ['employee'];
 
+	const rosterWithStatus = roster.map((r) => ({
+		id: r.id,
+		fullName: r.fullName,
+		email: r.email,
+		role: r.role,
+		isActive: r.isActive,
+		leaveLeft: balanceByUser.get(r.id) ?? 0,
+		status: attendanceByUser.get(r.id)?.checkInAt
+			? attendanceByUser.get(r.id)?.checkOutAt
+				? 'left'
+				: 'present'
+			: 'absent'
+	}));
+
 	return {
-		roster: roster.map((r) => ({
-			id: r.id,
-			fullName: r.fullName,
-			email: r.email,
-			role: r.role,
-			isActive: r.isActive,
-			status: attendanceByUser.get(r.id)?.checkInAt
-				? attendanceByUser.get(r.id)?.checkOutAt
-					? 'left'
-					: 'present'
-				: 'absent'
-		})),
-		pendingApprovals: pendingApprovals.length,
+		roster: rosterWithStatus,
+		teamSize: rosterWithStatus.length,
+		presentNow: rosterWithStatus.filter((r) => r.status === 'present').length,
+		onLeave: new Set(onLeaveToday.map((r) => r.userId)).size,
+		pendingApprovals: pendingApprovalRows.length,
 		creatableRoles
 	};
 };
