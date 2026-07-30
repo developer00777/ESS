@@ -1,0 +1,77 @@
+{
+  "holiday_calendars": [
+    {
+      "calendar_id": "HCAL-IN-MH-2026",
+      "name": "India - Maharashtra - 2026",
+      "country": "IN",
+      "region": "Maharashtra",
+      "version": 1,
+      "effective_from": "2026-01-01",
+      "effective_to": "2026-12-31",
+      "published_by": "superadmin@company.com",
+      "published_at": "2025-12-01T10:00:00+05:30",
+      "status": "PUBLISHED",
+      "days": [
+        { "date": "2026-01-26", "name": "Republic Day", "type": "PUBLIC", "recurring": true },
+        { "date": "2026-03-04", "name": "Holi", "type": "PUBLIC", "recurring": false },
+        { "date": "2026-04-01", "name": "Gudi Padwa", "type": "RESTRICTED", "recurring": false },
+        { "date": "2026-05-01", "name": "Maharashtra Day", "type": "PUBLIC", "recurring": true },
+        { "date": "2026-08-15", "name": "Independence Day", "type": "PUBLIC", "recurring": true },
+        { "date": "2026-08-26", "name": "Ganesh Chaturthi", "type": "PUBLIC", "recurring": false },
+        { "date": "2026-10-02", "name": "Gandhi Jayanti", "type": "PUBLIC", "recurring": true },
+        { "date": "2026-10-20", "name": "Diwali - Laxmi Pujan", "type": "PUBLIC", "recurring": false },
+        { "date": "2026-10-21", "name": "Diwali - Balipratipada", "type": "RESTRICTED", "recurring": false },
+        { "date": "2026-12-25", "name": "Christmas", "type": "PUBLIC", "recurring": true },
+        { "date": "2026-12-31", "name": "New Year's Eve (Office Open)", "type": "OPTIONAL", "recurring": true }
+      ]
+    },
+    {
+      "calendar_id": "HCAL-IN-KA-2026",
+      "name": "India - Karnataka - 2026",
+      "country": "IN",
+      "region": "Karnataka",
+      "version": 1,
+      "effective_from": "2026-01-01",
+      "effective_to": "2026-12-31",
+      "published_by": "superadmin@company.com",
+      "published_at": "2025-12-01T10:00:00+05:30",
+      "status": "PUBLISHED",
+      "days": [
+        { "date": "2026-01-26", "name": "Republic Day", "type": "PUBLIC", "recurring": true },
+        { "date": "2026-03-04", "name": "Holi", "type": "PUBLIC", "recurring": false },
+        { "date": "2026-04-14", "name": "Ugadi", "type": "PUBLIC", "recurring": false },
+        { "date": "2026-08-15", "name": "Independence Day", "type": "PUBLIC", "recurring": true },
+        { "date": "2026-10-02", "name": "Gandhi Jayanti", "type": "PUBLIC", "recurring": true },
+        { "date": "2026-11-01", "name": "Kannada Rajyotsava", "type": "PUBLIC", "recurring": true },
+        { "date": "2026-12-25", "name": "Christmas", "type": "PUBLIC", "recurring": true }
+      ]
+    },
+    {
+      "calendar_id": "HCAL-US-CA-2026",
+      "name": "United States - California - 2026",
+      "country": "US",
+      "region": "California",
+      "version": 1,
+      "effective_from": "2026-01-01",
+      "effective_to": "2026-12-31",
+      "published_by": "superadmin@company.com",
+      "published_at": "2025-12-01T10:00:00+05:30",
+      "status": "PUBLISHED",
+      "days": [
+        { "date": "2026-01-01", "name": "New Year's Day", "type": "PUBLIC", "recurring": true },
+        { "date": "2026-05-25", "name": "Memorial Day", "type": "PUBLIC", "recurring": false },
+        { "date": "2026-07-04", "name": "Independence Day (Observed)", "type": "PUBLIC", "recurring": false },
+        { "date": "2026-09-07", "name": "Labor Day", "type": "PUBLIC", "recurring": false },
+        { "date": "2026-11-26", "name": "Thanksgiving", "type": "PUBLIC", "recurring": false },
+        { "date": "2026-11-27", "name": "Day after Thanksgiving", "type": "OPTIONAL", "recurring": false },
+        { "date": "2026-12-25", "name": "Christmas", "type": "PUBLIC", "recurring": true }
+      ]
+    }
+  ],
+  "_field_notes": {
+    "calendar_id": "Stable natural key: HCAL-<country>-<region>-<year>. Bump the year on republish, not the version.",
+    "version": "Increment only when the SAME calendar_id+year is corrected after publish. Old versions stay queryable for payroll re-runs.",
+    "type": "PUBLIC = mandatory paid holiday, counted in payroll/attendance automatically. RESTRICTED = floater, employee must actively claim it (capped count enforced by LeavePolicy.restricted_holiday_cap). OPTIONAL = office stays open, no auto effect, purely informational on the calendar widget.",
+    "recurring": "UI hint only (e.g. show a repeat icon) — the resolver always matches on exact date, never re-derives a recurring date."
+  }
+}

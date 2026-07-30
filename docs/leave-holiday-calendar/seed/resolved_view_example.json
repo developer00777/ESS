@@ -1,0 +1,77 @@
+{
+  "_endpoint": "GET /api/v1/employees/EMP-1002/calendar?month=2026-10",
+  "_description": "Example resolved output for Rohit Menon (EMP-1002), a night-shift employee at Pune HQ, for October 2026. Demonstrates how the SAME published HolidayCalendar (HCAL-IN-MH-2026) renders differently because of his shift assignment. This exact JSON shape is what every dependent screen (dashboard widget, leave modal, attendance grid, payroll run) consumes.",
+
+  "employee": {
+    "employee_id": "EMP-1002",
+    "employee_name": "Rohit Menon",
+    "work_location_id": "LOC-PUNE-HQ",
+    "employee_category": "PERMANENT",
+    "shift_group_id": "SHIFT-NIGHT-OPS-PUNE",
+    "shift_start": "22:00",
+    "shift_end": "06:00",
+    "spans_midnight": true,
+    "week_offs": ["WEDNESDAY"]
+  },
+
+  "resolved_from": {
+    "holiday_calendar_id": "HCAL-IN-MH-2026",
+    "holiday_calendar_version": 1,
+    "leave_policy_id": "LPOL-PERMANENT-2026",
+    "leave_policy_version": 1,
+    "matched_via_assignment_id": "HCA-004",
+    "resolved_at": "2026-09-28T09:00:00+05:30"
+  },
+
+  "month_view": [
+    {
+      "date": "2026-10-02",
+      "day_of_week": "FRIDAY",
+      "holiday": {
+        "name": "Gandhi Jayanti",
+        "type": "PUBLIC",
+        "attributed_shift_start": "2026-10-02T22:00:00+05:30",
+        "is_redundant_holiday": false
+      },
+      "is_week_off": false,
+      "attendance_effect": "PAID_HOLIDAY_NO_LOGIN_REQUIRED"
+    },
+    {
+      "date": "2026-10-20",
+      "day_of_week": "TUESDAY",
+      "holiday": {
+        "name": "Diwali - Laxmi Pujan",
+        "type": "PUBLIC",
+        "attributed_shift_start": "2026-10-20T22:00:00+05:30",
+        "is_redundant_holiday": false
+      },
+      "is_week_off": false,
+      "attendance_effect": "PAID_HOLIDAY_NO_LOGIN_REQUIRED"
+    },
+    {
+      "date": "2026-10-21",
+      "day_of_week": "WEDNESDAY",
+      "holiday": {
+        "name": "Diwali - Balipratipada",
+        "type": "RESTRICTED",
+        "attributed_shift_start": "2026-10-21T22:00:00+05:30",
+        "is_redundant_holiday": true,
+        "redundant_reason": "Falls on employee's own weekly-off (WEDNESDAY); shown on calendar for visibility only, does not consume RH quota unless employee explicitly claims it as an RH leave application."
+      },
+      "is_week_off": true,
+      "attendance_effect": "WEEK_OFF_NOT_HOLIDAY_PAY"
+    }
+  ],
+
+  "leave_balance_snapshot": {
+    "as_of": "2026-10-01",
+    "balances": [
+      { "code": "EL", "available": 8.75, "unit": "days" },
+      { "code": "SL", "available": 4.5, "unit": "days" },
+      { "code": "CL", "available": 7, "unit": "days" },
+      { "code": "RH", "available": 2, "unit": "days", "eligible_dates": ["2026-04-01", "2026-10-21"] }
+    ]
+  },
+
+  "_contrast_note": "Compare EMP-1001 (day shift, same Pune HQ, same HCAL-IN-MH-2026 calendar) for 2026-10-02: attributed_shift_start would be '2026-10-02T09:30:00+05:30' and spans_midnight=false means no shift-boundary adjustment is needed. Same calendar row in the DB, different rendered effect per employee -- this is the 'dynamic depending on shift timings' behavior."
+}

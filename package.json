@@ -1,0 +1,41 @@
+{
+	"name": "champ-hr-ess-portal",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
+		"db:push": "drizzle-kit push",
+		"db:studio": "drizzle-kit studio",
+		"db:seed": "tsx src/lib/server/db/seed.ts",
+		"db:import-master-data": "tsx src/lib/server/db/import-master-data.ts"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-node": "^5.5.7",
+		"@sveltejs/kit": "^2.63.0",
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@types/pg": "^8.20.0",
+		"drizzle-kit": "^0.31.10",
+		"svelte": "^5.56.1",
+		"svelte-check": "^4.6.0",
+		"tsx": "^4.23.1",
+		"typescript": "^6.0.3",
+		"vite": "^8.0.16"
+	},
+	"dependencies": {
+		"@lucide/svelte": "^1.27.0",
+		"@node-rs/argon2": "^2.0.2",
+		"drizzle-orm": "^0.45.2",
+		"ioredis": "^5.11.1",
+		"jose": "^6.2.4",
+		"mongodb": "^7.5.0",
+		"pg": "^8.22.0"
+	}
+}

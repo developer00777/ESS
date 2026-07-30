@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1785348659145,
+      "tag": "0000_talented_star_brand",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785350939129,
+      "tag": "0001_futuristic_vengeance",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785353253794,
+      "tag": "0002_ancient_young_avengers",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785354187807,
+      "tag": "0003_daily_falcon",
+      "breakpoints": true
+    }
+  ]
+}

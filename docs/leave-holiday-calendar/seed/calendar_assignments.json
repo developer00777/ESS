@@ -1,0 +1,65 @@
+{
+  "holiday_calendar_assignments": [
+    {
+      "assignment_id": "HCA-001",
+      "scope": "WORK_LOCATION",
+      "scope_ref_id": "LOC-PUNE-HQ",
+      "scope_ref_name": "Pune HQ",
+      "calendar_id": "HCAL-IN-MH-2026",
+      "priority": 10
+    },
+    {
+      "assignment_id": "HCA-002",
+      "scope": "WORK_LOCATION",
+      "scope_ref_id": "LOC-BLR-OFFICE",
+      "scope_ref_name": "Bengaluru Office",
+      "calendar_id": "HCAL-IN-KA-2026",
+      "priority": 10
+    },
+    {
+      "assignment_id": "HCA-003",
+      "scope": "WORK_LOCATION",
+      "scope_ref_id": "LOC-SF-OFFICE",
+      "scope_ref_name": "San Francisco Office",
+      "calendar_id": "HCAL-US-CA-2026",
+      "priority": 10
+    },
+    {
+      "assignment_id": "HCA-004",
+      "scope": "SHIFT_GROUP",
+      "scope_ref_id": "SHIFT-NIGHT-OPS-PUNE",
+      "scope_ref_name": "Night Ops Shift Group - Pune",
+      "calendar_id": "HCAL-IN-MH-2026",
+      "priority": 20,
+      "note": "Same regional calendar as Pune HQ, but higher priority lets night-shift group override future date-boundary rules independently if needed."
+    }
+  ],
+  "leave_policy_assignments": [
+    {
+      "assignment_id": "LPA-001",
+      "scope": "EMPLOYEE_CATEGORY",
+      "scope_ref_id": "PERMANENT",
+      "policy_id": "LPOL-PERMANENT-2026",
+      "priority": 10
+    },
+    {
+      "assignment_id": "LPA-002",
+      "scope": "EMPLOYEE_CATEGORY",
+      "scope_ref_id": "PROBATION",
+      "policy_id": "LPOL-PROBATION-2026",
+      "priority": 10
+    },
+    {
+      "assignment_id": "LPA-003",
+      "scope": "EMPLOYEE_CATEGORY",
+      "scope_ref_id": "CONTRACT",
+      "policy_id": "LPOL-CONTRACT-2026",
+      "priority": 10
+    }
+  ],
+  "_field_notes": {
+    "scope": "WORK_LOCATION | DEPARTMENT | SHIFT_GROUP for holiday calendars. EMPLOYEE_CATEGORY | GRADE | DEPARTMENT for leave policies. This is the ONLY layer that changes when onboarding a new office/shift group.",
+    "priority": "If an employee matches more than one assignment rule (e.g. belongs to both a WORK_LOCATION rule and a SHIFT_GROUP rule), the resolver picks the highest priority number. Lets a shift-group-specific override win over the location default.",
+    "resolution_order": "Employee -> ShiftAssignment.shift_group_id -> match SHIFT_GROUP rule if exists, else -> Employee.work_location_id -> match WORK_LOCATION rule. Same pattern for department fallback if neither matches (not seeded here, but structurally supported)."
+  }
+}

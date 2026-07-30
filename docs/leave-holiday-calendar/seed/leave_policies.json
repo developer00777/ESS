@@ -1,0 +1,137 @@
+{
+  "leave_policies": [
+    {
+      "policy_id": "LPOL-PERMANENT-2026",
+      "name": "Permanent Employee Leave Policy 2026",
+      "employee_category": "PERMANENT",
+      "version": 1,
+      "effective_from": "2026-01-01",
+      "published_by": "superadmin@company.com",
+      "published_at": "2025-12-01T10:00:00+05:30",
+      "status": "PUBLISHED",
+      "restricted_holiday_cap": 2,
+      "leave_types": [
+        {
+          "code": "EL",
+          "name": "Earned Leave",
+          "accrual": { "method": "MONTHLY", "rate_per_month": 1.25, "annual_cap": 15 },
+          "carry_forward": { "allowed": true, "max_days": 30, "expiry_months": 24 },
+          "encashment": { "allowed": true, "max_days_per_year": 10 },
+          "min_days_per_request": 0.5,
+          "max_consecutive_days": 30,
+          "requires_approval": true,
+          "requires_document_above_days": null
+        },
+        {
+          "code": "SL",
+          "name": "Sick Leave",
+          "accrual": { "method": "MONTHLY", "rate_per_month": 0.5, "annual_cap": 6 },
+          "carry_forward": { "allowed": false, "max_days": 0, "expiry_months": 0 },
+          "encashment": { "allowed": false, "max_days_per_year": 0 },
+          "min_days_per_request": 0.5,
+          "max_consecutive_days": 6,
+          "requires_approval": true,
+          "requires_document_above_days": 2
+        },
+        {
+          "code": "CL",
+          "name": "Casual Leave",
+          "accrual": { "method": "YEARLY_UPFRONT", "rate_per_month": null, "annual_cap": 7 },
+          "carry_forward": { "allowed": false, "max_days": 0, "expiry_months": 0 },
+          "encashment": { "allowed": false, "max_days_per_year": 0 },
+          "min_days_per_request": 0.5,
+          "max_consecutive_days": 3,
+          "requires_approval": true,
+          "requires_document_above_days": null
+        },
+        {
+          "code": "ML",
+          "name": "Maternity Leave",
+          "accrual": { "method": "EVENT_BASED", "rate_per_month": null, "annual_cap": 182 },
+          "carry_forward": { "allowed": false, "max_days": 0, "expiry_months": 0 },
+          "encashment": { "allowed": false, "max_days_per_year": 0 },
+          "min_days_per_request": 1,
+          "max_consecutive_days": 182,
+          "requires_approval": true,
+          "requires_document_above_days": 0
+        },
+        {
+          "code": "RH",
+          "name": "Restricted Holiday",
+          "accrual": { "method": "YEARLY_UPFRONT", "rate_per_month": null, "annual_cap": 2 },
+          "carry_forward": { "allowed": false, "max_days": 0, "expiry_months": 0 },
+          "encashment": { "allowed": false, "max_days_per_year": 0 },
+          "min_days_per_request": 1,
+          "max_consecutive_days": 1,
+          "requires_approval": false,
+          "requires_document_above_days": null,
+          "source": "Must be picked from that employee's assigned HolidayCalendar where type=RESTRICTED"
+        }
+      ]
+    },
+    {
+      "policy_id": "LPOL-PROBATION-2026",
+      "name": "Probation Employee Leave Policy 2026",
+      "employee_category": "PROBATION",
+      "version": 1,
+      "effective_from": "2026-01-01",
+      "published_by": "superadmin@company.com",
+      "published_at": "2025-12-01T10:00:00+05:30",
+      "status": "PUBLISHED",
+      "restricted_holiday_cap": 0,
+      "leave_types": [
+        {
+          "code": "SL",
+          "name": "Sick Leave",
+          "accrual": { "method": "MONTHLY", "rate_per_month": 0.5, "annual_cap": 6 },
+          "carry_forward": { "allowed": false, "max_days": 0, "expiry_months": 0 },
+          "encashment": { "allowed": false, "max_days_per_year": 0 },
+          "min_days_per_request": 0.5,
+          "max_consecutive_days": 3,
+          "requires_approval": true,
+          "requires_document_above_days": 1
+        },
+        {
+          "code": "CL",
+          "name": "Casual Leave",
+          "accrual": { "method": "MONTHLY", "rate_per_month": 0.5, "annual_cap": 6 },
+          "carry_forward": { "allowed": false, "max_days": 0, "expiry_months": 0 },
+          "encashment": { "allowed": false, "max_days_per_year": 0 },
+          "min_days_per_request": 0.5,
+          "max_consecutive_days": 2,
+          "requires_approval": true,
+          "requires_document_above_days": null
+        }
+      ]
+    },
+    {
+      "policy_id": "LPOL-CONTRACT-2026",
+      "name": "Contract/Temp Staff Leave Policy 2026",
+      "employee_category": "CONTRACT",
+      "version": 1,
+      "effective_from": "2026-01-01",
+      "published_by": "superadmin@company.com",
+      "published_at": "2025-12-01T10:00:00+05:30",
+      "status": "PUBLISHED",
+      "restricted_holiday_cap": 0,
+      "leave_types": [
+        {
+          "code": "CL",
+          "name": "Casual Leave",
+          "accrual": { "method": "MONTHLY", "rate_per_month": 0.5, "annual_cap": 6 },
+          "carry_forward": { "allowed": false, "max_days": 0, "expiry_months": 0 },
+          "encashment": { "allowed": false, "max_days_per_year": 0 },
+          "min_days_per_request": 0.5,
+          "max_consecutive_days": 2,
+          "requires_approval": true,
+          "requires_document_above_days": null
+        }
+      ]
+    }
+  ],
+  "_field_notes": {
+    "accrual.method": "MONTHLY = credited each payroll cycle. YEARLY_UPFRONT = full quota on Jan 1 or DOJ anniversary. EVENT_BASED = triggered by an HR event (e.g. maternity), not time-based.",
+    "requires_document_above_days": "null = never required. 0 = always required. N = required only if the request spans more than N days.",
+    "RH.source": "Restricted Holiday leave type doesn't have fixed dates of its own — at request time the Leave Application form queries the employee's resolved HolidayCalendar for type=RESTRICTED entries and offers only those as selectable dates, capped by restricted_holiday_cap."
+  }
+}

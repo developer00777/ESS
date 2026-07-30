@@ -1,0 +1,56 @@
+{
+  "employee_shift_assignments": [
+    {
+      "employee_id": "EMP-1001",
+      "employee_name": "Aditi Rao",
+      "work_location_id": "LOC-PUNE-HQ",
+      "employee_category": "PERMANENT",
+      "shift_group_id": "SHIFT-DAY-STD",
+      "shift_start": "09:30",
+      "shift_end": "18:30",
+      "spans_midnight": false,
+      "week_offs": ["SATURDAY", "SUNDAY"],
+      "effective_from": "2025-01-01"
+    },
+    {
+      "employee_id": "EMP-1002",
+      "employee_name": "Rohit Menon",
+      "work_location_id": "LOC-PUNE-HQ",
+      "employee_category": "PERMANENT",
+      "shift_group_id": "SHIFT-NIGHT-OPS-PUNE",
+      "shift_start": "22:00",
+      "shift_end": "06:00",
+      "spans_midnight": true,
+      "week_offs": ["WEDNESDAY"],
+      "effective_from": "2025-06-15"
+    },
+    {
+      "employee_id": "EMP-1003",
+      "employee_name": "Sneha Patil",
+      "work_location_id": "LOC-BLR-OFFICE",
+      "employee_category": "PROBATION",
+      "shift_group_id": "SHIFT-DAY-STD",
+      "shift_start": "10:00",
+      "shift_end": "19:00",
+      "spans_midnight": false,
+      "week_offs": ["SATURDAY", "SUNDAY"],
+      "effective_from": "2026-05-01"
+    },
+    {
+      "employee_id": "EMP-1004",
+      "employee_name": "Daniel Cho",
+      "work_location_id": "LOC-SF-OFFICE",
+      "employee_category": "CONTRACT",
+      "shift_group_id": "SHIFT-DAY-STD",
+      "shift_start": "09:00",
+      "shift_end": "17:00",
+      "spans_midnight": false,
+      "week_offs": ["SATURDAY", "SUNDAY"],
+      "effective_from": "2026-02-01"
+    }
+  ],
+  "_field_notes": {
+    "spans_midnight": "When true, resolver attributes a holiday falling on the calendar date to the shift that STARTS on the evening of that date (e.g. EMP-1002's shift starting 21-Oct 22:00 counts 21-Oct as the holiday shift, not the 22-Oct portion after midnight).",
+    "week_offs": "If a PUBLIC holiday date falls on an employee's own week-off day, the resolver flags is_redundant_holiday=true so payroll doesn't double-count, and some policies auto-grant a compensatory day (not modeled here, would be a LeavePolicy.compensatory_off_on_redundant_holiday flag)."
+  }
+}
