@@ -154,6 +154,10 @@ export const employeeProfiles = pgTable('employee_profiles', {
 	sourceReferredBy: text('source_referred_by'),
 	salaryBand: text('salary_band'),
 
+	// EasyTime Pro / ZKTeco device enrollment number (the device-side "PIN"), used to
+	// map incoming ADMS punches to this user. Set by HR when a fingerprint/face is enrolled.
+	biometricDeviceId: varchar('biometric_device_id', { length: 32 }).unique(),
+
 	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
 });
 
@@ -323,3 +327,31 @@ export const holidayCalendarsRelations = relations(holidayCalendars, ({ one, man
 export const holidaysRelations = relations(holidays, ({ one }) => ({
 	calendar: one(holidayCalendars, { fields: [holidays.calendarId], references: [holidayCalendars.id] })
 }));
+
+// --- Biometric device push (EasyTime Pro / ZKTeco ADMS) ---
+// Shared secrets devices/EasyTime Pro use to push punches to /api/attendance/device-push.
+// Only the hash is stored; the plaintext token is shown once at generation time.
+export const devicePushTokens = pgTable('device_push_tokens', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	label: text('label').notNull(), // e.g. 'EasyTime Pro - Main Office'
+	tokenHash: text('token_hash').notNull().unique(),
+	createdBy: uuid('created_by').references(() => users.id),
+	revokedAt: timestamp('revoked_at', { withTimezone: true }),
+	lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// Raw punches as received from the device, kept for audit/replay regardless of whether
+// they matched a known employee. attendanceId is set once successfully applied.
+export const devicePunches = pgTable('device_punches', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	tokenId: uuid('token_id').references(() => devicePushTokens.id),
+	deviceSerial: text('device_serial'),
+	deviceUserPin: text('device_user_pin').notNull(),
+	punchedAt: timestamp('punched_at', { withTimezone: true }).notNull(),
+	direction: text('direction'), // 'in' | 'out' | null (device didn't specify)
+	rawLine: text('raw_line').notNull(),
+	matchedUserId: uuid('matched_user_id').references(() => users.id),
+	attendanceId: uuid('attendance_id').references(() => attendance.id),
+	receivedAt: timestamp('received_at', { withTimezone: true }).defaultNow().notNull()
+});
