@@ -1,9 +1,18 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
+	import AttendanceCalendar from '$lib/components/AttendanceCalendar.svelte';
+
 	let { data } = $props();
 
 	let busy = $state(false);
 	let error = $state('');
-	let today = $state(data.today);
+	const today = $derived(data.today);
+
+	const monthLabel = $derived(
+		new Date(Number(data.viewMonth.slice(0, 4)), Number(data.viewMonth.slice(5, 7)) - 1, 1)
+			.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+	);
+	const statPeriod = $derived(data.isCurrentMonth ? 'this month' : `in ${monthLabel}`);
 
 	function getPosition(): Promise<GeolocationPosition | null> {
 		return new Promise((resolve) => {
@@ -34,8 +43,7 @@
 				error = body.message ?? 'Could not check in';
 				return;
 			}
-			const body = await res.json();
-			today = body.attendance;
+			await invalidateAll();
 		} finally {
 			busy = false;
 		}
@@ -59,8 +67,7 @@
 				error = body.message ?? 'Could not check out';
 				return;
 			}
-			const body = await res.json();
-			today = body.attendance;
+			await invalidateAll();
 		} finally {
 			busy = false;
 		}
@@ -123,14 +130,17 @@
 
 	<div class="ess-stat">
 		<span class="ess-stat__label">Present days</span>
-		<span class="ess-stat__value">{data.presentDays} <span class="stat-of">/ {data.businessDaysSoFar}</span></span>
-		<span class="ess-stat__meta">this month</span>
+		<span class="ess-stat__value"
+			>{data.presentDays}{#if data.businessDaysSoFar > 0}
+				<span class="stat-of">/ {data.businessDaysSoFar}</span>{/if}</span
+		>
+		<span class="ess-stat__meta">{statPeriod}</span>
 	</div>
 
 	<div class="ess-stat">
 		<span class="ess-stat__label">Avg hours</span>
 		<span class="ess-stat__value">{formatHours(data.avgHours)}</span>
-		<span class="ess-stat__meta">per completed shift</span>
+		<span class="ess-stat__meta">per completed shift {statPeriod}</span>
 	</div>
 </div>
 
@@ -138,30 +148,13 @@
 	<p class="ess-error section-gap">{error}</p>
 {/if}
 
-<span class="ess-eyebrow section-gap">This Month</span>
-<div class="ess-table-shell">
-	<div class="history-row history-head">
-		<span>Date</span>
-		<span>Check In</span>
-		<span>Check Out</span>
-		<span class="align-right">Status</span>
-	</div>
-	{#each data.history as row (row.id)}
-		{@const status = row.checkOutAt ? 'checked-out' : row.checkInAt ? 'present' : 'absent'}
-		<div class="history-row">
-			<span>{row.date}</span>
-			<span>{formatTime(row.checkInAt)}</span>
-			<span>{formatTime(row.checkOutAt)}</span>
-			<span class="align-right">
-				<span class="ess-badge ess-badge--{status === 'present' ? 'present' : status === 'checked-out' ? 'cancelled' : 'absent'}">
-					{status === 'present' ? 'Present' : status === 'checked-out' ? 'Checked out' : 'Absent'}
-				</span>
-			</span>
-		</div>
-	{:else}
-		<p class="ess-empty">No attendance recorded yet this month.</p>
-	{/each}
-</div>
+<AttendanceCalendar
+	month={data.viewMonth}
+	records={data.records}
+	punchDays={data.punchDays}
+	holidays={data.monthHolidays}
+	leaves={data.monthLeaves}
+/>
 
 <style>
 	.page-header {
@@ -273,32 +266,6 @@
 	.section-gap {
 		display: block;
 		margin-bottom: 0.75rem;
-	}
-
-	.history-row {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr) 1fr;
-		padding: 12px 16px;
-		font-size: var(--ess-fs-body);
-		align-items: center;
-	}
-
-	.history-row:not(:last-child) {
-		border-bottom: 1px solid var(--ess-border-subtle);
-	}
-
-	.history-head {
-		font-weight: 700;
-		color: var(--ess-text-secondary);
-		font-size: var(--ess-fs-eyebrow);
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-		background: var(--ess-sunken);
-		border-bottom: 1px solid var(--ess-border);
-	}
-
-	.align-right {
-		text-align: right;
 	}
 
 	@media (max-width: 980px) {
