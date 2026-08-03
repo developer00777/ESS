@@ -100,10 +100,25 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.innerJoin(holidayCalendars, eq(holidayCalendars.shiftGroupId, shiftGroups.id))
 		.where(eq(holidayCalendars.status, 'published'));
 
+	// Employee code is the portal-wide identity key — every roster row carries it.
+	const rosterIdsForCode = roster.map((r) => r.id);
+	const codeRows =
+		rosterIdsForCode.length > 0
+			? await db
+					.select({
+						userId: employeeProfiles.userId,
+						employeeCode: employeeProfiles.employeeCode
+					})
+					.from(employeeProfiles)
+					.where(inArray(employeeProfiles.userId, rosterIdsForCode))
+			: [];
+	const codeByUser = new Map(codeRows.map((r) => [r.userId, r.employeeCode]));
+
 	const rosterWithStatus = roster.map((r) => ({
 		id: r.id,
 		fullName: r.fullName,
 		email: r.email,
+		employeeCode: codeByUser.get(r.id) ?? null,
 		role: r.role,
 		isActive: r.isActive,
 		leaveLeft: balanceByUser.get(r.id) ?? 0,
@@ -287,6 +302,25 @@ export const actions: Actions = {
 		// review flag rather than silently creating a duplicate account for the same person.
 		const allExistingUsers = await db.select({ id: users.id, fullName: users.fullName, email: users.email }).from(users);
 
+		// The employee code is unique and is the attendance join key, so a code
+		// already taken by someone else has to be caught before apply — otherwise
+		// the insert fails mid-batch and leaves the import half-applied.
+		const sheetCodes = parsedRows
+			.map((r) => r.employeeCode?.trim().toUpperCase())
+			.filter((c): c is string => Boolean(c));
+		const takenCodeRows =
+			sheetCodes.length > 0
+				? await db
+						.select({ userId: employeeProfiles.userId, code: employeeProfiles.employeeCode })
+						.from(employeeProfiles)
+						.where(inArray(employeeProfiles.employeeCode, sheetCodes))
+				: [];
+		const takenCodes = new Map(
+			takenCodeRows
+				.filter((r): r is { userId: string; code: string } => Boolean(r.code))
+				.map((r) => [r.code, r.userId])
+		);
+
 		const [importRow] = await db
 			.insert(bulkImports)
 			.values({ filename: file.name, uploadedBy: actor.id, rowCount: parsedRows.length })
@@ -298,14 +332,18 @@ export const actions: Actions = {
 				parsedRows.map((r) => {
 					const emailMatchId = existingByEmail.get(r.officialEmail) ?? null;
 					const nameMatch = emailMatchId ? null : suggestExistingUserMatch(r.fullName, allExistingUsers);
+					const code = r.employeeCode?.trim().toUpperCase() ?? null;
+					const codeOwner = code ? takenCodes.get(code) : undefined;
 
 					let status: 'ready' | 'needs_review' | 'skipped_existing' = 'ready';
 					if (emailMatchId) status = 'skipped_existing';
 					else if (nameMatch) status = 'needs_review';
+					// A code already held by someone else can't be applied as-is.
+					else if (codeOwner) status = 'needs_review';
 
 					return {
 						importId: importRow.id,
-						employeeCode: r.employeeCode,
+						employeeCode: code,
 						fullName: r.fullName,
 						designation: r.designation,
 						officialEmail: r.officialEmail,
@@ -392,6 +430,9 @@ export const actions: Actions = {
 
 			await db.insert(employeeProfiles).values({
 				userId: createdUser.id,
+				// The employee code is the portal-wide identity key and the join key
+				// for EasyTime Pro attendance — persist it, don't just display it.
+				employeeCode: row.employeeCode ? row.employeeCode.trim().toUpperCase() : null,
 				designation: row.designation,
 				teamAndFloor: row.teamAndFloor,
 				directReportingAuthority: row.reportingAuthorityRaw

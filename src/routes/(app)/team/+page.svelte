@@ -122,7 +122,14 @@
 	const filteredRoster = $derived(
 		data.roster.filter((person) => {
 			const q = search.trim().toLowerCase();
-			if (q && !person.fullName.toLowerCase().includes(q) && !person.email.toLowerCase().includes(q)) {
+			// Employee code is the primary way HR looks someone up, so it searches
+			// alongside name and email.
+			if (
+				q &&
+				!person.fullName.toLowerCase().includes(q) &&
+				!person.email.toLowerCase().includes(q) &&
+				!(person.employeeCode ?? '').toLowerCase().includes(q)
+			) {
 				return false;
 			}
 			if (filter === 'present' && person.status !== 'present') return false;
@@ -161,7 +168,11 @@
 </div>
 
 <div class="toolbar">
-	<input class="ess-input search-input" placeholder="Search name or email" bind:value={search} />
+	<input
+		class="ess-input search-input"
+		placeholder="Search name, employee code, or email"
+		bind:value={search}
+	/>
 	<div class="ess-segmented">
 		<button type="button" aria-pressed={filter === 'all'} onclick={() => (filter = 'all')}>All</button>
 		<button type="button" aria-pressed={filter === 'present'} onclick={() => (filter = 'present')}>Present</button>
@@ -230,6 +241,7 @@
 <div class="ess-table-shell roster-shell">
 	<div class="roster-row roster-head">
 		<span>Name</span>
+		<span>Emp code</span>
 		<span>Email</span>
 		<span>Role</span>
 		<span>Status</span>
@@ -240,6 +252,15 @@
 			<span class="name-cell">
 				<span class="avatar">{initials(person.fullName)}</span>
 				{person.fullName}
+			</span>
+			<span class="code-cell">
+				{#if person.employeeCode}
+					{person.employeeCode}
+				{:else}
+					<span class="code-missing" title="No employee code — biometric attendance can't be matched"
+						>Not set</span
+					>
+				{/if}
 			</span>
 			<span class="email-cell">{person.email}</span>
 			<span class="role">{person.role.replace('_', ' ')}</span>
@@ -596,11 +617,23 @@
 
 	.roster-row {
 		display: grid;
-		grid-template-columns: 1.5fr 1.6fr 0.9fr 1fr 0.8fr;
+		grid-template-columns: 1.5fr 0.8fr 1.6fr 0.9fr 1fr 0.8fr;
 		padding: 0.7rem 1.1rem;
 		font-size: var(--ess-fs-body);
 		align-items: center;
-		min-width: 640px;
+		min-width: 760px;
+	}
+
+	.code-cell {
+		font-family: var(--ess-font-mono);
+		font-size: var(--ess-fs-caption);
+		letter-spacing: 0.02em;
+		color: var(--ess-text);
+	}
+
+	.code-missing {
+		font-family: var(--ess-font-sans);
+		color: var(--ess-warning);
 	}
 
 	.roster-row:not(:last-child) {

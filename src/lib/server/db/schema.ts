@@ -86,6 +86,12 @@ export const employeeProfiles = pgTable('employee_profiles', {
 		.notNull()
 		.unique(),
 
+	// HR-locked — the company employee code (e.g. "CIPL2666"). This is the single
+	// source of truth for identifying a person across the portal, the HR master
+	// spreadsheets, and EasyTime Pro (where it is the device-side {emp_code}).
+	// Attendance ingestion joins on this value, so it must stay unique.
+	employeeCode: varchar('employee_code', { length: 32 }).unique(),
+
 	// self-editable — personal & contact
 	phone: text('phone'),
 	personalEmail: text('personal_email'),
@@ -153,10 +159,6 @@ export const employeeProfiles = pgTable('employee_profiles', {
 	dottedLineReportingAuthority: text('dotted_line_reporting_authority'),
 	sourceReferredBy: text('source_referred_by'),
 	salaryBand: text('salary_band'),
-
-	// EasyTime Pro / ZKTeco device enrollment number (the device-side "PIN"), used to
-	// map incoming ADMS punches to this user. Set by HR when a fingerprint/face is enrolled.
-	biometricDeviceId: varchar('biometric_device_id', { length: 32 }).unique(),
 
 	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
 });
@@ -328,12 +330,14 @@ export const holidaysRelations = relations(holidays, ({ one }) => ({
 	calendar: one(holidayCalendars, { fields: [holidays.calendarId], references: [holidayCalendars.id] })
 }));
 
-// --- Biometric device push (EasyTime Pro / ZKTeco ADMS) ---
-// Shared secrets devices/EasyTime Pro use to push punches to /api/attendance/device-push.
-// Only the hash is stored; the plaintext token is shown once at generation time.
-export const devicePushTokens = pgTable('device_push_tokens', {
+// --- EasyTime Pro attendance ingestion ---
+// EasyTime Pro exports a scheduled tab-separated file (see its "Data Template"
+// screen) and a scheduled job on that machine POSTs it to
+// /api/attendance/easytime-import. Auth is a shared token; only the hash is
+// stored, and the plaintext is shown once at generation time.
+export const attendanceImportTokens = pgTable('attendance_import_tokens', {
 	id: uuid('id').primaryKey().defaultRandom(),
-	label: text('label').notNull(), // e.g. 'EasyTime Pro - Main Office'
+	label: text('label').notNull(), // e.g. 'EasyTime Pro - Bangalore office'
 	tokenHash: text('token_hash').notNull().unique(),
 	createdBy: uuid('created_by').references(() => users.id),
 	revokedAt: timestamp('revoked_at', { withTimezone: true }),
@@ -341,15 +345,41 @@ export const devicePushTokens = pgTable('device_push_tokens', {
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 });
 
-// Raw punches as received from the device, kept for audit/replay regardless of whether
-// they matched a known employee. attendanceId is set once successfully applied.
+// One row per uploaded export file — the audit trail of what was ingested when.
+export const attendanceImports = pgTable('attendance_imports', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	tokenId: uuid('token_id').references(() => attendanceImportTokens.id),
+	uploadedBy: uuid('uploaded_by').references(() => users.id),
+	filename: text('filename'),
+	rowCount: integer('row_count').notNull(),
+	matchedCount: integer('matched_count').notNull(),
+	unmatchedCount: integer('unmatched_count').notNull(),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// Every raw punch line from the export, kept for audit/replay whether or not its
+// emp_code resolved to an employee. Unmatched rows stay here so HR can fix the
+// employee code and re-apply rather than losing the punch.
 export const devicePunches = pgTable('device_punches', {
 	id: uuid('id').primaryKey().defaultRandom(),
-	tokenId: uuid('token_id').references(() => devicePushTokens.id),
-	deviceSerial: text('device_serial'),
-	deviceUserPin: text('device_user_pin').notNull(),
+	importId: uuid('import_id').references(() => attendanceImports.id),
+	// {emp_code} — the join key back to employee_profiles.employee_code
+	empCode: text('emp_code').notNull(),
+	firstName: text('first_name'),
+	lastName: text('last_name'),
+	deptCode: text('dept_code'),
+	deptName: text('dept_name'),
 	punchedAt: timestamp('punched_at', { withTimezone: true }).notNull(),
-	direction: text('direction'), // 'in' | 'out' | null (device didn't specify)
+	verifyType: text('verify_type'),
+	punchState: text('punch_state'), // raw {punch_state} from the device
+	direction: text('direction'), // 'in' | 'out' | null once interpreted
+	workCode: text('work_code'),
+	cardNumber: text('card_number'),
+	areaName: text('area_name'),
+	terminalAlias: text('terminal_alias'),
+	terminalSn: text('terminal_sn'),
+	temperature: text('temperature'),
+	maskFlag: text('mask_flag'),
 	rawLine: text('raw_line').notNull(),
 	matchedUserId: uuid('matched_user_id').references(() => users.id),
 	attendanceId: uuid('attendance_id').references(() => attendance.id),

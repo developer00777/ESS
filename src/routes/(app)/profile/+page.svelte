@@ -70,6 +70,7 @@
 		</ProfileCard>
 
 		<ProfileCard icon={Briefcase} title="Job Information">
+			<p><strong>Employee code:</strong> <span class="emp-code">{data.profile?.employeeCode || '—'}</span></p>
 			<p><strong>Designation:</strong> {data.profile?.designation || '—'}</p>
 			<p><strong>Team:</strong> {data.profile?.teamAndFloor || '—'}</p>
 			<p><strong>Floor:</strong> {data.profile?.floorDetails || '—'}</p>
@@ -194,6 +195,11 @@
 		font-size: 0.72rem;
 		color: var(--ess-text-muted);
 		font-style: italic;
+	}
+
+	.emp-code {
+		font-family: var(--ess-font-mono);
+		letter-spacing: 0.02em;
 	}
 
 	.muted {

@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema';
 
-function hashDeviceToken(token: string): string {
+function hashImportToken(token: string): string {
 	return createHash('sha256').update(token).digest('hex');
 }
 
@@ -16,27 +16,28 @@ const db = drizzle(pool, { schema });
 async function main() {
 	const label = process.argv[2];
 	if (!label) {
-		console.error('Usage: tsx src/lib/server/db/generate-device-token.ts "<label>"');
-		console.error('Example: tsx src/lib/server/db/generate-device-token.ts "EasyTime Pro - Main Office"');
+		console.error('Usage: tsx src/lib/server/db/generate-import-token.ts "<label>"');
+		console.error(
+			'Example: tsx src/lib/server/db/generate-import-token.ts "EasyTime Pro - Bangalore office"'
+		);
 		process.exit(1);
 	}
 
 	const token = randomBytes(32).toString('base64url'); // 43 chars, URL-safe
-	const tokenHash = hashDeviceToken(token);
+	const tokenHash = hashImportToken(token);
 
 	const [row] = await db
-		.insert(schema.devicePushTokens)
+		.insert(schema.attendanceImportTokens)
 		.values({ label, tokenHash })
-		.returning({ id: schema.devicePushTokens.id });
+		.returning({ id: schema.attendanceImportTokens.id });
 
-	console.log('\nDevice push token created. This plaintext value is shown ONCE — store it now.\n');
+	console.log('\nAttendance import token created. This value is shown ONCE — store it now.\n');
 	console.log(`  Token ID: ${row.id}`);
 	console.log(`  Label:    ${label}`);
 	console.log(`  Token:    ${token}\n`);
-	console.log('Configure EasyTime Pro / the device to push to:');
-	console.log(
-		`  <YOUR_APP_URL>/api/attendance/device-push/iclock/cdata?token=${token}\n`
-	);
+	console.log('Configure the EasyTime Pro upload job to POST the exported file to:');
+	console.log('  <YOUR_APP_URL>/api/attendance/easytime-import');
+	console.log(`  Header: Authorization: Bearer ${token}\n`);
 
 	await pool.end();
 }

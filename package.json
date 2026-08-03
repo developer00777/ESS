@@ -15,7 +15,7 @@
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
 		"db:seed": "tsx src/lib/server/db/seed.ts",
-		"device-token:generate": "tsx src/lib/server/db/generate-device-token.ts"
+		"import-token:generate": "tsx src/lib/server/db/generate-import-token.ts"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-node": "^5.5.7",

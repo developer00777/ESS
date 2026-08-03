@@ -88,20 +88,45 @@ async function clearPlaceholderAccounts() {
 			.where(inArray(schema.devicePunches.attendanceId, ownAttendanceIds));
 	}
 
-	// device_push_tokens created by a placeholder: any punches referencing that token
-	// must have their token_id cleared before the token row itself can be deleted —
-	// the punch record (audit trail) survives, just loses the link to the deleted token.
+	// attendance_import_tokens / attendance_imports created by a placeholder.
+	// FK chain is device_punches -> attendance_imports -> attendance_import_tokens,
+	// so unlink the punches (their audit rows survive), then delete the imports,
+	// then the tokens.
 	const orphanTokens = await db
-		.select({ id: schema.devicePushTokens.id })
-		.from(schema.devicePushTokens)
-		.where(inArray(schema.devicePushTokens.createdBy, ids));
-	if (orphanTokens.length > 0) {
-		const tokenIds = orphanTokens.map((t) => t.id);
+		.select({ id: schema.attendanceImportTokens.id })
+		.from(schema.attendanceImportTokens)
+		.where(inArray(schema.attendanceImportTokens.createdBy, ids));
+
+	const orphanImports = await db
+		.select({ id: schema.attendanceImports.id })
+		.from(schema.attendanceImports)
+		.where(inArray(schema.attendanceImports.uploadedBy, ids));
+
+	const tokenIds = orphanTokens.map((t) => t.id);
+	const importIdsFromTokens =
+		tokenIds.length > 0
+			? await db
+					.select({ id: schema.attendanceImports.id })
+					.from(schema.attendanceImports)
+					.where(inArray(schema.attendanceImports.tokenId, tokenIds))
+			: [];
+
+	const importIds = [
+		...new Set([...orphanImports, ...importIdsFromTokens].map((r) => r.id))
+	];
+
+	if (importIds.length > 0) {
 		await db
 			.update(schema.devicePunches)
-			.set({ tokenId: null })
-			.where(inArray(schema.devicePunches.tokenId, tokenIds));
-		await db.delete(schema.devicePushTokens).where(inArray(schema.devicePushTokens.id, tokenIds));
+			.set({ importId: null })
+			.where(inArray(schema.devicePunches.importId, importIds));
+		await db.delete(schema.attendanceImports).where(inArray(schema.attendanceImports.id, importIds));
+	}
+
+	if (tokenIds.length > 0) {
+		await db
+			.delete(schema.attendanceImportTokens)
+			.where(inArray(schema.attendanceImportTokens.id, tokenIds));
 	}
 
 	// Step 2: delete rows that genuinely belong to the placeholder users themselves,
