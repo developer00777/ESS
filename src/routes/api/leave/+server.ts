@@ -1,10 +1,17 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db/postgres';
-import { leaveApplications, leaveAllocations, users } from '$lib/server/db/schema';
+import {
+	leaveApplications,
+	leaveAllocations,
+	leaveTypes,
+	employeeProfiles,
+	users
+} from '$lib/server/db/schema';
 import { requireUser } from '$lib/server/rbac';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, gte, lte, inArray, sql } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
+import { checkPinkLeaveEligibility, monthBounds } from '$lib/server/leave-eligibility';
 
 function businessDaysBetween(start: Date, end: Date): number {
 	let count = 0;
@@ -31,6 +38,73 @@ export const POST: RequestHandler = async (event) => {
 		throw error(400, 'endDate cannot be before startDate');
 	}
 	const days = businessDaysBetween(start, end);
+
+	const [type] = await db.select().from(leaveTypes).where(eq(leaveTypes.id, leaveTypeId)).limit(1);
+	if (!type || !type.isActive) {
+		throw error(400, 'That leave type is not available');
+	}
+
+	// Gender/tenure-restricted leave (pink leave). Enforced here, not just hidden
+	// in the UI — the client can post any leaveTypeId it likes.
+	if (type.genderEligibility || type.monthlyQuotaDays) {
+		const [profile] = await db
+			.select()
+			.from(employeeProfiles)
+			.where(eq(employeeProfiles.userId, user.id))
+			.limit(1);
+
+		const verdict = checkPinkLeaveEligibility(
+			profile
+				? {
+						gender: profile.gender,
+						dateOfJoining: profile.dateOfJoining,
+						dateOfConfirmation: profile.dateOfConfirmation,
+						pinkLeaveEligibleOverride: profile.pinkLeaveEligibleOverride
+					}
+				: null,
+			start
+		);
+
+		if (!verdict.eligible) {
+			throw error(403, `You are not eligible for ${type.name}`);
+		}
+	}
+
+	// Monthly-quota leave: the entitlement refreshes each calendar month and does
+	// not accumulate, so the check is "how much of THIS month's quota is already
+	// spoken for", not a running balance.
+	if (type.monthlyQuotaDays) {
+		const quota = Number(type.monthlyQuotaDays);
+		const { start: monthStart, end: monthEnd } = monthBounds(start);
+
+		if (end.getMonth() !== start.getMonth() || end.getFullYear() !== start.getFullYear()) {
+			throw error(400, `${type.name} must start and end within the same month`);
+		}
+
+		const [used] = await db
+			.select({ total: sql<string>`coalesce(sum(${leaveApplications.days}), 0)` })
+			.from(leaveApplications)
+			.where(
+				and(
+					eq(leaveApplications.userId, user.id),
+					eq(leaveApplications.leaveTypeId, leaveTypeId),
+					inArray(leaveApplications.status, ['pending', 'approved', 'escalated']),
+					gte(leaveApplications.startDate, monthStart),
+					lte(leaveApplications.startDate, monthEnd)
+				)
+			);
+
+		const alreadyUsed = Number(used?.total ?? 0);
+		const remaining = quota - alreadyUsed;
+		if (days > remaining) {
+			throw error(
+				400,
+				remaining <= 0
+					? `You have already used this month's ${type.name} (${quota} day${quota === 1 ? '' : 's'} per month, and it doesn't carry over)`
+					: `Only ${remaining} day(s) of ${type.name} left this month`
+			);
+		}
+	}
 
 	const [allocation] = await db
 		.select()

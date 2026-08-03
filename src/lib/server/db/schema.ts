@@ -86,6 +86,12 @@ export const employeeProfiles = pgTable('employee_profiles', {
 		.notNull()
 		.unique(),
 
+	// HR override for gender/tenure-restricted leave (pink leave). null = follow
+	// the automatic rule; true/false = HR has explicitly granted or withheld it.
+	// Exists because gender and joining dates are missing for most employees, so
+	// the automatic rule alone would silently exclude people.
+	pinkLeaveEligibleOverride: boolean('pink_leave_eligible_override'),
+
 	// HR-locked — the company employee code (e.g. "CIPL2666"). This is the single
 	// source of truth for identifying a person across the portal, the HR master
 	// spreadsheets, and EasyTime Pro (where it is the device-side {emp_code}).
@@ -177,6 +183,12 @@ export const leaveTypes = pgTable('leave_types', {
 	requiresDocumentation: boolean('requires_documentation').default(false).notNull(),
 	documentationNote: text('documentation_note'),
 	fixedDays: integer('fixed_days'), // for event-based leave (maternity/paternity/bereavement), null if accrual-based
+	// Monthly-quota leave (pink/menstrual): the entitlement refreshes every month
+	// and does NOT accumulate — unused days expire at month end rather than
+	// building a balance the way accrual leave does.
+	monthlyQuotaDays: numeric('monthly_quota_days', { precision: 5, scale: 2 }),
+	// Restricts who may apply. 'female' is used by pink leave; null = everyone.
+	genderEligibility: text('gender_eligibility'), // 'female' | 'male' | null
 	notes: text('notes'),
 	sourceDocumentId: text('source_document_id'), // Mongo policy_documents._id this rule was extracted from
 	policyVersion: integer('policy_version').default(1).notNull(),

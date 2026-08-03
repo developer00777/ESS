@@ -9,7 +9,8 @@ import {
 	holidayCalendars,
 	holidays
 } from '$lib/server/db/schema';
-import { eq, and, desc, inArray, ne } from 'drizzle-orm';
+import { eq, and, desc, inArray, ne, gte, lte, sql, isNotNull } from 'drizzle-orm';
+import { checkPinkLeaveEligibility, monthBounds } from '$lib/server/leave-eligibility';
 
 /**
  * Every role reads the same published holiday calendar rows and the same
@@ -92,6 +93,78 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.innerJoin(leaveTypes, eq(leaveAllocations.leaveTypeId, leaveTypes.id))
 		.where(and(eq(leaveAllocations.userId, user.id), eq(leaveAllocations.year, year)));
 
+	// Monthly-quota leave (pink leave) has no allocation row — its entitlement
+	// refreshes each month and doesn't accumulate — so its balance is computed
+	// from this month's applications instead.
+	const [selfProfile] = await db
+		.select()
+		.from(employeeProfiles)
+		.where(eq(employeeProfiles.userId, user.id))
+		.limit(1);
+
+	const pinkVerdict = checkPinkLeaveEligibility(
+		selfProfile
+			? {
+					gender: selfProfile.gender,
+					dateOfJoining: selfProfile.dateOfJoining,
+					dateOfConfirmation: selfProfile.dateOfConfirmation,
+					pinkLeaveEligibleOverride: selfProfile.pinkLeaveEligibleOverride
+				}
+			: null
+	);
+
+	let monthlyBalances: Array<{
+		typeId: string;
+		name: string;
+		quota: number;
+		used: number;
+		remaining: number;
+	}> = [];
+
+	if (pinkVerdict.eligible) {
+		const monthlyTypes = await db
+			.select()
+			.from(leaveTypes)
+			.where(and(eq(leaveTypes.isActive, true), isNotNull(leaveTypes.monthlyQuotaDays)));
+
+		if (monthlyTypes.length > 0) {
+			const { start: monthStart, end: monthEnd } = monthBounds(new Date());
+			const usedRows = await db
+				.select({
+					leaveTypeId: leaveApplications.leaveTypeId,
+					total: sql<string>`coalesce(sum(${leaveApplications.days}), 0)`
+				})
+				.from(leaveApplications)
+				.where(
+					and(
+						eq(leaveApplications.userId, user.id),
+						inArray(
+							leaveApplications.leaveTypeId,
+							monthlyTypes.map((t) => t.id)
+						),
+						inArray(leaveApplications.status, ['pending', 'approved', 'escalated']),
+						gte(leaveApplications.startDate, monthStart),
+						lte(leaveApplications.startDate, monthEnd)
+					)
+				)
+				.groupBy(leaveApplications.leaveTypeId);
+
+			const usedByType = new Map(usedRows.map((r) => [r.leaveTypeId, Number(r.total)]));
+
+			monthlyBalances = monthlyTypes.map((t) => {
+				const quota = Number(t.monthlyQuotaDays);
+				const used = usedByType.get(t.id) ?? 0;
+				return {
+					typeId: t.id,
+					name: t.name,
+					quota,
+					used,
+					remaining: Math.max(0, quota - used)
+				};
+			});
+		}
+	}
+
 	const myApplications = await db
 		.select({ application: leaveApplications, type: leaveTypes })
 		.from(leaveApplications)
@@ -129,5 +202,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const { calendarHolidays, leaveEvents } = await loadCalendarEvents(user);
 
-	return { allocations, myApplications, approvalQueue, calendarHolidays, leaveEvents };
+	return {
+		allocations,
+		monthlyBalances,
+		myApplications,
+		approvalQueue,
+		calendarHolidays,
+		leaveEvents
+	};
 };

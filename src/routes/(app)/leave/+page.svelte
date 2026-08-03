@@ -96,6 +96,21 @@
 				<div class="balance-bar"><div class="balance-bar-fill" style="width:{pct}%"></div></div>
 			</div>
 		{/each}
+
+		{#each data.monthlyBalances as row (row.typeId)}
+			{@const pct = Math.max(0, Math.min(100, (row.remaining / row.quota) * 100))}
+			<div class="balance-card">
+				<span class="balance-label">{row.name}</span>
+				<div class="balance-value-row">
+					<span class="balance-value">{row.remaining}</span>
+					<span class="balance-cap">/ {row.quota} this month</span>
+				</div>
+				<div class="balance-bar">
+					<div class="balance-bar-fill balance-bar-fill--monthly" style="width:{pct}%"></div>
+				</div>
+				<span class="balance-note">Resets monthly · doesn't carry over</span>
+			</div>
+		{/each}
 	</div>
 
 	<div class="layout">
@@ -277,6 +292,18 @@
 	.balance-bar-fill {
 		height: 100%;
 		background: var(--ess-primary);
+	}
+
+	/* Monthly-quota leave reads differently from an annual balance, so it gets
+	   its own accent and a note that it expires. */
+	.balance-bar-fill--monthly {
+		background: #ec4899;
+	}
+
+	.balance-note {
+		font-size: var(--ess-fs-eyebrow);
+		color: var(--ess-text-secondary);
+		margin-top: 0.35rem;
 	}
 
 	.applications-list {

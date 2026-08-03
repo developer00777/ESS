@@ -57,6 +57,13 @@
       "when": 1785759628070,
       "tag": "0007_employee_code_easytime_import",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785759629070,
+      "tag": "0008_pink_leave",
+      "breakpoints": true
     }
   ]
 }
