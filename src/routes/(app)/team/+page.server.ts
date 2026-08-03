@@ -9,14 +9,26 @@ import {
 	leaveAllocations,
 	shiftGroups,
 	holidayCalendars,
-	employeeProfiles
+	employeeProfiles,
+	bulkImports,
+	bulkImportRows
 } from '$lib/server/db/schema';
-import { eq, and, inArray, lte, gte } from 'drizzle-orm';
+import { eq, and, inArray, lte, gte, desc } from 'drizzle-orm';
 import { hashPassword } from '$lib/server/auth';
 import { randomBytes } from 'node:crypto';
-import { logActivity } from '$lib/server/db/mongo';
+import { logActivity, getPasswordActivity } from '$lib/server/db/mongo';
 import { requireRole, canCreateRole } from '$lib/server/rbac';
 import { type Role } from '$lib/server/auth';
+import { parseHrTeamSheet, suggestReportsToIndex, suggestExistingUserMatch } from '$lib/server/bulk-import';
+import { error } from '@sveltejs/kit';
+
+const DEFAULT_BULK_PASSWORD = 'Champ@123';
+
+const PASSWORD_ACTION_LABELS: Record<string, string> = {
+	'password.change': 'Changed own password',
+	'user.password_reset': "Reset another user's password",
+	'user.bulk_create': 'Created via bulk import (default password)'
+};
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = locals.user!;
@@ -102,6 +114,52 @@ export const load: PageServerLoad = async ({ locals }) => {
 			: 'absent'
 	}));
 
+	let bulkImportsList: Array<{
+		id: string;
+		filename: string;
+		status: 'pending_review' | 'applied';
+		rowCount: number;
+		createdAt: Date;
+	}> = [];
+	let passwordActivity: Array<{
+		label: string;
+		actorName: string | null;
+		targetName: string | null;
+		targetEmail: string | null;
+		createdAt: Date;
+	}> = [];
+
+	if (user.role === 'super_admin') {
+		bulkImportsList = await db
+			.select({
+				id: bulkImports.id,
+				filename: bulkImports.filename,
+				status: bulkImports.status,
+				rowCount: bulkImports.rowCount,
+				createdAt: bulkImports.createdAt
+			})
+			.from(bulkImports)
+			.orderBy(desc(bulkImports.createdAt));
+
+		const entries = await getPasswordActivity();
+		const involvedIds = [
+			...new Set(entries.flatMap((e) => [e.actorUserId, e.targetId].filter((id): id is string => Boolean(id))))
+		];
+		const involvedUsers =
+			involvedIds.length > 0
+				? await db.select({ id: users.id, fullName: users.fullName, email: users.email }).from(users).where(inArray(users.id, involvedIds))
+				: [];
+		const byId = new Map(involvedUsers.map((u) => [u.id, u]));
+
+		passwordActivity = entries.map((e) => ({
+			label: PASSWORD_ACTION_LABELS[e.action] ?? e.action,
+			actorName: byId.get(e.actorUserId)?.fullName ?? null,
+			targetName: e.targetId ? byId.get(e.targetId)?.fullName ?? null : null,
+			targetEmail: (e.details?.email as string | undefined) ?? null,
+			createdAt: e.createdAt
+		}));
+	}
+
 	return {
 		roster: rosterWithStatus,
 		teamSize: rosterWithStatus.length,
@@ -109,7 +167,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 		onLeave: new Set(onLeaveToday.map((r) => r.userId)).size,
 		pendingApprovals: pendingApprovalRows.length,
 		creatableRoles,
-		shiftGroups: groupsWithPublishedCalendar
+		shiftGroups: groupsWithPublishedCalendar,
+		isSuperAdmin: user.role === 'super_admin',
+		bulkImports: bulkImportsList,
+		passwordActivity
 	};
 };
 
@@ -184,5 +245,210 @@ export const actions: Actions = {
 		});
 
 		return { success: true, tempPassword, email };
+	},
+
+	// Super Admin uploads a spreadsheet with the "HR Team Master data" sheet shape.
+	// Parsed immediately into bulk_import_rows for review — nothing touches `users`
+	// yet (see applyBulkImport below).
+	uploadBulkImport: async (event) => {
+		const actor = requireRole(event, ['super_admin']);
+		const form = await event.request.formData();
+		const file = form.get('file');
+
+		if (!(file instanceof File) || file.size === 0) {
+			return { bulkImportError: 'Choose an .xlsx file to upload' };
+		}
+		if (file.size > 5 * 1024 * 1024) {
+			return { bulkImportError: 'File too large (max 5MB)' };
+		}
+
+		const buffer = Buffer.from(await file.arrayBuffer());
+
+		let parsedRows;
+		try {
+			parsedRows = await parseHrTeamSheet(buffer);
+		} catch (err) {
+			return { bulkImportError: err instanceof Error ? err.message : 'Failed to parse workbook' };
+		}
+		if (parsedRows.length === 0) {
+			return { bulkImportError: 'No rows found in the "HR Team Master data" sheet' };
+		}
+
+		const emails = parsedRows.map((r) => r.officialEmail);
+		const existingByEmailRows = await db
+			.select({ id: users.id, email: users.email })
+			.from(users)
+			.where(inArray(users.email, emails));
+		const existingByEmail = new Map(existingByEmailRows.map((u) => [u.email, u.id]));
+
+		// Full-name cross-check against ALL existing users, not just email matches — catches
+		// the case where the sheet lists a different email for someone who already has a
+		// real login (e.g. their actual account uses a different domain). Surfaced as a
+		// review flag rather than silently creating a duplicate account for the same person.
+		const allExistingUsers = await db.select({ id: users.id, fullName: users.fullName, email: users.email }).from(users);
+
+		const [importRow] = await db
+			.insert(bulkImports)
+			.values({ filename: file.name, uploadedBy: actor.id, rowCount: parsedRows.length })
+			.returning();
+
+		const insertedRows = await db
+			.insert(bulkImportRows)
+			.values(
+				parsedRows.map((r) => {
+					const emailMatchId = existingByEmail.get(r.officialEmail) ?? null;
+					const nameMatch = emailMatchId ? null : suggestExistingUserMatch(r.fullName, allExistingUsers);
+
+					let status: 'ready' | 'needs_review' | 'skipped_existing' = 'ready';
+					if (emailMatchId) status = 'skipped_existing';
+					else if (nameMatch) status = 'needs_review';
+
+					return {
+						importId: importRow.id,
+						employeeCode: r.employeeCode,
+						fullName: r.fullName,
+						designation: r.designation,
+						officialEmail: r.officialEmail,
+						teamAndFloor: r.teamAndFloor,
+						reportingAuthorityRaw: r.reportingAuthorityRaw,
+						existingUserId: emailMatchId ?? nameMatch?.id ?? null,
+						status
+					};
+				})
+			)
+			.returning();
+
+		for (let i = 0; i < parsedRows.length; i++) {
+			const suggestedIndex = suggestReportsToIndex(parsedRows[i].reportingAuthorityRaw, parsedRows, i);
+			const hasRawAuthority = Boolean(parsedRows[i].reportingAuthorityRaw);
+			const needsReviewForReportingLine = hasRawAuthority && suggestedIndex === null;
+			const alreadyDecided = insertedRows[i].status !== 'ready';
+
+			if (suggestedIndex !== null || (needsReviewForReportingLine && !alreadyDecided)) {
+				await db
+					.update(bulkImportRows)
+					.set({
+						reportsToRowId: suggestedIndex !== null ? insertedRows[suggestedIndex].id : null,
+						status: needsReviewForReportingLine && !alreadyDecided ? 'needs_review' : insertedRows[i].status
+					})
+					.where(eq(bulkImportRows.id, insertedRows[i].id));
+			}
+		}
+
+		await logActivity({
+			actorUserId: actor.id,
+			action: 'bulk_import.upload',
+			targetType: 'bulk_import',
+			targetId: importRow.id,
+			details: { filename: file.name, rowCount: parsedRows.length }
+		});
+
+		return { bulkImportUploaded: importRow.id };
+	},
+
+	// Creates one `users` row (+ employeeProfiles, + a team if the row is a team_lead)
+	// per "ready" row in the given import. Refuses if any row still needs review.
+	applyBulkImport: async (event) => {
+		const actor = requireRole(event, ['super_admin']);
+		const form = await event.request.formData();
+		const importId = String(form.get('importId') ?? '');
+		if (!importId) return { bulkImportError: 'Missing importId' };
+
+		const [importRow] = await db.select().from(bulkImports).where(eq(bulkImports.id, importId)).limit(1);
+		if (!importRow) throw error(404, 'Import not found');
+		if (importRow.status === 'applied') {
+			return { bulkImportError: 'This import has already been applied' };
+		}
+
+		const rows = await db.select().from(bulkImportRows).where(eq(bulkImportRows.importId, importId));
+		const pending = rows.filter((r) => r.status === 'needs_review');
+		if (pending.length > 0) {
+			return { bulkImportError: `${pending.length} row(s) still need review before this import can be applied` };
+		}
+
+		const passwordHash = await hashPassword(DEFAULT_BULK_PASSWORD);
+		const rowIdToUserId = new Map<string, string>();
+
+		for (const row of rows) {
+			if (row.status === 'skipped_existing') {
+				if (row.existingUserId) rowIdToUserId.set(row.id, row.existingUserId);
+				continue;
+			}
+			if (row.status !== 'ready') continue;
+
+			const [createdUser] = await db
+				.insert(users)
+				.values({
+					email: row.officialEmail,
+					passwordHash,
+					role: row.role,
+					fullName: row.fullName,
+					isActive: true,
+					mustChangePassword: true
+				})
+				.returning();
+
+			rowIdToUserId.set(row.id, createdUser.id);
+
+			await db.insert(employeeProfiles).values({
+				userId: createdUser.id,
+				designation: row.designation,
+				teamAndFloor: row.teamAndFloor,
+				directReportingAuthority: row.reportingAuthorityRaw
+			});
+
+			await db.update(bulkImportRows).set({ status: 'created', createdUserId: createdUser.id }).where(eq(bulkImportRows.id, row.id));
+
+			await logActivity({
+				actorUserId: actor.id,
+				action: 'user.bulk_create',
+				targetType: 'user',
+				targetId: createdUser.id,
+				details: { email: createdUser.email, importId, role: row.role }
+			});
+		}
+
+		for (const row of rows) {
+			if (row.status !== 'ready') continue;
+			const userId = rowIdToUserId.get(row.id);
+			if (!userId) continue;
+
+			const managerUserId = row.reportsToRowId ? rowIdToUserId.get(row.reportsToRowId) ?? null : null;
+
+			let teamId: string | null = null;
+			if (row.role === 'team_lead') {
+				const [team] = await db.insert(teams).values({ name: `${row.fullName}'s Team`, teamLeadId: userId }).returning();
+				teamId = team.id;
+			}
+
+			await db.update(users).set({ reportsTo: managerUserId, teamId }).where(eq(users.id, userId));
+		}
+
+		for (const row of rows) {
+			if (row.status !== 'ready' || row.role === 'team_lead') continue;
+			const userId = rowIdToUserId.get(row.id);
+			const managerUserId = row.reportsToRowId ? rowIdToUserId.get(row.reportsToRowId) ?? null : null;
+			if (!userId || !managerUserId) continue;
+
+			const [manager] = await db.select({ teamId: users.teamId }).from(users).where(eq(users.id, managerUserId)).limit(1);
+			if (manager?.teamId) {
+				await db.update(users).set({ teamId: manager.teamId }).where(eq(users.id, userId));
+			}
+		}
+
+		const createdCount = rows.filter((r) => r.status === 'ready').length;
+		const skippedCount = rows.filter((r) => r.status === 'skipped_existing').length;
+
+		await db.update(bulkImports).set({ status: 'applied', appliedAt: new Date() }).where(eq(bulkImports.id, importId));
+
+		await logActivity({
+			actorUserId: actor.id,
+			action: 'bulk_import.apply',
+			targetType: 'bulk_import',
+			targetId: importId,
+			details: { createdCount, skippedCount }
+		});
+
+		return { bulkImportApplied: { createdCount, skippedCount } };
 	}
 };

@@ -26,6 +26,20 @@ export async function logActivity(entry: Omit<ActivityLogEntry, 'createdAt'>) {
 	});
 }
 
+const PASSWORD_ACTIONS = ['password.change', 'user.password_reset', 'user.bulk_create'];
+
+// Audit trail of who changed/reset whose password and when — never the password
+// value itself, which isn't recoverable from a one-way hash by design.
+export async function getPasswordActivity(limit = 200): Promise<ActivityLogEntry[]> {
+	const db = await getMongo();
+	return db
+		.collection<ActivityLogEntry>('activity_log')
+		.find({ action: { $in: PASSWORD_ACTIONS } })
+		.sort({ createdAt: -1 })
+		.limit(limit)
+		.toArray();
+}
+
 // --- Policy documents (PRD §6.2: Mongo is system of record for versioned/rich-content
 // policy uploads; Postgres holds the structured rows extracted from them) ---
 

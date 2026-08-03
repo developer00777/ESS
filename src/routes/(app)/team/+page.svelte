@@ -1,12 +1,108 @@
 <script lang="ts">
 	import Users from '@lucide/svelte/icons/users';
+	import UploadCloud from '@lucide/svelte/icons/upload-cloud';
 	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 
 	let { data, form } = $props();
 
 	let showCreateForm = $state(false);
 	let search = $state('');
 	let filter = $state<'all' | 'present' | 'absent'>('all');
+
+	// --- Bulk import (Super Admin only) ---
+	const ROLES = ['employee', 'team_lead', 'admin', 'super_admin'] as const;
+
+	let showBulkImport = $state(false);
+	let bulkImportFile = $state<File | null>(null);
+	let uploadingBulk = $state(false);
+	let selectedImportId = $state<string | null>(null);
+
+	type ReviewRow = {
+		id: string;
+		employeeCode: string | null;
+		fullName: string;
+		designation: string | null;
+		officialEmail: string;
+		reportingAuthorityRaw: string | null;
+		reportsToRowId: string | null;
+		existingUserId: string | null;
+		existingUser: { id: string; fullName: string; email: string } | null;
+		role: 'super_admin' | 'admin' | 'team_lead' | 'employee';
+		status: 'ready' | 'needs_review' | 'created' | 'skipped_existing';
+	};
+
+	let reviewImport = $state<{ id: string; filename: string; status: string; appliedAt: string | null } | null>(null);
+	let reviewRows = $state<ReviewRow[]>([]);
+	let loadingReview = $state(false);
+	let savingRowId = $state<string | null>(null);
+	let applyingBulk = $state(false);
+
+	let needsReviewCount = $derived(reviewRows.filter((r) => r.status === 'needs_review').length);
+	let readyCount = $derived(reviewRows.filter((r) => r.status === 'ready').length);
+	let rowById = $derived(new Map(reviewRows.map((r) => [r.id, r])));
+
+	function onBulkFileChange(e: Event) {
+		const input = e.target as HTMLInputElement;
+		bulkImportFile = input.files?.[0] ?? null;
+	}
+
+	async function loadReview(importId: string) {
+		loadingReview = true;
+		try {
+			const res = await fetch(`/api/admin/bulk-imports/${importId}`);
+			const body = await res.json();
+			if (res.ok) {
+				reviewImport = body.import;
+				reviewRows = body.rows;
+				selectedImportId = importId;
+			}
+		} finally {
+			loadingReview = false;
+		}
+	}
+
+	async function patchRow(rowId: string, patch: Record<string, unknown>) {
+		if (!selectedImportId) return;
+		savingRowId = rowId;
+		try {
+			const res = await fetch(`/api/admin/bulk-imports/${selectedImportId}/rows/${rowId}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(patch)
+			});
+			const body = await res.json();
+			if (res.ok) {
+				reviewRows = reviewRows.map((r) => (r.id === rowId ? { ...r, ...body.row } : r));
+			}
+		} finally {
+			savingRowId = null;
+		}
+	}
+
+	function onEmailBlur(rowId: string, e: FocusEvent) {
+		const value = (e.target as HTMLInputElement).value.trim();
+		const row = rowById.get(rowId);
+		if (row && value && value !== row.officialEmail) patchRow(rowId, { officialEmail: value });
+	}
+
+	function onRoleChange(rowId: string, e: Event) {
+		patchRow(rowId, { role: (e.target as HTMLSelectElement).value });
+	}
+
+	function onManagerChange(rowId: string, e: Event) {
+		const value = (e.target as HTMLSelectElement).value;
+		patchRow(rowId, { reportsToRowId: value === '' ? null : value });
+	}
+
+	function resolveDuplicate(rowId: string, decision: 'link' | 'create_new') {
+		patchRow(rowId, { duplicateDecision: decision });
+	}
+
+	function managerName(row: ReviewRow): string {
+		if (!row.reportsToRowId) return '—';
+		return rowById.get(row.reportsToRowId)?.fullName ?? 'Unknown';
+	}
 
 	const statusLabel: Record<string, string> = {
 		present: 'Present',
@@ -158,6 +254,272 @@
 	</div>
 </div>
 
+{#if data.isSuperAdmin}
+	<section class="bulk-import-section">
+		<div class="section-head">
+			<div>
+				<h2 class="section-title">Bulk Import Logins</h2>
+				<p class="section-sub">
+					Upload a spreadsheet with an "HR Team Master data" sheet — new logins use <code>Champ@123</code> and must
+					be changed on first login.
+				</p>
+			</div>
+			<button class="ess-btn ess-btn--secondary" onclick={() => (showBulkImport = !showBulkImport)}>
+				<UploadCloud size={16} />
+				{showBulkImport ? 'Close' : 'Import from Spreadsheet'}
+			</button>
+		</div>
+
+		{#if showBulkImport}
+			<form
+				method="POST"
+				action="?/uploadBulkImport"
+				enctype="multipart/form-data"
+				use:enhance={() => {
+					uploadingBulk = true;
+					return async ({ result, update }) => {
+						uploadingBulk = false;
+						await update({ reset: false });
+						if (result.type === 'success' && result.data?.bulkImportUploaded) {
+							await invalidateAll();
+							await loadReview(result.data.bulkImportUploaded as string);
+						}
+					};
+				}}
+				class="create-card"
+			>
+				<label class="ess-field bulk-file-field">
+					<span class="ess-label">Spreadsheet (.xlsx)</span>
+					<input
+						class="ess-input"
+						type="file"
+						name="file"
+						accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+						onchange={onBulkFileChange}
+						required
+					/>
+				</label>
+				<button type="submit" class="ess-btn ess-btn--primary" disabled={uploadingBulk}>
+					{uploadingBulk ? 'Parsing…' : 'Upload & Review'}
+				</button>
+			</form>
+			{#if form?.bulkImportError}
+				<p class="ess-error section-gap">{form.bulkImportError}</p>
+			{/if}
+			{#if form?.bulkImportApplied}
+				<p class="temp-pass">
+					Created {form.bulkImportApplied.createdCount} login(s). {form.bulkImportApplied.skippedCount} already
+					existed and were left untouched.
+				</p>
+			{/if}
+		{/if}
+
+		{#if data.bulkImports.length > 0}
+			<div class="import-list">
+				{#each data.bulkImports as imp (imp.id)}
+					<button type="button" class="import-row" onclick={() => loadReview(imp.id)}>
+						<span class="import-main">
+							<strong>{imp.filename}</strong>
+							<span class="meta">{imp.rowCount} row(s)</span>
+						</span>
+						<span class="ess-badge ess-badge--{imp.status === 'applied' ? 'approved' : 'pending'}">
+							{imp.status === 'applied' ? 'Applied' : 'Pending review'}
+						</span>
+					</button>
+				{/each}
+			</div>
+		{/if}
+
+		{#if loadingReview}
+			<p class="ess-empty">Loading review…</p>
+		{/if}
+
+		{#if reviewImport}
+			{@const locked = reviewImport.status === 'applied'}
+			<div class="review-block">
+				{#if needsReviewCount > 0 && !locked}
+					<p class="ess-error section-gap">
+						{needsReviewCount} row(s) need a decision before applying — either a reporting-line manager couldn't be
+						confidently matched, or the name closely matches an existing account under a different email.
+					</p>
+				{/if}
+
+				<div class="ess-table-shell review-table-shell">
+					<table class="ess-table">
+						<thead>
+							<tr>
+								<th>Name</th>
+								<th>Code</th>
+								<th>Email</th>
+								<th>Role</th>
+								<th>Reports to</th>
+								<th>Status</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each reviewRows as row (row.id)}
+								<tr>
+									<td>{row.fullName}</td>
+									<td>{row.employeeCode ?? '—'}</td>
+									<td>
+										{#if locked || row.status === 'skipped_existing'}
+											{row.officialEmail}
+										{:else}
+											<input
+												class="ess-input"
+												type="email"
+												value={row.officialEmail}
+												onblur={(e) => onEmailBlur(row.id, e)}
+												disabled={savingRowId === row.id}
+											/>
+										{/if}
+									</td>
+									<td>
+										{#if locked || row.status === 'skipped_existing'}
+											{row.role.replace('_', ' ')}
+										{:else}
+											<select
+												class="ess-select"
+												value={row.role}
+												onchange={(e) => onRoleChange(row.id, e)}
+												disabled={savingRowId === row.id}
+											>
+												{#each ROLES as r (r)}
+													<option value={r}>{r.replace('_', ' ')}</option>
+												{/each}
+											</select>
+										{/if}
+									</td>
+									<td>
+										{#if locked || row.status === 'skipped_existing'}
+											{managerName(row)}
+										{:else}
+											<select
+												class="ess-select"
+												value={row.reportsToRowId ?? ''}
+												onchange={(e) => onManagerChange(row.id, e)}
+												disabled={savingRowId === row.id}
+											>
+												<option value="">— none —</option>
+												{#each reviewRows.filter((r) => r.id !== row.id) as candidate (candidate.id)}
+													<option value={candidate.id}>{candidate.fullName}</option>
+												{/each}
+											</select>
+											{#if row.reportingAuthorityRaw}
+												<span class="raw-hint">sheet said: "{row.reportingAuthorityRaw}"</span>
+											{/if}
+										{/if}
+									</td>
+									<td>
+										<span
+											class="ess-badge ess-badge--{row.status === 'needs_review'
+												? 'pending'
+												: row.status === 'skipped_existing'
+													? 'cancelled'
+													: 'approved'}"
+										>
+											{row.status.replace('_', ' ')}
+										</span>
+									</td>
+								</tr>
+								{#if row.status === 'needs_review' && row.existingUser}
+									<tr class="duplicate-row">
+										<td colspan="6">
+											<div class="duplicate-banner">
+												<span>
+													"{row.fullName}" closely matches an existing account:
+													<strong>{row.existingUser.fullName}</strong> ({row.existingUser.email}). Same person?
+												</span>
+												<div class="duplicate-actions">
+													<button
+														type="button"
+														class="ess-btn ess-btn--sm ess-btn--secondary"
+														onclick={() => resolveDuplicate(row.id, 'link')}
+														disabled={savingRowId === row.id}
+													>
+														Yes, same person — skip
+													</button>
+													<button
+														type="button"
+														class="ess-btn ess-btn--sm ess-btn--ghost"
+														onclick={() => resolveDuplicate(row.id, 'create_new')}
+														disabled={savingRowId === row.id}
+													>
+														No, create as new
+													</button>
+												</div>
+											</div>
+										</td>
+									</tr>
+								{/if}
+							{/each}
+						</tbody>
+					</table>
+					<div class="ess-table-foot">
+						<span>{readyCount} ready · {needsReviewCount} needs review</span>
+						{#if !locked}
+							<form
+								method="POST"
+								action="?/applyBulkImport"
+								use:enhance={() => {
+									applyingBulk = true;
+									return async ({ update }) => {
+										applyingBulk = false;
+										await update();
+										await invalidateAll();
+										if (selectedImportId) await loadReview(selectedImportId);
+									};
+								}}
+							>
+								<input type="hidden" name="importId" value={reviewImport.id} />
+								<button
+									type="submit"
+									class="ess-btn ess-btn--primary"
+									disabled={applyingBulk || needsReviewCount > 0 || readyCount === 0}
+								>
+									{applyingBulk ? 'Creating logins…' : `Create ${readyCount} login(s)`}
+								</button>
+							</form>
+						{/if}
+					</div>
+				</div>
+			</div>
+		{/if}
+	</section>
+
+	<section class="password-activity-section">
+		<h2 class="section-title">Password Activity</h2>
+		<p class="section-sub">
+			Who changed or reset whose password, and when. Actual passwords are never stored or shown — they're one-way
+			hashed and cannot be recovered by anyone, including a Super Admin.
+		</p>
+		<div class="ess-table-shell">
+			<table class="ess-table">
+				<thead>
+					<tr>
+						<th>When</th>
+						<th>Action</th>
+						<th>By</th>
+						<th>For</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each data.passwordActivity as entry, i (i)}
+						<tr>
+							<td>{new Date(entry.createdAt).toLocaleString()}</td>
+							<td>{entry.label}</td>
+							<td>{entry.actorName ?? 'Unknown'}</td>
+							<td>{entry.targetName ?? entry.targetEmail ?? '—'}</td>
+						</tr>
+					{:else}
+						<tr><td colspan="4" class="ess-empty">No password activity recorded yet.</td></tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+	</section>
+{/if}
+
 <style>
 	.page-header {
 		margin-bottom: 1.5rem;
@@ -294,5 +656,114 @@
 		.stat-grid {
 			grid-template-columns: 1fr 1fr;
 		}
+	}
+
+	.bulk-import-section,
+	.password-activity-section {
+		margin-top: 2rem;
+	}
+
+	.section-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	.section-title {
+		font-size: var(--ess-fs-h3);
+		font-weight: 700;
+		margin-bottom: 0.25rem;
+	}
+
+	.section-sub {
+		font-size: var(--ess-fs-caption);
+		color: var(--ess-text-secondary);
+		max-width: 560px;
+	}
+
+	.section-sub code {
+		background: var(--ess-sunken);
+		padding: 0.1rem 0.4rem;
+		border-radius: 4px;
+	}
+
+	.bulk-file-field {
+		flex: 1;
+		min-width: 220px;
+	}
+
+	.import-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin: 1rem 0;
+	}
+
+	.import-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
+		padding: 0.7rem 1rem;
+		cursor: pointer;
+		font-family: inherit;
+		text-align: left;
+	}
+
+	.import-main {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+	}
+
+	.import-main .meta {
+		font-size: var(--ess-fs-caption);
+		color: var(--ess-text-secondary);
+	}
+
+	.review-block {
+		margin-top: 1rem;
+	}
+
+	.review-table-shell {
+		overflow-x: auto;
+	}
+
+	.review-table-shell .ess-table td input,
+	.review-table-shell .ess-table td select {
+		min-width: 150px;
+	}
+
+	.raw-hint {
+		display: block;
+		font-size: 0.7rem;
+		color: var(--ess-text-secondary);
+		margin-top: 0.2rem;
+	}
+
+	.duplicate-row td {
+		padding: 0;
+		border-bottom: 1px solid var(--ess-border-subtle);
+	}
+
+	.duplicate-banner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		background: var(--ess-warning-bg);
+		color: var(--ess-warning);
+		padding: 0.6rem 1rem;
+		font-size: 0.8rem;
+	}
+
+	.duplicate-actions {
+		display: flex;
+		gap: 0.5rem;
+		flex-shrink: 0;
 	}
 </style>

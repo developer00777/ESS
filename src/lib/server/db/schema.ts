@@ -355,3 +355,62 @@ export const devicePunches = pgTable('device_punches', {
 	attendanceId: uuid('attendance_id').references(() => attendance.id),
 	receivedAt: timestamp('received_at', { withTimezone: true }).defaultNow().notNull()
 });
+
+export const bulkImportStatusEnum = pgEnum('bulk_import_status', ['pending_review', 'applied']);
+
+export const bulkImportRowStatusEnum = pgEnum('bulk_import_row_status', [
+	'ready',
+	'needs_review',
+	'created',
+	'skipped_existing'
+]);
+
+// A single spreadsheet upload (e.g. "HR Team Master data" sheet), reviewed by the
+// Super Admin before any login is actually created — nothing here touches `users`
+// until POST .../apply. Reusable for any future sheet with the same column shape.
+export const bulkImports = pgTable('bulk_imports', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	filename: text('filename').notNull(),
+	uploadedBy: uuid('uploaded_by').references(() => users.id),
+	status: bulkImportStatusEnum('status').default('pending_review').notNull(),
+	rowCount: integer('row_count').notNull(),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+	appliedAt: timestamp('applied_at', { withTimezone: true })
+});
+
+// One row per person parsed from the sheet. reportsToRowId links to another row in the
+// SAME import (reporting-line resolution happens within one batch); the Super Admin
+// confirms/corrects this before applying. role/teamId are set by the Super Admin in the
+// review step — this app has no automatic designation-to-role inference.
+export const bulkImportRows = pgTable('bulk_import_rows', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	importId: uuid('import_id')
+		.references(() => bulkImports.id)
+		.notNull(),
+	employeeCode: text('employee_code'),
+	fullName: text('full_name').notNull(),
+	designation: text('designation'),
+	officialEmail: text('official_email').notNull(),
+	teamAndFloor: text('team_and_floor'),
+	reportingAuthorityRaw: text('reporting_authority_raw'),
+	reportsToRowId: uuid('reports_to_row_id').references((): any => bulkImportRows.id),
+	role: roleEnum('role').default('employee').notNull(),
+	status: bulkImportRowStatusEnum('status').default('ready').notNull(),
+	existingUserId: uuid('existing_user_id').references(() => users.id),
+	createdUserId: uuid('created_user_id').references(() => users.id)
+});
+
+export const bulkImportsRelations = relations(bulkImports, ({ one, many }) => ({
+	uploader: one(users, { fields: [bulkImports.uploadedBy], references: [users.id] }),
+	rows: many(bulkImportRows)
+}));
+
+export const bulkImportRowsRelations = relations(bulkImportRows, ({ one }) => ({
+	import: one(bulkImports, { fields: [bulkImportRows.importId], references: [bulkImports.id] }),
+	reportsToRow: one(bulkImportRows, {
+		fields: [bulkImportRows.reportsToRowId],
+		references: [bulkImportRows.id]
+	}),
+	existingUser: one(users, { fields: [bulkImportRows.existingUserId], references: [users.id] }),
+	createdUser: one(users, { fields: [bulkImportRows.createdUserId], references: [users.id] })
+}));
