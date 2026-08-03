@@ -1150,3 +1150,107 @@ textarea {
 		transform: none;
 	}
 }
+
+/* ------------------------------------------------------------
+   DESIGN TWEAKS — the prototype's Tweaks panel, as real hooks.
+   Set on <html> by the admin-only preview panel (/admin/tweaks)
+   so defaults can be chosen against real screens, then baked in.
+   Every one of these is a no-op unless the attribute is present,
+   so the shipped default is exactly the Cosmic design default.
+------------------------------------------------------------ */
+
+/* Card surface treatment (default: glass) */
+[data-ess-card='outline'] .ess-card,
+[data-ess-card='outline'] .ess-panel,
+[data-ess-card='outline'] .ess-stat,
+[data-ess-card='outline'] .ess-table-shell {
+	background: rgba(255, 255, 255, 0.015);
+	border-color: rgba(255, 255, 255, 0.17);
+	box-shadow: none;
+}
+
+[data-ess-card='solid'] .ess-card,
+[data-ess-card='solid'] .ess-panel,
+[data-ess-card='solid'] .ess-stat,
+[data-ess-card='solid'] .ess-table-shell {
+	background: var(--ess-modal-bg);
+	border-color: rgba(255, 255, 255, 0.07);
+	box-shadow: 0 18px 40px -32px #000;
+}
+
+[data-ess-card='elevated'] .ess-card,
+[data-ess-card='elevated'] .ess-panel,
+[data-ess-card='elevated'] .ess-stat,
+[data-ess-card='elevated'] .ess-table-shell {
+	background: var(--ess-glass-raised-bg);
+	border-color: rgba(255, 255, 255, 0.14);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.22),
+		0 34px 62px -34px #000,
+		0 0 34px -22px var(--glow);
+}
+
+/* Corner radius scale (default: soft) */
+[data-ess-corner='sharp'] {
+	--ess-radius-xs: 4px;
+	--ess-radius-sm: 6px;
+	--ess-radius-md: 6px;
+	--ess-radius-lg: 8px;
+}
+
+[data-ess-corner='round'] {
+	--ess-radius-xs: 12px;
+	--ess-radius-sm: 16px;
+	--ess-radius-md: 28px;
+	--ess-radius-lg: 32px;
+}
+
+/* Density (default: comfortable) */
+[data-ess-density='compact'] .ess-stat {
+	padding: 14px;
+}
+[data-ess-density='compact'] .ess-stat__value {
+	font-size: 30px;
+}
+[data-ess-density='compact'] .ess-table td {
+	padding: 8px 16px;
+}
+[data-ess-density='compact'] .ess-table th {
+	padding: 8px 16px;
+}
+[data-ess-density='compact'] .ess-card {
+	padding: var(--ess-space-4);
+}
+
+/* Ambient glow intensity (default: medium) */
+[data-ess-glow='subtle'] .cosmos {
+	opacity: 0.5;
+}
+[data-ess-glow='subtle'] .ess-page-title,
+[data-ess-glow='subtle'] .ess-stat__value {
+	text-shadow: none;
+}
+[data-ess-glow='intense'] .cosmos {
+	filter: saturate(1.3) brightness(1.15);
+}
+[data-ess-glow='intense'] .ess-page-title,
+[data-ess-glow='intense'] .ess-stat__value {
+	text-shadow:
+		0 2px 24px rgba(0, 0, 0, 0.55),
+		0 0 44px var(--glow);
+}
+
+/* Starfield + hover-depth toggles (default: on) */
+[data-ess-stars='off'] .stars {
+	display: none;
+}
+
+[data-ess-depth='off'] .ess-card--interactive:hover,
+[data-ess-depth='off'] .ess-stat:hover {
+	transform: none;
+}
+
+/* Sparkline visibility (default: on) */
+[data-ess-spark='off'] .spark {
+	display: none;
+}

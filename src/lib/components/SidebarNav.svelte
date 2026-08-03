@@ -68,11 +68,12 @@
 
 	const teamItem = { href: '/team', label: 'Team', icon: Users };
 	const adminItem = { href: '/admin/policies', label: 'Publish Policies', icon: UploadCloud };
+	const tweaksItem = { href: '/admin/tweaks', label: 'Design Tweaks', icon: Sparkles };
 
 	let sections = $derived.by(() => {
 		const manage = [
 			...(role !== 'employee' ? [teamItem] : []),
-			...(role === 'super_admin' ? [adminItem] : [])
+			...(role === 'super_admin' ? [adminItem, tweaksItem] : [])
 		];
 		return [
 			{ label: 'Me', items: meItems },

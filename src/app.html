@@ -22,6 +22,16 @@
 				if (theme === 'dark') document.documentElement.setAttribute('data-ess-theme', 'dark');
 				if (localStorage.getItem('essShell') === 'rail')
 					document.documentElement.setAttribute('data-ess-shell', 'rail');
+
+				// Design-preview tweaks (Super Admin only, set at /admin/tweaks).
+				// Applied pre-paint so previewing never flashes the default first.
+				try {
+					var tweaks = JSON.parse(localStorage.getItem('essTweaks') || '{}');
+					for (var attr in tweaks) {
+						if (attr.indexOf('data-ess-') === 0 && tweaks[attr])
+							document.documentElement.setAttribute(attr, tweaks[attr]);
+					}
+				} catch (e) {}
 			})();
 		</script>
 		%sveltekit.head%
