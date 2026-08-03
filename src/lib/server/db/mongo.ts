@@ -85,3 +85,55 @@ export async function getPolicyDocument(id: string) {
 	const db = await getMongo();
 	return db.collection<PolicyDocumentEntry>('policy_documents').findOne({ _id: new ObjectId(id) } as never);
 }
+
+// --- Profile pictures ---
+// Stored here rather than on employee_profiles so the Postgres row that every
+// roster and profile query reads stays small. One document per user; uploading
+// again replaces it. Images are resized client-side before upload, so these are
+// small square JPEGs (see AvatarUpload.svelte).
+
+export interface ProfilePictureEntry {
+	userId: string;
+	mimeType: string;
+	fileBase64: string;
+	byteSize: number;
+	updatedAt: Date;
+}
+
+export async function upsertProfilePicture(
+	entry: Omit<ProfilePictureEntry, 'updatedAt'>
+): Promise<void> {
+	const db = await getMongo();
+	await db
+		.collection<ProfilePictureEntry>('profile_pictures')
+		.updateOne(
+			{ userId: entry.userId },
+			{ $set: { ...entry, updatedAt: new Date() } },
+			{ upsert: true }
+		);
+}
+
+export async function getProfilePicture(userId: string): Promise<ProfilePictureEntry | null> {
+	const db = await getMongo();
+	return db.collection<ProfilePictureEntry>('profile_pictures').findOne({ userId });
+}
+
+export async function deleteProfilePicture(userId: string): Promise<void> {
+	const db = await getMongo();
+	await db.collection<ProfilePictureEntry>('profile_pictures').deleteOne({ userId });
+}
+
+/**
+ * Which of the given users have a picture. Used by list views (roster,
+ * approvals) so they can render <img> only where one exists, without pulling
+ * every image's bytes into the page payload.
+ */
+export async function getUsersWithProfilePicture(userIds: string[]): Promise<Set<string>> {
+	if (userIds.length === 0) return new Set();
+	const db = await getMongo();
+	const rows = await db
+		.collection<ProfilePictureEntry>('profile_pictures')
+		.find({ userId: { $in: userIds } }, { projection: { userId: 1 } })
+		.toArray();
+	return new Set(rows.map((r) => r.userId));
+}

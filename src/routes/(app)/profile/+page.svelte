@@ -8,6 +8,7 @@
 	import Shield from '@lucide/svelte/icons/shield';
 	import Check from '@lucide/svelte/icons/check';
 	import ProfileCard from '$lib/components/ProfileCard.svelte';
+	import AvatarUpload from '$lib/components/AvatarUpload.svelte';
 	import { enhance } from '$app/forms';
 
 	let { data } = $props();
@@ -41,6 +42,18 @@
 	<h1 class="ess-page-title">Employee Profile</h1>
 	<p class="ess-page-sub">"My Profile" — a single source of truth for personal data</p>
 </header>
+
+<div class="identity-card">
+	<AvatarUpload
+		userId={data.userRow.id}
+		fullName={data.userRow.fullName}
+		hasPicture={data.hasProfilePicture}
+		pictureVersion={data.profilePictureVersion}
+	/>
+	{#if data.profile?.employeeCode}
+		<span class="identity-code">{data.profile.employeeCode}</span>
+	{/if}
+</div>
 
 <form
 	method="POST"
@@ -200,6 +213,31 @@
 	.emp-code {
 		font-family: var(--ess-font-mono);
 		letter-spacing: 0.02em;
+	}
+
+	.identity-card {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 1rem;
+		background: var(--ess-glass-bg);
+		border: 1px solid var(--ess-glass-border);
+		border-radius: var(--ess-radius-lg);
+		box-shadow: var(--ess-glass-shadow);
+		padding: 1.5rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.identity-code {
+		font-family: var(--ess-font-mono);
+		font-size: var(--ess-fs-body-lg);
+		letter-spacing: 0.04em;
+		padding: 0.4rem 0.9rem;
+		border-radius: var(--ess-radius-pill);
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary);
+		border: 1px solid color-mix(in oklab, var(--acc) 35%, transparent);
 	}
 
 	.muted {

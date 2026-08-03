@@ -12,15 +12,19 @@
 	import Moon from '@lucide/svelte/icons/moon';
 	import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
 	import PanelLeftOpen from '@lucide/svelte/icons/panel-left-open';
+	import Avatar from './Avatar.svelte';
 	import type { Role } from '$lib/server/auth';
 
 	interface Props {
 		activePath: string;
 		role: Role;
 		fullName: string;
+		userId: string;
+		hasPicture?: boolean;
+		pictureVersion?: number | null;
 	}
 
-	let { activePath, role, fullName }: Props = $props();
+	let { activePath, role, fullName, userId, hasPicture = false, pictureVersion }: Props = $props();
 
 	let theme = $state<'light' | 'dark'>('light');
 	let shell = $state<'classic' | 'rail'>('classic');
@@ -141,7 +145,9 @@
 
 	<div class="rail-foot">
 		<div class="foot-user">
-			<div class="foot-avatar">{fullName.charAt(0)}</div>
+			<a href="/profile" class="foot-avatar-link" title="My Profile">
+				<Avatar {userId} {fullName} {hasPicture} size="md" version={pictureVersion ?? undefined} />
+			</a>
 			<div class="foot-info">
 				<strong>{fullName}</strong>
 				<span>{role.replace('_', ' ')}</span>
@@ -341,20 +347,11 @@
 		min-width: 0;
 	}
 
-	.foot-avatar {
-		width: 34px;
-		height: 34px;
-		border-radius: 50%;
-		background: linear-gradient(150deg, var(--acc2), var(--acc));
-		color: var(--ess-text-on-primary);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-weight: 700;
+	.foot-avatar-link {
+		display: block;
+		line-height: 0;
 		flex-shrink: 0;
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.5),
-			0 6px 16px -8px var(--glow);
+		border-radius: 50%;
 	}
 
 	.foot-info {

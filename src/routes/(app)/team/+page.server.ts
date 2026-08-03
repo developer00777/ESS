@@ -16,7 +16,7 @@ import {
 import { eq, and, inArray, lte, gte, desc } from 'drizzle-orm';
 import { hashPassword } from '$lib/server/auth';
 import { randomBytes } from 'node:crypto';
-import { logActivity, getPasswordActivity } from '$lib/server/db/mongo';
+import { logActivity, getPasswordActivity, getUsersWithProfilePicture } from '$lib/server/db/mongo';
 import { requireRole, canCreateRole } from '$lib/server/rbac';
 import { type Role } from '$lib/server/auth';
 import { parseHrTeamSheet, suggestReportsToIndex, suggestExistingUserMatch } from '$lib/server/bulk-import';
@@ -114,11 +114,16 @@ export const load: PageServerLoad = async ({ locals }) => {
 			: [];
 	const codeByUser = new Map(codeRows.map((r) => [r.userId, r.employeeCode]));
 
+	// One query for the whole roster — avoids an <img> request per row for
+	// employees who have no picture.
+	const withPictures = await getUsersWithProfilePicture(rosterIdsForCode);
+
 	const rosterWithStatus = roster.map((r) => ({
 		id: r.id,
 		fullName: r.fullName,
 		email: r.email,
 		employeeCode: codeByUser.get(r.id) ?? null,
+		hasPicture: withPictures.has(r.id),
 		role: r.role,
 		isActive: r.isActive,
 		leaveLeft: balanceByUser.get(r.id) ?? 0,

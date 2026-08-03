@@ -6,7 +6,14 @@
 </script>
 
 <div class="ess-shell">
-	<SidebarNav activePath={page.url.pathname} role={data.user.role} fullName={data.user.fullName} />
+	<SidebarNav
+		activePath={page.url.pathname}
+		role={data.user.role}
+		fullName={data.user.fullName}
+		userId={data.user.id}
+		hasPicture={data.hasProfilePicture}
+		pictureVersion={data.profilePictureVersion}
+	/>
 	<main class="ess-main">
 		{@render children()}
 	</main>

@@ -2,7 +2,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { employeeProfiles, users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { logActivity } from '$lib/server/db/mongo';
+import { logActivity, getProfilePicture } from '$lib/server/db/mongo';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = locals.user!;
@@ -25,7 +25,16 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.where(eq(users.id, user.id))
 		.limit(1);
 
-	return { profile: profile ?? null, userRow };
+	const picture = await getProfilePicture(user.id);
+
+	return {
+		profile: profile ?? null,
+		userRow,
+		hasProfilePicture: Boolean(picture),
+		// Cache-buster: without it a reload can serve the previous image from
+		// the browser cache for the life of its max-age.
+		profilePictureVersion: picture?.updatedAt?.getTime() ?? null
+	};
 };
 
 export const actions: Actions = {

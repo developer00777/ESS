@@ -3,6 +3,7 @@
 	import UploadCloud from '@lucide/svelte/icons/upload-cloud';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import Avatar from '$lib/components/Avatar.svelte';
 
 	let { data, form } = $props();
 
@@ -109,15 +110,6 @@
 		left: 'Checked out',
 		absent: 'Absent'
 	};
-
-	function initials(name: string) {
-		return name
-			.split(' ')
-			.map((p) => p[0])
-			.slice(0, 2)
-			.join('')
-			.toUpperCase();
-	}
 
 	const filteredRoster = $derived(
 		data.roster.filter((person) => {
@@ -250,7 +242,12 @@
 	{#each filteredRoster as person (person.id)}
 		<div class="roster-row">
 			<span class="name-cell">
-				<span class="avatar">{initials(person.fullName)}</span>
+				<Avatar
+					userId={person.id}
+					fullName={person.fullName}
+					hasPicture={person.hasPicture}
+					size="sm"
+				/>
 				{person.fullName}
 			</span>
 			<span class="code-cell">
@@ -655,20 +652,6 @@
 		align-items: center;
 		gap: 10px;
 		font-weight: 500;
-	}
-
-	.avatar {
-		width: 26px;
-		height: 26px;
-		flex-shrink: 0;
-		border-radius: 50%;
-		background: var(--ess-green-400);
-		color: var(--ess-teal-900);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 10px;
-		font-weight: 700;
 	}
 
 	.email-cell {

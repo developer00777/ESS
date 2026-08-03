@@ -11,6 +11,7 @@ import {
 	holidays
 } from '$lib/server/db/schema';
 import { eq, and, gte, sql, desc } from 'drizzle-orm';
+import { getUsersWithProfilePicture } from '$lib/server/db/mongo';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = locals.user!;
@@ -116,11 +117,18 @@ export const load: PageServerLoad = async ({ locals }) => {
 		}
 	}
 
+	const applicantsWithPictures = await getUsersWithProfilePicture(
+		approvalQueue.map((r) => r.applicant.id)
+	);
+
 	return {
 		leaveBalance,
 		attendancePct,
 		pendingCount: Number(pendingLeaveCount[0]?.count ?? 0),
-		approvalQueue,
+		approvalQueue: approvalQueue.map((r) => ({
+			...r,
+			applicantHasPicture: applicantsWithPictures.has(r.applicant.id)
+		})),
 		upcomingHolidays
 	};
 };

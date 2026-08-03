@@ -10,6 +10,7 @@
 	import Headset from '@lucide/svelte/icons/headset';
 	import CalendarDays from '@lucide/svelte/icons/calendar-days';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import Avatar from '$lib/components/Avatar.svelte';
 	import StatCard from '$lib/components/StatCard.svelte';
 	import QuickActionRow from '$lib/components/QuickActionRow.svelte';
 	import IconChip from '$lib/components/IconChip.svelte';
@@ -17,15 +18,6 @@
 	let { data } = $props();
 
 	const canApprove = data.user.role === 'team_lead' || data.user.role === 'super_admin';
-
-	function initials(name: string) {
-		return name
-			.split(' ')
-			.map((p) => p[0])
-			.slice(0, 2)
-			.join('')
-			.toUpperCase();
-	}
 
 	function formatHolidayDate(d: string) {
 		return new Date(d + 'T00:00:00').toLocaleDateString(undefined, {
@@ -78,7 +70,12 @@
 					<div class="attention-list">
 						{#each data.approvalQueue as row (row.application.id)}
 							<div class="attention-row">
-								<div class="avatar">{initials(row.applicant.fullName)}</div>
+								<Avatar
+									userId={row.applicant.id}
+									fullName={row.applicant.fullName}
+									hasPicture={row.applicantHasPicture}
+									size="md"
+								/>
 								<div class="attention-meta">
 									<div class="attention-name">{row.applicant.fullName}</div>
 									<div class="attention-detail">
@@ -254,20 +251,6 @@
 
 	.attention-row:not(:last-child) {
 		border-bottom: 1px solid var(--ess-border-subtle);
-	}
-
-	.avatar {
-		width: 34px;
-		height: 34px;
-		flex-shrink: 0;
-		border-radius: 50%;
-		background: var(--ess-green-400);
-		color: var(--ess-teal-900);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 0.75rem;
-		font-weight: 700;
 	}
 
 	.attention-meta {
