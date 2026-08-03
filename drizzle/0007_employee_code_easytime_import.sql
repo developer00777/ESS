@@ -5,10 +5,13 @@
 --    parsed it, then made unique (it is the attendance join key).
 ALTER TABLE "employee_profiles" ADD COLUMN "employee_code" varchar(32);--> statement-breakpoint
 
+-- Match on created_user_id (rows that created a login) OR existing_user_id (rows
+-- linked to someone who already had a login — e.g. the seeded super admin, whose
+-- row is "skipped_existing" and therefore has no created_user_id).
 UPDATE "employee_profiles" ep
 SET "employee_code" = upper(trim(bir."employee_code"))
 FROM "bulk_import_rows" bir
-WHERE bir."created_user_id" = ep."user_id"
+WHERE ep."user_id" = COALESCE(bir."created_user_id", bir."existing_user_id")
   AND bir."employee_code" IS NOT NULL
   AND trim(bir."employee_code") <> ''
   AND ep."employee_code" IS NULL;--> statement-breakpoint
