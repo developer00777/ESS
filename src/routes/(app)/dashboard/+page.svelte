@@ -200,15 +200,16 @@
 		flex-shrink: 0;
 	}
 
+	/* auto-fit: reflows 4→3→2→1 on its own, so no column is ever left empty */
 	.stat-grid {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 		gap: 14px;
 	}
 
 	.dashboard-grid {
 		display: grid;
-		grid-template-columns: 1.6fr 1fr;
+		grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
 		gap: 20px;
 		align-items: start;
 	}
@@ -402,13 +403,13 @@
 		color: var(--ess-text-muted);
 	}
 
-	@media (max-width: 980px) {
-		.stat-grid {
-			grid-template-columns: 1fr 1fr;
-		}
+	@media (max-width: 1100px) {
 		.dashboard-grid {
 			grid-template-columns: 1fr;
 		}
+	}
+
+	@media (max-width: 980px) {
 		.coming-up-grid {
 			grid-template-columns: 1fr;
 		}

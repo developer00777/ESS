@@ -35,7 +35,7 @@
 <style>
 	.login-screen {
 		min-height: 100vh;
-		background: var(--ess-teal-900);
+		background: transparent; /* the .cosmos layer paints the deep-space canvas */
 		position: relative;
 		overflow: hidden;
 		display: flex;
@@ -45,13 +45,15 @@
 	.deco {
 		position: absolute;
 		border-radius: 50%;
-		opacity: 0.5;
+		opacity: 0.32;
+		filter: blur(90px);
+		pointer-events: none;
 	}
 
 	.deco-a {
 		width: 420px;
 		height: 420px;
-		background: var(--ess-teal-700);
+		background: var(--acc);
 		top: 55%;
 		right: -10%;
 	}
@@ -59,17 +61,19 @@
 	.deco-b {
 		width: 260px;
 		height: 260px;
-		background: var(--ess-teal-600);
+		background: var(--acc2);
 		top: 68%;
 		right: 4%;
+		opacity: 0.22;
 	}
 
 	.deco-c {
 		width: 260px;
 		height: 260px;
-		background: var(--ess-green-500);
+		background: var(--acc);
 		top: -12%;
 		left: -8%;
+		opacity: 0.24;
 	}
 
 	.login-content {
@@ -111,13 +115,14 @@
 	}
 
 	.login-card {
-		background: var(--ess-n-0);
+		background: var(--ess-glass-bg);
+		border: 1px solid var(--ess-glass-border);
 		border-radius: var(--ess-radius-lg);
 		padding: 2rem;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-		box-shadow: var(--ess-elev-4);
+		box-shadow: var(--ess-glass-shadow);
 	}
 
 	.login-card h2 {
@@ -145,17 +150,21 @@
 
 	:global(.login-card input) {
 		border: 1px solid var(--ess-n-200);
-		border-radius: var(--ess-radius-sm);
+		border-radius: 10px;
 		padding: 0.65rem 0.8rem;
 		font-size: 0.95rem;
 		font-family: inherit;
 		color: var(--ess-n-900);
-		background: var(--ess-n-0);
+		background: var(--ess-field-bg);
+		transition:
+			border-color var(--ess-t-fast),
+			box-shadow var(--ess-t-fast);
 	}
 
 	:global(.login-card input:focus) {
-		outline: 2px solid var(--ess-primary);
-		outline-offset: 1px;
+		outline: none;
+		border-color: var(--ess-primary);
+		box-shadow: 0 0 0 3px var(--ring);
 	}
 
 	:global(.login-card .error) {

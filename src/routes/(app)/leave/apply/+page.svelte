@@ -106,8 +106,12 @@
 
 	.date-row {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
+		grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 		gap: 1rem;
+	}
+
+	.date-row > * {
+		min-width: 0;
 	}
 
 	input,

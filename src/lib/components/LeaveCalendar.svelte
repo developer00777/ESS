@@ -226,6 +226,23 @@
 		padding: 1.5rem 1.75rem;
 	}
 
+	/* A 7-column month grid can't compress below ~300px and stay legible,
+	   so on phones the calendar scrolls horizontally inside its own box
+	   rather than forcing the whole page to scroll. */
+	@media (max-width: 560px) {
+		.calendar-box {
+			padding: 1rem;
+			overflow-x: auto;
+		}
+
+		.calendar-header,
+		.weekday-row,
+		.month-grid,
+		.legend {
+			min-width: 300px;
+		}
+	}
+
 	.calendar-header {
 		display: flex;
 		align-items: center;

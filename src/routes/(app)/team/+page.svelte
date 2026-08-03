@@ -227,7 +227,7 @@
 	{/if}
 {/if}
 
-<div class="ess-table-shell">
+<div class="ess-table-shell roster-shell">
 	<div class="roster-row roster-head">
 		<span>Name</span>
 		<span>Email</span>
@@ -527,7 +527,7 @@
 
 	.stat-grid {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 		gap: 14px;
 		margin-bottom: 1.5rem;
 	}
@@ -543,6 +543,7 @@
 	.toolbar {
 		display: flex;
 		align-items: center;
+		flex-wrap: wrap;
 		gap: 10px;
 		margin-bottom: 1rem;
 	}
@@ -587,12 +588,19 @@
 		margin-bottom: 1rem;
 	}
 
+	/* The 5-column roster can't compress below ~640px and stay readable, so
+	   it scrolls inside its own shell instead of overflowing the page. */
+	.roster-shell {
+		overflow-x: auto;
+	}
+
 	.roster-row {
 		display: grid;
 		grid-template-columns: 1.5fr 1.6fr 0.9fr 1fr 0.8fr;
 		padding: 0.7rem 1.1rem;
 		font-size: var(--ess-fs-body);
 		align-items: center;
+		min-width: 640px;
 	}
 
 	.roster-row:not(:last-child) {
@@ -652,12 +660,6 @@
 		color: var(--ess-text-secondary);
 	}
 
-	@media (max-width: 980px) {
-		.stat-grid {
-			grid-template-columns: 1fr 1fr;
-		}
-	}
-
 	.bulk-import-section,
 	.password-activity-section {
 		margin-top: 2rem;
@@ -667,6 +669,7 @@
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
+		flex-wrap: wrap;
 		gap: 1rem;
 		margin-bottom: 1rem;
 	}

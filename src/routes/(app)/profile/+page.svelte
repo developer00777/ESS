@@ -168,7 +168,7 @@
 
 	.profile-grid {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 		gap: 1.1rem;
 	}
 
@@ -213,7 +213,7 @@
 		border-radius: var(--ess-radius-lg);
 		padding: 1.5rem 2rem;
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 		gap: 1.5rem;
 	}
 
@@ -231,19 +231,13 @@
 		height: 36px;
 		flex-shrink: 0;
 		border-radius: 50%;
-		background: var(--ess-green-400);
-		color: var(--ess-teal-900);
+		background: linear-gradient(150deg, var(--acc2), var(--acc));
+		color: var(--ess-text-on-primary);
 		display: flex;
 		align-items: center;
 		justify-content: center;
-	}
-
-	@media (max-width: 1100px) {
-		.profile-grid {
-			grid-template-columns: repeat(2, 1fr);
-		}
-		.benefit-banner {
-			grid-template-columns: 1fr;
-		}
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.5),
+			0 6px 16px -8px var(--glow);
 	}
 </style>

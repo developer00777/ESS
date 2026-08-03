@@ -170,7 +170,7 @@
 
 	.top-grid {
 		display: grid;
-		grid-template-columns: 1.2fr 1fr 1fr;
+		grid-template-columns: minmax(280px, 1.2fr) repeat(auto-fit, minmax(200px, 1fr));
 		gap: 14px;
 		margin-bottom: 2rem;
 	}
@@ -227,18 +227,25 @@
 	}
 
 	.action-btn {
-		background: var(--ess-green-400);
-		color: var(--ess-teal-900);
+		background: linear-gradient(180deg, color-mix(in oklab, var(--acc) 82%, #fff), var(--acc));
+		color: var(--ess-text-on-primary);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.6),
+			0 10px 26px -12px var(--glow);
 	}
 
 	.action-btn:hover:not(:disabled) {
-		background: #00d9a5;
+		transform: translateY(-1px);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.7),
+			0 16px 34px -12px var(--glow);
 	}
 
 	.action-btn:disabled {
 		opacity: 1;
 		background: rgba(255, 255, 255, 0.35);
 		color: rgba(255, 255, 255, 0.9);
+		box-shadow: none;
 	}
 
 	.action-btn-outline {

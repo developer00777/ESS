@@ -387,6 +387,7 @@
 
 	.upload-form {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 1rem;
 		align-items: center;
 	}

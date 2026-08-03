@@ -210,14 +210,20 @@
 
 	.layout {
 		display: grid;
-		grid-template-columns: 1.3fr 1fr;
+		grid-template-columns: minmax(0, 1.3fr) minmax(260px, 1fr);
 		gap: 2rem;
 		align-items: start;
 	}
 
+	/* Grid items default to min-width:auto, which refuses to shrink below their
+	   content and pushes the page wide on phones. */
+	.layout > * {
+		min-width: 0;
+	}
+
 	.balance-grid {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 		gap: 0.85rem;
 		margin-bottom: 1.5rem;
 	}
@@ -307,12 +313,9 @@
 		flex-shrink: 0;
 	}
 
-	@media (max-width: 980px) {
+	@media (max-width: 1100px) {
 		.layout {
 			grid-template-columns: 1fr;
-		}
-		.balance-grid {
-			grid-template-columns: 1fr 1fr;
 		}
 	}
 </style>

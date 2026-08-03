@@ -1,10 +1,11 @@
 /* ============================================================
-   ESS Design System — Components
-   Drop-in replacement layer for src/app.css component styles.
-   Requires ess-tokens.css.
+   ESS Design System — Components · COSMIC
+   Drop-in component layer. Requires ess-tokens.css.
    ============================================================
    Every rule here is expressed in ESS tokens. Changing a token
    changes every screen; do not hard-code colors in .svelte files.
+   Surface language: glass cards on a deep-space canvas with an
+   ambient nebula glow (.cosmos) and starfield (.stars).
    ============================================================ */
 
 * {
@@ -42,7 +43,12 @@ a {
 	transition: color var(--ess-t-fast);
 }
 a:hover {
-	color: var(--ess-primary-hover);
+	color: var(--acc2);
+}
+
+::selection {
+	background: var(--acc);
+	color: var(--ess-text-on-primary);
 }
 
 button,
@@ -60,16 +66,79 @@ textarea {
 }
 
 /* ------------------------------------------------------------
+   AMBIENT BACKGROUND — nebula glow + drifting starfield.
+   Fixed, z-index -1: above the body base color, below all content.
+------------------------------------------------------------ */
+
+.cosmos {
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	opacity: 0.72;
+	background:
+		radial-gradient(
+			1100px 620px at 10% -12%,
+			color-mix(in oklab, var(--acc) 42%, transparent),
+			transparent 62%
+		),
+		radial-gradient(
+			900px 560px at 92% 4%,
+			color-mix(in oklab, var(--acc2) 26%, transparent),
+			transparent 64%
+		),
+		radial-gradient(1000px 780px at 62% 116%, rgba(236, 72, 153, 0.16), transparent 62%),
+		var(--ess-canvas);
+}
+
+[data-ess-theme='dark'] .cosmos {
+	opacity: 1;
+	background:
+		radial-gradient(1200px 680px at 12% -14%, rgba(30, 46, 74, 0.9), transparent 60%),
+		radial-gradient(900px 560px at 92% 2%, rgba(91, 143, 214, 0.12), transparent 62%),
+		radial-gradient(1100px 820px at 60% 118%, rgba(14, 20, 32, 0.92), transparent 62%),
+		var(--ess-canvas);
+}
+
+.stars {
+	position: fixed;
+	inset: -40%;
+	z-index: -1;
+	pointer-events: none;
+	opacity: 0.5;
+	background-image:
+		radial-gradient(1.4px 1.4px at 24px 34px, #fff, transparent),
+		radial-gradient(1.1px 1.1px at 128px 96px, rgba(255, 255, 255, 0.72), transparent),
+		radial-gradient(1.7px 1.7px at 232px 168px, rgba(255, 255, 255, 0.5), transparent);
+	background-size:
+		270px 230px,
+		350px 310px,
+		430px 390px;
+	animation: ess-drift 140s linear infinite;
+}
+
+[data-ess-theme='dark'] .stars {
+	opacity: 0.34;
+}
+
+@keyframes ess-drift {
+	to {
+		transform: translate3d(-270px, -230px, 0);
+	}
+}
+
+/* ------------------------------------------------------------
    TYPE ROLES
 ------------------------------------------------------------ */
 
 .ess-page-title {
 	font-family: var(--ess-font-display);
 	font-size: var(--ess-fs-title);
-	font-weight: 800;
+	font-weight: 700;
 	letter-spacing: -0.02em;
 	line-height: 1.2;
 	color: var(--ess-text);
+	text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
 }
 
 .ess-page-sub {
@@ -97,9 +166,9 @@ textarea {
 .ess-eyebrow {
 	font-size: var(--ess-fs-eyebrow);
 	font-weight: 700;
-	letter-spacing: 0.1em;
+	letter-spacing: 0.14em;
 	text-transform: uppercase;
-	color: var(--ess-text-secondary);
+	color: rgba(255, 255, 255, 0.82);
 }
 
 .ess-caption {
@@ -112,38 +181,49 @@ textarea {
 }
 
 /* ------------------------------------------------------------
-   SURFACES — four roles, no exceptions
+   SURFACES — glass language, four roles
 ------------------------------------------------------------ */
 
 .ess-card {
-	background: var(--ess-surface);
-	border: 1px solid var(--ess-border);
+	background: var(--ess-glass-bg);
+	border: 1px solid var(--ess-glass-border);
 	border-radius: var(--ess-radius-md);
 	padding: var(--ess-space-5);
+	box-shadow: var(--ess-glass-shadow);
 }
 
 .ess-card--raised {
-	border-color: transparent;
-	box-shadow: var(--ess-elev-2);
+	background: var(--ess-glass-raised-bg);
+	border-color: rgba(255, 255, 255, 0.14);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.22),
+		0 34px 62px -34px #000,
+		0 0 34px -22px var(--glow);
 }
 
 .ess-card--interactive {
 	transition:
-		transform var(--ess-t-fast),
-		box-shadow var(--ess-t-fast),
-		border-color var(--ess-t-fast);
+		transform var(--ess-t),
+		box-shadow var(--ess-t),
+		border-color var(--ess-t);
+	will-change: transform;
 }
 .ess-card--interactive:hover {
-	transform: translateY(-2px);
-	box-shadow: var(--ess-elev-3);
-	border-color: var(--ess-border-strong);
+	transform: translate3d(0, -4px, 0);
+	border-color: rgba(255, 255, 255, 0.22);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.26),
+		0 34px 64px -30px #000,
+		0 0 0 1px var(--ring),
+		0 0 40px -14px var(--glow);
 }
 
 .ess-panel {
-	background: var(--ess-surface);
-	border: 1px solid var(--ess-border);
+	background: var(--ess-glass-bg);
+	border: 1px solid var(--ess-glass-border);
 	border-radius: var(--ess-radius-lg);
 	padding: var(--ess-space-6);
+	box-shadow: var(--ess-glass-shadow);
 }
 
 .ess-sunken {
@@ -155,6 +235,7 @@ textarea {
 .ess-inverse {
 	background: var(--ess-inverse);
 	color: var(--ess-text-inverse);
+	border: 1px solid var(--ess-border-inverse);
 	border-radius: var(--ess-radius-lg);
 }
 
@@ -168,7 +249,7 @@ textarea {
 	justify-content: center;
 	gap: 8px;
 	height: 38px;
-	padding: 0 16px;
+	padding: 0 17px;
 	border: 1px solid transparent;
 	border-radius: var(--ess-radius-sm);
 	font-size: var(--ess-fs-body);
@@ -179,7 +260,8 @@ textarea {
 		background var(--ess-t-fast),
 		border-color var(--ess-t-fast),
 		color var(--ess-t-fast),
-		transform 60ms ease;
+		box-shadow var(--ess-t-fast),
+		transform var(--ess-t-fast);
 }
 
 .ess-btn:disabled {
@@ -188,9 +270,10 @@ textarea {
 }
 
 .ess-btn--sm {
-	height: 32px;
+	height: 31px;
 	padding: 0 12px;
 	font-size: var(--ess-fs-caption);
+	border-radius: 9px;
 }
 .ess-btn--lg {
 	height: 46px;
@@ -199,24 +282,30 @@ textarea {
 }
 
 .ess-btn--primary {
-	background: var(--ess-primary);
+	background: linear-gradient(180deg, color-mix(in oklab, var(--acc) 82%, #fff), var(--acc));
 	color: var(--ess-text-on-primary);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.6),
+		0 10px 26px -12px var(--glow);
 }
 .ess-btn--primary:hover:not(:disabled) {
-	background: var(--ess-primary-hover);
+	transform: translateY(-1px);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.7),
+		0 16px 34px -12px var(--glow);
 }
 .ess-btn--primary:active:not(:disabled) {
-	background: var(--ess-primary-press);
-	transform: translateY(1px);
+	transform: translateY(0);
 }
 
 .ess-btn--secondary {
-	background: var(--ess-surface);
-	border-color: var(--ess-border-strong);
+	background: rgba(255, 255, 255, 0.06);
+	border-color: rgba(255, 255, 255, 0.14);
 	color: var(--ess-text);
 }
 .ess-btn--secondary:hover:not(:disabled) {
-	background: var(--ess-sunken);
+	background: rgba(255, 255, 255, 0.12);
+	border-color: rgba(255, 255, 255, 0.24);
 }
 
 .ess-btn--ghost {
@@ -224,13 +313,16 @@ textarea {
 	color: var(--ess-text-secondary);
 }
 .ess-btn--ghost:hover:not(:disabled) {
-	background: var(--ess-sunken);
+	background: rgba(255, 255, 255, 0.08);
 	color: var(--ess-text);
 }
 
 .ess-btn--danger {
-	background: var(--ess-danger);
-	color: #fff;
+	background: linear-gradient(180deg, color-mix(in oklab, #fb7185 82%, #fff), #fb7185);
+	color: #1c0308;
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.55),
+		0 10px 26px -12px rgba(251, 113, 133, 0.45);
 }
 
 /* ------------------------------------------------------------
@@ -253,9 +345,9 @@ textarea {
 .ess-select,
 .ess-textarea {
 	width: 100%;
-	background: var(--ess-surface);
-	border: 1px solid var(--ess-border-strong);
-	border-radius: var(--ess-radius-sm);
+	background: var(--ess-field-bg);
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	border-radius: 10px;
 	padding: 9px 12px;
 	font-size: var(--ess-fs-body);
 	color: var(--ess-text);
@@ -274,7 +366,7 @@ textarea {
 .ess-textarea:focus {
 	outline: none;
 	border-color: var(--ess-primary);
-	box-shadow: var(--ess-focus-ring);
+	box-shadow: 0 0 0 3px var(--ring);
 }
 
 .ess-input--invalid {
@@ -293,16 +385,17 @@ textarea {
 }
 
 /* ------------------------------------------------------------
-   BADGES / STATUS PILLS
+   BADGES / STATUS PILLS — cosmic chips (tinted, hairline border)
 ------------------------------------------------------------ */
 
 .ess-badge {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	height: 22px;
-	padding: 0 10px;
+	height: 24px;
+	padding: 0 11px;
 	border-radius: var(--ess-radius-pill);
+	border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
 	font-size: var(--ess-fs-eyebrow);
 	font-weight: 700;
 	letter-spacing: 0.02em;
@@ -348,14 +441,17 @@ textarea {
 }
 
 /* ------------------------------------------------------------
-   DATA TABLE — one pattern for attendance / roster / policies
+   DATA TABLE — glass shell, luminous header band
 ------------------------------------------------------------ */
 
 .ess-table-shell {
-	background: var(--ess-surface);
-	border: 1px solid var(--ess-border);
+	background: var(--ess-glass-bg);
+	border: 1px solid var(--ess-glass-border);
 	border-radius: var(--ess-radius-md);
+	box-shadow: var(--ess-glass-shadow);
 	overflow: hidden;
+	/* Tables scroll inside their own shell rather than pushing the page wide. */
+	overflow-x: auto;
 }
 
 .ess-table {
@@ -366,14 +462,14 @@ textarea {
 
 .ess-table th {
 	text-align: left;
-	padding: 10px 16px;
-	background: var(--ess-sunken);
-	border-bottom: 1px solid var(--ess-border);
-	font-size: var(--ess-fs-eyebrow);
+	padding: 11px 18px;
+	background: rgba(255, 255, 255, 0.045);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	font-size: 10.5px;
 	font-weight: 700;
-	letter-spacing: 0.08em;
+	letter-spacing: 0.16em;
 	text-transform: uppercase;
-	color: var(--ess-text-secondary);
+	color: rgba(255, 255, 255, 0.82);
 	white-space: nowrap;
 }
 
@@ -386,17 +482,18 @@ textarea {
 }
 
 .ess-table td {
-	padding: 12px 16px;
-	border-bottom: 1px solid var(--ess-border-subtle);
-	color: var(--ess-text);
+	padding: 13px 18px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+	color: rgba(255, 255, 255, 0.94);
 	vertical-align: middle;
+	transition: background var(--ess-t-fast);
 }
 
 .ess-table tbody tr:last-child td {
 	border-bottom: none;
 }
 .ess-table tbody tr:hover td {
-	background: var(--ess-surface-hover);
+	background: rgba(255, 255, 255, 0.04);
 }
 
 .ess-table td.ess-num,
@@ -410,9 +507,9 @@ textarea {
 	align-items: center;
 	justify-content: space-between;
 	gap: 12px;
-	padding: 10px 16px;
-	border-top: 1px solid var(--ess-border);
-	background: var(--ess-sunken);
+	padding: 10px 18px;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	background: rgba(255, 255, 255, 0.045);
 	font-size: var(--ess-fs-caption);
 	color: var(--ess-text-secondary);
 }
@@ -437,7 +534,8 @@ textarea {
 	width: 44px;
 	height: 44px;
 	border-radius: var(--ess-radius-md);
-	background: var(--ess-sunken);
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.1);
 	color: var(--ess-text-muted);
 	margin-bottom: 4px;
 }
@@ -481,26 +579,34 @@ textarea {
 
 .ess-segmented {
 	display: inline-flex;
-	gap: 2px;
+	gap: 3px;
 	padding: 3px;
-	background: var(--ess-sunken);
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: var(--ess-radius-sm);
 }
 
 .ess-segmented button {
 	background: none;
 	border: none;
-	border-radius: 6px;
-	padding: 5px 12px;
+	border-radius: 8px;
+	padding: 5px 13px;
 	font-size: var(--ess-fs-caption);
-	font-weight: 600;
-	color: var(--ess-text-secondary);
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	color: var(--ess-text-inverse-secondary);
 	cursor: pointer;
+	transition:
+		background var(--ess-t-fast),
+		color var(--ess-t-fast);
+}
+.ess-segmented button:hover {
+	color: var(--ess-text);
 }
 .ess-segmented button[aria-pressed='true'] {
-	background: var(--ess-surface);
-	color: var(--ess-text);
-	box-shadow: var(--ess-elev-1);
+	background: linear-gradient(180deg, color-mix(in oklab, var(--acc) 82%, #fff), var(--acc));
+	color: var(--ess-text-on-primary);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 /* ------------------------------------------------------------
@@ -513,7 +619,7 @@ textarea {
 	gap: 10px;
 	padding: 12px 14px;
 	border-radius: var(--ess-radius-sm);
-	border: 1px solid transparent;
+	border: 1px solid color-mix(in srgb, currentColor 26%, transparent);
 	font-size: var(--ess-fs-body);
 }
 
@@ -539,15 +645,16 @@ textarea {
 	align-items: center;
 	gap: 10px;
 	padding: 12px 14px;
-	background: var(--ess-inverse);
+	background: var(--ess-pane-bg);
 	color: var(--ess-text-inverse);
+	border: 1px solid var(--ess-border-inverse);
 	border-radius: var(--ess-radius-sm);
 	box-shadow: var(--ess-elev-4);
 	font-size: var(--ess-fs-body);
 }
 
 /* ------------------------------------------------------------
-   AVATAR / USER CHIP
+   AVATAR / USER CHIP — accent gradient orb
 ------------------------------------------------------------ */
 
 .ess-avatar {
@@ -556,11 +663,14 @@ textarea {
 	width: 34px;
 	height: 34px;
 	border-radius: 50%;
-	background: var(--ess-green-400);
-	color: var(--ess-teal-900);
+	background: linear-gradient(150deg, var(--acc2), var(--acc));
+	color: var(--ess-text-on-primary);
 	font-size: var(--ess-fs-caption);
 	font-weight: 700;
 	flex-shrink: 0;
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.5),
+		0 6px 16px -8px var(--glow);
 }
 
 .ess-avatar--sm {
@@ -596,7 +706,7 @@ textarea {
 }
 
 /* ------------------------------------------------------------
-   APPROVAL TIMELINE (replaces StepTracker)
+   APPROVAL TIMELINE
 ------------------------------------------------------------ */
 
 .ess-timeline {
@@ -633,7 +743,7 @@ textarea {
 	height: 26px;
 	border-radius: 50%;
 	border: 2px solid var(--ess-border);
-	background: var(--ess-surface);
+	background: var(--ess-sunken);
 	color: var(--ess-text-muted);
 	font-size: var(--ess-fs-eyebrow);
 	font-weight: 700;
@@ -641,15 +751,15 @@ textarea {
 }
 
 .ess-tl-step[data-state='done'] .ess-tl-dot {
-	background: var(--ess-primary);
-	border-color: var(--ess-primary);
+	background: linear-gradient(180deg, color-mix(in oklab, var(--acc) 82%, #fff), var(--acc));
+	border-color: transparent;
 	color: var(--ess-text-on-primary);
 }
 
 .ess-tl-step[data-state='current'] .ess-tl-dot {
 	border-color: var(--ess-primary);
 	color: var(--ess-primary);
-	box-shadow: var(--ess-focus-ring);
+	box-shadow: 0 0 0 3px var(--ring);
 }
 
 .ess-tl-label {
@@ -670,11 +780,12 @@ textarea {
 .ess-scrim {
 	position: fixed;
 	inset: 0;
-	background: rgba(2, 52, 54, 0.5);
+	background: rgba(4, 2, 12, 0.65);
 }
 
 .ess-modal {
-	background: var(--ess-surface);
+	background: var(--ess-modal-bg);
+	border: 1px solid rgba(255, 255, 255, 0.12);
 	border-radius: var(--ess-radius-lg);
 	box-shadow: var(--ess-elev-4);
 	width: min(520px, calc(100vw - 32px));
@@ -694,7 +805,7 @@ textarea {
 }
 .ess-modal__foot {
 	border-top: 1px solid var(--ess-border);
-	background: var(--ess-sunken);
+	background: rgba(255, 255, 255, 0.03);
 	justify-content: flex-end;
 }
 .ess-modal__body {
@@ -707,7 +818,8 @@ textarea {
 	right: 0;
 	bottom: 0;
 	width: min(440px, 100vw);
-	background: var(--ess-surface);
+	background: var(--ess-modal-bg);
+	border-left: 1px solid rgba(255, 255, 255, 0.12);
 	box-shadow: var(--ess-elev-4);
 	display: flex;
 	flex-direction: column;
@@ -731,22 +843,16 @@ textarea {
 	border-radius: 6px;
 	background: linear-gradient(
 		90deg,
-		var(--ess-sunken) 0%,
-		var(--ess-border-subtle) 50%,
-		var(--ess-sunken) 100%
+		rgba(255, 255, 255, 0.05) 0%,
+		rgba(255, 255, 255, 0.12) 50%,
+		rgba(255, 255, 255, 0.05) 100%
 	);
 	background-size: 360px 100%;
 	animation: ess-shimmer 1.2s infinite linear;
 }
 
-@media (prefers-reduced-motion: reduce) {
-	.ess-skeleton {
-		animation: none;
-	}
-}
-
 /* ------------------------------------------------------------
-   NAV RAIL
+   NAV RAIL — dense glass pane
 ------------------------------------------------------------ */
 
 .ess-rail {
@@ -755,7 +861,7 @@ textarea {
 	height: 100vh;
 	position: sticky;
 	top: 0;
-	background: var(--ess-inverse);
+	background: var(--ess-pane-bg);
 	color: var(--ess-text-inverse);
 	display: flex;
 	flex-direction: column;
@@ -769,52 +875,80 @@ textarea {
 	gap: 12px;
 	height: 40px;
 	padding: 0 12px;
+	border: 1px solid transparent;
 	border-radius: var(--ess-radius-sm);
 	color: var(--ess-text-inverse-secondary);
 	font-size: var(--ess-fs-body);
 	font-weight: 500;
-	transition: background var(--ess-t-fast), color var(--ess-t-fast);
+	transition:
+		background var(--ess-t-fast),
+		color var(--ess-t-fast),
+		border-color var(--ess-t-fast);
 }
 .ess-nav-item:hover {
 	background: rgba(255, 255, 255, 0.06);
 	color: var(--ess-text-inverse);
 }
 .ess-nav-item[aria-current='page'] {
-	background: var(--ess-primary);
 	color: #fff;
 	font-weight: 600;
+	border-color: color-mix(in oklab, var(--acc) 45%, transparent);
+	background: linear-gradient(
+		100deg,
+		color-mix(in oklab, var(--acc) 34%, transparent),
+		rgba(255, 255, 255, 0.05)
+	);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.24),
+		0 10px 24px -14px var(--glow);
 }
 
 /* ------------------------------------------------------------
-   STAT CARD — light surface, accent value (was dark-on-dark)
+   STAT CARD — glass KPI with hover lift
 ------------------------------------------------------------ */
 
 .ess-stat {
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
-	background: var(--ess-surface);
-	border: 1px solid var(--ess-border);
+	background: var(--ess-glass-bg);
+	border: 1px solid var(--ess-glass-border);
 	border-radius: var(--ess-radius-md);
-	padding: 16px 18px;
+	padding: 18px 20px;
+	box-shadow: var(--ess-glass-shadow);
+	transition:
+		transform var(--ess-t),
+		box-shadow var(--ess-t),
+		border-color var(--ess-t);
+}
+
+.ess-stat:hover {
+	transform: translate3d(0, -4px, 0);
+	border-color: rgba(255, 255, 255, 0.22);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.26),
+		0 34px 64px -30px #000,
+		0 0 0 1px var(--ring),
+		0 0 40px -14px var(--glow);
 }
 
 .ess-stat__label {
 	font-size: var(--ess-fs-eyebrow);
 	font-weight: 700;
-	letter-spacing: 0.1em;
+	letter-spacing: 0.14em;
 	text-transform: uppercase;
-	color: var(--ess-text-secondary);
+	color: rgba(255, 255, 255, 0.82);
 }
 
 .ess-stat__value {
 	font-family: var(--ess-font-display);
 	font-size: var(--ess-fs-stat);
-	font-weight: 800;
+	font-weight: 700;
 	line-height: 1.05;
-	letter-spacing: -0.02em;
+	letter-spacing: -0.03em;
 	color: var(--ess-text);
 	font-variant-numeric: tabular-nums;
+	text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
 }
 
 .ess-stat__meta {
@@ -823,13 +957,158 @@ textarea {
 }
 
 /* ------------------------------------------------------------
-   PAGE SHELL
+   KPI ROW — `.ess-kpis` container + `.ess-stat` cards.
+   Layout variants via data-lay (grid / bento / split / rail / list)
+   per the Cosmic `dashboardLayout` spec. Default `grid` is
+   responsive by auto-fit so rows never leave dead columns.
+------------------------------------------------------------ */
+
+.ess-kpis {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 14px;
+}
+
+/* Explicit column counts for rows that must not re-wrap arbitrarily. */
+.ess-kpis[data-n='2'] {
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.ess-kpis[data-n='3'] {
+	grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+/* --- bento: first card 2×2, fourth spans 2 --- */
+.ess-kpis[data-lay='bento'] {
+	grid-template-columns: repeat(4, 1fr);
+}
+.ess-kpis[data-lay='bento'] > .ess-stat:nth-child(1) {
+	grid-column: span 2;
+	grid-row: span 2;
+	justify-content: center;
+}
+.ess-kpis[data-lay='bento'] > .ess-stat:nth-child(1) .ess-stat__value {
+	font-size: 74px;
+}
+.ess-kpis[data-lay='bento'] > .ess-stat:nth-child(4) {
+	grid-column: span 2;
+}
+
+/* --- split: tall hero + compact horizontal rows --- */
+.ess-kpis[data-lay='split'] {
+	grid-template-columns: 1.5fr 1fr;
+}
+.ess-kpis[data-lay='split'] > .ess-stat:nth-child(1) {
+	grid-row: span 3;
+	justify-content: center;
+}
+.ess-kpis[data-lay='split'] > .ess-stat:nth-child(1) .ess-stat__value {
+	font-size: 64px;
+}
+.ess-kpis[data-lay='split'] > .ess-stat:not(:first-child) {
+	flex-direction: row;
+	align-items: center;
+	gap: 14px;
+	padding: 12px 18px;
+}
+.ess-kpis[data-lay='split'] > .ess-stat:not(:first-child) .ess-stat__value {
+	font-size: 26px;
+	margin-left: auto;
+}
+.ess-kpis[data-lay='split'] > .ess-stat:not(:first-child) .ess-stat__meta {
+	display: none;
+}
+
+/* --- rail: horizontal scroll-snap row --- */
+.ess-kpis[data-lay='rail'] {
+	display: flex;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	padding-bottom: 8px;
+}
+.ess-kpis[data-lay='rail'] > .ess-stat {
+	min-width: 252px;
+	scroll-snap-align: start;
+}
+
+/* --- list: one bordered container, slim rows --- */
+.ess-kpis[data-lay='list'] {
+	display: block;
+	background: var(--ess-glass-bg);
+	border: 1px solid var(--ess-glass-border);
+	border-radius: var(--ess-radius-md);
+	box-shadow: var(--ess-glass-shadow);
+	overflow: hidden;
+}
+.ess-kpis[data-lay='list'] > .ess-stat {
+	background: none;
+	border: 0;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 0;
+	box-shadow: none;
+	flex-direction: row;
+	align-items: center;
+	gap: 18px;
+	padding: 14px 20px;
+}
+.ess-kpis[data-lay='list'] > .ess-stat:last-child {
+	border-bottom: 0;
+}
+.ess-kpis[data-lay='list'] > .ess-stat:hover {
+	transform: none;
+	background: rgba(255, 255, 255, 0.04);
+	box-shadow: none;
+}
+.ess-kpis[data-lay='list'] > .ess-stat > .ess-stat__label {
+	min-width: 150px;
+}
+.ess-kpis[data-lay='list'] > .ess-stat > .ess-stat__value {
+	font-size: 28px;
+	margin-left: auto;
+}
+.ess-kpis[data-lay='list'] > .ess-stat > .ess-stat__meta {
+	margin-left: auto;
+	text-align: right;
+}
+
+/* Asymmetric layouts collapse to the responsive grid on narrow viewports —
+   a 2×2 hero or a 1.5fr split is unreadable below tablet width. */
+@media (max-width: 900px) {
+	.ess-kpis[data-lay='bento'],
+	.ess-kpis[data-lay='split'] {
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	}
+	.ess-kpis[data-lay='bento'] > .ess-stat:nth-child(1),
+	.ess-kpis[data-lay='split'] > .ess-stat:nth-child(1) {
+		grid-column: auto;
+		grid-row: auto;
+	}
+	.ess-kpis[data-lay='bento'] > .ess-stat:nth-child(4) {
+		grid-column: auto;
+	}
+	.ess-kpis[data-lay='bento'] > .ess-stat:nth-child(1) .ess-stat__value,
+	.ess-kpis[data-lay='split'] > .ess-stat:nth-child(1) .ess-stat__value {
+		font-size: var(--ess-fs-stat);
+	}
+	.ess-kpis[data-lay='split'] > .ess-stat:not(:first-child) {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 6px;
+		padding: 18px 20px;
+	}
+	.ess-kpis[data-lay='split'] > .ess-stat:not(:first-child) .ess-stat__value {
+		font-size: var(--ess-fs-stat);
+		margin-left: 0;
+	}
+}
+
+/* ------------------------------------------------------------
+   PAGE SHELL — transparent: the cosmos paints the canvas
 ------------------------------------------------------------ */
 
 .ess-shell {
 	display: flex;
 	min-height: 100vh;
-	background: var(--ess-canvas);
+	background: transparent;
 }
 
 .ess-main {
@@ -838,10 +1117,36 @@ textarea {
 	padding: var(--ess-page-pad-y) var(--ess-page-pad-x);
 }
 
+/* Tighter page gutters on small screens — 32px each side eats real estate
+   that dense tables and KPI rows need back. */
+@media (max-width: 720px) {
+	.ess-main {
+		padding: 20px 16px;
+	}
+}
+
 .ess-page-head {
 	display: flex;
 	align-items: flex-end;
 	justify-content: space-between;
 	gap: 20px;
 	margin-bottom: var(--ess-space-6);
+}
+
+/* ------------------------------------------------------------
+   REDUCED MOTION
+------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+	.stars {
+		animation: none;
+	}
+	.ess-skeleton {
+		animation: none;
+	}
+	.ess-card--interactive:hover,
+	.ess-stat:hover,
+	.ess-btn--primary:hover:not(:disabled) {
+		transform: none;
+	}
 }

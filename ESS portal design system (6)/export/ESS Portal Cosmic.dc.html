@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        fontFamily: { display: ["'Space Grotesk'", "sans-serif"], sans: ["'Inter'", "system-ui", "sans-serif"], mono: ["'JetBrains Mono'", "monospace"] },
+        colors: { ok: "#34d399", warn: "#fbbf24", bad: "#fb7185", info: "#7dd3fc", dim: "rgba(255,255,255,.9)", faint: "rgba(255,255,255,.72)" }
+      } }
+    };
+  </script>
+  <style type="text/tailwindcss">
+    :root{ --acc:#a78bfa; --acc2:#22d3ee; --glow:rgba(167,139,250,.5); --ring:rgba(167,139,250,.28); --ink:#ffffff; }
+    [data-pal="aurora"]{ --acc:#34d399; --acc2:#38bdf8; --glow:rgba(52,211,153,.45); --ring:rgba(52,211,153,.26); }
+    [data-pal="onyx"]{ --acc:#5b8fd6; --acc2:#a8c8f0; --glow:rgba(91,143,214,.34); --ring:rgba(91,143,214,.22); }
+    [data-pal="onyx"] .cosmos{ opacity:1;
+      background:
+        radial-gradient(1200px 680px at 12% -14%, rgba(30,46,74,.9), transparent 60%),
+        radial-gradient(900px 560px at 92% 2%, rgba(91,143,214,.12), transparent 62%),
+        radial-gradient(1100px 820px at 60% 118%, rgba(14,20,32,.92), transparent 62%),
+        #040609; }
+    [data-pal="onyx"] .stars{ opacity:.34 }
+    [data-pal="onyx"] .glass{ background:linear-gradient(158deg, rgba(255,255,255,.055), rgba(7,10,16,.8) 62%); border-color:rgba(255,255,255,.1) }
+    [data-pal="onyx"] .kpis[data-lay="list"]{ background:linear-gradient(158deg, rgba(255,255,255,.055), rgba(7,10,16,.8) 62%); border-color:rgba(255,255,255,.1) }
+    [data-pal="onyx"] .pane{ background:linear-gradient(158deg, rgba(19,27,42,.96), rgba(5,8,13,.95) 62%); border-color:rgba(255,255,255,.1) }
+    [data-pal="onyx"][data-card="solid"] .glass{ background:linear-gradient(158deg,#0f1520,#070a10) }
+    [data-pal="onyx"][data-card="elevated"] .glass{ background:linear-gradient(158deg, rgba(255,255,255,.075), rgba(9,13,21,.86) 62%) }
+    [data-pal="onyx"] .btn-p{ color:#050a12; background:linear-gradient(180deg,#9dc0ea,var(--acc)) }
+    [data-pal="onyx"] .seg button[data-on="true"]{ color:#050a12; background:linear-gradient(180deg,#9dc0ea,var(--acc)) }
+    [data-pal="onyx"] .av{ color:#050a12; background:linear-gradient(150deg,#a8c8f0,var(--acc)) }
+    [data-pal="onyx"] .num-acc{ color:#9dc0ea }
+    [data-pal="onyx"] .navbtn[data-on="true"]{ background:linear-gradient(100deg, rgba(91,143,214,.26), rgba(255,255,255,.04)) }
+    [data-pal="onyx"] .cell[style*="var(--acc2)"]{ color:#050a12 }
+    [data-pal="ember"]{ --acc:#b4425c; --acc2:#e08a9c; --glow:rgba(180,66,92,.36); --ring:rgba(180,66,92,.24); }
+    [data-pal="ember"] .cosmos{ opacity:1;
+      background:
+        radial-gradient(1200px 680px at 12% -14%, rgba(66,24,36,.9), transparent 60%),
+        radial-gradient(900px 560px at 92% 2%, rgba(180,66,92,.12), transparent 62%),
+        radial-gradient(1100px 820px at 60% 118%, rgba(26,12,17,.92), transparent 62%),
+        #070405; }
+    [data-pal="ember"] .stars{ opacity:.34 }
+    [data-pal="ember"] .glass{ background:linear-gradient(158deg, rgba(255,255,255,.055), rgba(14,7,10,.8) 62%); border-color:rgba(255,255,255,.1) }
+    [data-pal="ember"] .kpis[data-lay="list"]{ background:linear-gradient(158deg, rgba(255,255,255,.055), rgba(14,7,10,.8) 62%); border-color:rgba(255,255,255,.1) }
+    [data-pal="ember"] .pane{ background:linear-gradient(158deg, rgba(40,20,27,.96), rgba(10,5,7,.95) 62%); border-color:rgba(255,255,255,.1) }
+    [data-pal="ember"][data-card="solid"] .glass{ background:linear-gradient(158deg,#1d1014,#0c0709) }
+    [data-pal="ember"][data-card="elevated"] .glass{ background:linear-gradient(158deg, rgba(255,255,255,.075), rgba(18,9,13,.86) 62%) }
+    [data-pal="ember"] .btn-p{ color:#12060a; background:linear-gradient(180deg,#e08a9c,var(--acc)) }
+    [data-pal="ember"] .seg button[data-on="true"]{ color:#12060a; background:linear-gradient(180deg,#e08a9c,var(--acc)) }
+    [data-pal="ember"] .av{ color:#12060a; background:linear-gradient(150deg,#e08a9c,var(--acc)) }
+    [data-pal="ember"] .num-acc{ color:#e08a9c }
+    [data-pal="ember"] .navbtn[data-on="true"]{ background:linear-gradient(100deg, rgba(180,66,92,.28), rgba(255,255,255,.04)) }
+    [data-pal="ember"] .cell[style*="var(--acc2)"]{ color:#12060a }
+    body{ margin:0; background:#070512; color:var(--ink); -webkit-font-smoothing:antialiased; }
+    a{ color:var(--acc); text-decoration:none } a:hover{ color:var(--acc2) }
+    ::selection{ background:var(--acc); color:#0a0718 }
+    input,select{ color-scheme:dark }
+    .cosmos{ position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.72;
+      background:
+        radial-gradient(1100px 620px at 10% -12%, color-mix(in oklab, var(--acc) 42%, transparent), transparent 62%),
+        radial-gradient(900px 560px at 92% 4%, color-mix(in oklab, var(--acc2) 26%, transparent), transparent 64%),
+        radial-gradient(1000px 780px at 62% 116%, rgba(236,72,153,.16), transparent 62%),
+        #070512; }
+    .stars{ position:fixed; inset:-40%; z-index:0; pointer-events:none; opacity:.5;
+      background-image:
+        radial-gradient(1.4px 1.4px at 24px 34px,#fff,transparent),
+        radial-gradient(1.1px 1.1px at 128px 96px,rgba(255,255,255,.72),transparent),
+        radial-gradient(1.7px 1.7px at 232px 168px,rgba(255,255,255,.5),transparent);
+      background-size:270px 230px, 350px 310px, 430px 390px;
+      animation:drift 140s linear infinite; }
+    @keyframes drift{ to{ transform:translate3d(-270px,-230px,0) } }
+    [data-stars="off"] .stars{ display:none }
+    .glass{ background:linear-gradient(158deg, rgba(255,255,255,.1), rgba(12,9,32,.72) 62%); border:1px solid rgba(255,255,255,.13); border-radius:var(--r,18px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.17), 0 22px 44px -30px rgba(0,0,0,.95); }
+    .pane{ background:linear-gradient(158deg, rgba(30,26,58,.92), rgba(12,9,30,.86) 62%); border-color:rgba(255,255,255,.13) }
+    .deck{ perspective:1400px }
+    .tilt{ transition:transform .22s cubic-bezier(.4,0,.2,1), box-shadow .22s, border-color .22s; will-change:transform }
+    .tilt:hover{ transform:translate3d(0,-4px,0) rotateX(3deg); border-color:rgba(255,255,255,.22);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.26), 0 34px 64px -30px #000, 0 0 0 1px var(--ring), 0 0 40px -14px var(--glow) }
+    [data-depth="off"] .tilt:hover{ transform:none }
+    .eyebrow{ font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.82) }
+    .num{ font-family:'Space Grotesk',sans-serif; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums; line-height:1; color:#fff }
+    .num-acc{ color:color-mix(in oklab, var(--acc) 72%, #fff) }
+    .extrude{ text-shadow:0 2px 24px rgba(0,0,0,.55) }
+    .chip{ display:inline-flex; align-items:center; gap:6px; height:24px; padding:0 11px; border-radius:999px; font-size:11.5px; font-weight:700; letter-spacing:.02em; border:1px solid transparent; white-space:nowrap; flex:none }
+    .chip i{ width:5px; height:5px; border-radius:50%; background:currentColor; font-style:normal }
+    .c-ok{ color:#6ee7b7; background:rgba(52,211,153,.12); border-color:rgba(52,211,153,.28) }
+    .c-warn{ color:#fcd34d; background:rgba(251,191,36,.12); border-color:rgba(251,191,36,.28) }
+    .c-bad{ color:#fda4af; background:rgba(251,113,133,.12); border-color:rgba(251,113,133,.3) }
+    .c-neu{ color:#cbd5e1; background:rgba(203,213,225,.1); border-color:rgba(203,213,225,.2) }
+    .thead{ padding:11px 18px; background:rgba(255,255,255,.045); border-bottom:1px solid rgba(255,255,255,.1); font-size:10.5px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:rgba(255,255,255,.82) }
+    .row{ align-items:center; padding:13px 18px; border-bottom:1px solid rgba(255,255,255,.09); font-size:13.5px; color:rgba(255,255,255,.94); transition:background .15s }
+    .row:hover{ background:rgba(255,255,255,.04) }
+    .row:last-child{ border-bottom:0 }
+    .navbtn{ display:flex; align-items:center; gap:12px; height:40px; padding:0 12px; border:1px solid transparent; border-radius:11px; width:100%; text-align:left; font:500 13.5px 'Inter',sans-serif; color:rgba(236,233,251,.6); background:transparent; cursor:pointer; transition:.16s }
+    .navbtn:hover{ background:rgba(255,255,255,.06); color:var(--ink) }
+    .navbtn[data-on="true"]{ color:#fff; font-weight:600; border-color:color-mix(in oklab, var(--acc) 45%, transparent);
+      background:linear-gradient(100deg, color-mix(in oklab, var(--acc) 34%, transparent), rgba(255,255,255,.05));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.24), 0 10px 24px -14px var(--glow) }
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; height:38px; padding:0 17px; border-radius:11px; font:600 13.5px 'Inter',sans-serif; cursor:pointer; border:1px solid transparent; transition:.16s; white-space:nowrap }
+    .btn-p{ color:#0a0718; background:linear-gradient(180deg, color-mix(in oklab, var(--acc) 82%, #fff), var(--acc));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 10px 26px -12px var(--glow) }
+    .btn-p:hover{ transform:translateY(-1px); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 16px 34px -12px var(--glow) }
+    .btn-p:active{ transform:translateY(0) }
+    .btn-g{ color:var(--ink); background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.14) }
+    .btn-g:hover{ background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.24) }
+    .btn-s{ height:31px; padding:0 12px; font-size:12px; border-radius:9px }
+    .fld{ width:100%; background:rgba(10,7,24,.5); border:1px solid rgba(255,255,255,.14); border-radius:10px; padding:10px 12px; font:400 13.5px 'Inter',sans-serif; color:var(--ink); outline:none; transition:.16s }
+    .fld:focus{ border-color:var(--acc); box-shadow:0 0 0 3px var(--ring) }
+    .fld::placeholder{ color:rgba(255,255,255,.6) }
+    .ico{ display:grid; place-items:center; width:32px; height:32px; border-radius:10px; font-size:14px; color:var(--acc);
+      background:linear-gradient(160deg, color-mix(in oklab, var(--acc) 26%, transparent), rgba(255,255,255,.04)); border:1px solid rgba(255,255,255,.12) }
+    .av{ display:grid; place-items:center; border-radius:50%; font-weight:700; color:#0a0718; background:linear-gradient(150deg, var(--acc2), var(--acc));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 6px 16px -8px var(--glow) }
+    .seg{ display:inline-flex; gap:3px; padding:3px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:11px }
+    .seg button{ border:none; border-radius:8px; padding:5px 13px; font:700 11.5px 'Inter',sans-serif; letter-spacing:.04em; color:rgba(236,233,251,.6); background:transparent; cursor:pointer; transition:.15s }
+    .seg button:hover{ color:var(--ink) }
+    .seg button[data-on="true"]{ color:#0a0718; background:linear-gradient(180deg, color-mix(in oklab, var(--acc) 82%, #fff), var(--acc)); box-shadow:inset 0 1px 0 rgba(255,255,255,.6) }
+    /* card surface variants */
+    [data-card="outline"] .glass{ background:rgba(255,255,255,.015); border-color:rgba(255,255,255,.17); box-shadow:none }
+    [data-card="solid"] .glass{ background:linear-gradient(158deg,#181433,#0e0b24); border-color:rgba(255,255,255,.07); box-shadow:0 18px 40px -32px #000 }
+    [data-card="elevated"] .glass{ background:linear-gradient(158deg, rgba(255,255,255,.12), rgba(255,255,255,.045) 62%); border-color:rgba(255,255,255,.14);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 34px 62px -34px #000, 0 0 34px -22px var(--glow) }
+    /* corner + density */
+    [data-corner="sharp"]{ --r:6px } [data-corner="soft"]{ --r:18px } [data-corner="round"]{ --r:28px }
+    [data-dense="compact"] .kpi{ padding:14px }
+    [data-dense="compact"] .kpi .num{ font-size:30px }
+    [data-dense="compact"] .row{ padding:8px 16px }
+    [data-dense="compact"] .thead{ padding:8px 16px }
+    /* glow */
+    [data-glow="subtle"] .cosmos{ opacity:.5 } [data-glow="intense"] .cosmos{ filter:saturate(1.3) brightness(1.15) }
+    [data-glow="subtle"] .extrude{ text-shadow:none }
+    [data-glow="intense"] .extrude{ text-shadow:0 2px 24px rgba(0,0,0,.55), 0 0 44px var(--glow) }
+    /* KPI layouts */
+    .kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px }
+    .kpi{ padding:22px; display:flex; flex-direction:column; gap:11px; min-height:176px }
+    .kpi > .eyebrow{ min-height:30px }
+    .kpi .num{ font-size:40px }
+    .kpi > .num{ min-height:48px; display:flex; align-items:flex-end }
+    .kpi .meta{ font-size:12.5px; color:rgba(255,255,255,.72) }
+    .kpi > .meta{ margin-top:auto }
+    .spark{ display:flex; align-items:flex-end; gap:3px; height:22px }
+    .spark span{ flex:1; border-radius:2px; background:linear-gradient(180deg, var(--acc), color-mix(in oklab, var(--acc) 20%, transparent)) }
+    [data-spark="off"] .spark{ display:none }
+    .kpis[data-lay="bento"] .kpi:nth-child(1){ grid-column:span 2; grid-row:span 2 }
+    .kpis[data-lay="bento"] .kpi:nth-child(1) .num{ font-size:74px }
+    .kpis[data-lay="bento"] .kpi:nth-child(1) .spark{ height:56px }
+    .kpis[data-lay="bento"] .kpi:nth-child(4){ grid-column:span 2 }
+    .kpis[data-lay="split"]{ grid-template-columns:1.5fr 1fr }
+    .kpis[data-lay="split"] .kpi:nth-child(1){ grid-row:span 3; justify-content:center }
+    .kpis[data-lay="split"] .kpi:nth-child(1) .num{ font-size:82px }
+    .kpis[data-lay="split"] .kpi:nth-child(1) .spark{ height:64px }
+    .kpis[data-lay="split"] .kpi:not(:first-child){ flex-direction:row; align-items:center; gap:14px; padding:12px 18px }
+    .kpis[data-lay="split"] .kpi:not(:first-child) .num{ font-size:26px; margin-left:auto }
+    .kpis[data-lay="split"] .kpi:not(:first-child) .meta, .kpis[data-lay="split"] .kpi:not(:first-child) .spark{ display:none }
+    .kpis[data-lay="rail"]{ display:flex; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:8px }
+    .kpis[data-lay="rail"] .kpi{ min-width:252px; scroll-snap-align:start }
+    .kpis[data-lay="list"]{ display:block; background:linear-gradient(158deg, rgba(255,255,255,.1), rgba(12,9,32,.72) 62%); border:1px solid rgba(255,255,255,.13); border-radius:var(--r,18px); overflow:hidden }
+    .kpis[data-lay="list"] .kpi{ background:none; border:0; border-bottom:1px solid rgba(255,255,255,.07); border-radius:0; box-shadow:none;
+      flex-direction:row; align-items:center; gap:18px; padding:14px 20px }
+    .kpis[data-lay="list"] .kpi:last-child{ border-bottom:0 }
+    .kpis[data-lay="list"] .kpi:hover{ transform:none; background:rgba(255,255,255,.04) }
+    .kpis[data-lay="list"] .kpi, .kpis[data-lay="split"] .kpi:not(:first-child){ min-height:0 }
+    .kpis[data-lay="list"] .kpi > .eyebrow, .kpis[data-lay="split"] .kpi:not(:first-child) > .eyebrow{ min-height:0 }
+    .kpis[data-lay="list"] .kpi > .num, .kpis[data-lay="split"] .kpi:not(:first-child) > .num{ min-height:0; display:block }
+    .kpis[data-lay="list"] .kpi > .meta, .kpis[data-lay="split"] .kpi:not(:first-child) > .meta{ margin-top:0 }
+    .kpis[data-lay="list"] > .kpi:not(.kpi--hero) > .num, .kpis[data-lay="list"] > .kpi:not(.kpi--hero) > .kfoot{ margin-left:auto; order:3 }
+    .kpis[data-lay="list"] > .kpi:not(.kpi--hero) > .num{ font-size:28px }
+    .kpis[data-lay="list"] > .kpi:not(.kpi--hero) > .kfoot .num{ font-size:28px }
+    .kpis[data-lay="list"] > .kpi:not(.kpi--hero) > .meta{ order:2; margin-left:auto; text-align:right }
+    .kpis[data-lay="list"] > .kpi:not(.kpi--hero) > .spark{ width:96px; flex:none; order:4; height:18px }
+    .kpis[data-lay="list"] > .kpi:not(.kpi--hero) > .eyebrow{ order:1; min-width:150px }
+    .kpi--hero{ grid-column:1 / -1 }
+    .kpis[data-lay="list"] .kpi--hero, .kpis[data-lay="split"] .kpi--hero, .kpis[data-lay="bento"] .kpi--hero{ flex-direction:column; align-items:stretch; padding:24px }
+    .kpis[data-lay="list"] .kpi--hero{ border-bottom:1px solid rgba(255,255,255,.07) }
+    .kpis[data-lay="rail"] .kpi--hero{ min-width:420px }
+    .kpis[data-lay="split"] .kpi--hero, .kpis[data-lay="bento"] .kpi--hero{ grid-column:span 2; grid-row:span 2 }
+    .kpis[data-info] > *{ padding:22px }
+    .kpis[data-info][data-lay="bento"] > *:nth-child(1){ grid-column:span 2; grid-row:span 2 }
+    .kpis[data-info][data-lay="rail"] > *{ min-width:280px; scroll-snap-align:start }
+    .kpis[data-n="3"]{ grid-template-columns:repeat(3,1fr) }
+    .kpis[data-n="2"]{ grid-template-columns:repeat(2,1fr) }
+    .kpis[data-lay="split"][data-n="3"], .kpis[data-lay="split"][data-n="2"]{ grid-template-columns:1.5fr 1fr }
+    .kpi .kbar{ height:4px; border-radius:999px; background:rgba(255,255,255,.1); overflow:hidden }
+    .kpi .kbar i{ display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,var(--acc2),var(--acc)) }
+    .kpis[data-lay="split"] .kpi:not(:first-child) .kbar{ display:none }
+    .kpis[data-lay="list"] .kpi .kbar{ width:120px; flex:none; order:3; margin-left:0 }
+    .kpis[data-lay="bento"] .kpi:nth-child(1) .kbar, .kpis[data-lay="split"] .kpi:nth-child(1) .kbar{ height:8px }
+    .kpi .kfoot{ display:flex; align-items:baseline; gap:6px }
+    .kpis[data-lay="list"] .kpi .kfoot, .kpis[data-lay="split"] .kpi:not(:first-child) .kfoot{ margin-left:auto }
+    /* SHELL: rail — collapsed icon sidebar */
+    [data-shell="rail"] .shellnav{ width:74px; padding:14px 10px; align-items:center }
+    [data-shell="rail"] .shellnav .navbrand{ padding:0 0 14px; justify-content:center }
+    [data-shell="rail"] .shellnav .navbrand > div:last-child, [data-shell="rail"] .shellnav .navfoot > div:not(.av), [data-shell="rail"] .shellnav .navlist .eyebrow{ display:none }
+    [data-shell="rail"] .shellnav .navlist{ width:100%; gap:6px }
+    [data-shell="rail"] .shellnav .navbtn{ justify-content:center; padding:0; height:46px; position:relative }
+    [data-shell="rail"] .shellnav .navbtn > span:not(.chip){ font-size:17px }
+    [data-shell="rail"] .shellnav .navbtn{ font-size:0 }
+    [data-shell="rail"] .shellnav .navbtn .chip{ position:absolute; top:5px; right:8px; margin:0; height:16px; min-width:16px; padding:0 4px; font-size:9.5px }
+    [data-shell="rail"] .shellnav .navfoot{ flex-direction:column; gap:8px; justify-content:center }
+    [data-shell="rail"] .shellnav .navfoot button{ margin:0 }
+    /* SHELL: topnav — horizontal nav, centered content */
+    [data-shell="topnav"]{ flex-direction:column }
+    [data-shell="topnav"] .shellnav{ width:auto; height:auto; flex-direction:row; align-items:center; gap:18px; padding:9px 26px;
+      border-left:0; border-right:0; border-bottom:1px solid rgba(255,255,255,.1) }
+    [data-shell="topnav"] .shellnav .navbrand{ padding:0 18px 0 0; border-bottom:0; border-right:1px solid rgba(255,255,255,.1) }
+    [data-shell="topnav"] .shellnav .navlist{ flex-direction:row; align-items:center; gap:4px; flex-wrap:wrap }
+    [data-shell="topnav"] .shellnav .navlist .eyebrow{ display:none }
+    [data-shell="topnav"] .shellnav .navbtn{ width:auto; height:34px; padding:0 13px; border-radius:999px; white-space:nowrap }
+    [data-shell="topnav"] .shellnav .navbtn > span:first-child{ display:none }
+    [data-shell="topnav"] .shellnav .navfoot{ margin:0 0 0 auto; padding-top:0; border-top:0 }
+    [data-shell="topnav"] .shellmain{ width:100%; max-width:1300px; margin:0 auto; padding-left:32px; padding-right:32px }
+    .qa{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px }
+    .qa button{ display:flex; flex-direction:column; align-items:flex-start; gap:10px; padding:14px 13px; border-radius:13px; cursor:pointer;
+      border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.045); color:#fff;
+      font:600 12.5px 'Inter',sans-serif; text-align:left; line-height:1.3; transition:.16s }
+    .qa button:hover{ background:rgba(255,255,255,.1); border-color:color-mix(in oklab, var(--acc) 45%, transparent); transform:translateY(-2px);
+      box-shadow:0 14px 28px -18px #000, 0 0 22px -14px var(--glow) }
+    [data-dense="compact"] .qa button{ padding:10px 11px; gap:7px }
+    .cell{ aspect-ratio:1; border-radius:11px; padding:7px; font-size:12px; font-variant-numeric:tabular-nums; display:flex; flex-direction:column; justify-content:space-between; border:1px solid transparent }
+  </style>
+</helmet>
+
+<div data-pal="{{ pal }}" data-stars="{{ starsOn }}" data-depth="{{ depthOn }}" data-card="{{ cardStyle }}" data-corner="{{ corner }}" data-dense="{{ dense }}" data-glow="{{ glow }}" data-spark="{{ sparkOn }}" class="font-sans text-[13.5px] leading-[1.55] min-h-screen relative">
+  <div class="cosmos"></div>
+  <div class="stars"></div>
+
+  <div class="relative z-10">
+
+    <div class="glass pane sticky top-0 z-30 flex items-center gap-5 px-6 py-3 rounded-none border-x-0 border-t-0 overflow-x-auto">
+      <span class="eyebrow shrink-0 whitespace-nowrap">Cosmic ESS · glass build</span>
+      <div class="seg ml-auto shrink-0">
+        <button type="button" data-on="{{ layGrid }}" onClick="{{ setGrid }}">Grid</button>
+        <button type="button" data-on="{{ layBento }}" onClick="{{ setBento }}">Bento</button>
+        <button type="button" data-on="{{ laySplit }}" onClick="{{ setSplit }}">Split</button>
+        <button type="button" data-on="{{ layRail }}" onClick="{{ setRail }}">Rail</button>
+        <button type="button" data-on="{{ layList }}" onClick="{{ setList }}">List</button>
+      </div>
+      <div class="seg shrink-0">
+        <button type="button" data-on="{{ isNebula }}" onClick="{{ setNebula }}">Nebula</button>
+        <button type="button" data-on="{{ isAurora }}" onClick="{{ setAurora }}">Aurora</button>
+        <button type="button" data-on="{{ isOnyx }}" onClick="{{ setOnyx }}">Onyx</button>
+        <button type="button" data-on="{{ isEmber }}" onClick="{{ setEmber }}">Ember</button>
+      </div>
+      <button type="button" class="btn btn-g btn-s shrink-0" onClick="{{ goLogin }}">Login screen</button>
+    </div>
+
+    <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+      <div class="min-h-[calc(100vh-53px)] flex items-center deck">
+        <div class="w-full max-w-[1140px] mx-auto grid grid-cols-[1.05fr_.95fr] gap-16 items-center px-8 py-14">
+          <div>
+            <div class="flex items-center gap-3 mb-9">
+              <div class="av w-11 h-11 text-[13px]">CH</div>
+              <span class="eyebrow" style="color:var(--acc)">Champ HR</span>
+            </div>
+            <h1 class="font-display font-bold text-[68px] leading-[.98] tracking-[-.045em] extrude max-w-[15ch]">Your work life,<br><span class="num-acc">in orbit.</span></h1>
+            <p class="text-[16px] text-dim mt-6 max-w-[44ch] [text-wrap:pretty]">Leave, attendance, payslips and policies — one login, no email chasing.</p>
+            <div class="flex gap-10 mt-11">
+              <div><div class="num num-acc text-[34px]">4</div><div class="eyebrow mt-2">leave types</div></div>
+              <div><div class="num num-acc text-[34px]">2</div><div class="eyebrow mt-2">step approval</div></div>
+              <div><div class="num num-acc text-[34px]">GPS</div><div class="eyebrow mt-2">check-in</div></div>
+            </div>
+          </div>
+          <div class="glass pane tilt p-8 flex flex-col gap-4">
+            <div>
+              <h2 class="font-display font-bold text-[32px] tracking-[-.03em] leading-none">Sign in</h2>
+              <p class="text-dim mt-2">Use your work email.</p>
+            </div>
+            <label class="flex flex-col gap-1.5"><span class="eyebrow">Email</span><input type="email" class="fld" placeholder="you@champ-hr.local"></label>
+            <label class="flex flex-col gap-1.5"><span class="eyebrow">Password</span><input type="password" class="fld" placeholder="••••••••"></label>
+            <button type="button" class="btn btn-p h-[46px] text-[15px] mt-1" onClick="{{ goDashboard }}">Sign in</button>
+            <a href="#" class="text-[12px] text-center text-dim">Forgot password?</a>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isApp }}" hint-placeholder-val="{{ true }}">
+      <div class="shellwrap flex items-stretch min-h-[calc(100vh-53px)]" data-shell="{{ shell }}">
+
+        <nav class="shellnav glass pane w-[262px] shrink-0 rounded-none border-y-0 border-l-0 flex flex-col gap-4 p-4 sticky top-[53px] h-[calc(100vh-53px)]">
+          <div class="navbrand flex items-center gap-3 px-2 pb-4 border-b border-white/10">
+            <div class="av w-9 h-9 text-[12px]">CH</div>
+            <div class="flex flex-col leading-tight">
+              <strong class="font-display text-[15px] tracking-[-.01em]">Champ HR</strong>
+              <span class="text-[11px] text-faint">ESS Portal</span>
+            </div>
+          </div>
+          <div class="navlist flex flex-col gap-1">
+            <span class="eyebrow px-3 pb-1">Me</span>
+            <button type="button" class="navbtn" data-on="{{ isDashboard }}" onClick="{{ goDashboard }}"><span class="w-4 text-center opacity-80">▤</span>Home</button>
+            <button type="button" class="navbtn" data-on="{{ isProfile }}" onClick="{{ goProfile }}"><span class="w-4 text-center opacity-80">◍</span>My Profile</button>
+            <button type="button" class="navbtn" data-on="{{ isLeave }}" onClick="{{ goLeave }}"><span class="w-4 text-center opacity-80">▦</span>Leave<span class="chip c-ok ml-auto h-[19px] px-2 text-[10.5px]">1</span></button>
+            <button type="button" class="navbtn" data-on="{{ isAttendance }}" onClick="{{ goAttendance }}"><span class="w-4 text-center opacity-80">◷</span>Attendance</button>
+            <button type="button" class="navbtn" data-on="{{ isPolicies }}" onClick="{{ goPolicies }}"><span class="w-4 text-center opacity-80">▥</span>Policies</button>
+            <span class="eyebrow px-3 pt-4 pb-1">Manage</span>
+            <button type="button" class="navbtn" data-on="{{ isTeam }}" onClick="{{ goTeam }}"><span class="w-4 text-center opacity-80">◎</span>Team<span class="chip c-warn ml-auto h-[19px] px-2 text-[10.5px]">3</span></button>
+            <button type="button" class="navbtn" data-on="{{ isAdmin }}" onClick="{{ goAdmin }}"><span class="w-4 text-center opacity-80">⇧</span>Publish Policies</button>
+          </div>
+          <div class="navfoot mt-auto pt-4 border-t border-white/10 flex items-center gap-2.5">
+            <div class="av w-8 h-8 text-[11px]">HR</div>
+            <div class="flex flex-col leading-tight min-w-0">
+              <span class="text-[13px] font-semibold">Hemang Raval</span>
+              <span class="text-[11px] text-faint">Super admin</span>
+            </div>
+            <button type="button" class="ml-auto text-faint hover:text-[color:var(--ink)] bg-transparent border-0 cursor-pointer p-1.5" onClick="{{ goLogin }}">⏻</button>
+          </div>
+        </nav>
+
+        <main class="shellmain flex-1 min-w-0 px-9 pt-8 pb-16 deck">
+
+          <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+            <div class="max-w-[1180px]">
+              <div class="glass pane tilt p-7 mb-5 flex items-center gap-6 flex-wrap overflow-hidden relative">
+                <div class="absolute -right-16 -top-24 w-72 h-72 rounded-full pointer-events-none" style="background:radial-gradient(circle, var(--glow), transparent 68%)"></div>
+                <div class="min-w-0 relative">
+                  <span class="eyebrow" style="color:var(--acc)">Thursday, 30 July</span>
+                  <h1 class="font-display font-bold text-[42px] leading-[1.06] tracking-[-.04em] mt-2 extrude">Welcome back, Hemang</h1>
+                  <p class="text-dim mt-2.5">You checked in at <span class="font-mono text-[color:var(--ink)]">09:42</span>. One leave request is waiting on you.</p>
+                </div>
+                <div class="flex gap-2.5 ml-auto relative">
+                  <button type="button" class="btn btn-p">Check out</button>
+                  <button type="button" class="btn btn-g" onClick="{{ goLeave }}">Apply leave</button>
+                </div>
+              </div>
+
+              <div class="kpis" data-lay="{{ lay }}">
+                <div class="glass tilt kpi">
+                  <span class="eyebrow">Leave balance</span>
+                  <div class="num">12.5</div>
+                  <div class="spark"><span style="height:38%"></span><span style="height:52%"></span><span style="height:44%"></span><span style="height:66%"></span><span style="height:58%"></span><span style="height:78%"></span><span style="height:100%"></span></div>
+                  <div class="meta">days remaining · 4 types</div>
+                </div>
+                <div class="glass tilt kpi">
+                  <span class="eyebrow">Attendance</span>
+                  <div class="num num-acc">96%</div>
+                  <div class="spark"><span style="height:72%"></span><span style="height:84%"></span><span style="height:64%"></span><span style="height:92%"></span><span style="height:88%"></span><span style="height:76%"></span><span style="height:96%"></span></div>
+                  <div class="meta">this month · 21 of 22 days</div>
+                </div>
+                <div class="glass tilt kpi">
+                  <span class="eyebrow">Latest payslip</span>
+                  <div class="num text-faint" style="font-size:26px">Pending</div>
+                  <div class="spark"><span style="height:60%"></span><span style="height:60%"></span><span style="height:62%"></span><span style="height:58%"></span><span style="height:64%"></span><span style="height:62%"></span><span style="height:22%;opacity:.35"></span></div>
+                  <div class="meta">July cycle closes 31 Jul</div>
+                </div>
+                <div class="glass tilt kpi">
+                  <span class="eyebrow">Pending requests</span>
+                  <div class="num" style="color:#fbbf24">3</div>
+                  <div class="spark"><span style="height:30%"></span><span style="height:44%"></span><span style="height:36%"></span><span style="height:52%"></span><span style="height:70%"></span><span style="height:62%"></span><span style="height:86%"></span></div>
+                  <div class="meta">awaiting your approval</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-[1.5fr_1fr] gap-6 items-start">
+                <div class="flex flex-col gap-6">
+                  <div>
+                    <div class="flex items-baseline justify-between mb-2.5">
+                      <span class="eyebrow">Needs your attention</span>
+                      <button type="button" class="bg-transparent border-0 cursor-pointer text-[12px] font-semibold" style="color:var(--acc)" onClick="{{ goTeam }}">View all 3 →</button>
+                    </div>
+                    <div class="glass overflow-hidden">
+                      <div class="row flex gap-3">
+                        <div class="av w-9 h-9 text-[11px]">AS</div>
+                        <div class="min-w-0"><div class="font-semibold">Aditi Sharma</div><div class="text-[12px] text-faint font-mono">Casual · 03–05 Aug · 3 days</div></div>
+                        <div class="flex gap-2 ml-auto"><button type="button" class="btn btn-p btn-s">Approve</button><button type="button" class="btn btn-g btn-s">Reject</button></div>
+                      </div>
+                      <div class="row flex gap-3">
+                        <div class="av w-9 h-9 text-[11px]">RM</div>
+                        <div class="min-w-0"><div class="font-semibold">Rohit Menon</div><div class="text-[12px] text-faint font-mono">Sick · 29 Jul · 1 day</div></div>
+                        <div class="flex gap-2 ml-auto"><button type="button" class="btn btn-p btn-s">Approve</button><button type="button" class="btn btn-g btn-s">Reject</button></div>
+                      </div>
+                      <div class="row flex gap-3">
+                        <div class="av w-9 h-9 text-[11px]">SQ</div>
+                        <div class="min-w-0"><div class="font-semibold">Sana Qureshi</div><div class="text-[12px] text-faint font-mono">Earned · 11–15 Aug · 5 days</div></div>
+                        <span class="chip c-warn ml-auto"><i></i>48h old</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span class="eyebrow block mb-2.5">Coming up</span>
+                    <div class="grid grid-cols-2 gap-3.5">
+                      <div class="glass tilt p-5"><div class="flex items-center gap-2.5 mb-2.5"><span class="ico">▦</span><strong>Independence Day</strong></div><p class="text-dim font-mono text-[12.5px]">Fri, 15 Aug · public holiday</p></div>
+                      <div class="glass tilt p-5"><div class="flex items-center gap-2.5 mb-2.5"><span class="ico">◷</span><strong>Timesheet lock</strong></div><p class="text-dim font-mono text-[12.5px]">Thu, 31 Jul · 18:00 IST</p></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-5">
+                  <div class="glass p-5">
+                    <span class="eyebrow block mb-3">Quick actions</span>
+                    <div class="qa">
+                      <button type="button" onClick="{{ goLeave }}"><span class="ico">▦</span>Apply leave</button>
+                      <button type="button" onClick="{{ goAttendance }}"><span class="ico">◷</span>Mark attendance</button>
+                      <button type="button"><span class="ico">◫</span>View payslip</button>
+                      <button type="button" onClick="{{ goProfile }}"><span class="ico">◍</span>Update profile</button>
+                    </div>
+                  </div>
+                  <div class="glass p-5">
+                    <span class="eyebrow block mb-3.5">Announcements</span>
+                    <div class="flex flex-col gap-3.5">
+                      <div><div class="font-semibold mb-0.5">Revised WFH policy</div><div class="text-[12px] text-faint">HR · 28 Jul</div></div>
+                      <div class="h-px bg-white/10"></div>
+                      <div><div class="font-semibold mb-0.5">Q3 appraisal window opens 5 Aug</div><div class="text-[12px] text-faint">People Ops · 25 Jul</div></div>
+                    </div>
+                  </div>
+                  <button type="button" class="glass tilt p-5 flex items-center gap-3.5 text-left w-full cursor-pointer" onClick="{{ goPolicies }}">
+                    <span class="ico w-9 h-9">▥</span>
+                    <span><span class="block font-semibold">Company policies</span><span class="text-[12px] text-faint">Holiday calendar &amp; leave rules</span></span>
+                    <span class="ml-auto text-faint">›</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isLeave }}" hint-placeholder-val="{{ true }}">
+            <div class="max-w-[1180px]">
+              <div class="flex items-end justify-between gap-5 mb-6">
+                <div>
+                  <span class="eyebrow">Time off</span>
+                  <h1 class="font-display font-bold text-[44px] leading-none tracking-[-.045em] mt-2 extrude">Leave</h1>
+                  <p class="text-dim mt-3 [text-wrap:pretty]">Request, track and approve — all in one view.</p>
+                </div>
+                <button type="button" class="btn btn-p">Apply leave</button>
+              </div>
+
+              <div class="flex gap-1 border-b border-white/10 mb-6">
+                <button type="button" class="bg-transparent border-0 border-b-2 px-3.5 py-2.5 text-[13.5px] font-semibold cursor-pointer" style="border-color:var(--acc);color:var(--acc)">My leave</button>
+                <button type="button" class="bg-transparent border-0 border-b-2 border-transparent px-3.5 py-2.5 text-[13.5px] font-semibold text-dim hover:text-[color:var(--ink)] cursor-pointer">Team calendar</button>
+                <button type="button" class="bg-transparent border-0 border-b-2 border-transparent px-3.5 py-2.5 text-[13.5px] font-semibold text-dim hover:text-[color:var(--ink)] cursor-pointer">Approvals <span class="chip c-warn ml-1.5 h-[19px] px-2 text-[10.5px]">3</span></button>
+              </div>
+
+              <div class="kpis" data-lay="{{ lay }}" data-n="4">
+                <div class="glass tilt kpi"><span class="eyebrow">Casual</span><div class="kfoot"><span class="num">5.5</span><span class="meta font-mono">/ 12</span></div><div class="kbar"><i style="width:46%"></i></div><div class="meta">days available</div></div>
+                <div class="glass tilt kpi"><span class="eyebrow">Sick</span><div class="kfoot"><span class="num">4.0</span><span class="meta font-mono">/ 6</span></div><div class="kbar"><i style="width:67%"></i></div><div class="meta">days available</div></div>
+                <div class="glass tilt kpi"><span class="eyebrow">Earned</span><div class="kfoot"><span class="num">3.0</span><span class="meta font-mono">/ 18</span></div><div class="kbar"><i style="width:17%"></i></div><div class="meta">days available</div></div>
+                <div class="glass tilt kpi"><span class="eyebrow">Comp off</span><div class="kfoot"><span class="num">0.0</span><span class="meta font-mono">/ 2</span></div><div class="kbar"><i style="width:2%"></i></div><div class="meta">days available</div></div>
+              </div>
+
+              <div class="grid grid-cols-[1.5fr_1fr] gap-6 items-start">
+                <div>
+                  <span class="eyebrow block mb-2.5">August 2026</span>
+                  <div class="glass p-5">
+                    <div class="grid grid-cols-7 gap-1.5 mb-2">
+                      <span class="eyebrow text-center">Mon</span><span class="eyebrow text-center">Tue</span><span class="eyebrow text-center">Wed</span><span class="eyebrow text-center">Thu</span><span class="eyebrow text-center">Fri</span><span class="eyebrow text-center">Sat</span><span class="eyebrow text-center">Sun</span>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1.5">
+                      <div class="cell bg-white/[0.03] text-faint items-end">27</div>
+                      <div class="cell bg-white/[0.03] text-faint items-end">28</div>
+                      <div class="cell bg-white/[0.03] text-faint items-end">29</div>
+                      <div class="cell items-end font-bold" style="border-color:var(--acc);color:var(--acc);box-shadow:0 0 24px -8px var(--glow)">30</div>
+                      <div class="cell bg-white/[0.06] items-end">31</div>
+                      <div class="cell bg-white/[0.03] text-faint items-end">1</div>
+                      <div class="cell bg-white/[0.03] text-faint items-end">2</div>
+                      <div class="cell c-warn"><span class="self-end">3</span><span class="text-[10px] tracking-widest">CL</span></div>
+                      <div class="cell c-warn"><span class="self-end">4</span><span class="text-[10px] tracking-widest">CL</span></div>
+                      <div class="cell c-warn"><span class="self-end">5</span><span class="text-[10px] tracking-widest">CL</span></div>
+                      <div class="cell bg-white/[0.06] items-end">6</div>
+                      <div class="cell bg-white/[0.06] items-end">7</div>
+                      <div class="cell bg-white/[0.03] text-faint items-end">8</div>
+                      <div class="cell bg-white/[0.03] text-faint items-end">9</div>
+                      <div class="cell bg-white/[0.06] items-end">10</div>
+                      <div class="cell c-ok"><span class="self-end">11</span><span class="text-[10px] tracking-widest">SQ</span></div>
+                      <div class="cell c-ok"><span class="self-end">12</span><span class="text-[10px] tracking-widest">SQ</span></div>
+                      <div class="cell c-ok"><span class="self-end">13</span><span class="text-[10px] tracking-widest">SQ</span></div>
+                      <div class="cell c-ok"><span class="self-end">14</span><span class="text-[10px] tracking-widest">SQ</span></div>
+                      <div class="cell text-[#0a0718] font-bold" style="background:linear-gradient(150deg,var(--acc2),var(--acc))"><span class="self-end">15</span><span class="text-[10px] tracking-widest">HOL</span></div>
+                      <div class="cell bg-white/[0.03] text-faint items-end">16</div>
+                    </div>
+                    <div class="flex flex-wrap gap-4 mt-4 pt-3.5 border-t border-white/10 text-[11px] text-faint">
+                      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-[3px] bg-[rgba(251,191,36,.35)]"></span>My leave</span>
+                      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-[3px] bg-[rgba(52,211,153,.35)]"></span>Team leave</span>
+                      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-[3px]" style="background:var(--acc)"></span>Holiday</span>
+                      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-[3px] bg-white/10"></span>Non-working</span>
+                    </div>
+                  </div>
+
+                  <span class="eyebrow block mt-7 mb-2.5">My applications</span>
+                  <div class="glass overflow-hidden">
+                    <div class="thead grid grid-cols-[1.1fr_1.5fr_.7fr_.9fr]"><span>Type</span><span>Dates</span><span class="text-right">Days</span><span class="text-right">Status</span></div>
+                    <div class="row grid grid-cols-[1.1fr_1.5fr_.7fr_.9fr]"><span class="font-medium">Casual</span><span class="text-dim font-mono">03 – 05 Aug</span><span class="text-right font-mono">3</span><span class="text-right"><span class="chip c-warn"><i></i>Pending</span></span></div>
+                    <div class="row grid grid-cols-[1.1fr_1.5fr_.7fr_.9fr]"><span class="font-medium">Sick</span><span class="text-dim font-mono">09 Jul</span><span class="text-right font-mono">1</span><span class="text-right"><span class="chip c-ok"><i></i>Approved</span></span></div>
+                    <div class="row grid grid-cols-[1.1fr_1.5fr_.7fr_.9fr]"><span class="font-medium">Earned</span><span class="text-dim font-mono">20 – 21 Jun</span><span class="text-right font-mono">2</span><span class="text-right"><span class="chip c-bad"><i></i>Rejected</span></span></div>
+                  </div>
+                </div>
+
+                <div class="glass p-5">
+                  <span class="eyebrow block mb-2">Latest request</span>
+                  <div class="font-semibold mb-5 font-mono text-[13px]">Casual · 03–05 Aug · 3 days</div>
+                  <div class="flex flex-col">
+                    <div class="grid grid-cols-[26px_1fr] gap-3 relative pb-5">
+                      <div class="absolute left-[12px] top-[26px] bottom-0 w-0.5" style="background:var(--acc)"></div>
+                      <div class="grid place-items-center w-[26px] h-[26px] rounded-full text-[11px] font-bold text-[#0a0718] z-[1]" style="background:var(--acc)">✓</div>
+                      <div><div class="font-semibold">Request submitted</div><div class="text-[12px] text-faint font-mono">28 Jul, 10:14</div></div>
+                    </div>
+                    <div class="grid grid-cols-[26px_1fr] gap-3 relative pb-5">
+                      <div class="absolute left-[12px] top-[26px] bottom-0 w-0.5 bg-white/12"></div>
+                      <div class="grid place-items-center w-[26px] h-[26px] rounded-full text-[11px] font-bold border-2 z-[1]" style="border-color:var(--acc);color:var(--acc)">2</div>
+                      <div><div class="font-semibold">Manager approval</div><div class="text-[12px]" style="color:var(--acc)">Waiting on Rohit Menon</div></div>
+                    </div>
+                    <div class="grid grid-cols-[26px_1fr] gap-3 relative pb-5">
+                      <div class="absolute left-[12px] top-[26px] bottom-0 w-0.5 bg-white/12"></div>
+                      <div class="grid place-items-center w-[26px] h-[26px] rounded-full text-[11px] font-bold border-2 border-white/15 text-faint z-[1]">3</div>
+                      <div class="font-semibold text-faint">HR verification</div>
+                    </div>
+                    <div class="grid grid-cols-[26px_1fr] gap-3">
+                      <div class="grid place-items-center w-[26px] h-[26px] rounded-full text-[11px] font-bold border-2 border-white/15 text-faint">4</div>
+                      <div class="font-semibold text-faint">Balance updated</div>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-g w-full mt-5">Cancel request</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isAttendance }}" hint-placeholder-val="{{ true }}">
+            <div class="max-w-[1180px]">
+              <div class="mb-6">
+                <span class="eyebrow">Daily record</span>
+                <h1 class="font-display font-bold text-[44px] leading-none tracking-[-.045em] mt-2 extrude">Attendance</h1>
+                <p class="text-dim mt-3 [text-wrap:pretty]">Check in once — the rest is recorded for you.</p>
+              </div>
+
+              <div class="kpis" data-lay="{{ lay }}" data-n="3">
+                <div class="glass pane tilt kpi kpi--hero relative overflow-hidden">
+                  <div class="absolute -right-10 -bottom-20 w-56 h-56 rounded-full pointer-events-none" style="background:radial-gradient(circle, var(--glow), transparent 68%)"></div>
+                  <span class="eyebrow relative" style="color:var(--acc)">Today · 30 Jul</span>
+                  <div class="flex items-baseline gap-3 mt-3 relative"><span class="num num-acc text-[50px]">09:42</span><span class="text-dim text-[13px]">checked in</span></div>
+                  <p class="text-[12px] text-faint mt-3 relative">Pune office · location verified · 6h 18m elapsed</p>
+                  <div class="flex gap-2.5 mt-5 relative"><button type="button" class="btn btn-p">Check out</button><button type="button" class="btn btn-g">Regularise</button></div>
+                </div>
+                <div class="glass tilt kpi"><span class="eyebrow">Present days</span><div class="kfoot"><span class="num">21</span><span class="meta font-mono">/ 22</span></div><div class="spark"><span style="height:80%"></span><span style="height:100%"></span><span style="height:90%"></span><span style="height:100%"></span><span style="height:40%"></span><span style="height:95%"></span><span style="height:100%"></span></div><div class="meta">July · 1 leave day</div></div>
+                <div class="glass tilt kpi"><span class="eyebrow">Avg hours</span><div class="num">8h 24m</div><div class="spark"><span style="height:70%"></span><span style="height:78%"></span><span style="height:66%"></span><span style="height:84%"></span><span style="height:80%"></span><span style="height:88%"></span><span style="height:92%"></span></div><div class="meta" style="color:#6ee7b7">+12m vs June</div></div>
+              </div>
+
+              <div class="flex items-center justify-between gap-4 mb-2.5">
+                <span class="eyebrow">This month</span>
+                <div class="seg"><button type="button" data-on="true">Month</button><button type="button">Quarter</button></div>
+              </div>
+              <div class="glass overflow-hidden">
+                <div class="thead grid grid-cols-[1.1fr_.8fr_.8fr_.8fr_1fr]"><span>Date</span><span>Check in</span><span>Check out</span><span class="text-right">Hours</span><span class="text-right">Status</span></div>
+                <div class="row grid grid-cols-[1.1fr_.8fr_.8fr_.8fr_1fr]"><span class="font-medium font-mono">Thu, 30 Jul</span><span class="font-mono">09:42</span><span class="text-faint">—</span><span class="text-right font-mono">6:18</span><span class="text-right"><span class="chip c-ok"><i></i>Present</span></span></div>
+                <div class="row grid grid-cols-[1.1fr_.8fr_.8fr_.8fr_1fr]"><span class="font-medium font-mono">Wed, 29 Jul</span><span class="font-mono">10:06</span><span class="font-mono">19:12</span><span class="text-right font-mono">9:06</span><span class="text-right"><span class="chip c-warn"><i></i>Late</span></span></div>
+                <div class="row grid grid-cols-[1.1fr_.8fr_.8fr_.8fr_1fr]"><span class="font-medium font-mono">Tue, 28 Jul</span><span class="font-mono">09:28</span><span class="font-mono">18:40</span><span class="text-right font-mono">9:12</span><span class="text-right"><span class="chip c-neu"><i></i>Checked out</span></span></div>
+                <div class="row grid grid-cols-[1.1fr_.8fr_.8fr_.8fr_1fr]"><span class="font-medium font-mono">Mon, 27 Jul</span><span class="text-faint">—</span><span class="text-faint">—</span><span class="text-right text-faint">—</span><span class="text-right"><span class="chip c-bad"><i></i>Absent</span></span></div>
+                <div class="flex items-center justify-between gap-3 px-[18px] py-2.5 border-t border-white/10 bg-white/[0.03] text-[12px] text-faint">
+                  <span>4 of 22 days</span>
+                  <div class="flex gap-1.5"><button type="button" class="btn btn-g btn-s opacity-50">Previous</button><button type="button" class="btn btn-g btn-s">Next</button></div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isTeam }}" hint-placeholder-val="{{ true }}">
+            <div class="max-w-[1180px]">
+              <div class="flex items-end justify-between gap-5 mb-6">
+                <div>
+                  <span class="eyebrow">27 reports</span>
+                  <h1 class="font-display font-bold text-[44px] leading-none tracking-[-.045em] mt-2 extrude">Team</h1>
+                  <p class="text-dim mt-3 [text-wrap:pretty]">Live status and pending approvals for your reports.</p>
+                </div>
+                <button type="button" class="btn btn-p">Add employee</button>
+              </div>
+
+              <div class="kpis" data-lay="{{ lay }}" data-n="4">
+                <div class="glass tilt kpi"><span class="eyebrow">Team size</span><div class="num">27</div><div class="spark"><span style="height:60%"></span><span style="height:64%"></span><span style="height:70%"></span><span style="height:74%"></span><span style="height:82%"></span><span style="height:90%"></span><span style="height:100%"></span></div><div class="meta">direct + dotted line</div></div>
+                <div class="glass tilt kpi"><span class="eyebrow">Present now</span><div class="num" style="color:#34d399">23</div><div class="spark"><span style="height:78%"></span><span style="height:86%"></span><span style="height:70%"></span><span style="height:92%"></span><span style="height:84%"></span><span style="height:88%"></span><span style="height:96%"></span></div><div class="meta">85% of the team</div></div>
+                <div class="glass tilt kpi"><span class="eyebrow">On leave</span><div class="num">2</div><div class="spark"><span style="height:20%"></span><span style="height:34%"></span><span style="height:26%"></span><span style="height:48%"></span><span style="height:30%"></span><span style="height:38%"></span><span style="height:44%"></span></div><div class="meta">Sana, Devansh</div></div>
+                <div class="glass tilt kpi"><span class="eyebrow">Pending approvals</span><div class="num" style="color:#fbbf24">3</div><div class="spark"><span style="height:32%"></span><span style="height:46%"></span><span style="height:38%"></span><span style="height:54%"></span><span style="height:72%"></span><span style="height:64%"></span><span style="height:88%"></span></div><div class="meta">oldest waiting 48h</div></div>
+              </div>
+
+              <div class="flex items-center gap-2.5 mb-2.5">
+                <input class="fld max-w-[280px]" placeholder="Search name or email">
+                <div class="seg"><button type="button" data-on="true">All</button><button type="button">Present</button><button type="button">On leave</button></div>
+              </div>
+
+              <div class="glass overflow-hidden">
+                <div class="thead grid grid-cols-[1.5fr_1.6fr_.9fr_1fr_.8fr]"><span class="text-[color:var(--ink)]">Name ▲</span><span>Email</span><span>Role</span><span>Status</span><span class="text-right">Leave left</span></div>
+                <div class="row grid grid-cols-[1.5fr_1.6fr_.9fr_1fr_.8fr]"><span class="flex items-center gap-2.5"><span class="av w-7 h-7 text-[10.5px]">AS</span><span class="font-medium">Aditi Sharma</span></span><span class="text-dim">aditi@champ-hr.local</span><span class="text-dim">Employee</span><span><span class="chip c-ok"><i></i>Present</span></span><span class="text-right font-mono">12.5</span></div>
+                <div class="row grid grid-cols-[1.5fr_1.6fr_.9fr_1fr_.8fr]"><span class="flex items-center gap-2.5"><span class="av w-7 h-7 text-[10.5px]">RM</span><span class="font-medium">Rohit Menon</span></span><span class="text-dim">rohit@champ-hr.local</span><span class="text-dim">Team lead</span><span><span class="chip c-neu"><i></i>Checked out</span></span><span class="text-right font-mono">6.0</span></div>
+                <div class="row grid grid-cols-[1.5fr_1.6fr_.9fr_1fr_.8fr]"><span class="flex items-center gap-2.5"><span class="av w-7 h-7 text-[10.5px]">SQ</span><span class="font-medium">Sana Qureshi</span></span><span class="text-dim">sana@champ-hr.local</span><span class="text-dim">Employee</span><span><span class="chip c-warn"><i></i>On leave</span></span><span class="text-right font-mono">18.0</span></div>
+                <div class="row grid grid-cols-[1.5fr_1.6fr_.9fr_1fr_.8fr]"><span class="flex items-center gap-2.5"><span class="av w-7 h-7 text-[10.5px]">DP</span><span class="font-medium">Devansh Patel</span></span><span class="text-dim">devansh@champ-hr.local</span><span class="text-dim">Employee</span><span><span class="chip c-bad"><i></i>Absent</span></span><span class="text-right font-mono">9.5</span></div>
+                <div class="flex items-center justify-between gap-3 px-[18px] py-2.5 border-t border-white/10 bg-white/[0.03] text-[12px] text-faint">
+                  <span>4 of 27 employees</span>
+                  <div class="flex gap-1.5"><button type="button" class="btn btn-g btn-s opacity-50">Previous</button><button type="button" class="btn btn-g btn-s">Next</button></div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ true }}">
+            <div class="max-w-[1180px]">
+              <div class="glass pane tilt p-7 mb-5 flex items-center gap-5 flex-wrap relative overflow-hidden">
+                <div class="absolute -left-20 -top-24 w-72 h-72 rounded-full pointer-events-none" style="background:radial-gradient(circle, var(--glow), transparent 68%)"></div>
+                <div class="av w-16 h-16 text-[22px] relative">HR</div>
+                <div class="relative">
+                  <h1 class="font-display font-bold text-[40px] leading-none tracking-[-.04em] extrude">Hemang Raval</h1>
+                  <p class="text-dim mt-2.5 font-mono text-[12.5px]">Super admin · EMP-0041 · Product · Pune · joined 12 Jan 2023</p>
+                </div>
+                <button type="button" class="btn btn-g ml-auto relative">Edit profile</button>
+              </div>
+
+              <div class="kpis" data-info="true" data-lay="{{ layInfo }}" data-n="3">
+                <div class="glass tilt">
+                  <div class="flex items-center gap-2.5 mb-4"><span class="ico">◍</span><strong class="text-[15px]">Personal</strong></div>
+                  <div class="flex flex-col gap-3.5">
+                    <div><div class="eyebrow">Email</div><div class="mt-1">hemang@champ-hr.local</div></div>
+                    <div><div class="eyebrow">Phone</div><div class="mt-1 font-mono">+91 98200 41122</div></div>
+                    <div><div class="eyebrow">Date of birth</div><div class="mt-1 font-mono">04 Mar 1991</div></div>
+                  </div>
+                </div>
+                <div class="glass tilt">
+                  <div class="flex items-center gap-2.5 mb-4"><span class="ico">◎</span><strong class="text-[15px]">Employment</strong></div>
+                  <div class="flex flex-col gap-3.5">
+                    <div><div class="eyebrow">Reports to</div><div class="mt-1">Priya Kulkarni</div></div>
+                    <div><div class="eyebrow">Shift group</div><div class="mt-1">General · 09:30–18:30 IST</div></div>
+                    <div><div class="eyebrow">Employment type</div><div class="mt-1">Full-time · confirmed</div></div>
+                  </div>
+                </div>
+                <div class="glass tilt">
+                  <div class="flex items-center gap-2.5 mb-4"><span class="ico">◫</span><strong class="text-[15px]">Bank &amp; statutory</strong></div>
+                  <div class="flex flex-col gap-3.5">
+                    <div><div class="eyebrow">Account</div><div class="mt-1 font-mono">•••• 4417</div></div>
+                    <div><div class="eyebrow">PAN</div><div class="mt-1 font-mono">ABCDE1234F</div></div>
+                    <div><div class="eyebrow">UAN</div><div class="mt-1 font-mono">1002 3345 6677</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-[1.4fr_1fr] gap-6 items-start">
+                <div>
+                  <span class="eyebrow block mb-2.5">Documents</span>
+                  <div class="glass overflow-hidden">
+                    <div class="thead grid grid-cols-[1.6fr_1fr_1fr]"><span>Document</span><span>Uploaded</span><span class="text-right">Status</span></div>
+                    <div class="row grid grid-cols-[1.6fr_1fr_1fr]"><span class="font-medium">Aadhaar card</span><span class="text-dim font-mono">14 Jan 2023</span><span class="text-right"><span class="chip c-ok"><i></i>Verified</span></span></div>
+                    <div class="row grid grid-cols-[1.6fr_1fr_1fr]"><span class="font-medium">Relieving letter</span><span class="text-dim font-mono">14 Jan 2023</span><span class="text-right"><span class="chip c-ok"><i></i>Verified</span></span></div>
+                    <div class="row grid grid-cols-[1.6fr_1fr_1fr]"><span class="font-medium">Address proof</span><span class="text-faint">—</span><span class="text-right"><span class="chip c-warn"><i></i>Missing</span></span></div>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-3.5">
+                  <div class="flex items-start gap-2.5 p-3.5 rounded-xl c-warn text-[13px]"><span>!</span><span>Address proof is missing. Upload it to complete your file.</span></div>
+                  <div class="glass p-5">
+                    <strong class="block text-[15px] mb-1.5">Security</strong>
+                    <p class="text-dim mb-4">Password last changed 4 months ago.</p>
+                    <button type="button" class="btn btn-g w-full">Change password</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isPolicies }}" hint-placeholder-val="{{ true }}">
+            <div class="max-w-[940px]">
+              <div class="mb-6">
+                <span class="eyebrow">General shift</span>
+                <h1 class="font-display font-bold text-[44px] leading-none tracking-[-.045em] mt-2 extrude">Policies</h1>
+                <p class="text-dim mt-3 [text-wrap:pretty]">Your holiday calendar and leave rules, resolved for your shift group.</p>
+              </div>
+
+              <div class="flex items-center justify-between gap-4 mb-2.5">
+                <span class="eyebrow">Holiday calendar · 2026</span>
+                <span class="text-[12px] text-faint">Published 08 Jan 2026 by People Ops</span>
+              </div>
+              <div class="glass overflow-hidden mb-8">
+                <div class="thead grid grid-cols-[1fr_2fr_1fr]"><span>Date</span><span>Holiday</span><span class="text-right">Type</span></div>
+                <div class="row grid grid-cols-[1fr_2fr_1fr]"><span class="text-dim font-mono">Fri, 15 Aug</span><span class="font-medium">Independence Day</span><span class="text-right"><span class="chip c-ok"><i></i>Public</span></span></div>
+                <div class="row grid grid-cols-[1fr_2fr_1fr]"><span class="text-dim font-mono">Sat, 06 Sep</span><span class="font-medium">Ganesh Chaturthi</span><span class="text-right"><span class="chip c-warn"><i></i>Restricted</span></span></div>
+                <div class="row grid grid-cols-[1fr_2fr_1fr]"><span class="text-dim font-mono">Thu, 02 Oct</span><span class="font-medium">Gandhi Jayanti</span><span class="text-right"><span class="chip c-ok"><i></i>Public</span></span></div>
+                <div class="row grid grid-cols-[1fr_2fr_1fr]"><span class="text-dim font-mono">Tue, 10 Nov</span><span class="font-medium">Diwali (Laxmi Pujan)</span><span class="text-right"><span class="chip c-neu"><i></i>Optional</span></span></div>
+              </div>
+
+              <span class="eyebrow block mb-2.5">Leave policy</span>
+              <div class="kpis" data-info="true" data-lay="{{ layInfo }}" data-n="2">
+                <div class="glass tilt"><div class="flex items-baseline justify-between mb-2.5"><strong class="text-[15px]">Casual leave</strong><span class="font-mono font-semibold" style="color:var(--acc)">1.0 / month</span></div><div class="flex flex-col gap-1 text-dim text-[13px]"><span>Carry-forward cap · 6 days</span><span>No documentation required</span></div></div>
+                <div class="glass tilt"><div class="flex items-baseline justify-between mb-2.5"><strong class="text-[15px]">Sick leave</strong><span class="font-mono font-semibold" style="color:var(--acc)">0.5 / month</span></div><div class="flex flex-col gap-1 text-dim text-[13px]"><span>No carry-forward</span><span>Medical certificate beyond 2 days</span></div></div>
+                <div class="glass tilt"><div class="flex items-baseline justify-between mb-2.5"><strong class="text-[15px]">Earned leave</strong><span class="font-mono font-semibold" style="color:var(--acc)">1.5 / month</span></div><div class="flex flex-col gap-1 text-dim text-[13px]"><span>Carry-forward cap · 30 days</span><span>Eligibility · after probation</span></div></div>
+                <div class="glass tilt"><div class="flex items-baseline justify-between mb-2.5"><strong class="text-[15px]">Maternity leave</strong><span class="font-mono font-semibold" style="color:var(--acc)">182 days</span></div><div class="flex flex-col gap-1 text-dim text-[13px]"><span>Event-based</span><span>Documentation · medical certificate</span></div></div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
+            <div class="max-w-[1000px]">
+              <div class="flex items-end justify-between gap-5 mb-6">
+                <div>
+                  <span class="eyebrow">Admin</span>
+                  <h1 class="font-display font-bold text-[44px] leading-none tracking-[-.045em] mt-2 extrude">Publish policies</h1>
+                  <p class="text-dim mt-3 [text-wrap:pretty]">Assign a holiday calendar to a shift group, then publish.</p>
+                </div>
+                <div class="flex gap-2.5"><button type="button" class="btn btn-g">Save draft</button><button type="button" class="btn btn-p">Publish to 27 employees</button></div>
+              </div>
+
+              <div class="flex items-start gap-2.5 p-3.5 rounded-xl mb-5 text-[13px]" style="color:#7dd3fc;background:rgba(125,211,252,.1);border:1px solid rgba(125,211,252,.24)"><span>ⓘ</span><span>Publishing replaces the current 2026 calendar for the selected shift groups. Employees are notified in-app.</span></div>
+
+              <div class="glass p-6 mb-5">
+                <span class="eyebrow block mb-4">Calendar definition</span>
+                <div class="grid grid-cols-3 gap-3.5">
+                  <label class="flex flex-col gap-1.5"><span class="eyebrow">Calendar name</span><input class="fld" value="India 2026 — General"></label>
+                  <label class="flex flex-col gap-1.5"><span class="eyebrow">Year</span><select class="fld"><option>2026</option><option>2027</option></select></label>
+                  <label class="flex flex-col gap-1.5"><span class="eyebrow">Shift group</span><select class="fld"><option>General (09:30–18:30)</option><option>US shift (18:00–03:00)</option></select></label>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between gap-4 mb-2.5">
+                <span class="eyebrow">Holidays · 3 in this draft</span>
+                <button type="button" class="btn btn-g btn-s">Add holiday</button>
+              </div>
+              <div class="glass overflow-hidden mb-5">
+                <div class="thead grid grid-cols-[1fr_2fr_1fr_90px]"><span>Date</span><span>Name</span><span>Type</span><span class="text-right">Action</span></div>
+                <div class="row grid grid-cols-[1fr_2fr_1fr_90px] gap-2.5"><input type="date" class="fld py-1.5" value="2026-08-15"><input class="fld py-1.5" value="Independence Day"><select class="fld py-1.5"><option>Public</option><option>Restricted</option><option>Optional</option></select><button type="button" class="justify-self-end bg-transparent border-0 cursor-pointer text-[12px] font-semibold text-[#fda4af]">Remove</button></div>
+                <div class="row grid grid-cols-[1fr_2fr_1fr_90px] gap-2.5"><input type="date" class="fld py-1.5" value="2026-09-06"><input class="fld py-1.5" value="Ganesh Chaturthi"><select class="fld py-1.5"><option>Restricted</option><option>Public</option><option>Optional</option></select><button type="button" class="justify-self-end bg-transparent border-0 cursor-pointer text-[12px] font-semibold text-[#fda4af]">Remove</button></div>
+                <div class="row grid grid-cols-[1fr_2fr_1fr_90px] gap-2.5"><input type="date" class="fld py-1.5" value="2026-11-10"><input class="fld py-1.5" value="Diwali (Laxmi Pujan)"><select class="fld py-1.5"><option>Optional</option><option>Public</option><option>Restricted</option></select><button type="button" class="justify-self-end bg-transparent border-0 cursor-pointer text-[12px] font-semibold text-[#fda4af]">Remove</button></div>
+              </div>
+
+              <span class="eyebrow block mb-2.5">Publish impact</span>
+              <div class="kpis" data-lay="{{ lay }}" data-n="4">
+                <div class="glass tilt kpi"><span class="eyebrow">Employees affected</span><div class="num">27</div><div class="meta">notified in-app on publish</div></div>
+                <div class="glass tilt kpi"><span class="eyebrow">Shift group</span><div class="num">1</div><div class="meta">General · 09:30–18:30</div></div>
+                <div class="glass tilt kpi"><span class="eyebrow">Holidays</span><div class="num">3</div><div class="meta">in this draft</div></div>
+                <div class="glass tilt kpi"><span class="eyebrow">Replacing existing</span><div class="num" style="color:#fbbf24">2</div><div class="meta">dates already published</div></div>
+              </div>
+            </div>
+          </sc-if>
+
+        </main>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;shell&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;classic&quot;,&quot;rail&quot;,&quot;topnav&quot;],&quot;default&quot;:&quot;classic&quot;,&quot;tsType&quot;:&quot;'classic' | 'rail' | 'topnav'&quot;,&quot;section&quot;:&quot;Shell&quot;},&quot;palette&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;nebula&quot;,&quot;aurora&quot;,&quot;onyx&quot;,&quot;ember&quot;],&quot;default&quot;:&quot;nebula&quot;,&quot;tsType&quot;:&quot;'nebula' | 'aurora' | 'onyx' | 'ember'&quot;,&quot;section&quot;:&quot;Cosmic&quot;},&quot;dashboardLayout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;grid&quot;,&quot;bento&quot;,&quot;split&quot;,&quot;rail&quot;,&quot;list&quot;],&quot;default&quot;:&quot;grid&quot;,&quot;tsType&quot;:&quot;'grid' | 'bento' | 'split' | 'rail' | 'list'&quot;,&quot;section&quot;:&quot;Dashboard&quot;},&quot;cardStyle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;glass&quot;,&quot;outline&quot;,&quot;solid&quot;,&quot;elevated&quot;],&quot;default&quot;:&quot;glass&quot;,&quot;tsType&quot;:&quot;'glass' | 'outline' | 'solid' | 'elevated'&quot;,&quot;section&quot;:&quot;Dashboard&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;comfortable&quot;,&quot;tsType&quot;:&quot;'comfortable' | 'compact'&quot;,&quot;section&quot;:&quot;Dashboard&quot;},&quot;corner&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;sharp&quot;,&quot;soft&quot;,&quot;round&quot;],&quot;default&quot;:&quot;soft&quot;,&quot;tsType&quot;:&quot;'sharp' | 'soft' | 'round'&quot;,&quot;section&quot;:&quot;Dashboard&quot;},&quot;sparklines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Dashboard&quot;},&quot;glow&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;subtle&quot;,&quot;medium&quot;,&quot;intense&quot;],&quot;default&quot;:&quot;medium&quot;,&quot;tsType&quot;:&quot;'subtle' | 'medium' | 'intense'&quot;,&quot;section&quot;:&quot;Cosmic&quot;},&quot;starfield&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Cosmic&quot;},&quot;depth&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Cosmic&quot;}}">
+class Component extends DCLogic {
+  state = { pal: null, screen: 'dashboard', lay: null };
+
+  get pal() {
+ return this.state.pal ?? this.props.palette ?? 'nebula'; }
+
+  go(screen) { return () => this.setState({ screen }); }
+
+  renderVals() {
+    const s = this.state.screen, p = this.pal;
+    const lay = this.state.lay ?? this.props.dashboardLayout ?? 'grid';
+    const setLay = v => () => this.setState({ lay: v });
+    return {
+      pal: p,
+      lay,
+      layInfo: (lay === 'list' ? 'grid' : lay === 'split' ? 'bento' : lay),
+      layGrid: lay === 'grid', layBento: lay === 'bento', laySplit: lay === 'split',
+      layRail: lay === 'rail', layList: lay === 'list',
+      setGrid: setLay('grid'), setBento: setLay('bento'), setSplit: setLay('split'),
+      setRail: setLay('rail'), setList: setLay('list'),
+      shell: this.props.shell ?? 'classic',
+      cardStyle: this.props.cardStyle ?? 'glass',
+      corner: this.props.corner ?? 'soft',
+      dense: this.props.density ?? 'comfortable',
+      glow: this.props.glow ?? 'medium',
+      sparkOn: (this.props.sparklines ?? true) ? 'on' : 'off',
+      isNebula: p === 'nebula',
+      isAurora: p === 'aurora',
+      isOnyx: p === 'onyx',
+      isEmber: p === 'ember',
+      setEmber: () => this.setState({ pal: 'ember' }),
+      setOnyx: () => this.setState({ pal: 'onyx' }),
+      setNebula: () => this.setState({ pal: 'nebula' }),
+      setAurora: () => this.setState({ pal: 'aurora' }),
+      starsOn: (this.props.starfield ?? true) ? 'on' : 'off',
+      depthOn: (this.props.depth ?? true) ? 'on' : 'off',
+      isLogin: s === 'login',
+      isApp: s !== 'login',
+      isDashboard: s === 'dashboard',
+      isLeave: s === 'leave',
+      isAttendance: s === 'attendance',
+      isTeam: s === 'team',
+      isProfile: s === 'profile',
+      isPolicies: s === 'policies',
+      isAdmin: s === 'admin',
+      goDashboard: this.go('dashboard'),
+      goProfile: this.go('profile'),
+      goLeave: this.go('leave'),
+      goAttendance: this.go('attendance'),
+      goTeam: this.go('team'),
+      goPolicies: this.go('policies'),
+      goAdmin: this.go('admin'),
+      goLogin: this.go('login')
+    };
+  }
+}
+</script>
+</body>
+</html>
