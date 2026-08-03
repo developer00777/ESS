@@ -46,6 +46,21 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const attendancePct =
 		businessDaysSoFar > 0 ? Math.round((daysWithCheckIn / businessDaysSoFar) * 100) : 0;
 
+	// Sparkline over the last 7 days: full bar on a day with a check-in, a low
+	// stub otherwise. Real data — the KPI card never shows a decorative trend.
+	const attendanceByDate = new Set(
+		attendanceRows.filter((r) => r.checkInAt).map((r) => r.date)
+	);
+	const attendanceSpark: number[] = [];
+	for (let i = 6; i >= 0; i--) {
+		const d = new Date();
+		d.setDate(d.getDate() - i);
+		const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+		attendanceSpark.push(attendanceByDate.has(iso) ? 100 : 14);
+	}
+
+	const leaveTypeCount = allocations.length;
+
 	const applicantColumns = { id: users.id, fullName: users.fullName, teamId: users.teamId };
 
 	let approvalQueue: Array<{
@@ -123,7 +138,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	return {
 		leaveBalance,
+		leaveTypeCount,
 		attendancePct,
+		attendanceSpark,
+		daysWithCheckIn,
+		businessDaysSoFar,
 		pendingCount: Number(pendingLeaveCount[0]?.count ?? 0),
 		approvalQueue: approvalQueue.map((r) => ({
 			...r,

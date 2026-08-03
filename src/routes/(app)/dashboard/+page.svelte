@@ -53,10 +53,27 @@
 	</div>
 
 	<div class="stat-grid">
-		<StatCard icon={Calendar} label="Leave Balance" value="{data.leaveBalance} Days" />
-		<StatCard icon={Clock} label="Attendance" value="{data.attendancePct}%" />
-		<StatCard icon={Wallet} label="Latest Payslip" value="Not yet generated" />
-		<StatCard icon={Clipboard} label="Pending Requests" value="{data.pendingCount} Open" />
+		<StatCard
+			icon={Calendar}
+			label="Leave Balance"
+			value="{data.leaveBalance} Days"
+			meta="days remaining · {data.leaveTypeCount} type{data.leaveTypeCount === 1 ? '' : 's'}"
+		/>
+		<StatCard
+			icon={Clock}
+			label="Attendance"
+			value="{data.attendancePct}%"
+			accent
+			spark={data.attendanceSpark}
+			meta="this month · {data.daysWithCheckIn} of {data.businessDaysSoFar} days"
+		/>
+		<StatCard icon={Wallet} label="Latest Payslip" value="Not yet generated" meta="no payslip published yet" />
+		<StatCard
+			icon={Clipboard}
+			label="Pending Requests"
+			value="{data.pendingCount} Open"
+			meta={data.pendingCount === 0 ? 'nothing awaiting approval' : 'awaiting approval'}
+		/>
 	</div>
 
 	<div class="dashboard-grid">
