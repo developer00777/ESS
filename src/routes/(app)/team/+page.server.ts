@@ -284,14 +284,17 @@ export const actions: Actions = {
 
 		const buffer = Buffer.from(await file.arrayBuffer());
 
-		let parsedRows;
+		let parseResult;
 		try {
-			parsedRows = await parseHrTeamSheet(buffer);
+			parseResult = await parseHrTeamSheet(buffer);
 		} catch (err) {
 			return { bulkImportError: err instanceof Error ? err.message : 'Failed to parse workbook' };
 		}
+		const parsedRows = parseResult.rows;
 		if (parsedRows.length === 0) {
-			return { bulkImportError: 'No rows found in the "HR Team Master data" sheet' };
+			return {
+				bulkImportError: `No employee rows found in "${parseResult.sheetName}" — every row needs at least a name and a work email.`
+			};
 		}
 
 		const emails = parsedRows.map((r) => r.officialEmail);
@@ -383,10 +386,23 @@ export const actions: Actions = {
 			action: 'bulk_import.upload',
 			targetType: 'bulk_import',
 			targetId: importRow.id,
-			details: { filename: file.name, rowCount: parsedRows.length }
+			details: {
+				filename: file.name,
+				rowCount: parsedRows.length,
+				// How the columns were interpreted — worth auditing when the
+				// mapping was decided by the model rather than known headers.
+				sheetName: parseResult.sheetName,
+				strategy: parseResult.strategy,
+				note: parseResult.note
+			}
 		});
 
-		return { bulkImportUploaded: importRow.id };
+		return {
+			bulkImportUploaded: importRow.id,
+			bulkImportSheet: parseResult.sheetName,
+			bulkImportStrategy: parseResult.strategy,
+			bulkImportNote: parseResult.note
+		};
 	},
 
 	// Creates one `users` row (+ employeeProfiles, + a team if the row is a team_lead)

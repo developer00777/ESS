@@ -1,4 +1,10 @@
 import ExcelJS from 'exceljs';
+import {
+	mapSpreadsheet,
+	redactCell,
+	type SheetMapping,
+	type SheetSummary
+} from '$lib/server/ai/map-spreadsheet';
 
 export interface ParsedImportRow {
 	employeeCode: string | null;
@@ -35,59 +41,170 @@ function cellText(value: unknown): string | null {
 	return s === '' ? null : s;
 }
 
-/**
- * Parses the "HR Team Master data" sheet shape (or any sheet with the same headers,
- * in any column order) into one row per person. Throws if the sheet or required
- * columns aren't found — this is a known, fixed shape, not a general-purpose importer.
- */
-export async function parseHrTeamSheet(buffer: Buffer): Promise<ParsedImportRow[]> {
-	const workbook = new ExcelJS.Workbook();
-	// exceljs's Buffer type predates newer @types/node Buffer fields (maxByteLength, etc.)
-	await workbook.xlsx.load(buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]);
+export interface ParseResult {
+	rows: ParsedImportRow[];
+	/** Which sheet was used, and how it was chosen — surfaced in the review UI. */
+	sheetName: string;
+	strategy: 'known-headers' | 'ai-mapped';
+	note: string | null;
+}
 
-	const sheet = workbook.getWorksheet('HR Team Master data');
-	if (!sheet) {
-		throw new Error('Sheet "HR Team Master data" not found in this workbook');
-	}
-
-	const headerRow = sheet.getRow(1);
-	const columnIndex: Partial<Record<keyof ParsedImportRow, number>> = {};
-	headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
-		const normalized = normalizeHeader(cell.value);
-		const field = HEADER_MAP[normalized];
-		if (field) columnIndex[field] = colNumber;
-	});
-
-	const required: (keyof ParsedImportRow)[] = ['fullName', 'officialEmail'];
-	for (const field of required) {
-		if (!columnIndex[field]) {
-			throw new Error(`Required column for "${field}" not found in sheet headers`);
-		}
-	}
-
+/** Reads a sheet given an explicit header row and column-number map. */
+function readRows(
+	sheet: ExcelJS.Worksheet,
+	headerRowNumber: number,
+	columnIndex: Partial<Record<keyof ParsedImportRow, number>>
+): ParsedImportRow[] {
 	const rows: ParsedImportRow[] = [];
-	sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-		if (rowNumber === 1) return;
+	const at = (row: ExcelJS.Row, field: keyof ParsedImportRow) => {
+		const col = columnIndex[field];
+		return col ? cellText(row.getCell(col).value) : null;
+	};
 
-		const fullName = columnIndex.fullName ? cellText(row.getCell(columnIndex.fullName).value) : null;
-		const officialEmail = columnIndex.officialEmail
-			? cellText(row.getCell(columnIndex.officialEmail).value)
-			: null;
+	sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+		if (rowNumber <= headerRowNumber) return;
+
+		const fullName = at(row, 'fullName');
+		const officialEmail = at(row, 'officialEmail');
+		// A person needs at minimum a name and a work email to become a login.
 		if (!fullName || !officialEmail) return;
 
 		rows.push({
-			employeeCode: columnIndex.employeeCode ? cellText(row.getCell(columnIndex.employeeCode).value) : null,
+			employeeCode: at(row, 'employeeCode'),
 			fullName,
-			designation: columnIndex.designation ? cellText(row.getCell(columnIndex.designation).value) : null,
+			designation: at(row, 'designation'),
 			officialEmail: officialEmail.toLowerCase(),
-			teamAndFloor: columnIndex.teamAndFloor ? cellText(row.getCell(columnIndex.teamAndFloor).value) : null,
-			reportingAuthorityRaw: columnIndex.reportingAuthorityRaw
-				? cellText(row.getCell(columnIndex.reportingAuthorityRaw).value)
-				: null
+			teamAndFloor: at(row, 'teamAndFloor'),
+			reportingAuthorityRaw: at(row, 'reportingAuthorityRaw')
 		});
 	});
 
 	return rows;
+}
+
+/** Tries the known header names against one sheet's given header row. */
+function matchKnownHeaders(
+	sheet: ExcelJS.Worksheet,
+	headerRowNumber: number
+): Partial<Record<keyof ParsedImportRow, number>> {
+	const columnIndex: Partial<Record<keyof ParsedImportRow, number>> = {};
+	sheet.getRow(headerRowNumber).eachCell({ includeEmpty: false }, (cell, colNumber) => {
+		const field = HEADER_MAP[normalizeHeader(cell.value)];
+		if (field) columnIndex[field] = colNumber;
+	});
+	return columnIndex;
+}
+
+/**
+ * Parses an HR spreadsheet into one row per person.
+ *
+ * Sheet names and column headers are NOT assumed: every sheet is tried against
+ * the known header set first (instant, offline, and unchanged for files we
+ * already understand). Only when no sheet matches does the LLM inspect the
+ * workbook's structure and decide the mapping, so an unfamiliar export — a
+ * renamed sheet, reordered or reworded columns — still imports.
+ *
+ * Cell values sent to the model are redacted; see redactCell.
+ */
+export async function parseHrTeamSheet(buffer: Buffer): Promise<ParseResult> {
+	const workbook = new ExcelJS.Workbook();
+	// exceljs's Buffer type predates newer @types/node Buffer fields (maxByteLength, etc.)
+	await workbook.xlsx.load(buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]);
+
+	const sheets = workbook.worksheets;
+	if (sheets.length === 0) throw new Error('This workbook has no sheets');
+
+	// --- 1. Deterministic pass: any sheet whose headers we already recognise.
+	// Header rows are usually row 1, but tolerate a title row or two above it.
+	let best: { sheet: ExcelJS.Worksheet; headerRow: number; index: Partial<Record<keyof ParsedImportRow, number>> } | null =
+		null;
+
+	for (const sheet of sheets) {
+		for (let headerRow = 1; headerRow <= Math.min(3, sheet.rowCount); headerRow++) {
+			const index = matchKnownHeaders(sheet, headerRow);
+			if (index.fullName && index.officialEmail) {
+				const score = Object.keys(index).length;
+				const bestScore = best ? Object.keys(best.index).length : -1;
+				if (score > bestScore) best = { sheet, headerRow, index };
+			}
+		}
+	}
+
+	if (best) {
+		const rows = readRows(best.sheet, best.headerRow, best.index);
+		if (rows.length > 0) {
+			return { rows, sheetName: best.sheet.name, strategy: 'known-headers', note: null };
+		}
+	}
+
+	// --- 2. LLM pass: nothing matched, so let the model decide.
+	const summaries: SheetSummary[] = sheets.map((sheet) => {
+		const sampleRows: string[][] = [];
+		const limit = Math.min(4, sheet.rowCount);
+		for (let r = 1; r <= limit; r++) {
+			const cells: string[] = [];
+			sheet.getRow(r).eachCell({ includeEmpty: true }, (cell) => {
+				const text = cellText(cell.value) ?? '';
+				// Row 1 is nearly always headers and carries no personal data —
+				// send it verbatim so the model can match on exact header text.
+				cells.push(r === 1 ? text : redactCell(text));
+			});
+			sampleRows.push(cells);
+		}
+		return { name: sheet.name, rowCount: sheet.rowCount, sampleRows };
+	});
+
+	let mapping: SheetMapping;
+	try {
+		mapping = await mapSpreadsheet(summaries);
+	} catch (err) {
+		const detail = err instanceof Error ? err.message : String(err);
+		throw new Error(
+			`Could not recognise this spreadsheet's layout, and automatic mapping failed: ${detail}`
+		);
+	}
+
+	const sheet = workbook.getWorksheet(mapping.sheetName);
+	if (!sheet) {
+		throw new Error(`Automatic mapping chose sheet "${mapping.sheetName}", which isn't in this workbook`);
+	}
+
+	// Resolve the model's header TEXT back to column numbers.
+	const headerToCol = new Map<string, number>();
+	sheet.getRow(mapping.headerRow).eachCell({ includeEmpty: false }, (cell, colNumber) => {
+		const text = cellText(cell.value);
+		if (text) headerToCol.set(normalizeHeader(text), colNumber);
+	});
+
+	const resolve = (header: string | null) =>
+		header ? headerToCol.get(normalizeHeader(header)) : undefined;
+
+	const index: Partial<Record<keyof ParsedImportRow, number>> = {
+		employeeCode: resolve(mapping.columns.employeeCode),
+		fullName: resolve(mapping.columns.fullName),
+		designation: resolve(mapping.columns.designation),
+		officialEmail: resolve(mapping.columns.officialEmail),
+		teamAndFloor: resolve(mapping.columns.teamAndFloor),
+		reportingAuthorityRaw: resolve(mapping.columns.reportingAuthority)
+	};
+
+	if (!index.fullName || !index.officialEmail) {
+		const missing = [!index.fullName && 'employee name', !index.officialEmail && 'work email']
+			.filter(Boolean)
+			.join(' and ');
+		throw new Error(
+			`Could not find a ${missing} column in "${sheet.name}"${mapping.note ? ` — ${mapping.note}` : ''}`
+		);
+	}
+
+	const rows = readRows(sheet, mapping.headerRow, index);
+
+	return {
+		rows,
+		sheetName: sheet.name,
+		strategy: 'ai-mapped',
+		note: mapping.note ?? null
+	};
 }
 
 function nameWords(name: string): string[] {

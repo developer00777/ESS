@@ -278,7 +278,7 @@
 			<div>
 				<h2 class="section-title">Bulk Import Logins</h2>
 				<p class="section-sub">
-					Upload a spreadsheet with an "HR Team Master data" sheet — new logins use <code>Champ@123</code> and must
+					Upload any HR spreadsheet — the sheet and columns are detected automatically. New logins use <code>Champ@123</code> and must
 					be changed on first login.
 				</p>
 			</div>
@@ -323,6 +323,17 @@
 			</form>
 			{#if form?.bulkImportError}
 				<p class="ess-error section-gap">{form.bulkImportError}</p>
+			{/if}
+			{#if form?.bulkImportSheet}
+				<p class="mapping-note">
+					Read sheet <strong>"{form.bulkImportSheet}"</strong>
+					{#if form.bulkImportStrategy === 'ai-mapped'}
+						— columns were matched automatically, so check the rows below carefully.
+					{:else}
+						using known column names.
+					{/if}
+					{#if form.bulkImportNote}<br /><em>{form.bulkImportNote}</em>{/if}
+				</p>
 			{/if}
 			{#if form?.bulkImportApplied}
 				<p class="temp-pass">
@@ -762,6 +773,16 @@
 		font-size: 0.7rem;
 		color: var(--ess-text-secondary);
 		margin-top: 0.2rem;
+	}
+
+	.mapping-note {
+		display: block;
+		margin-bottom: 1rem;
+		padding: 0.6rem 0.9rem;
+		border-radius: var(--ess-radius-sm);
+		background: var(--ess-info-bg);
+		color: var(--ess-info);
+		font-size: var(--ess-fs-caption);
 	}
 
 	.duplicate-row td {
