@@ -116,7 +116,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			startDate: leaveApplications.startDate,
 			endDate: leaveApplications.endDate,
 			status: leaveApplications.status,
-			typeName: leaveTypes.name
+			// `days` distinguishes a half day (0.5) from a full one; `typeCode` is
+			// the stable code from the published policy (EL, SL, PINK…) and drives
+			// the calendar's day marker, so a new policy type needs no code change.
+			days: leaveApplications.days,
+			typeName: leaveTypes.name,
+			typeCode: leaveTypes.code
 		})
 		.from(leaveApplications)
 		.innerJoin(leaveTypes, eq(leaveApplications.leaveTypeId, leaveTypes.id))

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import { dayMarker, leaveLetter, isHalfDayLeave } from '$lib/attendance-markers';
 
 	interface AttendanceRecord {
 		id: string;
@@ -28,7 +29,9 @@
 		startDate: string;
 		endDate: string;
 		status: string;
+		days?: string | number | null;
 		typeName: string;
+		typeCode?: string | null;
 	}
 
 	let {
@@ -96,6 +99,20 @@
 		return map;
 	});
 
+	/**
+	 * The leave markers actually present this month, so the legend explains the
+	 * letters on screen instead of listing every type in the policy.
+	 */
+	const legendLeaveTypes = $derived.by(() => {
+		const seen = new Map<string, string>();
+		for (const l of leaves) {
+			if (isHalfDayLeave(l)) continue; // half days show H, covered above
+			const letter = leaveLetter(l);
+			if (!seen.has(letter)) seen.set(letter, l.typeName);
+		}
+		return [...seen].map(([letter, name]) => ({ letter, name }));
+	});
+
 	interface Cell {
 		date: number;
 		key: string;
@@ -160,6 +177,21 @@
 		return `${h}h ${m}m`;
 	}
 
+	/**
+	 * Compact time for a calendar cell. Two timestamps sit side by side in a
+	 * cell that can be ~90px wide, so the meridiem is reduced to a single
+	 * letter ("9:02a") — still unambiguous, but roughly a third narrower than
+	 * "9:02 AM".
+	 */
+	function cellTime(value: string | Date | null | undefined): string {
+		if (!value) return '';
+		const d = new Date(value);
+		const h = d.getHours();
+		const m = String(d.getMinutes()).padStart(2, '0');
+		const hour12 = h % 12 === 0 ? 12 : h % 12;
+		return `${hour12}:${m}${h < 12 ? 'a' : 'p'}`;
+	}
+
 	function fmtHeading(key: string): string {
 		const [y, m, d] = key.split('-').map(Number);
 		return new Date(y, m - 1, d).toLocaleDateString(undefined, {
@@ -171,14 +203,29 @@
 
 	function cellLabel(cell: Cell): string {
 		const rec = recordsByDate.get(cell.key);
+		const dayLeaves = leaveByDate.get(cell.key) ?? [];
+		const dayHolidays = holidaysByDate.get(cell.key) ?? [];
 		const base = `${MONTH_NAMES[viewMonth]} ${cell.date}`;
+
+		// The marker is a letter on screen; screen readers get its full meaning.
+		const marker = dayMarker({
+			hasCheckIn: Boolean(rec?.checkInAt),
+			leaves: dayLeaves,
+			isHoliday: dayHolidays.length > 0,
+			isAbsent: isAbsent(cell)
+		});
+
+		const parts = [base];
+		if (marker) parts.push(marker.label);
 		if (rec?.checkInAt) {
-			return `${base}, in ${fmtTime(rec.checkInAt)}, out ${fmtTime(rec.checkOutAt)}`;
+			parts.push(`in ${fmtTime(rec.checkInAt)}`);
+			if (rec.checkOutAt) {
+				parts.push(`out ${fmtTime(rec.checkOutAt)}`);
+				parts.push(duration(rec.checkInAt, rec.checkOutAt));
+			}
 		}
-		if (leaveByDate.get(cell.key)?.length) return `${base}, on leave`;
-		if (holidaysByDate.get(cell.key)?.length) return `${base}, holiday`;
-		if (isAbsent(cell)) return `${base}, absent`;
-		return base;
+		if (!marker && dayHolidays.length > 0) parts.push(dayHolidays[0].name);
+		return parts.join(', ');
 	}
 
 	const selected = $derived.by(() => {
@@ -237,11 +284,16 @@
 	</div>
 
 	<div class="legend">
-		<span class="legend-item"><i class="dot dot-portal"></i> Portal check-in</span>
-		<span class="legend-item"><i class="dot dot-biometric"></i> Biometric sync</span>
-		<span class="legend-item"><i class="swatch swatch-holiday"></i> Holiday</span>
-		<span class="legend-item"><i class="swatch swatch-leave"></i> Leave</span>
-		<span class="legend-item"><i class="dot dot-absent"></i> Absent</span>
+		<span class="legend-item"><span class="marker marker-present">P</span> Present</span>
+		<span class="legend-item"><span class="marker marker-half">H</span> Half day</span>
+		<span class="legend-item"><span class="marker marker-absent">A</span> Absent</span>
+		<!-- Leave markers come from each type's policy code, so the legend names
+		     the types actually in use this month rather than a fixed list. -->
+		{#each legendLeaveTypes as lt (lt.letter)}
+			<span class="legend-item"><span class="marker marker-leave">{lt.letter}</span> {lt.name}</span>
+		{/each}
+		<span class="legend-item"><i class="dot dot-portal"></i> Portal</span>
+		<span class="legend-item"><i class="dot dot-biometric"></i> Biometric</span>
 	</div>
 
 	<div class="weekday-row">
@@ -260,6 +312,12 @@
 				{@const dayHolidays = holidaysByDate.get(cell.key) ?? []}
 				{@const dayLeaves = leaveByDate.get(cell.key) ?? []}
 				{@const absent = isAbsent(cell)}
+				{@const marker = dayMarker({
+					hasCheckIn: Boolean(rec?.checkInAt),
+					leaves: dayLeaves,
+					isHoliday: dayHolidays.length > 0,
+					isAbsent: absent
+				})}
 				<button
 					class="day-cell"
 					class:is-today={cell.isToday}
@@ -274,24 +332,34 @@
 						<span class="day-dots">
 							{#if rec?.source === 'manual' && rec.checkInAt}<i class="dot dot-portal"></i>{/if}
 							{#if punch || rec?.source === 'biometric'}<i class="dot dot-biometric"></i>{/if}
-							{#if absent}<i class="dot dot-absent absent-dot"></i>{/if}
 						</span>
 					</span>
-					{#if rec?.checkInAt}
-						<span class="cell-time"><span class="t-label">in</span>{fmtTime(rec.checkInAt)}</span>
-						<span class="cell-time"><span class="t-label">out</span>{fmtTime(rec.checkOutAt)}</span>
-					{:else if dayLeaves.length > 0}
-						{@const approved = dayLeaves.some((l) => l.status === 'approved')}
-						<span class="day-tag" class:tag-leave={approved} class:tag-pending={!approved}>
-							{dayLeaves[0].typeName}
-						</span>
-					{:else if dayHolidays.length > 0}
-						<span class="day-tag tag-holiday" title={dayHolidays.map((h) => h.name).join(', ')}>
-							{dayHolidays[0].name}
-						</span>
-					{:else if absent}
-						<span class="cell-absent">Absent</span>
-					{/if}
+
+					<!-- in-time left / out-time right -->
+					<span class="cell-times">
+						<span class="t-in">{cellTime(rec?.checkInAt)}</span>
+						<span class="t-out">{cellTime(rec?.checkOutAt)}</span>
+					</span>
+
+					<!-- centre: worked hours, or what the day was instead -->
+					<span class="cell-middle">
+						{#if rec?.checkInAt && rec.checkOutAt}
+							{duration(rec.checkInAt, rec.checkOutAt)}
+						{:else if dayLeaves.length > 0}
+							<span class="mid-tag">{dayLeaves[0].typeName}</span>
+						{:else if dayHolidays.length > 0}
+							<span class="mid-tag" title={dayHolidays.map((h) => h.name).join(', ')}>
+								{dayHolidays[0].name}
+							</span>
+						{/if}
+					</span>
+
+					<!-- bottom right: P / H / policy-derived leave code / A -->
+					<span class="cell-foot">
+						{#if marker}
+							<span class="marker marker-{marker.tone}" title={marker.label}>{marker.letter}</span>
+						{/if}
+					</span>
 				</button>
 			{/if}
 		{/each}
@@ -604,59 +672,90 @@
 		display: none;
 	}
 
-	.cell-time {
+	/* In-time and out-time on one line, pinned to opposite edges. */
+	.cell-times {
 		display: flex;
+		justify-content: space-between;
 		align-items: baseline;
-		gap: 0.3rem;
-		font-size: 0.68rem;
+		gap: 0.2rem;
+		font-size: 0.66rem;
 		color: var(--ess-text-secondary);
 		font-variant-numeric: tabular-nums;
 		white-space: nowrap;
+		min-height: 0.9rem;
 	}
 
-	.t-label {
-		font-size: 0.58rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
+	.t-out {
 		color: var(--ess-text-muted);
-		width: 2.2em;
-		flex-shrink: 0;
 	}
 
-	.cell-absent {
+	/* Worked hours (the ProHance slot until that feed is connected), or the
+	   name of whatever the day was instead. */
+	.cell-middle {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex: 1;
+		min-height: 0;
 		font-size: 0.66rem;
 		font-weight: 600;
-		color: var(--ess-danger);
+		color: var(--ess-text);
+		font-variant-numeric: tabular-nums;
+		overflow: hidden;
 	}
 
-	.day-tag {
-		font-size: 0.65rem;
+	.mid-tag {
+		font-size: 0.6rem;
 		font-weight: 600;
-		padding: 0.1rem 0.35rem;
-		border-radius: 6px;
-		background: var(--ess-surface);
 		color: var(--ess-text-secondary);
 		max-width: 100%;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		align-self: flex-start;
 	}
 
-	.tag-holiday {
-		background: var(--ess-info-bg);
-		color: var(--ess-info);
+	.cell-foot {
+		display: flex;
+		justify-content: flex-end;
+		align-items: flex-end;
+		min-height: 1rem;
 	}
 
-	.tag-leave {
+	/* The day's single status marker: P present, H half day, A absent, or the
+	   leave type's own policy code (EL, SL, PI…). */
+	.marker {
+		font-size: 0.62rem;
+		font-weight: 800;
+		line-height: 1;
+		letter-spacing: 0.02em;
+		padding: 0.12rem 0.3rem;
+		border-radius: 5px;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.marker-present {
 		background: var(--ess-success-bg);
 		color: var(--ess-success);
 	}
 
-	.tag-pending {
+	.marker-half {
 		background: var(--ess-warning-bg);
 		color: var(--ess-warning);
+	}
+
+	.marker-leave {
+		background: var(--ess-info-bg);
+		color: var(--ess-info);
+	}
+
+	.marker-absent {
+		background: var(--ess-danger-bg);
+		color: var(--ess-danger);
+	}
+
+	.marker-holiday {
+		background: var(--ess-info-bg);
+		color: var(--ess-info);
 	}
 
 	.day-detail {
@@ -743,19 +842,39 @@
 		color: var(--ess-text-secondary);
 	}
 
+	/* Two timestamps plus a duration won't fit once a cell drops below ~90px.
+	   The marker survives longest because it carries the day's status on its
+	   own; times go first, then the middle line. */
+	@media (max-width: 900px) {
+		.cell-times,
+		.cell-middle {
+			font-size: 0.6rem;
+		}
+	}
+
+	@media (max-width: 760px) {
+		.cell-middle {
+			display: none;
+		}
+	}
+
 	@media (max-width: 700px) {
 		.day-cell {
-			min-height: 3.2rem;
+			min-height: 3.4rem;
+			padding: 0.3rem 0.32rem;
 		}
 
-		.cell-time,
-		.cell-absent,
-		.day-tag {
+		.cell-times {
 			display: none;
 		}
 
-		.absent-dot {
-			display: inline-block;
+		.cell-foot {
+			min-height: 0;
+		}
+
+		.marker {
+			font-size: 0.58rem;
+			padding: 0.1rem 0.24rem;
 		}
 
 		.source-row {
