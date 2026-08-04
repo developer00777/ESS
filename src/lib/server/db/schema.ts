@@ -8,6 +8,7 @@ import {
 	numeric,
 	boolean,
 	date,
+	jsonb,
 	pgEnum
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
@@ -118,6 +119,7 @@ export const employeeProfiles = pgTable('employee_profiles', {
 	dobDocuments: date('dob_documents'),
 	dobActual: date('dob_actual'),
 	fatherName: text('father_name'),
+	fatherDob: date('father_dob'),
 	fatherContact: text('father_contact'),
 	motherName: text('mother_name'),
 	motherDob: date('mother_dob'),
@@ -129,6 +131,11 @@ export const employeeProfiles = pgTable('employee_profiles', {
 	spouseDob: text('spouse_dob'),
 	spouseContact: text('spouse_contact'),
 	anniversaryDate: text('anniversary_date'),
+	// The HR tracker carries three fixed "Kids Name #n / Date of Birth" column
+	// pairs, but the real count varies per person. Stored as a list rather than
+	// six rigid columns so the sheet's arbitrary cap isn't baked into the schema:
+	// [{ name: 'Aarav', dob: '2019-04-02' }, …]
+	children: jsonb('children').$type<{ name: string; dob: string | null }[]>(),
 
 	// self-editable — education
 	underGraduate: text('under_graduate'),
@@ -161,8 +168,16 @@ export const employeeProfiles = pgTable('employee_profiles', {
 	officeTimings: text('office_timings'),
 	shiftType: text('shift_type'),
 	shiftGroupId: uuid('shift_group_id').references(() => shiftGroups.id),
+	// The names exactly as written in the HR sheet. Kept verbatim even after a
+	// match, so the source stays auditable and an unresolvable manager (senior
+	// staff outside this roster, or a title like "Chief") still has something
+	// to display.
 	directReportingAuthority: text('direct_reporting_authority'),
 	dottedLineReportingAuthority: text('dotted_line_reporting_authority'),
+	// Resolved counterpart of dottedLineReportingAuthority. The direct manager's
+	// resolved link lives on users.reportsTo; this one has no equivalent there
+	// because a dotted line does not carry approval rights.
+	dottedLineManagerId: uuid('dotted_line_manager_id').references(() => users.id),
 	sourceReferredBy: text('source_referred_by'),
 	salaryBand: text('salary_band'),
 
@@ -435,6 +450,16 @@ export const bulkImportRows = pgTable('bulk_import_rows', {
 	officialEmail: text('official_email').notNull(),
 	teamAndFloor: text('team_and_floor'),
 	reportingAuthorityRaw: text('reporting_authority_raw'),
+	dottedLineAuthorityRaw: text('dotted_line_authority_raw'),
+	/**
+	 * The rest of the parsed spreadsheet row, verbatim. The tracker carries ~50
+	 * profile fields; mirroring each as a column here would duplicate
+	 * employeeProfiles for data that is transient by design — these rows exist
+	 * only between upload and the Super Admin's approval, then stop being read.
+	 */
+	profileData: jsonb('profile_data').$type<Record<string, unknown>>(),
+	/** Data-quality notes from the parser, shown in the review screen. */
+	repairNotes: jsonb('repair_notes').$type<string[]>(),
 	reportsToRowId: uuid('reports_to_row_id').references((): any => bulkImportRows.id),
 	role: roleEnum('role').default('employee').notNull(),
 	status: bulkImportRowStatusEnum('status').default('ready').notNull(),

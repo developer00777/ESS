@@ -20,6 +20,8 @@ import { logActivity, getPasswordActivity, getUsersWithProfilePicture } from '$l
 import { requireRole, canCreateRole } from '$lib/server/rbac';
 import { type Role } from '$lib/server/auth';
 import { parseHrTeamSheet, suggestReportsToIndex, suggestExistingUserMatch } from '$lib/server/bulk-import';
+import { profileValuesFromImport } from '$lib/server/import-profile-fields';
+import { matchName } from '$lib/server/name-match';
 import { error } from '@sveltejs/kit';
 
 const DEFAULT_BULK_PASSWORD = 'Champ@123';
@@ -339,7 +341,7 @@ export const actions: Actions = {
 		const insertedRows = await db
 			.insert(bulkImportRows)
 			.values(
-				parsedRows.map((r) => {
+				parsedRows.map((r, rowIndex) => {
 					const emailMatchId = existingByEmail.get(r.officialEmail) ?? null;
 					const nameMatch = emailMatchId ? null : suggestExistingUserMatch(r.fullName, allExistingUsers);
 					const code = r.employeeCode?.trim().toUpperCase() ?? null;
@@ -351,14 +353,31 @@ export const actions: Actions = {
 					// A code already held by someone else can't be applied as-is.
 					else if (codeOwner) status = 'needs_review';
 
+					// Everything beyond the columns needed to create the login is
+					// carried as-is and written to the profile on apply.
+					const {
+						fullName,
+						officialEmail,
+						designation,
+						teamAndFloor,
+						reportingAuthorityRaw,
+						dottedLineAuthorityRaw,
+						employeeCode: _code,
+						salaryBankRaw: _salaryBankRaw,
+						...profileData
+					} = r;
+
 					return {
 						importId: importRow.id,
 						employeeCode: code,
-						fullName: r.fullName,
-						designation: r.designation,
-						officialEmail: r.officialEmail,
-						teamAndFloor: r.teamAndFloor,
-						reportingAuthorityRaw: r.reportingAuthorityRaw,
+						fullName,
+						designation,
+						officialEmail,
+						teamAndFloor,
+						reportingAuthorityRaw,
+						dottedLineAuthorityRaw,
+						profileData,
+						repairNotes: parseResult.repairs[rowIndex] ?? null,
 						existingUserId: emailMatchId ?? nameMatch?.id ?? null,
 						status
 					};
@@ -458,7 +477,10 @@ export const actions: Actions = {
 				employeeCode: row.employeeCode ? row.employeeCode.trim().toUpperCase() : null,
 				designation: row.designation,
 				teamAndFloor: row.teamAndFloor,
-				directReportingAuthority: row.reportingAuthorityRaw
+				directReportingAuthority: row.reportingAuthorityRaw,
+				dottedLineReportingAuthority: row.dottedLineAuthorityRaw,
+				// Everything else the spreadsheet carried.
+				...profileValuesFromImport(row.profileData)
 			});
 
 			await db.update(bulkImportRows).set({ status: 'created', createdUserId: createdUser.id }).where(eq(bulkImportRows.id, row.id));
@@ -498,6 +520,27 @@ export const actions: Actions = {
 			if (manager?.teamId) {
 				await db.update(users).set({ teamId: manager.teamId }).where(eq(users.id, userId));
 			}
+		}
+
+		// Resolve dotted-line managers against everyone now in the portal, not
+		// just this batch — the dotted line often points at someone senior who was
+		// already onboarded. Unresolvable names (people outside the roster, or a
+		// title like "Chief") keep their raw text and simply carry no code.
+		const allUsers = await db.select({ id: users.id, fullName: users.fullName }).from(users);
+		const candidates = allUsers.map((u) => ({ key: u.id, fullName: u.fullName }));
+
+		for (const row of rows) {
+			if (row.status !== 'ready' || !row.dottedLineAuthorityRaw) continue;
+			const userId = rowIdToUserId.get(row.id);
+			if (!userId) continue;
+
+			const result = matchName(row.dottedLineAuthorityRaw, candidates);
+			if (result.status !== 'matched' || result.key === userId) continue;
+
+			await db
+				.update(employeeProfiles)
+				.set({ dottedLineManagerId: result.key })
+				.where(eq(employeeProfiles.userId, userId));
 		}
 
 		const createdCount = rows.filter((r) => r.status === 'ready').length;

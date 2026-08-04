@@ -6,6 +6,7 @@
 	import Users from '@lucide/svelte/icons/users';
 	import Phone from '@lucide/svelte/icons/phone';
 	import Shield from '@lucide/svelte/icons/shield';
+	import GraduationCap from '@lucide/svelte/icons/graduation-cap';
 	import Check from '@lucide/svelte/icons/check';
 	import ProfileCard from '$lib/components/ProfileCard.svelte';
 	import AvatarUpload from '$lib/components/AvatarUpload.svelte';
@@ -32,6 +33,11 @@
 	let aadharNumber = $state(data.profile?.aadharNumber ?? '');
 	let panNumber = $state(data.profile?.panNumber ?? '');
 	let uanNumber = $state(data.profile?.uanNumber ?? '');
+	let underGraduate = $state(data.profile?.underGraduate ?? '');
+	let graduate = $state(data.profile?.graduate ?? '');
+	let masters = $state(data.profile?.masters ?? '');
+	let diplomaOthers = $state(data.profile?.diplomaOthers ?? '');
+	let totalExperience = $state(data.profile?.totalExperience ?? '');
 </script>
 
 <svelte:head>
@@ -76,8 +82,17 @@
 				<p>{data.profile?.phone || 'No phone on file'}</p>
 				<p>{data.profile?.personalEmail || data.userRow.email}</p>
 				<p>{data.profile?.address || 'No address on file'}</p>
+				{#if data.profile?.permanentAddress && data.profile.permanentAddress !== data.profile.address}
+					<p class="muted">Permanent: {data.profile.permanentAddress}</p>
+				{/if}
+				{#if data.profile?.dobActual || data.profile?.dobDocuments}
+					<p class="muted">Born {data.profile.dobActual || data.profile.dobDocuments}</p>
+				{/if}
 				{#if data.profile?.gender || data.profile?.bloodGroup}
 					<p class="muted">{[data.profile?.gender, data.profile?.bloodGroup].filter(Boolean).join(' · ')}</p>
+				{/if}
+				{#if data.profile?.religion || data.profile?.motherTongue}
+					<p class="muted">{[data.profile?.religion, data.profile?.motherTongue].filter(Boolean).join(' · ')}</p>
 				{/if}
 			{/if}
 		</ProfileCard>
@@ -88,8 +103,23 @@
 			<p><strong>Team:</strong> {data.profile?.teamAndFloor || '—'}</p>
 			<p><strong>Floor:</strong> {data.profile?.floorDetails || '—'}</p>
 			<p><strong>Joined:</strong> {data.profile?.dateOfJoining || '—'}</p>
+			<p><strong>Department:</strong> {data.profile?.subProcessDepartment || '—'}</p>
+			<p><strong>Confirmed:</strong> {data.profile?.dateOfConfirmation || '—'}</p>
 			<p><strong>Shift:</strong> {data.profile?.shiftType || '—'} ({data.profile?.officeTimings || '—'})</p>
-			<p><strong>Reports to:</strong> {data.profile?.directReportingAuthority || '—'}</p>
+			<p>
+				<strong>Reports to:</strong>
+				{#if data.managers?.direct}
+					{data.managers.direct.display}
+					{#if data.managers.direct.unlinked}<span class="unlinked">not in system</span>{/if}
+				{:else}—{/if}
+			</p>
+			<p>
+				<strong>Dotted line:</strong>
+				{#if data.managers?.dotted}
+					{data.managers.dotted.display}
+					{#if data.managers.dotted.unlinked}<span class="unlinked">not in system</span>{/if}
+				{:else}—{/if}
+			</p>
 			<p class="hr-locked">HR-locked fields</p>
 		</ProfileCard>
 
@@ -125,9 +155,25 @@
 				<label>Marital Status <input name="maritalStatus" bind:value={maritalStatus} /></label>
 				<label>Spouse Name <input name="spouseName" bind:value={spouseName} /></label>
 			{:else}
-				<p>Father: {data.profile?.fatherName || 'Not added'}</p>
-				<p>Mother: {data.profile?.motherName || 'Not added'}</p>
+				<p>
+					Father: {data.profile?.fatherName || 'Not added'}
+					{#if data.profile?.fatherContact}<span class="muted">· {data.profile.fatherContact}</span>{/if}
+				</p>
+				<p>
+					Mother: {data.profile?.motherName || 'Not added'}
+					{#if data.profile?.motherContact}<span class="muted">· {data.profile.motherContact}</span>{/if}
+				</p>
 				<p>{data.profile?.maritalStatus || 'Not added'}{data.profile?.spouseName ? ` · ${data.profile.spouseName}` : ''}</p>
+				{#if data.profile?.anniversaryDate}
+					<p class="muted">Anniversary: {data.profile.anniversaryDate}</p>
+				{/if}
+				{#if data.profile?.children?.length}
+					<p class="muted">
+						Children: {data.profile.children
+							.map((c) => (c.dob ? `${c.name} (${c.dob})` : c.name))
+							.join(', ')}
+					</p>
+				{/if}
 			{/if}
 		</ProfileCard>
 
@@ -140,6 +186,27 @@
 				<p>{data.profile?.emergencyContactName || 'Not added'}</p>
 				<p>{data.profile?.emergencyContactRelationship || ''}</p>
 				<p>{data.profile?.emergencyContactPhone || ''}</p>
+			{/if}
+		</ProfileCard>
+
+		<ProfileCard icon={GraduationCap} title="Education & Experience">
+			{#if editing}
+				<label>Under Graduate <input name="underGraduate" bind:value={underGraduate} /></label>
+				<label>Graduate <input name="graduate" bind:value={graduate} /></label>
+				<label>Masters <input name="masters" bind:value={masters} /></label>
+				<label>Diploma / Others <input name="diplomaOthers" bind:value={diplomaOthers} /></label>
+				<label>Total Experience <input name="totalExperience" bind:value={totalExperience} /></label>
+			{:else}
+				{@const quals = [
+					data.profile?.underGraduate,
+					data.profile?.graduate,
+					data.profile?.masters,
+					data.profile?.diplomaOthers
+				].filter(Boolean)}
+				<p>{quals.length ? quals.join(' · ') : 'Not added'}</p>
+				{#if data.profile?.totalExperience}
+					<p class="muted">Experience: {data.profile.totalExperience}</p>
+				{/if}
 			{/if}
 		</ProfileCard>
 
@@ -213,6 +280,18 @@
 	.emp-code {
 		font-family: var(--ess-font-mono);
 		letter-spacing: 0.02em;
+	}
+
+	/* Marks a manager who exists only as a name in the HR sheet, so a missing
+	   employee code reads as "we don't have them" rather than an error. */
+	.unlinked {
+		font-size: 0.68rem;
+		color: var(--ess-text-muted);
+		border: 1px solid var(--ess-border);
+		border-radius: 999px;
+		padding: 0.05rem 0.4rem;
+		margin-left: 0.35rem;
+		white-space: nowrap;
 	}
 
 	.identity-card {
