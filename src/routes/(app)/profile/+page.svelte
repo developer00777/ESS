@@ -109,14 +109,14 @@
 			<p>
 				<strong>Reports to:</strong>
 				{#if data.managers?.direct}
-					{data.managers.direct.display}
+					<span class="manager">{data.managers.direct.display}</span>
 					{#if data.managers.direct.unlinked}<span class="unlinked">not in system</span>{/if}
 				{:else}—{/if}
 			</p>
 			<p>
 				<strong>Dotted line:</strong>
 				{#if data.managers?.dotted}
-					{data.managers.dotted.display}
+					<span class="manager">{data.managers.dotted.display}</span>
 					{#if data.managers.dotted.unlinked}<span class="unlinked">not in system</span>{/if}
 				{:else}—{/if}
 			</p>
@@ -280,6 +280,12 @@
 	.emp-code {
 		font-family: var(--ess-font-mono);
 		letter-spacing: 0.02em;
+	}
+
+	/* "Deepak Guduru(CIPL0225)" is one unit — without this the code wraps onto
+	   its own line in a narrow card and reads as a separate field. */
+	.manager {
+		display: inline-block;
 	}
 
 	/* Marks a manager who exists only as a name in the HR sheet, so a missing

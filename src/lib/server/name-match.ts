@@ -101,7 +101,7 @@ export function matchName(raw: string | null, candidates: NameCandidate[]): Name
 }
 
 /**
- * Renders a manager for display as "Name (EMPCODE)".
+ * Renders a manager for display as "Name(EMPCODE)".
  *
  * Employee code is the portal's identity key, so a resolved manager always
  * carries theirs. Managers who exist only as a name in the HR sheet — senior
@@ -115,5 +115,5 @@ export function formatManager(
 	const name = fullName?.trim();
 	if (!name) return null;
 	const code = employeeCode?.trim();
-	return code ? `${name} (${code})` : name;
+	return code ? `${name}(${code})` : name;
 }

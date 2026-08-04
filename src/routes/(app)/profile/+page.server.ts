@@ -35,7 +35,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		reportsTo: userRow?.reportsTo ?? null,
 		directRaw: profile?.directReportingAuthority ?? null,
 		dottedManagerId: profile?.dottedLineManagerId ?? null,
-		dottedRaw: profile?.dottedLineReportingAuthority ?? null
+		dottedRaw: profile?.dottedLineReportingAuthority ?? null,
+		selfUserId: user.id
 	});
 
 	return {
