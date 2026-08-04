@@ -17,13 +17,32 @@ export interface ParsedImportRow {
 
 // Header names are matched case-insensitively with surrounding whitespace trimmed —
 // the source sheet has trailing spaces on several headers (e.g. "Official E Mail ").
+// Synonyms cover the naming drift across the HR trackers ("HR Team Master data",
+// "HR Team Master Tracker", …) so familiar shapes never need the LLM fallback.
 const HEADER_MAP: Record<string, keyof ParsedImportRow> = {
 	'cipl emp code': 'employeeCode',
+	'emp code': 'employeeCode',
+	'employee code': 'employeeCode',
+	'employee id': 'employeeCode',
 	'name of the champion': 'fullName',
+	'employee name': 'fullName',
+	name: 'fullName',
 	designation: 'designation',
 	'team and floor': 'teamAndFloor',
+	team: 'teamAndFloor',
+	department: 'teamAndFloor',
 	'direct reporting authority': 'reportingAuthorityRaw',
-	'official e mail': 'officialEmail'
+	'reporting authority': 'reportingAuthorityRaw',
+	'reporting manager': 'reportingAuthorityRaw',
+	'reports to': 'reportingAuthorityRaw',
+	'official e mail': 'officialEmail',
+	'official e-mail': 'officialEmail',
+	'official email': 'officialEmail',
+	'official mail id': 'officialEmail',
+	'official email id': 'officialEmail',
+	'email id': 'officialEmail',
+	email: 'officialEmail',
+	'work email': 'officialEmail'
 };
 
 function normalizeHeader(value: unknown): string {
@@ -80,6 +99,32 @@ function readRows(
 	});
 
 	return rows;
+}
+
+/**
+ * Finds the worksheet the model named, tolerating the ways a model rewrites a
+ * name: trimmed trailing spaces, case differences, or a close-but-partial name.
+ * Sheet names in real HR workbooks routinely carry invisible trailing spaces,
+ * and exceljs's getWorksheet() is exact-match only.
+ */
+function resolveSheet(workbook: ExcelJS.Workbook, name: string): ExcelJS.Worksheet | undefined {
+	const exact = workbook.getWorksheet(name);
+	if (exact) return exact;
+
+	const norm = (s: string) => s.trim().toLowerCase();
+	const target = norm(name);
+
+	const caseInsensitive = workbook.worksheets.filter((s) => norm(s.name) === target);
+	if (caseInsensitive.length === 1) return caseInsensitive[0];
+
+	const partial = workbook.worksheets.filter(
+		(s) => norm(s.name).includes(target) || target.includes(norm(s.name))
+	);
+	if (partial.length === 1) return partial[0];
+
+	// A one-sheet workbook leaves no room for ambiguity about which sheet was meant.
+	if (workbook.worksheets.length === 1) return workbook.worksheets[0];
+	return undefined;
 }
 
 /** Tries the known header names against one sheet's given header row. */
@@ -164,9 +209,12 @@ export async function parseHrTeamSheet(buffer: Buffer): Promise<ParseResult> {
 		);
 	}
 
-	const sheet = workbook.getWorksheet(mapping.sheetName);
+	const sheet = resolveSheet(workbook, mapping.sheetName);
 	if (!sheet) {
-		throw new Error(`Automatic mapping chose sheet "${mapping.sheetName}", which isn't in this workbook`);
+		const available = workbook.worksheets.map((s) => `"${s.name}"`).join(', ');
+		throw new Error(
+			`Automatic mapping chose sheet "${mapping.sheetName}", which isn't in this workbook (sheets found: ${available})`
+		);
 	}
 
 	// Resolve the model's header TEXT back to column numbers.
