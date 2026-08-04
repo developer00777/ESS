@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import { financialYearLabel } from '$lib/financial-year';
 
 	interface HolidayRow {
 		date: string;
@@ -148,7 +149,11 @@
 			<button class="nav-btn" onclick={goToPrevMonth} aria-label="Previous month">
 				<ChevronLeft size={size === 'large' ? 22 : 18} />
 			</button>
-			<h2 class="month-label">{MONTH_NAMES[viewMonth]} {viewYear}</h2>
+			<h2 class="month-label">
+				{MONTH_NAMES[viewMonth]}
+				{viewYear}
+				<span class="fy-label">{financialYearLabel(viewYear, viewMonth)}</span>
+			</h2>
 			<button class="nav-btn" onclick={goToNextMonth} aria-label="Next month">
 				<ChevronRight size={size === 'large' ? 22 : 18} />
 			</button>
@@ -261,8 +266,26 @@
 		font-size: 1.15rem;
 		font-weight: 700;
 		color: var(--ess-text);
-		min-width: 11rem;
+		/* Widened from 11rem to fit the FY chip without the arrows shifting
+		   as the month name changes length. */
+		min-width: 15rem;
 		text-align: center;
+		white-space: nowrap;
+	}
+
+	/* Secondary to the month itself — it qualifies the date rather than
+	   naming it. */
+	.fy-label {
+		font-size: 0.7rem;
+		font-weight: 600;
+		letter-spacing: 0.02em;
+		color: var(--ess-text-secondary);
+		background: var(--ess-sunken);
+		border: 1px solid var(--ess-border-subtle);
+		border-radius: var(--ess-radius-pill);
+		padding: 0.12rem 0.45rem;
+		margin-left: 0.35rem;
+		vertical-align: middle;
 	}
 
 	.nav-btn {

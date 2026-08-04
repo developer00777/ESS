@@ -11,8 +11,13 @@
 	import ProfileCard from '$lib/components/ProfileCard.svelte';
 	import AvatarUpload from '$lib/components/AvatarUpload.svelte';
 	import { enhance } from '$app/forms';
+	import { tenureFrom } from '$lib/tenure';
 
 	let { data } = $props();
+
+	// Recomputed whenever the profile changes, so tenure never goes stale
+	// against a freshly loaded joining date.
+	const tenure = $derived(tenureFrom(data.profile?.dateOfJoining));
 
 	let editing = $state(false);
 	let phone = $state(data.profile?.phone ?? '');
@@ -99,10 +104,16 @@
 
 		<ProfileCard icon={Briefcase} title="Job Information">
 			<p><strong>Employee code:</strong> <span class="emp-code">{data.profile?.employeeCode || '—'}</span></p>
+			<!-- The login address is the official work email; personalEmail lives
+			     under Personal Information and is the employee's own. -->
+			<p><strong>Official email:</strong> <span class="official-email">{data.userRow.email}</span></p>
 			<p><strong>Designation:</strong> {data.profile?.designation || '—'}</p>
 			<p><strong>Team:</strong> {data.profile?.teamAndFloor || '—'}</p>
 			<p><strong>Floor:</strong> {data.profile?.floorDetails || '—'}</p>
 			<p><strong>Joined:</strong> {data.profile?.dateOfJoining || '—'}</p>
+			{#if tenure}
+				<p><strong>Tenure:</strong> {tenure}</p>
+			{/if}
 			<p><strong>Department:</strong> {data.profile?.subProcessDepartment || '—'}</p>
 			<p><strong>Confirmed:</strong> {data.profile?.dateOfConfirmation || '—'}</p>
 			<p><strong>Shift:</strong> {data.profile?.shiftType || '—'} ({data.profile?.officeTimings || '—'})</p>
@@ -288,6 +299,12 @@
 	   its own line in a narrow card and reads as a separate field. */
 	.manager {
 		display: inline-block;
+	}
+
+	/* Work addresses are long; break them anywhere rather than let one
+	   overflow the card. */
+	.official-email {
+		overflow-wrap: anywhere;
 	}
 
 	/* Marks a manager who exists only as a name in the HR sheet, so a missing
