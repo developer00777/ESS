@@ -97,12 +97,26 @@ export async function resolveManagers(sources: ManagerSources): Promise<Resolved
 
 		// No link — try the roster. An ambiguous name resolves to nothing rather
 		// than guessing between two people.
-		const result = matchName(
+		const candidates = roster.filter((r) => r.id !== sources.selfUserId);
+		let result = matchName(
 			name,
-			roster
-				.filter((r) => r.id !== sources.selfUserId)
-				.map((r) => ({ key: r.id, fullName: r.fullName }))
+			candidates.map((r) => ({ key: r.id, fullName: r.fullName }))
 		);
+
+		// A tie between a real employee and a placeholder account is not a real
+		// ambiguity: only someone with an employee code is a person the HR sheet
+		// could have meant. Retrying against coded accounts alone resolves the
+		// common case of a leftover seed login sharing a manager's first name.
+		if (result.status === 'ambiguous') {
+			const coded = candidates.filter((r) => r.employeeCode);
+			if (coded.length > 0 && coded.length < candidates.length) {
+				result = matchName(
+					name,
+					coded.map((r) => ({ key: r.id, fullName: r.fullName }))
+				);
+			}
+		}
+
 		if (result.status === 'matched') {
 			const found = roster.find((r) => r.id === result.key);
 			if (found) {
@@ -118,8 +132,20 @@ export async function resolveManagers(sources: ManagerSources): Promise<Resolved
 		return { display: name, userId: null, employeeCode: null, unlinked: true };
 	};
 
-	return {
-		direct: build(sources.reportsTo, sources.directRaw),
-		dotted: build(sources.dottedManagerId, sources.dottedRaw)
-	};
+	const direct = build(sources.reportsTo, sources.directRaw);
+	const dotted = build(sources.dottedManagerId, sources.dottedRaw);
+
+	// A dotted line is only worth showing when it names someone other than the
+	// direct manager. The HR tracker frequently repeats the same person in both
+	// columns, and showing them twice reads as a bug rather than as a second
+	// reporting line. Compared by user id where both resolved, falling back to
+	// the displayed text so unresolved names dedupe too.
+	const sameAsDirect =
+		direct && dotted
+			? direct.userId && dotted.userId
+				? direct.userId === dotted.userId
+				: direct.display.toLowerCase() === dotted.display.toLowerCase()
+			: false;
+
+	return { direct, dotted: sameAsDirect ? null : dotted };
 }

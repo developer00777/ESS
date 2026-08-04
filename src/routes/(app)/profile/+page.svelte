@@ -113,13 +113,15 @@
 					{#if data.managers.direct.unlinked}<span class="unlinked">not in system</span>{/if}
 				{:else}—{/if}
 			</p>
-			<p>
-				<strong>Dotted line:</strong>
-				{#if data.managers?.dotted}
+			<!-- Only shown when there is a second manager to name; the server
+			     suppresses a dotted line that repeats the direct one. -->
+			{#if data.managers?.dotted}
+				<p>
+					<strong>Dotted line:</strong>
 					<span class="manager">{data.managers.dotted.display}</span>
 					{#if data.managers.dotted.unlinked}<span class="unlinked">not in system</span>{/if}
-				{:else}—{/if}
-			</p>
+				</p>
+			{/if}
 			<p class="hr-locked">HR-locked fields</p>
 		</ProfileCard>
 
