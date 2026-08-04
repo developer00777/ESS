@@ -36,18 +36,30 @@
 		typeCode?: string | null;
 	}
 
+	interface ProhanceDayRow {
+		sessionDate: string;
+		firstLogin: string | Date | null;
+		lastLogout: string | Date | null;
+		timeOnSystemMinutes: number | null;
+		dayType: string | null;
+	}
+
 	let {
 		month, // 'YYYY-MM' — data is loaded per month by the server
 		records,
 		punchDays,
 		holidays,
-		leaves
+		leaves,
+		prohanceDays = [],
+		prohanceEnabled = false
 	}: {
 		month: string;
 		records: AttendanceRecord[];
 		punchDays: PunchDay[];
 		holidays: HolidayRow[];
 		leaves: LeaveRow[];
+		prohanceDays?: ProhanceDayRow[];
+		prohanceEnabled?: boolean;
 	} = $props();
 
 	const MONTH_NAMES = [
@@ -81,6 +93,9 @@
 
 	const recordsByDate = $derived(new Map(records.map((r) => [r.date.slice(0, 10), r])));
 	const punchesByDate = $derived(new Map(punchDays.map((p) => [p.date, p])));
+	const prohanceByDate = $derived(
+		new Map(prohanceDays.map((p) => [p.sessionDate.slice(0, 10), p]))
+	);
 
 	const holidaysByDate = $derived.by(() => {
 		const map = new Map<string, HolidayRow[]>();
@@ -206,6 +221,11 @@
 		return `${h}h ${m}m`;
 	}
 
+	function minutesLabel(mins: number | null | undefined): string | null {
+		if (mins === null || mins === undefined || mins === 0) return null;
+		return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+	}
+
 	/**
 	 * Compact time for a calendar cell. Two timestamps sit side by side in a
 	 * cell that can be ~90px wide, so the meridiem is reduced to a single
@@ -270,6 +290,7 @@
 			punches: punchesByDate.get(selectedKey) ?? null,
 			holidays: holidaysByDate.get(selectedKey) ?? [],
 			leaves: leaveByDate.get(selectedKey) ?? [],
+			prohance: prohanceByDate.get(selectedKey) ?? null,
 			isWeekend: weekday === 0 || weekday === 6,
 			isPast: selectedKey < todayKey
 		};
@@ -329,6 +350,9 @@
 		{/each}
 		<span class="legend-item"><i class="dot dot-portal"></i> Portal</span>
 		<span class="legend-item"><i class="dot dot-biometric"></i> Biometric</span>
+		{#if prohanceEnabled}
+			<span class="legend-item"><i class="dot dot-prohance"></i> ProHance</span>
+		{/if}
 	</div>
 
 	<div class="weekday-row">
@@ -369,6 +393,7 @@
 						<span class="day-dots">
 							{#if rec?.source === 'manual' && rec.checkInAt}<i class="dot dot-portal"></i>{/if}
 							{#if punch || rec?.source === 'biometric'}<i class="dot dot-biometric"></i>{/if}
+							{#if prohanceByDate.get(cell.key)?.firstLogin}<i class="dot dot-prohance"></i>{/if}
 						</span>
 					</span>
 
@@ -450,7 +475,30 @@
 
 				<div class="source-row">
 					<span class="source-label">ProHance</span>
-					<span class="source-value muted">Not connected yet</span>
+					{#if selected.prohance}
+						<span class="source-value">
+							{#if selected.prohance.firstLogin}
+								{fmtTime(selected.prohance.firstLogin)} – {selected.prohance.lastLogout
+									? fmtTime(selected.prohance.lastLogout)
+									: 'active'}
+							{/if}
+							{#if minutesLabel(selected.prohance.timeOnSystemMinutes)}
+								<span class="source-extra"
+									>· {minutesLabel(selected.prohance.timeOnSystemMinutes)} on system</span
+								>
+							{/if}
+							{#if !selected.prohance.firstLogin && !minutesLabel(selected.prohance.timeOnSystemMinutes)}
+								{selected.prohance.dayType ?? 'No activity'}
+							{/if}
+						</span>
+						<span class="source-note">
+							{#if selected.prohance.dayType}{selected.prohance.dayType}{/if}
+						</span>
+					{:else if prohanceEnabled}
+						<span class="source-value muted">No ProHance data</span>
+					{:else}
+						<span class="source-value muted">Not connected yet</span>
+					{/if}
 				</div>
 			</div>
 
@@ -604,6 +652,10 @@
 
 	.dot-biometric {
 		background: var(--acc2);
+	}
+
+	.dot-prohance {
+		background: var(--ess-warning);
 	}
 
 	.dot-absent {

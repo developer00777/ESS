@@ -7,9 +7,11 @@ import {
 	holidayCalendars,
 	holidays,
 	leaveApplications,
-	leaveTypes
+	leaveTypes,
+	prohanceDays
 } from '$lib/server/db/schema';
 import { eq, and, gte, lt, lte, desc, inArray } from 'drizzle-orm';
+import { isProhanceConfigured } from '$lib/server/prohance';
 import {
 	CYCLE_END_DAY,
 	cycleForDate,
@@ -153,6 +155,25 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			)
 		);
 
+	// ProHance activity for the cycle (polled from their Web Services API and
+	// matched to this user by employee code — see $lib/server/prohance).
+	const monthProhance = await db
+		.select({
+			sessionDate: prohanceDays.sessionDate,
+			firstLogin: prohanceDays.firstLogin,
+			lastLogout: prohanceDays.lastLogout,
+			timeOnSystemMinutes: prohanceDays.timeOnSystemMinutes,
+			dayType: prohanceDays.dayType
+		})
+		.from(prohanceDays)
+		.where(
+			and(
+				eq(prohanceDays.matchedUserId, user.id),
+				gte(prohanceDays.sessionDate, monthStart),
+				lte(prohanceDays.sessionDate, monthEnd)
+			)
+		);
+
 	// Stats follow the viewed cycle so the counters agree with the grid. The
 	// denominator counts working days only — Saturday and Sunday are the weekly
 	// offs — up to today for the running cycle, or the whole cycle once past.
@@ -182,6 +203,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		punchDays,
 		monthHolidays,
 		monthLeaves,
+		monthProhance,
+		prohanceEnabled: isProhanceConfigured(),
 		presentDays,
 		businessDaysSoFar,
 		avgHours

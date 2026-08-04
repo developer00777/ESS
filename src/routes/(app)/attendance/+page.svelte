@@ -154,6 +154,8 @@
 	punchDays={data.punchDays}
 	holidays={data.monthHolidays}
 	leaves={data.monthLeaves}
+	prohanceDays={data.monthProhance}
+	prohanceEnabled={data.prohanceEnabled}
 />
 
 <style>

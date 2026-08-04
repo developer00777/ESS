@@ -9,7 +9,8 @@ import {
 	boolean,
 	date,
 	jsonb,
-	pgEnum
+	pgEnum,
+	uniqueIndex
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -412,6 +413,55 @@ export const devicePunches = pgTable('device_punches', {
 	attendanceId: uuid('attendance_id').references(() => attendance.id),
 	receivedAt: timestamp('received_at', { withTimezone: true }).defaultNow().notNull()
 });
+
+// --- ProHance activity ingestion (polled from the ProHance Web Services API) ---
+// The portal POSTS to <PROHANCE_BASE_URL>/report/comprehensive/getdata
+// (reportBy=User, viewBy=Day) on an interval and upserts one row per employee
+// per day. "Employee ID" in ProHance is the same company employee code as
+// employee_profiles.employee_code — that's the join key, exactly like EasyTime.
+
+// One row per poll/manual run — the audit trail of what was pulled when.
+export const prohanceSyncs = pgTable('prohance_syncs', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	trigger: text('trigger').default('poll').notNull(), // 'poll' | 'manual'
+	rangeFrom: date('range_from').notNull(),
+	rangeTo: date('range_to').notNull(),
+	status: text('status').default('ok').notNull(), // 'ok' | 'error'
+	rowCount: integer('row_count').default(0).notNull(),
+	matchedCount: integer('matched_count').default(0).notNull(),
+	unmatchedCount: integer('unmatched_count').default(0).notNull(),
+	error: text('error'),
+	startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+	finishedAt: timestamp('finished_at', { withTimezone: true })
+});
+
+// One employee-day of ProHance activity. Upserted on (emp_code, session_date):
+// re-polling the same window refreshes rows in place, so the poller can safely
+// re-cover "25th of last month → today" on every run. Rows whose employee code
+// doesn't resolve to a user are kept unmatched, mirroring device_punches.
+export const prohanceDays = pgTable(
+	'prohance_days',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		syncId: uuid('sync_id').references(() => prohanceSyncs.id), // last sync that touched this row
+		empCode: text('emp_code').notNull(),
+		consoleLoginId: text('console_login_id'),
+		userName: text('user_name'),
+		sessionDate: date('session_date').notNull(),
+		firstLogin: timestamp('first_login', { withTimezone: true }),
+		lastLogout: timestamp('last_logout', { withTimezone: true }),
+		loggedMinutes: integer('logged_minutes'),
+		activeMinutes: integer('active_minutes'),
+		idleMinutes: integer('idle_minutes'),
+		timeOnSystemMinutes: integer('time_on_system_minutes'),
+		timeAwayMinutes: integer('time_away_minutes'),
+		dayType: text('day_type'), // ProHance DayTypeAlias: Work Day / Weekly Off / Planned Leave…
+		raw: jsonb('raw'), // flattened source row, for audit & future columns
+		matchedUserId: uuid('matched_user_id').references(() => users.id),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(t) => [uniqueIndex('prohance_days_emp_code_session_date').on(t.empCode, t.sessionDate)]
+);
 
 export const bulkImportStatusEnum = pgEnum('bulk_import_status', ['pending_review', 'applied']);
 
