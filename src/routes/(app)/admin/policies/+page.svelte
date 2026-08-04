@@ -60,6 +60,28 @@
 		}
 	}
 
+	// Two-step inline confirm; deleting a leave type also removes every
+	// application and allocation that used it.
+	let confirmingDeleteType = $state<string | null>(null);
+	let deletingTypeId = $state<string | null>(null);
+
+	async function deleteLeaveType(leaveTypeId: string) {
+		errorMsg = '';
+		deletingTypeId = leaveTypeId;
+		try {
+			const res = await fetch(`/api/admin/leave-types/${leaveTypeId}`, { method: 'DELETE' });
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				errorMsg = body.message ?? 'Could not delete leave type';
+				return;
+			}
+			location.reload();
+		} finally {
+			deletingTypeId = null;
+			confirmingDeleteType = null;
+		}
+	}
+
 	async function archiveLeaveType(leaveTypeId: string) {
 		if (!confirm('Archive this leave type? It will no longer be selectable when employees apply for leave.')) return;
 		archivingId = leaveTypeId;
@@ -329,14 +351,40 @@
 			<div class="current-card">
 				<strong>{lt.code ?? lt.name}</strong>
 				<span>{lt.name} · v{lt.policyVersion}</span>
-				<button
-					type="button"
-					class="link-danger archive-btn"
-					onclick={() => archiveLeaveType(lt.id)}
-					disabled={archivingId === lt.id}
-				>
-					{archivingId === lt.id ? 'Archiving…' : 'Archive'}
-				</button>
+				{#if confirmingDeleteType === lt.id}
+					<span class="card-actions">
+						<button
+							type="button"
+							class="link-danger"
+							onclick={() => deleteLeaveType(lt.id)}
+							disabled={deletingTypeId === lt.id}
+						>
+							{deletingTypeId === lt.id ? 'Deleting…' : 'Confirm delete'}
+						</button>
+						<button type="button" class="link" onclick={() => (confirmingDeleteType = null)}>
+							Cancel
+						</button>
+					</span>
+				{:else}
+					<span class="card-actions">
+						<button
+							type="button"
+							class="link-danger archive-btn"
+							onclick={() => archiveLeaveType(lt.id)}
+							disabled={archivingId === lt.id}
+						>
+							{archivingId === lt.id ? 'Archiving…' : 'Archive'}
+						</button>
+						<button
+							type="button"
+							class="link-danger archive-btn"
+							onclick={() => (confirmingDeleteType = lt.id)}
+							title="Permanently delete this leave type and all leave taken under it"
+						>
+							Delete
+						</button>
+					</span>
+				{/if}
 			</div>
 		{/each}
 		{#if data.leaveTypes.length === 0}
@@ -603,6 +651,13 @@
 
 	.archive-btn {
 		align-self: flex-start;
+		margin-top: 0.2rem;
+	}
+
+	.card-actions {
+		display: flex;
+		gap: 0.75rem;
+		align-items: center;
 		margin-top: 0.2rem;
 	}
 

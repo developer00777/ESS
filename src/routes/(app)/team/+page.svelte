@@ -4,6 +4,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
 
 	let { data, form } = $props();
 
@@ -110,6 +111,29 @@
 		left: 'Checked out',
 		absent: 'Absent'
 	};
+
+	// Two-step inline confirm rather than a native confirm() dialog — deleting
+	// someone should take a deliberate second click, not a reflexive OK.
+	let confirmingDelete = $state<string | null>(null);
+	let deletingId = $state<string | null>(null);
+	let deleteError = $state('');
+
+	async function deleteEmployee(userId: string) {
+		deleteError = '';
+		deletingId = userId;
+		try {
+			const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				deleteError = body.message ?? 'Could not delete this employee';
+				return;
+			}
+			confirmingDelete = null;
+			await invalidateAll();
+		} finally {
+			deletingId = null;
+		}
+	}
 
 	const filteredRoster = $derived(
 		data.roster.filter((person) => {
@@ -230,6 +254,10 @@
 	{/if}
 {/if}
 
+{#if deleteError}
+	<p class="ess-error section-gap">{deleteError}</p>
+{/if}
+
 <div class="ess-table-shell roster-shell">
 	<div class="roster-row roster-head">
 		<span>Name</span>
@@ -238,6 +266,7 @@
 		<span>Role</span>
 		<span>Status</span>
 		<span class="align-right">Leave left</span>
+		<span class="align-right">{data.isSuperAdmin ? 'Remove' : ''}</span>
 	</div>
 	{#each filteredRoster as person (person.id)}
 		<div class="roster-row">
@@ -263,6 +292,40 @@
 			<span class="role">{person.role.replace('_', ' ')}</span>
 			<span><span class="ess-badge ess-badge--{person.status}">{statusLabel[person.status]}</span></span>
 			<span class="align-right">{person.leaveLeft}</span>
+			<span class="align-right">
+				{#if data.isSuperAdmin && person.id !== data.currentUserId}
+					{#if confirmingDelete === person.id}
+						<span class="confirm-delete">
+							<button
+								type="button"
+								class="ess-btn ess-btn--sm ess-btn--danger"
+								onclick={() => deleteEmployee(person.id)}
+								disabled={deletingId === person.id}
+							>
+								{deletingId === person.id ? 'Deleting…' : 'Confirm'}
+							</button>
+							<button
+								type="button"
+								class="ess-btn ess-btn--sm ess-btn--ghost"
+								onclick={() => (confirmingDelete = null)}
+								disabled={deletingId === person.id}
+							>
+								Cancel
+							</button>
+						</span>
+					{:else}
+						<button
+							type="button"
+							class="row-delete"
+							onclick={() => (confirmingDelete = person.id)}
+							aria-label="Delete {person.fullName}"
+							title="Delete {person.fullName}"
+						>
+							<Trash2 size={15} />
+						</button>
+					{/if}
+				{/if}
+			</span>
 		</div>
 	{:else}
 		<p class="ess-empty">No employees match this search.</p>
@@ -625,11 +688,11 @@
 
 	.roster-row {
 		display: grid;
-		grid-template-columns: 1.5fr 0.8fr 1.6fr 0.9fr 1fr 0.8fr;
+		grid-template-columns: 1.5fr 0.8fr 1.6fr 0.9fr 1fr 0.7fr 0.9fr;
 		padding: 0.7rem 1.1rem;
 		font-size: var(--ess-fs-body);
 		align-items: center;
-		min-width: 760px;
+		min-width: 860px;
 	}
 
 	.code-cell {
@@ -642,6 +705,30 @@
 	.code-missing {
 		font-family: var(--ess-font-sans);
 		color: var(--ess-warning);
+	}
+
+	.row-delete {
+		background: transparent;
+		border: none;
+		color: var(--ess-text-muted);
+		cursor: pointer;
+		padding: 4px;
+		border-radius: 6px;
+		display: inline-flex;
+		transition:
+			color var(--ess-t-fast),
+			background var(--ess-t-fast);
+	}
+
+	.row-delete:hover {
+		color: var(--ess-danger);
+		background: var(--ess-danger-bg);
+	}
+
+	.confirm-delete {
+		display: inline-flex;
+		gap: 0.35rem;
+		justify-content: flex-end;
 	}
 
 	.roster-row:not(:last-child) {

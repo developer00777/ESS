@@ -9,6 +9,7 @@
 	import FileText from '@lucide/svelte/icons/file-text';
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
+	import Eraser from '@lucide/svelte/icons/eraser';
 	import Moon from '@lucide/svelte/icons/moon';
 	import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
 	import PanelLeftOpen from '@lucide/svelte/icons/panel-left-open';
@@ -69,11 +70,12 @@
 	const teamItem = { href: '/team', label: 'Team', icon: Users };
 	const adminItem = { href: '/admin/policies', label: 'Publish Policies', icon: UploadCloud };
 	const tweaksItem = { href: '/admin/tweaks', label: 'Design Tweaks', icon: Sparkles };
+	const cleanupItem = { href: '/admin/cleanup', label: 'Data Cleanup', icon: Eraser };
 
 	let sections = $derived.by(() => {
 		const manage = [
 			...(role !== 'employee' ? [teamItem] : []),
-			...(role === 'super_admin' ? [adminItem, tweaksItem] : [])
+			...(role === 'super_admin' ? [adminItem, tweaksItem, cleanupItem] : [])
 		];
 		return [
 			{ label: 'Me', items: meItems },

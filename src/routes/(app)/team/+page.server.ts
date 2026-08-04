@@ -189,6 +189,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		creatableRoles,
 		shiftGroups: groupsWithPublishedCalendar,
 		isSuperAdmin: user.role === 'super_admin',
+		// The roster hides the delete control on your own row; the API refuses it too.
+		currentUserId: user.id,
 		bulkImports: bulkImportsList,
 		passwordActivity
 	};
