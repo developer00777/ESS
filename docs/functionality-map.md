@@ -198,6 +198,8 @@ profile identity card and the Team roster.
 - **Deterministic first, LLM second.** Every sheet is scanned against known
   header names across header rows 1–3; only if nothing matches does an LLM
   (OpenRouter) infer the mapping. Data cells are redacted before being sent.
+  The known tracker resolves deterministically and never reaches the LLM, so
+  the key matters only for unfamiliar spreadsheet layouts.
 - **Column drift repair.** The tracker's headers do not line up with its data,
   and the drift differs per row. Government IDs, bank details and emergency
   contacts are rebuilt from *value shape* — a 12-digit number is Aadhaar, a
@@ -224,7 +226,9 @@ profile identity card and the Team roster.
 ### 5.8 Policy publishing
 
 - Upload a JPEG/PNG/PDF; an LLM extracts either a leave policy or a holiday
-  calendar; the Super Admin reviews and publishes.
+  calendar; the Super Admin reviews and publishes. Unlike the spreadsheet
+  parser this has no deterministic fallback — it always calls OpenRouter, so
+  `OPENROUTER_API_KEY` is required for publishing to work at all.
 - Holiday calendars are versioned per shift group and resolved per employee's
   shift assignment.
 - Source documents stored in MongoDB, linked by `source_document_id`.
@@ -303,8 +307,8 @@ backfill), `0008` adds pink leave, `0009` adds the master-tracker fields.
 | `SUPER_ADMIN_EMAIL` | Bootstrap Super Admin identity |
 | `SUPER_ADMIN_PASSWORD` | Bootstrap Super Admin password |
 | `SUPER_ADMIN_FULL_NAME` | Bootstrap Super Admin name |
-| `OPENROUTER_API_KEY` | LLM policy extraction and spreadsheet mapping |
-| `OPENROUTER_MODEL` | Defaults to `google/gemini-3.5-flash` |
+| `OPENROUTER_API_KEY` | LLM policy extraction and spreadsheet mapping — set in Railway |
+| `OPENROUTER_MODEL` | Optional; defaults to `google/gemini-3.5-flash` |
 
 `start.sh` runs `drizzle-kit migrate` on boot, so a deploy applies pending
 migrations automatically.
@@ -328,8 +332,5 @@ Accurate as of this writing — these are real, not hypothetical.
    calendar's middle slot shows worked hours (out − in) in its place.
 4. **Seed/placeholder accounts may still exist in production.** They collide
    with real employees during name matching. The Data Cleanup page removes them.
-5. **`OPENROUTER_API_KEY` may not be set in Railway.** The deterministic parser
-   handles the known tracker without it; it is only needed for unfamiliar
-   spreadsheet layouts.
-6. **No automated test suite.** Verification to date has been manual, against a
+5. **No automated test suite.** Verification to date has been manual, against a
    real database and browser.
