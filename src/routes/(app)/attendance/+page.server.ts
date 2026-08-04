@@ -10,6 +10,12 @@ import {
 	leaveTypes
 } from '$lib/server/db/schema';
 import { eq, and, gte, lt, lte, desc, inArray } from 'drizzle-orm';
+import {
+	CYCLE_END_DAY,
+	cycleForDate,
+	cycleForKey,
+	workingDaysSoFar
+} from '$lib/attendance-cycle';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -17,16 +23,21 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const user = locals.user!;
 	const now = new Date();
 	const todayStr = now.toISOString().slice(0, 10);
-	const currentMonth = todayStr.slice(0, 7);
 
-	// The calendar is month-parameterized: ?month=YYYY-MM, defaulting to now.
+	// Attendance runs on the payroll cycle — the 26th of one month to the 25th
+	// of the next — not the calendar month. `?month=YYYY-MM` still identifies a
+	// cycle by the month it ends in, so existing links keep working.
 	const rawMonth = url.searchParams.get('month') ?? '';
-	const viewMonth = /^\d{4}-(0[1-9]|1[0-2])$/.test(rawMonth) ? rawMonth : currentMonth;
+	const currentCycle = cycleForDate(now);
+	const viewMonth = /^\d{4}-(0[1-9]|1[0-2])$/.test(rawMonth) ? rawMonth : currentCycle.key;
+	const cycle = cycleForKey(viewMonth);
 	const [vy, vm] = viewMonth.split('-').map(Number);
-	const daysInMonth = new Date(vy, vm, 0).getDate();
-	const monthStart = `${viewMonth}-01`;
-	const monthEnd = `${viewMonth}-${pad(daysInMonth)}`;
-	const nextMonthStart = vm === 12 ? `${vy + 1}-01-01` : `${vy}-${pad(vm + 1)}-01`;
+	const monthStart = cycle.startDate;
+	const monthEnd = cycle.endDate;
+	// Exclusive upper bound for the punch timestamp query — the day after the
+	// cycle's last date.
+	const cycleEnd = new Date(vy, vm - 1, CYCLE_END_DAY + 1);
+	const nextMonthStart = `${cycleEnd.getFullYear()}-${pad(cycleEnd.getMonth() + 1)}-${pad(cycleEnd.getDate())}`;
 
 	const [todayRow] = await db
 		.select()
@@ -82,25 +93,33 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.where(eq(employeeProfiles.userId, user.id))
 		.limit(1);
 	if (profile?.shiftGroupId) {
-		const [calendar] = await db
+		// A cycle can straddle a year end (26 Dec – 25 Jan), so both years'
+		// published calendars are considered rather than just the end year's.
+		const startYear = Number(monthStart.slice(0, 4));
+		const calendarYears = startYear === vy ? [vy] : [startYear, vy];
+
+		const calendars = await db
 			.select({ id: holidayCalendars.id })
 			.from(holidayCalendars)
 			.where(
 				and(
 					eq(holidayCalendars.shiftGroupId, profile.shiftGroupId),
-					eq(holidayCalendars.year, vy),
+					inArray(holidayCalendars.year, calendarYears),
 					eq(holidayCalendars.status, 'published')
 				)
 			)
-			.orderBy(desc(holidayCalendars.version))
-			.limit(1);
-		if (calendar) {
+			.orderBy(desc(holidayCalendars.version));
+
+		if (calendars.length > 0) {
 			monthHolidays = await db
 				.select({ date: holidays.date, name: holidays.name, type: holidays.type })
 				.from(holidays)
 				.where(
 					and(
-						eq(holidays.calendarId, calendar.id),
+						inArray(
+							holidays.calendarId,
+							calendars.map((c) => c.id)
+						),
 						gte(holidays.date, monthStart),
 						lte(holidays.date, monthEnd)
 					)
@@ -134,11 +153,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			)
 		);
 
-	// Stats follow the viewed month; for the current month the denominator is
-	// days elapsed so far, for past months the whole month.
+	// Stats follow the viewed cycle so the counters agree with the grid. The
+	// denominator counts working days only — Saturday and Sunday are the weekly
+	// offs — up to today for the running cycle, or the whole cycle once past.
 	const presentDays = records.filter((r) => r.checkInAt).length;
 	const businessDaysSoFar =
-		viewMonth === currentMonth ? now.getDate() : viewMonth < currentMonth ? daysInMonth : 0;
+		viewMonth === currentCycle.key
+			? workingDaysSoFar(cycle, now)
+			: viewMonth < currentCycle.key
+				? workingDaysSoFar(cycle, new Date(vy, vm - 1, CYCLE_END_DAY))
+				: 0;
 
 	const completedShifts = records.filter((r) => r.checkInAt && r.checkOutAt);
 	const avgHours =
@@ -153,7 +177,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	return {
 		today: todayRow ?? null,
 		viewMonth,
-		isCurrentMonth: viewMonth === currentMonth,
+		isCurrentMonth: viewMonth === currentCycle.key,
 		records,
 		punchDays,
 		monthHolidays,

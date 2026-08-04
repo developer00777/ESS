@@ -3,6 +3,7 @@
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import { dayMarker, leaveLetter, isHalfDayLeave } from '$lib/attendance-markers';
 	import { financialYearLabel } from '$lib/financial-year';
+	import { cycleDates, cycleForDate, cycleForKey, cycleLabel } from '$lib/attendance-cycle';
 
 	interface AttendanceRecord {
 		id: string;
@@ -54,11 +55,18 @@
 		'July', 'August', 'September', 'October', 'November', 'December'
 	];
 	const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	const MONTH_SHORT = [
+		'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+		'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+	];
 
 	const now = new Date();
 	const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-	const currentMonthKey = todayKey.slice(0, 7);
+	// `month` identifies a payroll cycle by the month it ends in, so "today's"
+	// cycle is the one containing today — on the 28th that is next month's.
+	const currentMonthKey = cycleForDate(now).key;
 
+	const cycle = $derived(cycleForKey(month));
 	const viewYear = $derived(Number(month.slice(0, 4)));
 	const viewMonth = $derived(Number(month.slice(5, 7)) - 1); // 0-indexed
 
@@ -117,34 +125,54 @@
 	interface Cell {
 		date: number;
 		key: string;
+		/** True for days inside the cycle; false for the grid's leading/trailing padding. */
 		inMonth: boolean;
 		isToday: boolean;
 		isWeekend: boolean;
+		/** Days from the cycle's opening month show it, so "26 Jul" reads clearly. */
+		showMonth: boolean;
+		monthShort: string;
 	}
 
 	const gridDays = $derived.by(() => {
-		const startWeekday = new Date(viewYear, viewMonth, 1).getDay();
-		const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
 		const cells: Cell[] = [];
+		const dates = cycleDates(cycle);
+		if (dates.length === 0) return cells;
 
-		for (let i = 0; i < startWeekday; i++) {
-			cells.push({ date: 0, key: `lead-${i}`, inMonth: false, isToday: false, isWeekend: false });
-		}
-		for (let date = 1; date <= daysInMonth; date++) {
-			const key = toKey(viewYear, viewMonth, date);
-			const weekday = (startWeekday + date - 1) % 7;
+		const blank = (key: string): Cell => ({
+			date: 0,
+			key,
+			inMonth: false,
+			isToday: false,
+			isWeekend: false,
+			showMonth: false,
+			monthShort: ''
+		});
+
+		// Pad to the weekday the cycle opens on, so columns line up under Sun–Sat.
+		const [fy, fm, fd] = dates[0].split('-').map(Number);
+		const startWeekday = new Date(fy, fm - 1, fd).getDay();
+		for (let i = 0; i < startWeekday; i++) cells.push(blank(`lead-${i}`));
+
+		for (const key of dates) {
+			const [y, m, d] = key.split('-').map(Number);
+			const weekday = new Date(y, m - 1, d).getDay();
 			cells.push({
-				date,
+				date: d,
 				key,
 				inMonth: true,
 				isToday: key === todayKey,
-				isWeekend: weekday === 0 || weekday === 6
+				// Saturday and Sunday are the weekly offs.
+				isWeekend: weekday === 0 || weekday === 6,
+				// A cycle spans two months, so days from the opening month carry
+				// their month name to make the boundary unmistakable.
+				showMonth: m !== cycle.endMonth,
+				monthShort: MONTH_SHORT[m - 1]
 			});
 		}
+
 		let i = 0;
-		while (cells.length % 7 !== 0) {
-			cells.push({ date: 0, key: `trail-${i++}`, inMonth: false, isToday: false, isWeekend: false });
-		}
+		while (cells.length % 7 !== 0) cells.push(blank(`trail-${i++}`));
 		return cells;
 	});
 
@@ -206,7 +234,10 @@
 		const rec = recordsByDate.get(cell.key);
 		const dayLeaves = leaveByDate.get(cell.key) ?? [];
 		const dayHolidays = holidaysByDate.get(cell.key) ?? [];
-		const base = `${MONTH_NAMES[viewMonth]} ${cell.date}`;
+		// Named from the cell's own date, not the cycle's end month — a 26 Jul
+		// cell in the August cycle must not read as "August 26".
+		const cellMonth = Number(cell.key.slice(5, 7)) - 1;
+		const base = `${MONTH_NAMES[cellMonth]} ${cell.date}`;
 
 		// The marker is a letter on screen; screen readers get its full meaning.
 		const marker = dayMarker({
@@ -270,8 +301,7 @@
 				<ChevronLeft size={18} />
 			</a>
 			<h2 class="month-label">
-				{MONTH_NAMES[viewMonth]}
-				{viewYear}
+				{cycleLabel(cycle)}
 				<span class="fy-label">{financialYearLabel(viewYear, viewMonth)}</span>
 			</h2>
 			<a
@@ -333,7 +363,9 @@
 					onclick={() => (selectedKey = selectedKey === cell.key ? null : cell.key)}
 				>
 					<span class="day-head">
-						<span class="day-number">{cell.date}</span>
+						<span class="day-number">
+							{cell.date}{#if cell.showMonth}<span class="day-month">{cell.monthShort}</span>{/if}
+						</span>
 						<span class="day-dots">
 							{#if rec?.source === 'manual' && rec.checkInAt}<i class="dot dot-portal"></i>{/if}
 							{#if punch || rec?.source === 'biometric'}<i class="dot dot-biometric"></i>{/if}
@@ -485,7 +517,7 @@
 		color: var(--ess-text);
 		/* Widened from 11rem to fit the FY chip without the arrows shifting
 		   as the month name changes length. */
-		min-width: 15rem;
+		min-width: 19rem;
 		text-align: center;
 		white-space: nowrap;
 	}
@@ -653,6 +685,15 @@
 
 	.day-cell.is-weekend .day-number {
 		color: var(--ess-text-muted);
+	}
+
+	/* Marks the tail of the opening month ("26 Jul") so the cycle boundary is
+	   obvious without a separate divider. */
+	.day-month {
+		font-size: 0.6rem;
+		font-weight: 600;
+		color: var(--ess-text-muted);
+		margin-left: 0.15rem;
 	}
 
 	.day-cell.is-today {

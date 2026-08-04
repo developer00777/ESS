@@ -2,6 +2,7 @@
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import { financialYearLabel } from '$lib/financial-year';
+	import { cycleDates, cycleForDate, cycleForKey, cycleLabel } from '$lib/attendance-cycle';
 
 	interface HolidayRow {
 		date: string;
@@ -27,12 +28,18 @@
 		$props();
 
 	const today = new Date();
-	let viewYear = $state(today.getFullYear());
-	let viewMonth = $state(today.getMonth()); // 0-indexed
+	// Opens on the cycle containing today, which after the 25th is next month's.
+	const todayCycle = cycleForDate(today);
+	let viewYear = $state(todayCycle.endYear);
+	let viewMonth = $state(todayCycle.endMonth - 1); // 0-indexed
 
 	const MONTH_NAMES = [
 		'January', 'February', 'March', 'April', 'May', 'June',
 		'July', 'August', 'September', 'October', 'November', 'December'
+	];
+	const MONTH_SHORT = [
+		'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+		'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 	];
 	const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -79,37 +86,60 @@
 		return map;
 	});
 
+	// Leave follows the same payroll cycle as attendance — the 26th of one month
+	// to the 25th of the next — so both calendars describe the same period.
+	const cycle = $derived(cycleForKey(`${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`));
+
 	const gridDays = $derived.by(() => {
-		const firstOfMonth = new Date(viewYear, viewMonth, 1);
-		const startWeekday = firstOfMonth.getDay();
-		const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+		const cells: Array<{
+			date: number;
+			key: string;
+			inMonth: boolean;
+			isToday: boolean;
+			showMonth: boolean;
+			monthShort: string;
+		}> = [];
 
-		const cells: Array<{ date: number; key: string; inMonth: boolean; isToday: boolean }> = [];
+		const dates = cycleDates(cycle);
+		if (dates.length === 0) return cells;
 
-		const prevMonthDays = new Date(viewYear, viewMonth, 0).getDate();
-		for (let i = startWeekday - 1; i >= 0; i--) {
-			const date = prevMonthDays - i;
-			const m = viewMonth === 0 ? 11 : viewMonth - 1;
-			const y = viewMonth === 0 ? viewYear - 1 : viewYear;
-			cells.push({ date, key: toKey(y, m, date), inMonth: false, isToday: false });
-		}
+		const todayKey = toKey(today.getFullYear(), today.getMonth(), today.getDate());
+		const [fy, fm, fd] = dates[0].split('-').map(Number);
+		const startWeekday = new Date(fy, fm - 1, fd).getDay();
 
-		for (let date = 1; date <= daysInMonth; date++) {
+		for (let i = 0; i < startWeekday; i++) {
 			cells.push({
-				date,
-				key: toKey(viewYear, viewMonth, date),
-				inMonth: true,
-				isToday:
-					viewYear === today.getFullYear() && viewMonth === today.getMonth() && date === today.getDate()
+				date: 0,
+				key: `lead-${i}`,
+				inMonth: false,
+				isToday: false,
+				showMonth: false,
+				monthShort: ''
 			});
 		}
 
-		let nextDate = 1;
+		for (const key of dates) {
+			const [, m, d] = key.split('-').map(Number);
+			cells.push({
+				date: d,
+				key,
+				inMonth: true,
+				isToday: key === todayKey,
+				showMonth: m !== cycle.endMonth,
+				monthShort: MONTH_SHORT[m - 1]
+			});
+		}
+
+		let i = 0;
 		while (cells.length % 7 !== 0) {
-			const m = viewMonth === 11 ? 0 : viewMonth + 1;
-			const y = viewMonth === 11 ? viewYear + 1 : viewYear;
-			cells.push({ date: nextDate, key: toKey(y, m, nextDate), inMonth: false, isToday: false });
-			nextDate++;
+			cells.push({
+				date: 0,
+				key: `trail-${i++}`,
+				inMonth: false,
+				isToday: false,
+				showMonth: false,
+				monthShort: ''
+			});
 		}
 
 		return cells;
@@ -134,8 +164,8 @@
 	}
 
 	function goToToday() {
-		viewYear = today.getFullYear();
-		viewMonth = today.getMonth();
+		viewYear = todayCycle.endYear;
+		viewMonth = todayCycle.endMonth - 1;
 	}
 
 	let selectedKey = $state<string | null>(null);
@@ -150,8 +180,7 @@
 				<ChevronLeft size={size === 'large' ? 22 : 18} />
 			</button>
 			<h2 class="month-label">
-				{MONTH_NAMES[viewMonth]}
-				{viewYear}
+				{cycleLabel(cycle)}
 				<span class="fy-label">{financialYearLabel(viewYear, viewMonth)}</span>
 			</h2>
 			<button class="nav-btn" onclick={goToNextMonth} aria-label="Next month">
@@ -186,7 +215,11 @@
 				class:is-selected={selectedKey === cell.key}
 				onclick={() => (selectedKey = selectedKey === cell.key ? null : cell.key)}
 			>
-				<span class="day-number">{cell.date}</span>
+				<span class="day-number">
+					{#if cell.inMonth}{cell.date}{#if cell.showMonth}<span class="day-month"
+								>{cell.monthShort}</span
+							>{/if}{/if}
+				</span>
 				{#if dayHolidays.length > 0}
 					<span class="day-tag tag-holiday" title={dayHolidays.map((h) => h.name).join(', ')}>
 						{dayHolidays[0].name}
@@ -268,7 +301,7 @@
 		color: var(--ess-text);
 		/* Widened from 11rem to fit the FY chip without the arrows shifting
 		   as the month name changes length. */
-		min-width: 15rem;
+		min-width: 19rem;
 		text-align: center;
 		white-space: nowrap;
 	}
@@ -420,6 +453,15 @@
 		color: var(--ess-text);
 	}
 
+	/* Marks the tail of the opening month ("26 Jul") so the cycle boundary is
+	   obvious without a separate divider. */
+	.day-month {
+		font-size: 0.6rem;
+		font-weight: 600;
+		color: var(--ess-text-muted);
+		margin-left: 0.15rem;
+	}
+
 	.day-tag {
 		font-size: 0.65rem;
 		font-weight: 600;
@@ -493,7 +535,7 @@
 
 	.calendar-box.large .month-label {
 		font-size: 1.75rem;
-		min-width: 15rem;
+		min-width: 19rem;
 	}
 
 	.calendar-box.large .nav-btn {
