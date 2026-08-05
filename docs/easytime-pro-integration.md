@@ -21,6 +21,29 @@ stored for audit, but never used to identify anyone.
 
 ---
 
+## 0. Start here — what the IT team needs
+
+Three things, and the portal side of all three is already done:
+
+| # | What | Where it comes from |
+|---|---|---|
+| 1 | **Endpoint URL** — `https://<portal-domain>/api/attendance/easytime-import` | The portal owner; it's the live Railway domain |
+| 2 | **Bearer token** | Already generated. In `docs/integration-credentials.md`, which is gitignored — ask the portal owner. Never in this file. |
+| 3 | **Every employee's code set in the portal**, matching their EasyTime `emp_code` | §2 — this is Champ HR's job, not IT's |
+
+Then, in order:
+
+1. Create the Custom Export in EasyTime Pro with the exact template in §1a.
+2. Run the **smoke test** in §1b — proves URL, token and network in one call.
+3. Schedule the upload job (§1b).
+4. Confirm the first real run reports `matchedCount > 0` and
+   `unmatchedEmpCodes: []`.
+
+Nothing needs installing on the portal side and no inbound firewall rule is
+needed — the EasyTime Pro machine makes an ordinary outbound HTTPS POST.
+
+---
+
 ## 1. What the EasyTime Pro team needs to configure
 
 ### 1a. The export template
@@ -63,18 +86,50 @@ POST https://<portal-domain>/api/attendance/easytime-import
 Authorization: Bearer <TOKEN>
 ```
 
-Two accepted body formats — use whichever is easier:
+Two accepted body formats — use whichever is easier.
+
+**Recommended: PowerShell, uploading every file not yet sent.** Uploading only
+the newest file loses punches whenever a run is missed or the machine reboots.
+Re-uploading is harmless (see *Re-sending is safe*), so this sends anything
+touched recently and moves each file aside once the portal accepts it.
 
 ```powershell
-# PowerShell — multipart upload of the newest export file
-$Token = "<TOKEN>"
-$Url   = "https://<portal-domain>/api/attendance/easytime-import"
-$File  = Get-ChildItem "C:\EasyTimePro\Exports\*.txt" |
-         Sort-Object LastWriteTime -Descending | Select-Object -First 1
+# C:\Scripts\Upload-EasyTime.ps1  — run every 30 min via Task Scheduler
+$ErrorActionPreference = "Stop"
 
-curl.exe -X POST $Url `
-  -H "Authorization: Bearer $Token" `
-  -F "file=@$($File.FullName)"
+$Token   = "<TOKEN>"                      # from docs/integration-credentials.md
+$Url     = "https://<portal-domain>/api/attendance/easytime-import"
+$Export  = "C:\EasyTimePro\Exports"
+$Sent    = "C:\EasyTimePro\Exports\sent"
+$LogFile = "C:\EasyTimePro\Exports\upload.log"
+
+New-Item -ItemType Directory -Force -Path $Sent | Out-Null
+
+foreach ($File in Get-ChildItem "$Export\*.txt" | Sort-Object LastWriteTime) {
+  try {
+    $Response = curl.exe -sS -X POST $Url `
+      -H "Authorization: Bearer $Token" `
+      -F "file=@$($File.FullName)" 2>&1
+
+    if ($Response -match '"rowCount"') {
+      Add-Content $LogFile "$(Get-Date -f s)  OK    $($File.Name)  $Response"
+      Move-Item $File.FullName (Join-Path $Sent $File.Name) -Force
+    } else {
+      # Left in place so the next run retries it.
+      Add-Content $LogFile "$(Get-Date -f s)  FAIL  $($File.Name)  $Response"
+    }
+  } catch {
+    Add-Content $LogFile "$(Get-Date -f s)  ERROR $($File.Name)  $_"
+  }
+}
+```
+
+Register it:
+
+```powershell
+schtasks /Create /TN "ESS attendance upload" /SC MINUTE /MO 30 ^
+  /TR "powershell -NoProfile -ExecutionPolicy Bypass -File C:\Scripts\Upload-EasyTime.ps1" ^
+  /RU SYSTEM /F
 ```
 
 ```bash
@@ -87,18 +142,63 @@ curl -X POST "https://<portal-domain>/api/attendance/easytime-import?filename=$(
 
 Max upload size is 10 MB (roughly 100k punch rows).
 
+### Smoke test before scheduling anything
+
+Confirms the URL, token and network path in one step, with no real data:
+
+```powershell
+# One fake punch. Replace <EMP_CODE> with a real code from the portal roster.
+"<EMP_CODE>`tTest`tUser`t-`t-`t2026-08-05`t09:00`t1`t0`t-`t-`t-`t-`t-`t-`t0" |
+  Set-Content -NoNewline "$env:TEMP\ess-test.txt"
+
+curl.exe -X POST "https://<portal-domain>/api/attendance/easytime-import" `
+  -H "Authorization: Bearer <TOKEN>" `
+  -F "file=@$env:TEMP\ess-test.txt"
+```
+
+Expected:
+
+```json
+{"importId":"...","rowCount":1,"matchedCount":1,"unmatchedCount":0,"unmatchedEmpCodes":[]}
+```
+
+- `matchedCount: 1` → everything works end to end.
+- `unmatchedCount: 1` → reached the portal fine, but that employee code isn't in
+  it. Fix the code (§2), then re-send.
+- `401` → token or header problem.
+- Connection error / timeout → the office network can't reach the portal; the
+  Railway domain needs allowing outbound.
+
+Remove the test row afterwards if you used a real employee code, or just use a
+deliberately fake code like `TESTCODE` and expect `unmatchedCount: 1` — unmatched
+punches are stored for audit but never touch anyone's attendance.
+
 ### 1c. The token
 
-The portal issues the token. Generate it once, on the portal side:
+**A token has already been generated for production.** It is recorded in
+`docs/integration-credentials.md`, which is gitignored — ask the portal owner for
+it rather than looking for it in this file. Tokens are secrets and are
+deliberately kept out of the repository.
+
+To generate another (one per site or device is fine), run this on the Railway
+**app** service shell — `DATABASE_URL` is already injected there:
 
 ```
 npm run import-token:generate -- "EasyTime Pro - <site name>"
 ```
 
-It prints the token **once** — store it in a password manager and hand it to
-whoever configures the upload job. Only its hash is kept in the database, so a
-database leak does not expose it. To revoke, set `revoked_at` on the row in
-`attendance_import_tokens`; requests with that token then fail with `401`.
+Notes:
+
+- Run it on the **app** service, not the Postgres service. The script falls back
+  to a localhost connection string when `DATABASE_URL` is unset, which would
+  write the token to a throwaway database and silently fail at upload time.
+- The label is read from the first argument only, so a multi-word label needs to
+  survive shell quoting; it is a human hint and has no effect on authentication.
+- The token prints **once**. Only its SHA-256 hash is stored, so a lost token
+  cannot be recovered — generate a replacement instead.
+- To revoke, set `revoked_at` on that row in `attendance_import_tokens`; requests
+  with it then fail `401`. Several tokens may be active at once, so a rotation
+  can be done with no downtime: add the new one, switch the job, revoke the old.
 
 ---
 
@@ -219,19 +319,28 @@ The variables the integration *depends on* are already set for the portal itself
 
 ### What actually needs doing on Railway
 
-1. **Deploy** so the endpoint exists. `start.sh` runs `drizzle-kit migrate` on
-   boot, which creates `attendance_import_tokens`, `attendance_imports` and
-   `device_punches` if they aren't there yet.
-2. **Generate the import token against production**, not locally — the token is
-   stored in whichever database you run the script against:
+1. ~~**Deploy** so the endpoint exists.~~ **Done.** `start.sh` runs
+   `drizzle-kit migrate` on boot, which created `attendance_import_tokens`,
+   `attendance_imports` and `device_punches`.
+2. ~~**Generate the import token against production.**~~ **Done** —
+   `068ad33e-689f-4c29-b76f-98df2ae4b2ac`, generated on the Railway app service
+   on 2026-08-05. The value is in `docs/integration-credentials.md` (gitignored).
+   To create more:
    ```
-   DATABASE_URL="<railway-postgres-url>" npm run import-token:generate -- "EasyTime Pro - Bangalore"
+   npm run import-token:generate -- "EasyTime Pro - <site>"
    ```
-   Copy the printed token straight into a password manager; it is shown once.
-3. **Give the EasyTime Pro team** the endpoint URL and that token.
-4. **Confirm the public URL is reachable** from the EasyTime Pro machine. The
-   portal must accept an inbound HTTPS POST from the office network — if egress
-   there is restricted, whitelist the Railway domain.
+   Run it on the **app** service shell, where `DATABASE_URL` is already injected.
+   On the wrong service the script falls back to a localhost connection string
+   and writes the token somewhere useless.
+3. **Give the EasyTime Pro team** the endpoint URL and that token. *(outstanding)*
+4. **Confirm the portal is reachable** from the EasyTime Pro machine — the smoke
+   test in §1b does this. Traffic is outbound from the office, so no inbound
+   firewall rule is needed on the portal; if office egress is restricted, allow
+   the Railway domain. *(outstanding)*
+5. **Rotate the handover token** once the integration is confirmed working. This
+   one was transmitted through a chat session, so treat it as exposed — see
+   `docs/integration-credentials.md` for the zero-downtime rotation steps.
+   *(outstanding)*
 
 ### No cron, worker or volume needed
 
@@ -245,18 +354,30 @@ outbound and therefore does need a long-running process.
 
 ## 5. Handover checklist
 
-**EasyTime Pro side**
-- [ ] Custom Export created with the exact template above
-- [ ] Date `yyyy-MM-DD`, time `HH:mm`, format Txt
-- [ ] Export schedule set
-- [ ] Upload job scheduled, pointing at the portal URL with the Bearer token
-- [ ] One manual run done; response shows `matchedCount` > 0
+**Portal side — already done**
+- [x] Endpoint deployed and live on Railway
+- [x] Tables created by the boot migration
+- [x] Import token generated against production (`068ad33e-…`)
+- [x] Timestamps pinned to IST regardless of server timezone
+- [x] Night shifts paired into a single shift with correct hours
 
-**Champ HR side**
-- [ ] Import token generated and handed over securely
+**EasyTime Pro / IT side — to do**
+- [ ] Custom Export created with the exact template in §1a
+- [ ] Date `yyyy-MM-DD`, time `HH:mm`, file format Txt
+- [ ] Export schedule set (hourly, or nightly after the last shift ends)
+- [ ] Smoke test run (§1b) returns `rowCount: 1`
+- [ ] Upload job scheduled and confirmed running unattended
+- [ ] First real run shows `matchedCount > 0`
+
+**Champ HR side — to do**
+- [ ] Token handed to IT through a password manager, not chat or email
 - [ ] Every employee has an employee code matching their EasyTime `emp_code`
 - [ ] `/team` shows no "Not set" codes for staff who use the biometric device
 - [ ] After the first real run, `unmatchedEmpCodes` is empty
+- [ ] Handover token rotated and the original revoked
+- [ ] Office timings corrected in the HR tracker — several read
+      `06:00 PM to 03:30 PM` (a typo for AM) and three employees have none,
+      which makes night-shift pairing fall back to a 14-hour default
 
 ---
 

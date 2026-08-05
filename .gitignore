@@ -30,3 +30,9 @@ docker-compose.local.yml
 
 # Contains real employee personal data — never publish
 personal master data.xlsx
+Designation master data*.xlsx
+HR Team Master Tracker.xlsx
+
+# Live integration credentials — the handover doc references this file rather
+# than embedding the tokens, so they never enter git history.
+docs/integration-credentials.md
