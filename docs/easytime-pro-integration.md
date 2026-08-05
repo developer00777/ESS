@@ -156,18 +156,42 @@ file and the punches will attach.
 check-out later, so re-posting the same file (or overlapping date ranges) never
 double-counts or corrupts a day. Overlap deliberately rather than risk gaps.
 
-### Night shifts cross two attendance rows
+### Night shifts are paired into one shift
 
-A shift that starts 18:00 and ends 03:30 produces **two** rows: a check-in on the
-start date and a check-out on the next. Each punch is filed under the date the
-device reported it, which is correct and auditable, but it means a night-shift
-day shows a check-in with no check-out and the following day the reverse.
+Each punch is stored under the date the device reported it, so a shift running
+18:00 → 03:30 lands in two rows. The portal pairs them back together: a day with
+a check-in but no check-out borrows the next day's check-out, and the shift is
+credited to its **start** date with the full span.
 
-Pairing them into a single shift needs the employee's shift window (already on
-the profile as `shiftType` / `officeTimings`) to decide which calendar day a
-post-midnight punch belongs to. That is not implemented — flagged here because
-several employees in the HR tracker are on `Night Shift`, so it will show up in
-real data on day one.
+```
+3 Aug   6:00p → 3:30a⁺¹   9h 30m   P
+4 Aug   6:05p → 2:00a⁺¹   7h 55m!  P     ← under 9h, flagged amber
+5 Aug   ↳ shift  ends 2:00a               ← tail of the 4th, not its own day
+```
+
+`⁺¹` marks a check-out that happened the following morning. Present-day counts
+and average hours are computed from paired shifts, so an overnight shift counts
+as one day rather than two.
+
+**How far a check-out may sit from its check-in** comes from the employee's own
+`officeTimings` (shift length + 3h slack), capped at 14 hours. Staff with blank
+or "Flexible" timings use the 14-hour default. An 18:00 check-in with a 09:00
+check-out the next morning is 15 hours — too long to be one shift, so it is
+flagged rather than paired.
+
+**Under 9 hours is flagged, never rewritten.** A short day shows its real worked
+time in amber with a `!`; the portal does not credit a minimum. Actual attendance
+stays truthful and the shortfall is visible.
+
+**Anomalies are surfaced, not absorbed.** A cell reads "needs review" when a
+check-in has no plausible check-out, a check-out has no check-in, the gap is too
+long to pair, or the device clock recorded an out before its in. Hovering gives
+the specific reason.
+
+One caveat worth knowing: several `officeTimings` values in the HR tracker read
+`06:00 PM to 03:30 PM`, which is 21.5 hours and plainly a typo for AM. The parser
+re-reads an implausibly long window as the following morning, so these resolve to
+9h 30m — but correcting the sheet is better than relying on that.
 
 ### Error responses
 

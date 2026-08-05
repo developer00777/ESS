@@ -18,8 +18,22 @@ import {
 	cycleForKey,
 	workingDaysSoFar
 } from '$lib/attendance-cycle';
+import { pairShifts, gapForShift, STANDARD_SHIFT_MINUTES } from '$lib/shift-hours';
 
 const pad = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * `attendance.date` is a Postgres `date`, but node-postgres hands it back as a
+ * Date at local midnight. Formatting that with toISOString() (or String().slice)
+ * shifts it a day west of UTC, so the calendar day is read from the local date
+ * parts instead.
+ */
+function attendanceDateKey(value: string | Date): string {
+	if (value instanceof Date) {
+		return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+	}
+	return String(value).slice(0, 10);
+}
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const user = locals.user!;
@@ -90,7 +104,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	// Holidays from the published calendar for the viewer's shift group & year.
 	let monthHolidays: Array<{ date: string; name: string; type: string }> = [];
 	const [profile] = await db
-		.select({ shiftGroupId: employeeProfiles.shiftGroupId })
+		.select({
+			shiftGroupId: employeeProfiles.shiftGroupId,
+			// Drives how far a check-out may sit from its check-in when pairing an
+			// overnight shift.
+			officeTimings: employeeProfiles.officeTimings,
+			shiftType: employeeProfiles.shiftType
+		})
 		.from(employeeProfiles)
 		.where(eq(employeeProfiles.userId, user.id))
 		.limit(1);
@@ -177,7 +197,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	// Stats follow the viewed cycle so the counters agree with the grid. The
 	// denominator counts working days only — Saturday and Sunday are the weekly
 	// offs — up to today for the running cycle, or the whole cycle once past.
-	const presentDays = records.filter((r) => r.checkInAt).length;
 	const businessDaysSoFar =
 		viewMonth === currentCycle.key
 			? workingDaysSoFar(cycle, now)
@@ -185,28 +204,55 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 				? workingDaysSoFar(cycle, new Date(vy, vm - 1, CYCLE_END_DAY))
 				: 0;
 
-	const completedShifts = records.filter((r) => r.checkInAt && r.checkOutAt);
+	// Pair overnight shifts before measuring anything. A night shift arrives as
+	// two rows — a check-in with no check-out, then a check-out with no check-in —
+	// so subtracting per row would report neither day's hours correctly. The
+	// employee's own shift window bounds how far a check-out may sit from its
+	// check-in; staff with no timings on file fall back to the default gap.
+	const shifts = pairShifts(
+		records.map((r) => ({
+			date: attendanceDateKey(r.date),
+			checkInAt: r.checkInAt,
+			checkOutAt: r.checkOutAt
+		})),
+		gapForShift(profile?.officeTimings)
+	);
+
+	// Counted from paired shifts, not raw rows: an overnight shift spans two rows
+	// and would otherwise count as two days present.
+	const presentDays = shifts.filter((s) => s.checkInAt).length;
+
+	const measured = shifts.filter((s) => s.workedMinutes !== null);
 	const avgHours =
-		completedShifts.length > 0
-			? completedShifts.reduce((sum, r) => {
-					const hrs =
-						(new Date(r.checkOutAt!).getTime() - new Date(r.checkInAt!).getTime()) / 3_600_000;
-					return sum + hrs;
-				}, 0) / completedShifts.length
+		measured.length > 0
+			? measured.reduce((sum, s) => sum + (s.workedMinutes ?? 0), 0) / measured.length / 60
 			: 0;
 
 	return {
 		today: todayRow ?? null,
 		viewMonth,
 		isCurrentMonth: viewMonth === currentCycle.key,
-		records,
+		// Dates normalised to a plain 'YYYY-MM-DD' string. Left as Date objects
+		// they serialise through toISOString() and land a day early for anyone
+		// east of UTC, which silently misfiles every row in the calendar.
+		records: records.map((r) => ({ ...r, date: attendanceDateKey(r.date) })),
 		punchDays,
-		monthHolidays,
-		monthLeaves,
-		monthProhance,
+		// Same normalisation as records — these are `date` columns too.
+		monthHolidays: monthHolidays.map((h) => ({ ...h, date: attendanceDateKey(h.date) })),
+		monthLeaves: monthLeaves.map((l) => ({
+			...l,
+			startDate: attendanceDateKey(l.startDate),
+			endDate: attendanceDateKey(l.endDate)
+		})),
+		monthProhance: monthProhance.map((p) => ({
+			...p,
+			sessionDate: attendanceDateKey(p.sessionDate)
+		})),
 		prohanceEnabled: isProhanceConfigured(),
 		presentDays,
 		businessDaysSoFar,
-		avgHours
+		avgHours,
+		shifts,
+		standardShiftMinutes: STANDARD_SHIFT_MINUTES
 	};
 };

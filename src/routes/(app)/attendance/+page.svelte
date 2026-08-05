@@ -156,6 +156,7 @@
 	leaves={data.monthLeaves}
 	prohanceDays={data.monthProhance}
 	prohanceEnabled={data.prohanceEnabled}
+	shifts={data.shifts}
 />
 
 <style>

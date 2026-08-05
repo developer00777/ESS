@@ -4,6 +4,7 @@
 	import { dayMarker, leaveLetter, isHalfDayLeave } from '$lib/attendance-markers';
 	import { financialYearLabel } from '$lib/financial-year';
 	import { cycleDates, cycleForDate, cycleForKey, cycleLabel } from '$lib/attendance-cycle';
+	import type { ShiftDay } from '$lib/shift-hours';
 
 	interface AttendanceRecord {
 		id: string;
@@ -51,7 +52,8 @@
 		holidays,
 		leaves,
 		prohanceDays = [],
-		prohanceEnabled = false
+		prohanceEnabled = false,
+		shifts = []
 	}: {
 		month: string;
 		records: AttendanceRecord[];
@@ -60,7 +62,29 @@
 		leaves: LeaveRow[];
 		prohanceDays?: ProhanceDayRow[];
 		prohanceEnabled?: boolean;
+		/**
+		 * Attendance rows already paired into shifts by the server, so an overnight
+		 * shift reports its full span against its start date instead of appearing
+		 * as two half-days.
+		 */
+		shifts?: ShiftDay[];
 	} = $props();
+
+	const shiftByDate = $derived(new Map(shifts.map((s) => [s.date, s])));
+	/**
+	 * Dates whose check-out belongs to the previous day's overnight shift.
+	 *
+	 * A date that also starts its own shift is excluded: on back-to-back night
+	 * shifts the middle day both ends one shift and begins the next, and its own
+	 * shift is the more useful thing to show.
+	 */
+	const absorbedInto = $derived(
+		new Map(
+			shifts
+				.filter((s) => s.absorbedDate && !shifts.some((o) => o.date === s.absorbedDate))
+				.map((s) => [s.absorbedDate as string, s])
+		)
+	);
 
 	const MONTH_NAMES = [
 		'January', 'February', 'March', 'April', 'May', 'June',
@@ -223,6 +247,25 @@
 			hour: 'numeric',
 			minute: '2-digit'
 		});
+	}
+
+	const STANDARD_HOURS_LABEL = '9h';
+
+	function formatMinutes(mins: number): string {
+		return `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, '0')}m`;
+	}
+
+	function anomalyLabel(a: NonNullable<ShiftDay['anomaly']>): string {
+		switch (a) {
+			case 'missing-check-out':
+				return 'Check-in recorded but no check-out';
+			case 'orphan-check-out':
+				return 'Check-out with no matching check-in';
+			case 'gap-too-long':
+				return 'Check-out too far from check-in to pair as one shift';
+			case 'check-out-before-check-in':
+				return 'Check-out is earlier than check-in — device clock fault';
+		}
 	}
 
 	function duration(from: string | Date, to: string | Date): string {
@@ -388,6 +431,8 @@
 				{@const dayHolidays = holidaysByDate.get(cell.key) ?? []}
 				{@const dayLeaves = leaveByDate.get(cell.key) ?? []}
 				{@const absent = isAbsent(cell)}
+				{@const shift = shiftByDate.get(cell.key)}
+				{@const tailOf = absorbedInto.get(cell.key)}
 				{@const marker = dayMarker({
 					hasCheckIn: Boolean(rec?.checkInAt),
 					leaves: dayLeaves,
@@ -414,16 +459,32 @@
 						</span>
 					</span>
 
-					<!-- in-time left / out-time right -->
+					<!-- in-time left / out-time right. An overnight shift shows its own
+					     span on the start date; the morning it ends on shows the tail. -->
 					<span class="cell-times">
-						<span class="t-in">{cellTime(rec?.checkInAt)}</span>
-						<span class="t-out">{cellTime(rec?.checkOutAt)}</span>
+						{#if tailOf}
+							<span class="t-in t-cont">↳ shift</span>
+							<span class="t-out">{cellTime(tailOf.checkOutAt)}</span>
+						{:else}
+							<span class="t-in">{cellTime(shift?.checkInAt ?? rec?.checkInAt)}</span>
+							<span class="t-out">
+								{cellTime(shift?.checkOutAt ?? rec?.checkOutAt)}{#if shift?.crossesMidnight}<span
+										class="next-day">+1</span
+									>{/if}
+							</span>
+						{/if}
 					</span>
 
 					<!-- centre: worked hours, or what the day was instead -->
 					<span class="cell-middle">
-						{#if rec?.checkInAt && rec.checkOutAt}
-							{duration(rec.checkInAt, rec.checkOutAt)}
+						{#if tailOf}
+							<span class="mid-tag">ends {cellTime(tailOf.checkOutAt)}</span>
+						{:else if shift?.workedMinutes !== null && shift?.workedMinutes !== undefined}
+							<span class:short-hours={shift.isShort} title={shift.isShort ? `Under ${STANDARD_HOURS_LABEL}` : ''}>
+								{formatMinutes(shift.workedMinutes)}{#if shift.isShort}<span class="short-flag">!</span>{/if}
+							</span>
+						{:else if shift?.anomaly}
+							<span class="mid-tag anomaly" title={anomalyLabel(shift.anomaly)}>needs review</span>
 						{:else if dayLeaves.length > 0}
 							<span class="mid-tag">{dayLeaves[0].typeName}</span>
 						{:else if dayHolidays.length > 0}
@@ -845,6 +906,37 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	/* Worked less than a standard shift. Amber, not red — a short day is worth
+	   noticing but it isn't an error. */
+	.short-hours {
+		color: var(--ess-warning);
+	}
+
+	.short-flag {
+		font-weight: 800;
+		margin-left: 0.1rem;
+	}
+
+	.mid-tag.anomaly {
+		color: var(--ess-danger);
+	}
+
+	/* "+1" after a check-out that happened the following morning. */
+	.next-day {
+		font-size: 0.52rem;
+		font-weight: 700;
+		vertical-align: super;
+		color: var(--ess-text-muted);
+		margin-left: 0.05rem;
+	}
+
+	/* The morning half of an overnight shift — its hours are credited to the
+	   previous day, so this cell only marks the continuation. */
+	.t-cont {
+		color: var(--ess-text-muted);
+		font-size: 0.58rem;
 	}
 
 	.cell-foot {
