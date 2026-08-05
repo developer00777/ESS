@@ -434,7 +434,6 @@
 				{@const shift = shiftByDate.get(cell.key)}
 				{@const tailOf = absorbedInto.get(cell.key)}
 				{@const ph = prohanceByDate.get(cell.key)}
-				{@const phOnly = !(shift?.checkInAt ?? rec?.checkInAt) && !(shift?.checkOutAt ?? rec?.checkOutAt) && Boolean(ph?.firstLogin)}
 				{@const marker = dayMarker({
 					hasCheckIn: Boolean(rec?.checkInAt),
 					leaves: dayLeaves,
@@ -467,11 +466,6 @@
 						{#if tailOf}
 							<span class="t-in t-cont">↳ shift</span>
 							<span class="t-out">{cellTime(tailOf.checkOutAt)}</span>
-						{:else if phOnly}
-							<!-- No portal/biometric record — ProHance's own login/logout stand in,
-							     tinted to match the ProHance dot so the source is unmistakable. -->
-							<span class="t-in t-prohance">{cellTime(ph?.firstLogin)}</span>
-							<span class="t-out t-prohance">{ph?.lastLogout ? cellTime(ph.lastLogout) : '…'}</span>
 						{:else}
 							<span class="t-in">{cellTime(shift?.checkInAt ?? rec?.checkInAt)}</span>
 							<span class="t-out">
@@ -565,23 +559,18 @@
 				<div class="source-row">
 					<span class="source-label">ProHance</span>
 					{#if selected.prohance}
+						<!-- ProHance contributes activity volume only. In/out times come
+						     strictly from biometric/portal attendance, never from here. -->
 						<span class="source-value">
-							{#if selected.prohance.firstLogin}
-								{fmtTime(selected.prohance.firstLogin)} – {selected.prohance.lastLogout
-									? fmtTime(selected.prohance.lastLogout)
-									: 'active'}
-							{/if}
 							{#if minutesLabel(selected.prohance.timeOnSystemMinutes)}
-								<span class="source-extra"
-									>· {minutesLabel(selected.prohance.timeOnSystemMinutes)} on system</span
-								>
-							{/if}
-							{#if !selected.prohance.firstLogin && !minutesLabel(selected.prohance.timeOnSystemMinutes)}
+								{minutesLabel(selected.prohance.timeOnSystemMinutes)} on system
+							{:else}
 								{selected.prohance.dayType ?? 'No activity'}
 							{/if}
 						</span>
 						<span class="source-note">
-							{#if selected.prohance.dayType}{selected.prohance.dayType}{/if}
+							{#if selected.prohance.dayType && minutesLabel(selected.prohance.timeOnSystemMinutes)}{selected
+									.prohance.dayType}{/if}
 						</span>
 					{:else if prohanceEnabled}
 						<span class="source-value muted">No ProHance data</span>
@@ -747,11 +736,7 @@
 		background: var(--ess-warning);
 	}
 
-	/* ProHance-sourced values in a day cell share the amber of its legend dot. */
-	.t-prohance {
-		color: var(--ess-warning);
-	}
-
+	/* ProHance time-on-system shares the amber of its legend dot. */
 	.mid-prohance {
 		color: var(--ess-warning);
 		font-variant-numeric: tabular-nums;
