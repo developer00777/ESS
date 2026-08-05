@@ -433,6 +433,8 @@
 				{@const absent = isAbsent(cell)}
 				{@const shift = shiftByDate.get(cell.key)}
 				{@const tailOf = absorbedInto.get(cell.key)}
+				{@const ph = prohanceByDate.get(cell.key)}
+				{@const phOnly = !(shift?.checkInAt ?? rec?.checkInAt) && !(shift?.checkOutAt ?? rec?.checkOutAt) && Boolean(ph?.firstLogin)}
 				{@const marker = dayMarker({
 					hasCheckIn: Boolean(rec?.checkInAt),
 					leaves: dayLeaves,
@@ -465,6 +467,11 @@
 						{#if tailOf}
 							<span class="t-in t-cont">↳ shift</span>
 							<span class="t-out">{cellTime(tailOf.checkOutAt)}</span>
+						{:else if phOnly}
+							<!-- No portal/biometric record — ProHance's own login/logout stand in,
+							     tinted to match the ProHance dot so the source is unmistakable. -->
+							<span class="t-in t-prohance">{cellTime(ph?.firstLogin)}</span>
+							<span class="t-out t-prohance">{ph?.lastLogout ? cellTime(ph.lastLogout) : '…'}</span>
 						{:else}
 							<span class="t-in">{cellTime(shift?.checkInAt ?? rec?.checkInAt)}</span>
 							<span class="t-out">
@@ -491,6 +498,10 @@
 							<span class="mid-tag" title={dayHolidays.map((h) => h.name).join(', ')}>
 								{dayHolidays[0].name}
 							</span>
+						{:else if ph && minutesLabel(ph.timeOnSystemMinutes)}
+							<span class="mid-prohance" title="ProHance time on system"
+								>{minutesLabel(ph.timeOnSystemMinutes)}</span
+							>
 						{/if}
 					</span>
 
@@ -734,6 +745,16 @@
 
 	.dot-prohance {
 		background: var(--ess-warning);
+	}
+
+	/* ProHance-sourced values in a day cell share the amber of its legend dot. */
+	.t-prohance {
+		color: var(--ess-warning);
+	}
+
+	.mid-prohance {
+		color: var(--ess-warning);
+		font-variant-numeric: tabular-nums;
 	}
 
 	.dot-absent {
