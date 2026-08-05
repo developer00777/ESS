@@ -19,6 +19,7 @@ import {
 	workingDaysSoFar
 } from '$lib/attendance-cycle';
 import { pairShifts, gapForShift, STANDARD_SHIFT_MINUTES } from '$lib/shift-hours';
+import { prohancePresence } from '$lib/attendance-markers';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -219,8 +220,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	);
 
 	// Counted from paired shifts, not raw rows: an overnight shift spans two rows
-	// and would otherwise count as two days present.
-	const presentDays = shifts.filter((s) => s.checkInAt).length;
+	// and would otherwise count as two days present. Days with no record but
+	// enough ProHance time-on-system count too, matching the calendar's P rule.
+	const shiftDates = new Set(shifts.filter((s) => s.checkInAt).map((s) => s.date));
+	const presentDates = new Set(shiftDates);
+	for (const p of monthProhance) {
+		if (prohancePresence(p.timeOnSystemMinutes) === 'present') {
+			presentDates.add(attendanceDateKey(p.sessionDate));
+		}
+	}
+	const presentDays = presentDates.size;
 
 	const measured = shifts.filter((s) => s.workedMinutes !== null);
 	const avgHours =

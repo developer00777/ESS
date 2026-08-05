@@ -54,11 +54,31 @@ export function isHalfDayLeave(leave: MarkerLeave): boolean {
 	return Number(leave.days) === 0.5;
 }
 
+/**
+ * ProHance-based presence, used only when no portal/biometric record exists.
+ * 4+ hours on system counts as a present day, 2–4 hours as a half day —
+ * agreed with HR on 2026-08-05 so ProHance-tracked staff don't read as
+ * absent while the biometric feed is still being wired up.
+ */
+export const PROHANCE_PRESENT_MINUTES = 240;
+export const PROHANCE_HALF_MINUTES = 120;
+
+export function prohancePresence(
+	timeOnSystemMinutes: number | null | undefined
+): 'present' | 'half' | null {
+	const mins = timeOnSystemMinutes ?? 0;
+	if (mins >= PROHANCE_PRESENT_MINUTES) return 'present';
+	if (mins >= PROHANCE_HALF_MINUTES) return 'half';
+	return null;
+}
+
 export interface DayInputs {
 	hasCheckIn: boolean;
 	leaves: MarkerLeave[];
 	isHoliday: boolean;
 	isAbsent: boolean;
+	/** ProHance time-on-system for the day, when the day has one. */
+	prohanceMinutes?: number | null;
 }
 
 /**
@@ -83,6 +103,17 @@ export function dayMarker(day: DayInputs): DayMarker | null {
 
 	if (day.hasCheckIn) {
 		return { letter: 'P', tone: 'present', label: 'Present' };
+	}
+
+	// No attendance record — ProHance activity stands in as presence evidence.
+	// Deliberately ranked above pending leave: hours on system are a fact,
+	// an undecided application is not.
+	const ph = prohancePresence(day.prohanceMinutes);
+	if (ph === 'present') {
+		return { letter: 'P', tone: 'present', label: 'Present · 4h+ on system (ProHance)' };
+	}
+	if (ph === 'half') {
+		return { letter: 'H', tone: 'half', label: 'Half day · 2–4h on system (ProHance)' };
 	}
 
 	// Pending leave still marks the day so it doesn't read as an absence while

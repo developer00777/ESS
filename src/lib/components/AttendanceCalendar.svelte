@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
-	import { dayMarker, leaveLetter, isHalfDayLeave } from '$lib/attendance-markers';
+	import { dayMarker, leaveLetter, isHalfDayLeave, prohancePresence } from '$lib/attendance-markers';
 	import { financialYearLabel } from '$lib/financial-year';
 	import { cycleDates, cycleForDate, cycleForKey, cycleLabel } from '$lib/attendance-cycle';
 	import type { ShiftDay } from '$lib/shift-hours';
@@ -228,6 +228,7 @@
 			!cell.isWeekend &&
 			cell.key < todayKey &&
 			!recordsByDate.get(cell.key)?.checkInAt &&
+			!prohancePresence(prohanceByDate.get(cell.key)?.timeOnSystemMinutes) &&
 			!(holidaysByDate.get(cell.key)?.length ?? 0) &&
 			!(leaveByDate.get(cell.key)?.length ?? 0)
 		);
@@ -324,7 +325,8 @@
 			hasCheckIn: Boolean(rec?.checkInAt),
 			leaves: dayLeaves,
 			isHoliday: dayHolidays.length > 0,
-			isAbsent: isAbsent(cell)
+			isAbsent: isAbsent(cell),
+			prohanceMinutes: prohanceByDate.get(cell.key)?.timeOnSystemMinutes
 		});
 
 		const parts = [base];
@@ -361,6 +363,9 @@
 		if (selected.record?.checkInAt) return { label: 'Present', badge: 'present' };
 		const approvedLeave = selected.leaves.find((l) => l.status === 'approved');
 		if (approvedLeave) return { label: 'On leave', badge: 'approved' };
+		const ph = prohancePresence(selected.prohance?.timeOnSystemMinutes);
+		if (ph === 'present') return { label: 'Present · ProHance', badge: 'present' };
+		if (ph === 'half') return { label: 'Half day · ProHance', badge: 'pending' };
 		if (selected.leaves.length > 0) return { label: 'Leave pending', badge: 'pending' };
 		if (selected.holidays.length > 0) return { label: 'Holiday', badge: 'info' };
 		if (selected.isWeekend) return { label: 'Weekend', badge: 'optional' };
@@ -438,7 +443,8 @@
 					hasCheckIn: Boolean(rec?.checkInAt),
 					leaves: dayLeaves,
 					isHoliday: dayHolidays.length > 0,
-					isAbsent: absent
+					isAbsent: absent,
+					prohanceMinutes: ph?.timeOnSystemMinutes
 				})}
 				<button
 					class="day-cell"
