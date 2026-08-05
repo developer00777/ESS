@@ -23,6 +23,7 @@ import { type Role } from '$lib/server/auth';
 import { parseHrTeamSheet, suggestReportsToIndex, suggestExistingUserMatch } from '$lib/server/bulk-import';
 import { profileValuesFromImport } from '$lib/server/import-profile-fields';
 import { matchName } from '$lib/server/name-match';
+import { ensureLeaveAllocations } from '$lib/server/leave-accrual';
 import { error } from '@sveltejs/kit';
 
 const DEFAULT_BULK_PASSWORD = 'Champ@123';
@@ -77,6 +78,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const year = new Date().getFullYear();
 	const rosterIds = roster.map((r) => r.id);
+	// Roster balances follow the published policy's accrual, same as the
+	// employee-facing pages.
+	await ensureLeaveAllocations(rosterIds);
 	const allocations =
 		rosterIds.length > 0
 			? await db

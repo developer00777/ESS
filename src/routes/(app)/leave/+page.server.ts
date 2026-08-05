@@ -11,6 +11,7 @@ import {
 } from '$lib/server/db/schema';
 import { eq, and, desc, inArray, ne, gte, lte, sql, isNotNull } from 'drizzle-orm';
 import { checkPinkLeaveEligibility, monthBounds } from '$lib/server/leave-eligibility';
+import { ensureLeaveAllocations } from '$lib/server/leave-accrual';
 
 /**
  * Every role reads the same published holiday calendar rows and the same
@@ -86,6 +87,10 @@ async function loadCalendarEvents(user: { id: string; role: string; teamId: stri
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = locals.user!;
 	const year = new Date().getFullYear();
+
+	// Balances follow the published policy's monthly accrual — recomputed
+	// here so the page always shows the current month's figure.
+	await ensureLeaveAllocations([user.id]);
 
 	const allocations = await db
 		.select({ allocation: leaveAllocations, type: leaveTypes })

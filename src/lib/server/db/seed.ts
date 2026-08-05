@@ -55,30 +55,11 @@ async function seed() {
 
 	await db.insert(schema.employeeProfiles).values({ userId: superAdmin.id });
 
-	const leaveTypeRows = await db
-		.insert(schema.leaveTypes)
-		.values([
-			{ name: 'Casual Leave', accrualPerMonth: '1', carryForwardCap: 6, encashmentEligible: false },
-			{ name: 'Sick Leave', accrualPerMonth: '1', carryForwardCap: 0, encashmentEligible: false },
-			{
-				name: 'Earned Leave',
-				accrualPerMonth: '1.5',
-				carryForwardCap: 30,
-				encashmentEligible: true
-			}
-		])
-		.returning();
-
-	const year = new Date().getFullYear();
-	for (const lt of leaveTypeRows) {
-		await db.insert(schema.leaveAllocations).values({
-			userId: superAdmin.id,
-			leaveTypeId: lt.id,
-			year,
-			allocatedDays: '12',
-			usedDays: '0'
-		});
-	}
+	// No leave types or allocations are seeded. The real types come from the
+	// leave policy document published via Admin → Publish Policies, and
+	// balances accrue from those types automatically (see
+	// $lib/server/leave-accrual). Seeding placeholders here once produced
+	// fictional Casual/Sick/Earned 12-day balances that shadowed the policy.
 
 	console.log('Seed complete:');
 	console.log(`  Super Admin: ${SUPER_ADMIN_EMAIL} / ${SUPER_ADMIN_PASSWORD}`);

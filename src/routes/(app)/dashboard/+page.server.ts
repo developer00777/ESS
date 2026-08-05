@@ -12,10 +12,14 @@ import {
 } from '$lib/server/db/schema';
 import { eq, and, gte, sql, desc } from 'drizzle-orm';
 import { getUsersWithProfilePicture } from '$lib/server/db/mongo';
+import { ensureLeaveAllocations } from '$lib/server/leave-accrual';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = locals.user!;
 	const year = new Date().getFullYear();
+
+	// Keep the balance tile on the policy's monthly accrual schedule.
+	await ensureLeaveAllocations([user.id]);
 
 	const allocations = await db
 		.select()
