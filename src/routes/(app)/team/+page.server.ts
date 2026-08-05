@@ -11,9 +11,10 @@ import {
 	holidayCalendars,
 	employeeProfiles,
 	bulkImports,
-	bulkImportRows
+	bulkImportRows,
+	prohanceDays
 } from '$lib/server/db/schema';
-import { eq, and, inArray, lte, gte, desc } from 'drizzle-orm';
+import { eq, and, inArray, lte, gte, desc, isNotNull } from 'drizzle-orm';
 import { hashPassword } from '$lib/server/auth';
 import { randomBytes } from 'node:crypto';
 import { logActivity, getPasswordActivity, getUsersWithProfilePicture } from '$lib/server/db/mongo';
@@ -46,6 +47,23 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const today = new Date().toISOString().slice(0, 10);
 	const todaysAttendance = await db.select().from(attendance).where(eq(attendance.date, today));
 	const attendanceByUser = new Map(todaysAttendance.map((a) => [a.userId, a]));
+
+	// ProHance stands in for people with no attendance record today: a first
+	// login with no logout reads as present right now, a logout as left. Same
+	// fallback the attendance calendar uses — a real record always wins.
+	const todaysProhance = await db
+		.select({
+			userId: prohanceDays.matchedUserId,
+			firstLogin: prohanceDays.firstLogin,
+			lastLogout: prohanceDays.lastLogout
+		})
+		.from(prohanceDays)
+		.where(and(eq(prohanceDays.sessionDate, today), isNotNull(prohanceDays.matchedUserId)));
+	const prohanceByUser = new Map(
+		todaysProhance
+			.filter((p): p is typeof p & { userId: string } => Boolean(p.userId))
+			.map((p) => [p.userId, p])
+	);
 
 	const pendingApprovalRows = await db
 		.select({ application: leaveApplications, applicant: users })
@@ -133,7 +151,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 			? attendanceByUser.get(r.id)?.checkOutAt
 				? 'left'
 				: 'present'
-			: 'absent'
+			: prohanceByUser.get(r.id)?.firstLogin
+				? prohanceByUser.get(r.id)?.lastLogout
+					? 'left'
+					: 'present'
+				: 'absent'
 	}));
 
 	let bulkImportsList: Array<{
