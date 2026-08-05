@@ -156,7 +156,9 @@ export const POST: RequestHandler = async (event) => {
  * moves later, so re-posting the same file changes nothing.
  */
 async function applyPunch(userId: string, punch: ParsedPunch): Promise<string> {
-	const dateStr = punch.punchedAt.toISOString().slice(0, 10);
+	// The device's own date field — not derived from punchedAt, which would shift
+	// an early night-shift punch (01:30 IST) onto the previous day.
+	const dateStr = punch.punchDate;
 
 	const [existing] = await db
 		.select()

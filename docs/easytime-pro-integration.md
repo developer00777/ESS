@@ -6,9 +6,18 @@ How biometric attendance gets from EasyTime Pro into the ESS portal.
 a small scheduled job on that machine POSTs the file to the portal, which matches
 each punch to an employee and updates their attendance.
 
-**The join key is `{emp_code}`.** It must equal the employee's code in the portal
-(e.g. `CIPL2666`). Nothing else is used to identify the person — not the name, not
-the card number, not the device PIN.
+**The join key is `{emp_code}` — and only `{emp_code}`.** It must equal the
+employee's code in the portal (e.g. `CIPL2666`). Nothing else identifies the
+person: not the name, not the card number, not the device PIN, not the email.
+
+This is deliberate. Name matching is unreliable in this data — the HR tracker
+spells the same person differently in different columns — and a wrong match would
+credit one employee's attendance to another. So a punch either matches an
+employee code exactly (case-insensitive, trimmed) or is stored unmatched for a
+human to resolve. There is no fallback and no guessing.
+
+The card number, device serial, terminal alias, temperature and mask flag are all
+stored for audit, but never used to identify anyone.
 
 ---
 
@@ -147,6 +156,19 @@ file and the punches will attach.
 check-out later, so re-posting the same file (or overlapping date ranges) never
 double-counts or corrupts a day. Overlap deliberately rather than risk gaps.
 
+### Night shifts cross two attendance rows
+
+A shift that starts 18:00 and ends 03:30 produces **two** rows: a check-in on the
+start date and a check-out on the next. Each punch is filed under the date the
+device reported it, which is correct and auditable, but it means a night-shift
+day shows a check-in with no check-out and the following day the reverse.
+
+Pairing them into a single shift needs the employee's shift window (already on
+the profile as `shiftType` / `officeTimings`) to decide which calendar day a
+post-midnight punch belongs to. That is not implemented — flagged here because
+several employees in the HR tracker are on `Night Shift`, so it will show up in
+real data on day one.
+
 ### Error responses
 
 | Status | Meaning |
@@ -157,7 +179,47 @@ double-counts or corrupts a day. Overlap deliberately rather than risk gaps.
 
 ---
 
-## 4. Handover checklist
+## 4. Railway configuration
+
+### Environment variables
+
+Nothing is **required** for this integration — the token lives in the database and
+the device offset defaults to IST. Only one optional variable exists:
+
+| Variable | Needed? | Value | Why |
+|---|---|---|---|
+| `DEVICE_UTC_OFFSET` | Optional | `+05:30` | Only if biometric terminals are outside India. Defaults to IST, so leave it unset for Bangalore. |
+
+The variables the integration *depends on* are already set for the portal itself:
+`DATABASE_URL` (punches and tokens), and nothing else.
+
+### What actually needs doing on Railway
+
+1. **Deploy** so the endpoint exists. `start.sh` runs `drizzle-kit migrate` on
+   boot, which creates `attendance_import_tokens`, `attendance_imports` and
+   `device_punches` if they aren't there yet.
+2. **Generate the import token against production**, not locally — the token is
+   stored in whichever database you run the script against:
+   ```
+   DATABASE_URL="<railway-postgres-url>" npm run import-token:generate -- "EasyTime Pro - Bangalore"
+   ```
+   Copy the printed token straight into a password manager; it is shown once.
+3. **Give the EasyTime Pro team** the endpoint URL and that token.
+4. **Confirm the public URL is reachable** from the EasyTime Pro machine. The
+   portal must accept an inbound HTTPS POST from the office network — if egress
+   there is restricted, whitelist the Railway domain.
+
+### No cron, worker or volume needed
+
+The portal is a passive receiver: the EasyTime Pro machine initiates every
+upload on its own schedule. There is no poller to run, no background worker, and
+no disk to mount — the uploaded file is parsed in memory and only its parsed rows
+are persisted. This is the opposite of the ProHance integration, which polls
+outbound and therefore does need a long-running process.
+
+---
+
+## 5. Handover checklist
 
 **EasyTime Pro side**
 - [ ] Custom Export created with the exact template above
@@ -174,7 +236,7 @@ double-counts or corrupts a day. Overlap deliberately rather than risk gaps.
 
 ---
 
-## 5. Notes for whoever maintains this
+## 6. Notes for whoever maintains this
 
 - Ingestion code: `src/lib/server/easytime-import.ts` (parser + token check),
   `src/routes/api/attendance/easytime-import/+server.ts` (endpoint).
@@ -182,6 +244,12 @@ double-counts or corrupts a day. Overlap deliberately rather than risk gaps.
   `device_punches` (one row per punch), `employee_profiles.employee_code`.
 - The earlier live ADMS push endpoint (`/iclock/cdata`) has been removed — this
   file-export path replaced it, so there is exactly one way attendance enters.
-- Timestamps are stored as sent by the device, interpreted in the server's
-  timezone. If the device and server are in different zones, that offset needs
-  handling before go-live.
+- **Timezone.** Devices report local wall-clock time with no zone, so the parser
+  pins it to IST (`+05:30`) explicitly rather than trusting the server's zone —
+  Railway runs UTC, so without this the same file would import differently in
+  production than in local testing. Override with `DEVICE_UTC_OFFSET` only if
+  terminals are installed outside India.
+- **The attendance day is the device's own `{date}` field**, never re-derived
+  from the timestamp. Deriving it would put a 03:30 night-shift punch on the
+  previous day on an IST server, and the portal displays office hours in IST for
+  every viewer regardless of where they open it.

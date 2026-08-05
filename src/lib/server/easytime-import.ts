@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db/postgres';
 import { attendanceImportTokens } from '$lib/server/db/schema';
 import { eq, isNull } from 'drizzle-orm';
@@ -40,6 +41,13 @@ export interface ParsedPunch {
 	deptCode: string | null;
 	deptName: string | null;
 	punchedAt: Date;
+	/**
+	 * The device's own {date} field, verbatim. This is the attendance day —
+	 * never re-derived from punchedAt, because converting an instant back to a
+	 * calendar date depends on the server's timezone and would move an early
+	 * night-shift punch onto the previous day.
+	 */
+	punchDate: string;
 	verifyType: string | null;
 	punchState: string | null;
 	direction: 'in' | 'out' | null;
@@ -90,6 +98,22 @@ function clean(value: string | undefined): string | null {
 }
 
 /**
+ * The devices report local wall-clock time with no zone, so the offset has to
+ * be supplied. Defaults to IST; override with DEVICE_UTC_OFFSET if terminals
+ * are ever installed in another zone.
+ *
+ * Without an explicit offset, `new Date('2026-08-05T01:30:00')` is interpreted
+ * in the *server's* zone — which makes the same file import differently on a
+ * UTC host (Railway) than on an IST laptop.
+ */
+const DEFAULT_DEVICE_UTC_OFFSET = '+05:30';
+
+function deviceUtcOffset(): string {
+	const raw = (env.DEVICE_UTC_OFFSET ?? '').trim();
+	return /^[+-]\d{2}:\d{2}$/.test(raw) ? raw : DEFAULT_DEVICE_UTC_OFFSET;
+}
+
+/**
  * ZKTeco/EasyTime punch_state convention: 0 = check-in, 1 = check-out.
  * Some deployments emit text ("Check In"/"Check Out") or 4/5 for overtime
  * in/out, so both are handled. Anything unrecognised stays null and is
@@ -109,6 +133,7 @@ export function interpretPunchState(raw: string | null): 'in' | 'out' | null {
  */
 export function parseEasyTimeExport(body: string): ParsedPunch[] {
 	const punches: ParsedPunch[] = [];
+	const offset = deviceUtcOffset();
 
 	for (const line of body.split(/\r?\n/)) {
 		const trimmed = line.trim();
@@ -130,7 +155,10 @@ export function parseEasyTimeExport(body: string): ParsedPunch[] {
 		// Header row (the template field names themselves, or a literal header).
 		if (empCode.toLowerCase().includes('emp_code') || date.toLowerCase() === 'date') continue;
 
-		const punchedAt = new Date(`${date}T${time.length === 5 ? `${time}:00` : time}`);
+		// Pinned to the device's zone so the same file yields the same instant
+		// regardless of where the portal runs.
+		const clock = time.length === 5 ? `${time}:00` : time;
+		const punchedAt = new Date(`${date}T${clock}${offset}`);
 		if (Number.isNaN(punchedAt.getTime())) continue;
 
 		punches.push({
@@ -140,6 +168,7 @@ export function parseEasyTimeExport(body: string): ParsedPunch[] {
 			deptCode: row.deptCode,
 			deptName: row.deptName,
 			punchedAt,
+			punchDate: date,
 			verifyType: row.verifyType,
 			punchState: row.punchState,
 			direction: interpretPunchState(row.punchState),

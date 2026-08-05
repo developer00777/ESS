@@ -209,9 +209,20 @@
 		);
 	}
 
+	/**
+	 * Office hours are always shown in the company's timezone, not the viewer's.
+	 * A punch recorded at 09:01 in the office must read "9:01 AM" for everyone,
+	 * including someone opening the portal while travelling.
+	 */
+	const OFFICE_TZ = 'Asia/Kolkata';
+
 	function fmtTime(value: string | Date | null | undefined): string {
 		if (!value) return '—';
-		return new Date(value).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+		return new Date(value).toLocaleTimeString('en-IN', {
+			timeZone: OFFICE_TZ,
+			hour: 'numeric',
+			minute: '2-digit'
+		});
 	}
 
 	function duration(from: string | Date, to: string | Date): string {
@@ -234,11 +245,17 @@
 	 */
 	function cellTime(value: string | Date | null | undefined): string {
 		if (!value) return '';
-		const d = new Date(value);
-		const h = d.getHours();
-		const m = String(d.getMinutes()).padStart(2, '0');
-		const hour12 = h % 12 === 0 ? 12 : h % 12;
-		return `${hour12}:${m}${h < 12 ? 'a' : 'p'}`;
+		// Office timezone, not the viewer's — getHours() would render an office
+		// 9:01 AM punch as 3:31 AM for anyone outside IST.
+		const parts = new Intl.DateTimeFormat('en-GB', {
+			timeZone: OFFICE_TZ,
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: false
+		}).format(new Date(value));
+		const [hh, mm] = parts.split(':').map(Number);
+		const hour12 = hh % 12 === 0 ? 12 : hh % 12;
+		return `${hour12}:${String(mm).padStart(2, '0')}${hh < 12 ? 'a' : 'p'}`;
 	}
 
 	function fmtHeading(key: string): string {
