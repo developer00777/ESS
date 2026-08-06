@@ -5,6 +5,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import KeyRound from '@lucide/svelte/icons/key-round';
 
 	let { data, form } = $props();
 
@@ -135,6 +136,57 @@
 		}
 	}
 
+	/* Admin-issued password reset. Passwords are Argon2-hashed and cannot be
+	   read back, so the only recovery path is to set a new one — issued here,
+	   shown once for hand-off, and forced to change on the user's next login. */
+	let resettingId = $state<string | null>(null);
+	let resetFor = $state<{ id: string; name: string } | null>(null);
+	let resetValue = $state('');
+	let resetError = $state('');
+	let resetIssued = $state<{ name: string; password: string } | null>(null);
+
+	function openReset(person: { id: string; fullName: string }) {
+		resetFor = { id: person.id, name: person.fullName };
+		resetValue = generatePassword();
+		resetError = '';
+		resetIssued = null;
+	}
+
+	function generatePassword() {
+		const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+		const pick = new Uint32Array(12);
+		crypto.getRandomValues(pick);
+		return 'Champ@' + [...pick].map((n) => chars[n % chars.length]).join('').slice(0, 8);
+	}
+
+	async function submitReset() {
+		if (!resetFor) return;
+		resetError = '';
+		if (resetValue.length < 8) {
+			resetError = 'Password must be at least 8 characters';
+			return;
+		}
+		resettingId = resetFor.id;
+		try {
+			const res = await fetch(`/api/admin/users/${resetFor.id}/password`, {
+				method: 'PUT',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ newPassword: resetValue })
+			});
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				resetError = body.message ?? 'Could not reset this password';
+				return;
+			}
+			resetIssued = { name: resetFor.name, password: resetValue };
+			resetFor = null;
+			resetValue = '';
+			await invalidateAll();
+		} finally {
+			resettingId = null;
+		}
+	}
+
 	const filteredRoster = $derived(
 		data.roster.filter((person) => {
 			const q = search.trim().toLowerCase();
@@ -258,6 +310,54 @@
 	<p class="ess-error section-gap">{deleteError}</p>
 {/if}
 
+{#if resetFor}
+	<div class="reset-panel">
+		<div class="reset-head">
+			<KeyRound size={16} />
+			<strong>Reset password — {resetFor.name}</strong>
+		</div>
+		<p class="reset-note">
+			Existing passwords are one-way hashed and can never be read back, so a reset issues a new
+			one. It is shown once here for hand-off, and {resetFor.name} must change it at next login.
+		</p>
+		<div class="reset-controls">
+			<input
+				class="ess-input reset-input"
+				bind:value={resetValue}
+				spellcheck="false"
+				autocomplete="off"
+				aria-label="New password"
+			/>
+			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (resetValue = generatePassword())}>
+				Regenerate
+			</button>
+			<button
+				type="button"
+				class="ess-btn ess-btn--sm"
+				onclick={submitReset}
+				disabled={resettingId !== null}
+			>
+				{resettingId ? 'Resetting…' : 'Reset password'}
+			</button>
+			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (resetFor = null)}>
+				Cancel
+			</button>
+		</div>
+		{#if resetError}<p class="ess-error">{resetError}</p>{/if}
+	</div>
+{/if}
+
+{#if resetIssued}
+	<div class="reset-issued">
+		<strong>Password reset for {resetIssued.name}.</strong>
+		Share this once — it won't be shown again:
+		<code>{resetIssued.password}</code>
+		<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (resetIssued = null)}>
+			Dismiss
+		</button>
+	</div>
+{/if}
+
 <div class="ess-table-shell roster-shell">
 	<div class="roster-row roster-head">
 		<span>Name</span>
@@ -314,6 +414,15 @@
 							</button>
 						</span>
 					{:else}
+						<button
+							type="button"
+							class="row-reset"
+							onclick={() => openReset(person)}
+							aria-label="Reset password for {person.fullName}"
+							title="Reset password for {person.fullName}"
+						>
+							<KeyRound size={15} />
+						</button>
 						<button
 							type="button"
 							class="row-delete"
@@ -718,6 +827,85 @@
 		transition:
 			color var(--ess-t-fast),
 			background var(--ess-t-fast);
+	}
+
+	.reset-panel {
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border-strong);
+		border-radius: var(--ess-radius-md);
+		padding: 16px 18px;
+		margin-bottom: 14px;
+	}
+
+	.reset-head {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		color: var(--ess-text);
+		margin-bottom: 6px;
+	}
+
+	.reset-note {
+		color: var(--ess-text-secondary);
+		font-size: var(--ess-fs-caption);
+		margin: 0 0 12px;
+		max-width: 74ch;
+	}
+
+	.reset-controls {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.reset-input {
+		font-family: var(--ess-font-mono);
+		max-width: 260px;
+	}
+
+	.reset-issued {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px;
+		background: var(--ess-success-bg);
+		border: 1px solid var(--ess-success);
+		color: var(--ess-text);
+		border-radius: var(--ess-radius-md);
+		padding: 12px 16px;
+		margin-bottom: 14px;
+		font-size: var(--ess-fs-caption);
+	}
+
+	.reset-issued code {
+		font-family: var(--ess-font-mono);
+		font-size: var(--ess-fs-body);
+		font-weight: 600;
+		background: var(--ess-sunken);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-xs);
+		padding: 4px 10px;
+		user-select: all;
+	}
+
+	.row-reset {
+		background: transparent;
+		border: none;
+		color: var(--ess-text-muted);
+		cursor: pointer;
+		padding: 4px;
+		border-radius: 6px;
+		display: inline-flex;
+		margin-right: 2px;
+		transition:
+			color var(--ess-t-fast),
+			background var(--ess-t-fast);
+	}
+
+	.row-reset:hover {
+		color: var(--ess-primary-text);
+		background: var(--ess-primary-soft);
 	}
 
 	.row-delete:hover {

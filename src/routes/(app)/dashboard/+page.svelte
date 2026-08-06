@@ -157,7 +157,7 @@
 				<div class="action-list">
 					<QuickActionRow icon={Calendar} label="Apply Leave" href="/leave/apply" />
 					<QuickActionRow icon={Clock} label="Mark Attendance" href="/attendance" />
-					<QuickActionRow icon={Wallet} label="View Payslip" href="/payroll" />
+					<QuickActionRow icon={Wallet} label="View Payslip" soon />
 					<QuickActionRow icon={User} label="Update Profile" href="/profile" />
 				</div>
 			</div>

@@ -7,17 +7,25 @@
 		label: string;
 		href?: string;
 		onclick?: () => void;
+		/* Renders the row inert with a "Soon" badge — for modules that are in
+		   the nav but have no route yet, so the row never dead-ends. */
+		soon?: boolean;
 	}
 
-	let { icon, label, href, onclick }: Props = $props();
+	let { icon, label, href, onclick, soon = false }: Props = $props();
 </script>
 
 {#snippet content()}
 	<IconChip {icon} size="sm" />
 	<span class="label">{label}</span>
+	{#if soon}<span class="soon-badge">Soon</span>{/if}
 {/snippet}
 
-{#if href}
+{#if soon}
+	<span class="row row-soon" aria-disabled="true" title="{label} — coming soon">
+		{@render content()}
+	</span>
+{:else if href}
 	<a {href} class="row">
 		{@render content()}
 	</a>
@@ -48,5 +56,27 @@
 
 	.row:hover {
 		background: var(--ess-sunken);
+	}
+
+	.row-soon {
+		opacity: 0.55;
+		cursor: not-allowed;
+	}
+
+	.row-soon:hover {
+		background: transparent;
+	}
+
+	.soon-badge {
+		margin-left: auto;
+		font-size: 9.5px;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		padding: 2px 6px;
+		border-radius: var(--ess-radius-xs);
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
+		white-space: nowrap;
 	}
 </style>

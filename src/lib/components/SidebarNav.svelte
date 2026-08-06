@@ -64,7 +64,9 @@
 		{ href: '/profile', label: 'My Profile', icon: User },
 		{ href: '/leave', label: 'Leave', icon: Calendar },
 		{ href: '/attendance', label: 'Attendance', icon: Clock },
-		{ href: '/payroll', label: 'Payroll', icon: Wallet },
+		/* Payroll has no route yet, so it stays visible (employees expect it in
+		   the nav) but is inert and badged rather than 404-ing on click. */
+		{ href: '/payroll', label: 'Payroll', icon: Wallet, soon: true },
 		{ href: '/policies', label: 'Policies', icon: BookOpen }
 	];
 
@@ -138,15 +140,28 @@
 		{#each sections as section (section.label)}
 			<span class="nav-eyebrow">{section.label}</span>
 			{#each section.items as item (item.href)}
-				<a
-					href={item.href}
-					class:active={activePath.startsWith(item.href)}
-					data-tip={item.label}
-					aria-label={item.label}
-				>
-					<item.icon size={18} />
-					<span class="nav-label">{item.label}</span>
-				</a>
+				{#if item.soon}
+					<span
+						class="nav-soon"
+						data-tip="{item.label} — coming soon"
+						aria-disabled="true"
+						title="{item.label} — coming soon"
+					>
+						<item.icon size={18} />
+						<span class="nav-label">{item.label}</span>
+						<span class="soon-badge">Soon</span>
+					</span>
+				{:else}
+					<a
+						href={item.href}
+						class:active={activePath.startsWith(item.href)}
+						data-tip={item.label}
+						aria-label={item.label}
+					>
+						<item.icon size={18} />
+						<span class="nav-label">{item.label}</span>
+					</a>
+				{/if}
 			{/each}
 		{/each}
 	</div>
@@ -319,6 +334,48 @@
 			background var(--ess-t-fast),
 			color var(--ess-t-fast),
 			border-color var(--ess-t-fast);
+	}
+
+	/* Same geometry as a nav link so the rail rhythm holds, but inert: no
+	   href, no hover affordance, and a badge that says why. */
+	.nav-soon {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		height: 40px;
+		padding: 0 12px;
+		border: 1px solid transparent;
+		border-radius: var(--ess-radius-sm);
+		color: var(--ess-text-inverse-secondary);
+		font-size: var(--ess-fs-body);
+		font-weight: 500;
+		opacity: 0.55;
+		cursor: not-allowed;
+		position: relative;
+		user-select: none;
+	}
+
+	.soon-badge {
+		margin-left: auto;
+		font-size: 9.5px;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		padding: 2px 6px;
+		border-radius: var(--ess-radius-xs);
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
+		white-space: nowrap;
+	}
+
+	:global([data-ess-shell='rail']) .nav-soon {
+		justify-content: center;
+		padding: 0;
+		height: 46px;
+	}
+
+	:global([data-ess-shell='rail']) .soon-badge {
+		display: none;
 	}
 
 	.nav-list a:hover {
@@ -508,6 +565,7 @@
 	   — a native `title` waits ~1s and can't be styled, which made items like
 	   "Publish Policies" and "Design Tweaks" unidentifiable at a glance. */
 	:global([data-ess-shell='rail']) .nav-list a::after,
+	:global([data-ess-shell='rail']) .nav-soon::after,
 	:global([data-ess-shell='rail']) .logout-btn::after {
 		content: attr(data-tip);
 		position: absolute;
@@ -533,6 +591,7 @@
 
 	:global([data-ess-shell='rail']) .nav-list a:hover::after,
 	:global([data-ess-shell='rail']) .nav-list a:focus-visible::after,
+	:global([data-ess-shell='rail']) .nav-soon:hover::after,
 	:global([data-ess-shell='rail']) .logout-btn:hover::after,
 	:global([data-ess-shell='rail']) .logout-btn:focus-visible::after {
 		opacity: 1;
