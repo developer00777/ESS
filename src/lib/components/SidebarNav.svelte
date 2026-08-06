@@ -59,7 +59,9 @@
 	}
 
 	/* Nav grouped per the Cosmic shell spec: "Me" (personal) / "Manage" (lead+). */
-	const meItems = [
+	type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; soon?: boolean };
+
+	const meItems: NavItem[] = [
 		{ href: '/dashboard', label: 'Home', icon: LayoutDashboard },
 		{ href: '/profile', label: 'My Profile', icon: User },
 		{ href: '/leave', label: 'Leave', icon: Calendar },
@@ -74,10 +76,14 @@
 	   book (▥), publishing one is a push upward (⇧). The old set used a plain
 	   document for both and a vague cloud for publish, so the two policy rows
 	   were near-indistinguishable in the collapsed rail. */
-	const teamItem = { href: '/team', label: 'Team', icon: Users };
-	const adminItem = { href: '/admin/policies', label: 'Publish Policies', icon: ArrowUpFromLine };
-	const tweaksItem = { href: '/admin/tweaks', label: 'Design Tweaks', icon: Palette };
-	const cleanupItem = { href: '/admin/cleanup', label: 'Data Cleanup', icon: DatabaseZap };
+	const teamItem: NavItem = { href: '/team', label: 'Team', icon: Users };
+	const adminItem: NavItem = {
+		href: '/admin/policies',
+		label: 'Publish Policies',
+		icon: ArrowUpFromLine
+	};
+	const tweaksItem: NavItem = { href: '/admin/tweaks', label: 'Design Tweaks', icon: Palette };
+	const cleanupItem: NavItem = { href: '/admin/cleanup', label: 'Data Cleanup', icon: DatabaseZap };
 
 	let sections = $derived.by(() => {
 		const manage = [

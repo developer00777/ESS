@@ -8,9 +8,13 @@ import {
 	holidays,
 	leaveApplications,
 	leaveTypes,
-	prohanceDays
+	prohanceDays,
+	attendanceDeviations,
+	compOffCredits,
+	users as usersTable
 } from '$lib/server/db/schema';
-import { eq, and, gte, lt, lte, desc, inArray } from 'drizzle-orm';
+import { DEVIATION_MONTHLY_CAP, lapseExpiredCompOffs } from '$lib/server/comp-off';
+import { eq, ne, and, gte, lt, lte, desc, inArray } from 'drizzle-orm';
 import { isProhanceConfigured } from '$lib/server/prohance';
 import {
 	CYCLE_END_DAY,
@@ -237,6 +241,79 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			? measured.reduce((sum, s) => sum + (s.workedMinutes ?? 0), 0) / measured.length / 60
 			: 0;
 
+	// --- SOP: comp-off credits & attendance deviations ---
+	// Lapse first so an expired credit is never rendered as spendable (SOP §1).
+	await lapseExpiredCompOffs(user.id);
+	const myCompOffs = await db
+		.select()
+		.from(compOffCredits)
+		.where(eq(compOffCredits.userId, user.id))
+		.orderBy(desc(compOffCredits.workedDate));
+
+	const myDeviations = await db
+		.select()
+		.from(attendanceDeviations)
+		.where(eq(attendanceDeviations.userId, user.id))
+		.orderBy(desc(attendanceDeviations.createdAt));
+
+	// SOP §2: the cap counts only live biometric-related requests in the current month.
+	const currentMonthKey = new Date().toISOString().slice(0, 7);
+	const deviationMonthlyUsed = myDeviations.filter(
+		(d) =>
+			d.monthKey === currentMonthKey &&
+			d.countsTowardMonthlyCap &&
+			['pending', 'needs_manager_approval', 'approved'].includes(d.status)
+	).length;
+
+	// --- SOP review queue (Team Lead / HR / Super Admin) ---
+	// Leads see their own team; HR and Super Admin see everyone. Nobody reviews
+	// their own request, so the reviewer's own rows are excluded from the queue.
+	const canReview = user.role !== 'employee';
+	let deviationQueue: {
+		deviation: typeof attendanceDeviations.$inferSelect;
+		employeeName: string;
+	}[] = [];
+	let compOffQueue: { credit: typeof compOffCredits.$inferSelect; employeeName: string }[] = [];
+
+	if (canReview) {
+		const scope =
+			user.role === 'team_lead'
+				? and(eq(usersTable.teamId, user.teamId ?? ''), ne(usersTable.id, user.id))
+				: ne(usersTable.id, user.id);
+
+		const devRows = await db
+			.select({ deviation: attendanceDeviations, employeeName: usersTable.fullName })
+			.from(attendanceDeviations)
+			.innerJoin(usersTable, eq(attendanceDeviations.userId, usersTable.id))
+			.where(
+				and(
+					inArray(attendanceDeviations.status, ['pending', 'needs_manager_approval']),
+					scope
+				)
+			)
+			.orderBy(desc(attendanceDeviations.createdAt));
+
+		const coRows = await db
+			.select({ credit: compOffCredits, employeeName: usersTable.fullName })
+			.from(compOffCredits)
+			.innerJoin(usersTable, eq(compOffCredits.userId, usersTable.id))
+			.where(and(eq(compOffCredits.status, 'pending'), scope))
+			.orderBy(desc(compOffCredits.workedDate));
+
+		deviationQueue = devRows.map((r) => ({
+			...r,
+			deviation: { ...r.deviation, date: attendanceDateKey(r.deviation.date) }
+		}));
+		compOffQueue = coRows.map((r) => ({
+			...r,
+			credit: {
+				...r.credit,
+				workedDate: attendanceDateKey(r.credit.workedDate),
+				expiresOn: attendanceDateKey(r.credit.expiresOn)
+			}
+		}));
+	}
+
 	return {
 		today: todayRow ?? null,
 		viewMonth,
@@ -262,6 +339,19 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		businessDaysSoFar,
 		avgHours,
 		shifts,
-		standardShiftMinutes: STANDARD_SHIFT_MINUTES
+		standardShiftMinutes: STANDARD_SHIFT_MINUTES,
+		// SOP: comp-off credits and the employee's own deviation history.
+		compOffCredits: myCompOffs.map((c) => ({
+			...c,
+			workedDate: attendanceDateKey(c.workedDate),
+			expiresOn: attendanceDateKey(c.expiresOn)
+		})),
+		myDeviations: myDeviations.map((d) => ({ ...d, date: attendanceDateKey(d.date) })),
+		deviationMonthlyUsed,
+		deviationMonthlyCap: DEVIATION_MONTHLY_CAP,
+		// SOP review queues — empty for employees.
+		canReview,
+		deviationQueue,
+		compOffQueue
 	};
 };

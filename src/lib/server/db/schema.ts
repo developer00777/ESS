@@ -26,6 +26,38 @@ export const leaveStatusEnum = pgEnum('leave_status', [
 
 export const attendanceSourceEnum = pgEnum('attendance_source', ['manual', 'biometric']);
 
+// SOP §2/§4 — the fixed reason list an attendance correction can be raised under.
+// Kept as an enum so the monthly cap can be scoped to biometric-only reasons.
+export const deviationReasonEnum = pgEnum('deviation_reason', [
+	'login_not_captured',
+	'logout_not_captured',
+	'missing_biometric_punch',
+	'biometric_system_mismatch',
+	'prohance_mismatch',
+	'system_server_issue',
+	'machine_malfunction',
+	'technical_error',
+	'wrong_half_day',
+	'wrong_absent',
+	'incorrect_working_hours'
+]);
+
+export const deviationStatusEnum = pgEnum('deviation_status', [
+	'pending',
+	'approved',
+	'rejected',
+	'needs_manager_approval', // SOP §2: 4th+ biometric request in a month
+	'cancelled'
+]);
+
+export const compOffStatusEnum = pgEnum('comp_off_status', [
+	'pending',
+	'approved',
+	'rejected',
+	'used',
+	'lapsed'
+]);
+
 export const calendarStatusEnum = pgEnum('calendar_status', ['draft', 'published', 'archived']);
 
 // --- Org structure ---
@@ -530,4 +562,84 @@ export const bulkImportRowsRelations = relations(bulkImportRows, ({ one }) => ({
 	}),
 	existingUser: one(users, { fields: [bulkImportRows.existingUserId], references: [users.id] }),
 	createdUser: one(users, { fields: [bulkImportRows.createdUserId], references: [users.id] })
+}));
+
+// --- SOP: Attendance Deviations & Comp-Off ---------------------------------
+//
+// Both tables are request-and-approve records rather than derived state: the
+// SOP makes HR the arbiter, so nothing here mutates attendance or leave
+// balances until a decision is recorded.
+
+export const attendanceDeviations = pgTable('attendance_deviations', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	userId: uuid('user_id')
+		.references(() => users.id)
+		.notNull(),
+	// The working day whose attendance is wrong.
+	date: date('date').notNull(),
+	reason: deviationReasonEnum('reason').notNull(),
+	// Free-text account from the employee; this is what the LLM reads.
+	description: text('description').notNull(),
+	// What the employee says the record should be, when they know.
+	claimedCheckIn: text('claimed_check_in'), // 'HH:MM'
+	claimedCheckOut: text('claimed_check_out'), // 'HH:MM'
+	status: deviationStatusEnum('status').default('pending').notNull(),
+
+	// --- LLM triage (advisory only; HR still decides) ---
+	// Populated at submit time by src/lib/server/ai/triage-deviation.ts. Stored
+	// so a decision can always be audited against what the model actually saw
+	// and said, rather than re-running a non-deterministic call later.
+	aiSummary: text('ai_summary'),
+	aiSuggestedReason: deviationReasonEnum('ai_suggested_reason'),
+	aiConfidence: numeric('ai_confidence', { precision: 4, scale: 3 }),
+	aiEvidenceNote: text('ai_evidence_note'),
+	aiFlags: jsonb('ai_flags'), // string[] — e.g. ["no_prohance_activity","outside_shift"]
+	aiModel: text('ai_model'),
+	aiRanAt: timestamp('ai_ran_at', { withTimezone: true }),
+
+	// Snapshot of the corroborating data at submit time, so a later ProHance
+	// re-sync can't silently change the basis of an approved request.
+	evidenceSnapshot: jsonb('evidence_snapshot'),
+
+	// SOP §2: counts toward the 3/month biometric cap.
+	countsTowardMonthlyCap: boolean('counts_toward_monthly_cap').default(true).notNull(),
+	monthKey: varchar('month_key', { length: 7 }).notNull(), // 'YYYY-MM', for the cap query
+
+	supportingDocumentId: text('supporting_document_id'), // Mongo policy_documents-style attachment
+	reviewerId: uuid('reviewer_id').references((): any => users.id),
+	reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+	reviewNote: text('review_note'),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+export const compOffCredits = pgTable('comp_off_credits', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	userId: uuid('user_id')
+		.references(() => users.id)
+		.notNull(),
+	// The holiday/weekend actually worked.
+	workedDate: date('worked_date').notNull(),
+	workedMinutes: integer('worked_minutes'), // from ProHance/biometric at claim time
+	// SOP §1: 7+ hours on an eligible holiday or weekend earns one comp-off.
+	status: compOffStatusEnum('status').default('pending').notNull(),
+	// SOP §1: valid 3 months from the date earned, non-encashable.
+	expiresOn: date('expires_on').notNull(),
+	usedOn: date('used_on'),
+	usedApplicationId: uuid('used_application_id').references(() => leaveApplications.id),
+	evidenceSnapshot: jsonb('evidence_snapshot'),
+	note: text('note'),
+	approverId: uuid('approver_id').references((): any => users.id),
+	decidedAt: timestamp('decided_at', { withTimezone: true }),
+	decisionNote: text('decision_note'),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+export const attendanceDeviationsRelations = relations(attendanceDeviations, ({ one }) => ({
+	user: one(users, { fields: [attendanceDeviations.userId], references: [users.id] }),
+	reviewer: one(users, { fields: [attendanceDeviations.reviewerId], references: [users.id] })
+}));
+
+export const compOffCreditsRelations = relations(compOffCredits, ({ one }) => ({
+	user: one(users, { fields: [compOffCredits.userId], references: [users.id] }),
+	approver: one(users, { fields: [compOffCredits.approverId], references: [users.id] })
 }));

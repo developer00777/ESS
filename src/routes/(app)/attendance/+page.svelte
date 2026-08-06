@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import AttendanceCalendar from '$lib/components/AttendanceCalendar.svelte';
+	import CompOffClaim from '$lib/components/CompOffClaim.svelte';
+	import DeviationRequest from '$lib/components/DeviationRequest.svelte';
+	import SopReviewQueue from '$lib/components/SopReviewQueue.svelte';
 
 	let { data } = $props();
 
@@ -159,7 +162,116 @@
 	shifts={data.shifts}
 />
 
+<!-- SOP: comp-off and attendance-deviation self-service. Placed below the
+     calendar so the record itself is read first, then corrected. -->
+<div class="sop-grid">
+	<CompOffClaim credits={data.compOffCredits} />
+
+	<div class="sop-panel">
+		<div class="sop-head">
+			<strong>Attendance deviations</strong>
+			<span class="sop-tally">{data.deviationMonthlyUsed} of {data.deviationMonthlyCap} used this month</span>
+		</div>
+		{#if data.myDeviations.length > 0}
+			<ul class="dev-list">
+				{#each data.myDeviations.slice(0, 5) as d (d.id)}
+					<li>
+						<span class="d-date">{new Date(d.date + 'T00:00:00').toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</span>
+						<span class="d-reason">{d.reason.replace(/_/g, ' ')}</span>
+						<span class="ess-badge ess-badge--{d.status === 'approved' ? 'present' : d.status === 'rejected' ? 'absent' : 'restricted'}">
+							{d.status.replace(/_/g, ' ')}
+						</span>
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<p class="sop-empty">No correction requests raised yet.</p>
+		{/if}
+		<DeviationRequest
+			monthlyUsed={data.deviationMonthlyUsed}
+			monthlyCap={data.deviationMonthlyCap}
+		/>
+	</div>
+</div>
+
+{#if data.canReview}
+	<SopReviewQueue deviations={data.deviationQueue} compOffs={data.compOffQueue} />
+{/if}
+
 <style>
+	.sop-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+		gap: 14px;
+		margin-top: 1.5rem;
+	}
+
+	.sop-panel {
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
+		padding: 1rem 1.1rem;
+	}
+
+	.sop-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+		margin-bottom: 0.6rem;
+	}
+
+	.sop-head strong {
+		font-size: 0.92rem;
+		color: var(--ess-text);
+	}
+
+	.sop-tally {
+		font-size: 0.78rem;
+		font-weight: 600;
+		color: var(--ess-text-secondary);
+	}
+
+	.sop-empty {
+		font-size: 0.78rem;
+		color: var(--ess-text-secondary);
+		margin: 0 0 0.5rem;
+	}
+
+	.dev-list {
+		list-style: none;
+		margin: 0 0 0.6rem;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+
+	.dev-list li {
+		display: grid;
+		grid-template-columns: 4.5rem 1fr auto;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.78rem;
+		padding: 0.35rem 0;
+		border-bottom: 1px solid var(--ess-border-subtle);
+	}
+
+	.dev-list li:last-child {
+		border-bottom: 0;
+	}
+
+	.d-date {
+		color: var(--ess-text);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.d-reason {
+		color: var(--ess-text-secondary);
+		text-transform: capitalize;
+	}
+
 	.page-header {
 		margin-bottom: 1.75rem;
 	}
