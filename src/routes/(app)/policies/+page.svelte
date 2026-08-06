@@ -2,6 +2,8 @@
 	import BookOpen from '@lucide/svelte/icons/book-open';
 	import CalendarDays from '@lucide/svelte/icons/calendar-days';
 	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
+	import ShieldCheck from '@lucide/svelte/icons/shield-check';
+	import { WORKPLACE_POLICIES, WORKPLACE_POLICY_INTRO } from '$lib/workplace-policies';
 
 	let { data } = $props();
 
@@ -26,7 +28,10 @@
 
 <header class="page-header">
 	<h1 class="ess-page-title">Company Policies</h1>
-	<p class="ess-page-sub">Your holiday calendar and leave policy — resolved for your own shift assignment</p>
+	<p class="ess-page-sub">
+		Workplace policies for everyone, plus the holiday calendar and leave policy resolved for your
+		own shift assignment
+	</p>
 </header>
 
 <section class="block">
@@ -71,28 +76,53 @@
 	{#if data.leaveTypes.length === 0}
 		<p class="empty">No leave policy has been published yet.</p>
 	{:else}
-		<div class="leave-grid">
+		<ul class="policy-list">
 			{#each data.leaveTypes as lt (lt.id)}
-				<div class="leave-card">
-					<strong>{lt.name}</strong>
-					{#if lt.fixedDays}
-						<span>{lt.fixedDays} days (event-based)</span>
-					{:else}
-						<span>{lt.accrualPerMonth} days / month</span>
-					{/if}
-					{#if lt.carryForwardCap}
-						<span class="muted">Carry-forward cap: {lt.carryForwardCap} days</span>
-					{/if}
-					{#if lt.requiresDocumentation}
-						<span class="muted">Requires documentation{lt.documentationNote ? `: ${lt.documentationNote}` : ''}</span>
-					{/if}
-					{#if lt.eligibility}
-						<span class="muted">Eligibility: {lt.eligibility.replace('_', ' ')}</span>
-					{/if}
-				</div>
+				<li class="policy-item">
+					<div class="policy-item-head">
+						<strong>{lt.name}</strong>
+						<span class="entitlement">
+							{#if lt.fixedDays}
+								{lt.fixedDays} days (event-based)
+							{:else}
+								{lt.accrualPerMonth} days / month
+							{/if}
+						</span>
+					</div>
+					<ul class="rule-list">
+						{#if lt.carryForwardCap}
+							<li>Carry-forward cap: {lt.carryForwardCap} days</li>
+						{/if}
+						{#if lt.requiresDocumentation}
+							<li>Requires documentation{lt.documentationNote ? `: ${lt.documentationNote}` : ''}</li>
+						{/if}
+						{#if lt.eligibility}
+							<li>Eligibility: {lt.eligibility.replace('_', ' ')}</li>
+						{/if}
+					</ul>
+				</li>
 			{/each}
-		</div>
+		</ul>
 	{/if}
+</section>
+
+<section class="block">
+	<h2><ShieldCheck size={18} /> Workplace Policies</h2>
+	<p class="policy-intro">{WORKPLACE_POLICY_INTRO}</p>
+	<ol class="policy-list">
+		{#each WORKPLACE_POLICIES as policy (policy.id)}
+			<li class="policy-item">
+				<div class="policy-item-head">
+					<strong><span class="policy-icon" aria-hidden="true">{policy.icon}</span> {policy.title}</strong>
+				</div>
+				<ul class="rule-list">
+					{#each policy.rules as rule (rule)}
+						<li>{rule}</li>
+					{/each}
+				</ul>
+			</li>
+		{/each}
+	</ol>
 </section>
 
 <style>
@@ -135,32 +165,101 @@
 		margin-bottom: 0.75rem;
 	}
 
-	.leave-grid {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.75rem;
-	}
-
-	.leave-card {
-		background: var(--ess-surface);
-		border: 1px solid var(--ess-border);
-		border-radius: var(--ess-radius-md);
-		padding: 0.9rem 1rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		font-size: 0.82rem;
-		min-width: 220px;
-		flex: 1;
-	}
-
-	.leave-card strong {
-		font-size: 0.9rem;
-	}
-
 	.muted {
 		color: var(--ess-text-secondary);
 		font-size: 0.75rem;
+	}
+
+	.policy-intro {
+		font-size: 0.85rem;
+		font-style: italic;
+		color: var(--ess-text-secondary);
+		margin: 0 0 1rem;
+		padding-left: 0.75rem;
+		border-left: 2px solid var(--ess-primary);
+	}
+
+	/* List, not cards: these are read top-to-bottom as a document, and a card
+	   grid fragments a numbered policy set into unordered tiles. */
+	.policy-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		counter-reset: policy;
+	}
+
+	.policy-item {
+		counter-increment: policy;
+		padding: 0.9rem 0 0.9rem 2.25rem;
+		border-bottom: 1px solid var(--ess-border-subtle);
+		position: relative;
+	}
+
+	.policy-item:last-child {
+		border-bottom: 0;
+		padding-bottom: 0;
+	}
+
+	.policy-item::before {
+		content: counter(policy);
+		position: absolute;
+		left: 0;
+		top: 0.9rem;
+		width: 1.5rem;
+		height: 1.5rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: var(--ess-radius-xs);
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
+		font-size: 0.72rem;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.policy-item-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+		margin-bottom: 0.4rem;
+	}
+
+	.policy-item-head strong {
+		font-size: 0.92rem;
+		color: var(--ess-text);
+	}
+
+	.policy-icon {
+		margin-right: 0.35rem;
+	}
+
+	.entitlement {
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: var(--ess-primary-text);
+		white-space: nowrap;
+	}
+
+	.rule-list {
+		margin: 0;
+		padding-left: 1.05rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+
+	.rule-list li {
+		font-size: 0.82rem;
+		line-height: 1.5;
+		color: var(--ess-text-secondary);
+		max-width: 72ch;
+	}
+
+	.rule-list:empty {
+		display: none;
 	}
 
 	.empty {
