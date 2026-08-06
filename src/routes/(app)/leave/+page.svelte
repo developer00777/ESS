@@ -118,7 +118,14 @@
 			<span class="ess-eyebrow">
 				{new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
 			</span>
-			<LeaveCalendar holidays={data.calendarHolidays} leaveEvents={calendarLeaveEvents} showNames={false} />
+			<LeaveCalendar
+				holidays={data.calendarHolidays}
+				leaveEvents={calendarLeaveEvents}
+				showNames={false}
+				weekOffRosters={data.weekOffRosters}
+				weekOffAssignments={data.weekOffAssignments}
+				weekOffLabel={data.myWeekOff?.summary ?? null}
+			/>
 
 			<span class="ess-eyebrow section-gap">My Applications</span>
 			<div class="applications-list">
@@ -148,6 +155,9 @@
 			leaveEvents={calendarLeaveEvents}
 			showNames={canSeeNames}
 			size="large"
+			weekOffRosters={data.weekOffRosters}
+			weekOffAssignments={data.weekOffAssignments}
+			weekOffLabel={data.myWeekOff?.summary ?? null}
 		/>
 	</section>
 {:else if tab === 'approvals'}

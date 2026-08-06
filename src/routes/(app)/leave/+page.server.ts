@@ -12,6 +12,7 @@ import {
 import { eq, and, desc, inArray, ne, gte, lte, sql, isNotNull } from 'drizzle-orm';
 import { checkPinkLeaveEligibility, monthBounds } from '$lib/server/leave-eligibility';
 import { ensureLeaveAllocations } from '$lib/server/leave-accrual';
+import { loadWeekOffFor, currentRosterByUser } from '$lib/server/week-off';
 
 /**
  * Every role reads the same published holiday calendar rows and the same
@@ -207,12 +208,23 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const { calendarHolidays, leaveEvents } = await loadCalendarEvents(user);
 
+	// The calendar shades the viewer's own week offs, which are whatever roster
+	// their manager assigned — not a hardcoded Saturday/Sunday. Rosters and
+	// assignments are sent through so the resolver can run client-side as the
+	// user pages between months.
+	const today = new Date().toISOString().slice(0, 10);
+	const { rosters, assignmentsByUser } = await loadWeekOffFor([user.id]);
+	const myRoster = (await currentRosterByUser([user.id], today)).get(user.id) ?? null;
+
 	return {
 		allocations,
 		monthlyBalances,
 		myApplications,
 		approvalQueue,
 		calendarHolidays,
-		leaveEvents
+		leaveEvents,
+		weekOffRosters: rosters,
+		weekOffAssignments: assignmentsByUser.get(user.id) ?? [],
+		myWeekOff: myRoster
 	};
 };

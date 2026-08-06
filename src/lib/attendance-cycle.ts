@@ -90,13 +90,22 @@ export function cycleDates(cycle: AttendanceCycle): string[] {
 	return out;
 }
 
-/** Working days elapsed in the cycle up to `upTo`, excluding Sat/Sun. */
-export function workingDaysSoFar(cycle: AttendanceCycle, upTo: Date): number {
-	const todayKey = `${upTo.getFullYear()}-${pad(upTo.getMonth() + 1)}-${pad(upTo.getDate())}`;
-	return cycleDates(cycle).filter((key) => {
-		if (key > todayKey) return false;
+/**
+ * Working days elapsed in the cycle up to `upTo`.
+ *
+ * `isWeekOff` comes from the employee's assigned week-off roster; without one
+ * the default treats Saturday and Sunday as the weekly offs, which is what
+ * every employee gets until a roster is assigned to them.
+ */
+export function workingDaysSoFar(
+	cycle: AttendanceCycle,
+	upTo: Date,
+	isWeekOff: (dateKey: string) => boolean = (key) => {
 		const [y, m, d] = key.split('-').map(Number);
 		const weekday = new Date(y, m - 1, d).getDay();
-		return weekday !== 0 && weekday !== 6; // Saturday and Sunday are the weekly offs
-	}).length;
+		return weekday === 0 || weekday === 6;
+	}
+): number {
+	const todayKey = `${upTo.getFullYear()}-${pad(upTo.getMonth() + 1)}-${pad(upTo.getDate())}`;
+	return cycleDates(cycle).filter((key) => key <= todayKey && !isWeekOff(key)).length;
 }

@@ -5,6 +5,11 @@
 	import { financialYearLabel } from '$lib/financial-year';
 	import { cycleDates, cycleForDate, cycleForKey, cycleLabel } from '$lib/attendance-cycle';
 	import type { ShiftDay } from '$lib/shift-hours';
+	import {
+		makeWeekOffResolver,
+		type WeekOffRosterShape,
+		type WeekOffAssignmentShape
+	} from '$lib/week-off';
 
 	interface AttendanceRecord {
 		id: string;
@@ -53,7 +58,9 @@
 		leaves,
 		prohanceDays = [],
 		prohanceEnabled = false,
-		shifts = []
+		shifts = [],
+		weekOffRosters = [],
+		weekOffAssignments = []
 	}: {
 		month: string;
 		records: AttendanceRecord[];
@@ -68,7 +75,15 @@
 		 * as two half-days.
 		 */
 		shifts?: ShiftDay[];
+		/**
+		 * The employee's week-off roster. Absent, the resolver falls back to
+		 * Saturday + Sunday — the behaviour before rosters existed.
+		 */
+		weekOffRosters?: WeekOffRosterShape[];
+		weekOffAssignments?: WeekOffAssignmentShape[];
 	} = $props();
+
+	const isWeekOffDate = $derived(makeWeekOffResolver(weekOffRosters, weekOffAssignments));
 
 	const shiftByDate = $derived(new Map(shifts.map((s) => [s.date, s])));
 	/**
@@ -194,15 +209,15 @@
 		for (let i = 0; i < startWeekday; i++) cells.push(blank(`lead-${i}`));
 
 		for (const key of dates) {
-			const [y, m, d] = key.split('-').map(Number);
-			const weekday = new Date(y, m - 1, d).getDay();
+			const [, m, d] = key.split('-').map(Number);
 			cells.push({
 				date: d,
 				key,
 				inMonth: true,
 				isToday: key === todayKey,
-				// Saturday and Sunday are the weekly offs.
-				isWeekend: weekday === 0 || weekday === 6,
+				// The employee's own week off, from the roster assigned to them —
+				// Saturday + Sunday only when they have no roster.
+				isWeekend: isWeekOffDate(key),
 				// A cycle spans two months, so days from the opening month carry
 				// their month name to make the boundary unmistakable.
 				showMonth: m !== cycle.endMonth,
@@ -344,8 +359,6 @@
 
 	const selected = $derived.by(() => {
 		if (!selectedKey) return null;
-		const [y, m, d] = selectedKey.split('-').map(Number);
-		const weekday = new Date(y, m - 1, d).getDay();
 		return {
 			key: selectedKey,
 			record: recordsByDate.get(selectedKey) ?? null,
@@ -353,7 +366,7 @@
 			holidays: holidaysByDate.get(selectedKey) ?? [],
 			leaves: leaveByDate.get(selectedKey) ?? [],
 			prohance: prohanceByDate.get(selectedKey) ?? null,
-			isWeekend: weekday === 0 || weekday === 6,
+			isWeekend: isWeekOffDate(selectedKey),
 			isPast: selectedKey < todayKey
 		};
 	});
@@ -368,7 +381,7 @@
 		if (ph === 'half') return { label: 'Half day · ProHance', badge: 'pending' };
 		if (selected.leaves.length > 0) return { label: 'Leave pending', badge: 'pending' };
 		if (selected.holidays.length > 0) return { label: 'Holiday', badge: 'info' };
-		if (selected.isWeekend) return { label: 'Weekend', badge: 'optional' };
+		if (selected.isWeekend) return { label: 'Week off', badge: 'optional' };
 		if (selected.isPast) return { label: 'Absent', badge: 'absent' };
 		if (selected.key === todayKey) return { label: 'No activity yet', badge: 'optional' };
 		return { label: 'Upcoming', badge: 'optional' };

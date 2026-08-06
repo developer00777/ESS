@@ -60,6 +60,12 @@ export const compOffStatusEnum = pgEnum('comp_off_status', [
 
 export const calendarStatusEnum = pgEnum('calendar_status', ['draft', 'published', 'archived']);
 
+// A week-off roster is either the same weekdays off every week, or an N-week
+// rotation that repeats. Rotational is what makes a roster worth saving at all —
+// a fixed pattern could be a column, but a rotation needs an anchor date and a
+// per-week weekday set.
+export const weekOffPatternEnum = pgEnum('week_off_pattern', ['fixed', 'rotational']);
+
 // --- Org structure ---
 
 // Shift group is the key that makes holiday calendars & leave policy rules render
@@ -633,6 +639,83 @@ export const compOffCredits = pgTable('comp_off_credits', {
 	decisionNote: text('decision_note'),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 });
+
+// --- Week-off rosters ------------------------------------------------------
+//
+// Two tables, deliberately: the *roster* is a reusable pattern the Super Admin
+// authors once ("All Sundays", "Sat + Sun", "4-week rotation"), and the
+// *assignment* is what actually gives one employee their days off for a date
+// range. Separating them is what lets one roster be published to a team lead
+// and applied to many people without copying the pattern per employee.
+
+export const weekOffRosters = pgTable('week_off_rosters', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	name: text('name').notNull(),
+	description: text('description'),
+	pattern: weekOffPatternEnum('pattern').notNull(),
+
+	// 'fixed': the weekdays off every week, 0 = Sunday … 6 = Saturday.
+	// [0] is "all Sundays"; [0,6] is "Saturday + Sunday".
+	weekdays: jsonb('weekdays').$type<number[]>(),
+
+	// 'rotational': one weekday set per week of the cycle, e.g.
+	// [[0], [0,6], [0], [5,6]] is a 4-week rotation. cycleWeeks is
+	// rotationWeeks.length, stored so the rotation can be queried without
+	// unpacking the JSON.
+	rotationWeeks: jsonb('rotation_weeks').$type<number[][]>(),
+	cycleWeeks: integer('cycle_weeks'),
+	// Week 1 of the rotation is the week containing this date. Every assignment
+	// counts elapsed weeks from here, so two employees on the same roster stay
+	// in phase with each other regardless of when they were assigned.
+	rotationAnchorDate: date('rotation_anchor_date'),
+
+	// Team-specific rosters only appear to that team's manager; a null teamId is
+	// an org-wide template any manager may apply.
+	teamId: uuid('team_id').references(() => teams.id),
+
+	// Drafts are editable and invisible to team leads. Publishing is what makes a
+	// roster assignable — same lifecycle as a holiday calendar.
+	status: calendarStatusEnum('status').default('draft').notNull(),
+	createdBy: uuid('created_by').references((): any => users.id),
+	publishedBy: uuid('published_by').references((): any => users.id),
+	publishedAt: timestamp('published_at', { withTimezone: true }),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+export const weekOffAssignments = pgTable('week_off_assignments', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	userId: uuid('user_id')
+		.references(() => users.id)
+		.notNull(),
+	rosterId: uuid('roster_id')
+		.references(() => weekOffRosters.id)
+		.notNull(),
+	// Open-ended by default: effectiveTo is set when a later assignment supersedes
+	// this one, so an employee's history stays readable rather than being
+	// overwritten each time their roster changes.
+	effectiveFrom: date('effective_from').notNull(),
+	effectiveTo: date('effective_to'),
+	assignedBy: uuid('assigned_by').references((): any => users.id),
+	note: text('note'),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+export const weekOffRostersRelations = relations(weekOffRosters, ({ one, many }) => ({
+	team: one(teams, { fields: [weekOffRosters.teamId], references: [teams.id] }),
+	creator: one(users, { fields: [weekOffRosters.createdBy], references: [users.id] }),
+	publisher: one(users, { fields: [weekOffRosters.publishedBy], references: [users.id] }),
+	assignments: many(weekOffAssignments)
+}));
+
+export const weekOffAssignmentsRelations = relations(weekOffAssignments, ({ one }) => ({
+	user: one(users, { fields: [weekOffAssignments.userId], references: [users.id] }),
+	roster: one(weekOffRosters, {
+		fields: [weekOffAssignments.rosterId],
+		references: [weekOffRosters.id]
+	}),
+	assigner: one(users, { fields: [weekOffAssignments.assignedBy], references: [users.id] })
+}));
 
 export const attendanceDeviationsRelations = relations(attendanceDeviations, ({ one }) => ({
 	user: one(users, { fields: [attendanceDeviations.userId], references: [users.id] }),

@@ -12,17 +12,8 @@ import { requireUser } from '$lib/server/rbac';
 import { and, eq, gte, lte, inArray, sql } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { checkPinkLeaveEligibility, monthBounds } from '$lib/server/leave-eligibility';
-
-function businessDaysBetween(start: Date, end: Date): number {
-	let count = 0;
-	const cur = new Date(start);
-	while (cur <= end) {
-		const day = cur.getDay();
-		if (day !== 0 && day !== 6) count++;
-		cur.setDate(cur.getDate() + 1);
-	}
-	return count;
-}
+import { weekOffResolverForUser } from '$lib/server/week-off';
+import { workingDaysInRange } from '$lib/week-off';
 
 export const POST: RequestHandler = async (event) => {
 	const user = requireUser(event);
@@ -37,7 +28,16 @@ export const POST: RequestHandler = async (event) => {
 	if (end < start) {
 		throw error(400, 'endDate cannot be before startDate');
 	}
-	const days = businessDaysBetween(start, end);
+	// Days are counted against this employee's own week-off roster, not a fixed
+	// Sat/Sun: someone whose only weekly off is Sunday must be charged for the
+	// Saturdays inside their leave, and someone on a rotation for whichever days
+	// that week's rotation actually gives them off.
+	const isWeekOff = await weekOffResolverForUser(user.id);
+	const days = workingDaysInRange(
+		String(startDate).slice(0, 10),
+		String(endDate).slice(0, 10),
+		isWeekOff
+	);
 
 	const [type] = await db.select().from(leaveTypes).where(eq(leaveTypes.id, leaveTypeId)).limit(1);
 	if (!type || !type.isActive) {

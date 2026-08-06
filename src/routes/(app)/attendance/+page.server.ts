@@ -23,6 +23,7 @@ import {
 	workingDaysSoFar
 } from '$lib/attendance-cycle';
 import { pairShifts, gapForShift, STANDARD_SHIFT_MINUTES } from '$lib/shift-hours';
+import { loadWeekOffFor } from '$lib/server/week-off';
 import { prohancePresence } from '$lib/attendance-markers';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -199,14 +200,20 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			)
 		);
 
+	// Week offs come from the roster assigned to this employee — Saturday +
+	// Sunday only when they have none — so both the grid and the counters below
+	// describe the same working days.
+	const weekOff = await loadWeekOffFor([user.id]);
+	const isWeekOff = weekOff.resolverFor(user.id);
+
 	// Stats follow the viewed cycle so the counters agree with the grid. The
-	// denominator counts working days only — Saturday and Sunday are the weekly
-	// offs — up to today for the running cycle, or the whole cycle once past.
+	// denominator counts working days only, up to today for the running cycle,
+	// or the whole cycle once past.
 	const businessDaysSoFar =
 		viewMonth === currentCycle.key
-			? workingDaysSoFar(cycle, now)
+			? workingDaysSoFar(cycle, now, isWeekOff)
 			: viewMonth < currentCycle.key
-				? workingDaysSoFar(cycle, new Date(vy, vm - 1, CYCLE_END_DAY))
+				? workingDaysSoFar(cycle, new Date(vy, vm - 1, CYCLE_END_DAY), isWeekOff)
 				: 0;
 
 	// Pair overnight shifts before measuring anything. A night shift arrives as
@@ -335,6 +342,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			sessionDate: attendanceDateKey(p.sessionDate)
 		})),
 		prohanceEnabled: isProhanceConfigured(),
+		weekOffRosters: weekOff.rosters,
+		weekOffAssignments: weekOff.assignmentsByUser.get(user.id) ?? [],
 		presentDays,
 		businessDaysSoFar,
 		avgHours,

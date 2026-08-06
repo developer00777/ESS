@@ -3,6 +3,11 @@
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import { financialYearLabel } from '$lib/financial-year';
 	import { cycleDates, cycleForDate, cycleForKey, cycleLabel } from '$lib/attendance-cycle';
+	import {
+		makeWeekOffResolver,
+		type WeekOffRosterShape,
+		type WeekOffAssignmentShape
+	} from '$lib/week-off';
 
 	interface HolidayRow {
 		date: string;
@@ -23,9 +28,24 @@
 		holidays,
 		leaveEvents,
 		showNames = false,
-		size = 'default'
-	}: { holidays: HolidayRow[]; leaveEvents: LeaveEvent[]; showNames?: boolean; size?: 'default' | 'large' } =
-		$props();
+		size = 'default',
+		// Week offs come from the roster the employee's manager assigned. With no
+		// roster the resolver falls back to Saturday + Sunday, which is what the
+		// calendar showed before rosters existed.
+		weekOffRosters = [],
+		weekOffAssignments = [],
+		weekOffLabel = null
+	}: {
+		holidays: HolidayRow[];
+		leaveEvents: LeaveEvent[];
+		showNames?: boolean;
+		size?: 'default' | 'large';
+		weekOffRosters?: WeekOffRosterShape[];
+		weekOffAssignments?: WeekOffAssignmentShape[];
+		weekOffLabel?: string | null;
+	} = $props();
+
+	const isWeekOff = $derived(makeWeekOffResolver(weekOffRosters, weekOffAssignments));
 
 	const today = new Date();
 	// Opens on the cycle containing today, which after the 25th is next month's.
@@ -96,6 +116,7 @@
 			key: string;
 			inMonth: boolean;
 			isToday: boolean;
+			isWeekOff: boolean;
 			showMonth: boolean;
 			monthShort: string;
 		}> = [];
@@ -113,6 +134,7 @@
 				key: `lead-${i}`,
 				inMonth: false,
 				isToday: false,
+				isWeekOff: false,
 				showMonth: false,
 				monthShort: ''
 			});
@@ -125,6 +147,7 @@
 				key,
 				inMonth: true,
 				isToday: key === todayKey,
+				isWeekOff: isWeekOff(key),
 				showMonth: m !== cycle.endMonth,
 				monthShort: MONTH_SHORT[m - 1]
 			});
@@ -137,6 +160,7 @@
 				key: `trail-${i++}`,
 				inMonth: false,
 				isToday: false,
+				isWeekOff: false,
 				showMonth: false,
 				monthShort: ''
 			});
@@ -194,6 +218,7 @@
 		<span class="legend-item"><i class="dot dot-holiday"></i> Holiday</span>
 		<span class="legend-item"><i class="dot dot-approved"></i> Approved leave</span>
 		<span class="legend-item"><i class="dot dot-pending"></i> Pending leave</span>
+		<span class="legend-item"><i class="swatch swatch-weekoff"></i> Week off{weekOffLabel ? ` · ${weekOffLabel}` : ''}</span>
 	</div>
 
 	<div class="weekday-row">
@@ -212,6 +237,7 @@
 				class="day-cell"
 				class:out-of-month={!cell.inMonth}
 				class:is-today={cell.isToday}
+				class:is-week-off={cell.isWeekOff}
 				class:is-selected={selectedKey === cell.key}
 				onclick={() => (selectedKey = selectedKey === cell.key ? null : cell.key)}
 			>
@@ -432,6 +458,31 @@
 	.day-cell.out-of-month {
 		background: transparent;
 		opacity: 0.35;
+	}
+
+	/* A week off is a non-working day, so it recedes rather than competing with
+	   holidays and leave — the day number stays readable, the cell does not
+	   invite a click. Today keeps its own emphasis. */
+	.day-cell.is-week-off:not(.is-today) {
+		background: var(--ess-surface);
+		border-color: var(--ess-border-subtle);
+	}
+
+	.day-cell.is-week-off:not(.is-today) .day-number {
+		color: var(--ess-text-muted);
+	}
+
+	.swatch {
+		display: inline-block;
+		width: 0.7rem;
+		height: 0.7rem;
+		border-radius: 3px;
+		flex-shrink: 0;
+	}
+
+	.swatch-weekoff {
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border-strong);
 	}
 
 	.day-cell.is-today {

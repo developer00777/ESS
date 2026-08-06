@@ -24,6 +24,8 @@ import { parseHrTeamSheet, suggestReportsToIndex, suggestExistingUserMatch } fro
 import { profileValuesFromImport } from '$lib/server/import-profile-fields';
 import { matchName } from '$lib/server/name-match';
 import { ensureLeaveAllocations } from '$lib/server/leave-accrual';
+import { currentRosterByUser, loadAssignableRosters } from '$lib/server/week-off';
+import { describeRoster, rotationSummary } from '$lib/week-off';
 import { error } from '@sveltejs/kit';
 
 const DEFAULT_BULK_PASSWORD = 'Champ@123';
@@ -155,6 +157,41 @@ export const load: PageServerLoad = async ({ locals }) => {
 	// employees who have no picture.
 	const withPictures = await getUsersWithProfilePicture(rosterIdsForCode);
 
+	// Week-off roster in force today, per employee. Nobody assigned a roster
+	// falls back to Saturday + Sunday, which is what the column shows for them.
+	const weekOffByUser = await currentRosterByUser(rosterIdsForCode, today);
+
+	// The rosters this actor may actually apply — a team lead sees org-wide and
+	// own-team published rosters; a Super Admin sees drafts too.
+	const weekOffRosterRows = await loadAssignableRosters(user);
+	const weekOffRosterOptions = weekOffRosterRows.map((r) => ({
+		id: r.id,
+		name: r.name,
+		description: r.description,
+		pattern: r.pattern,
+		weekdays: r.weekdays ?? null,
+		rotationWeeks: r.rotationWeeks ?? null,
+		rotationAnchorDate: r.rotationAnchorDate ?? null,
+		teamId: r.teamId,
+		status: r.status,
+		summary: describeRoster({
+			id: r.id,
+			name: r.name,
+			pattern: r.pattern,
+			weekdays: r.weekdays ?? null,
+			rotationWeeks: r.rotationWeeks ?? null,
+			rotationAnchorDate: r.rotationAnchorDate ?? null
+		}),
+		weeks: rotationSummary({
+			id: r.id,
+			name: r.name,
+			pattern: r.pattern,
+			weekdays: r.weekdays ?? null,
+			rotationWeeks: r.rotationWeeks ?? null,
+			rotationAnchorDate: r.rotationAnchorDate ?? null
+		})
+	}));
+
 	const rosterWithStatus = roster.map((r) => ({
 		id: r.id,
 		fullName: r.fullName,
@@ -163,6 +200,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 		shiftGroupId: shiftByUser.get(r.id) ?? null,
 		shiftGroupName: shiftGroupNameById.get(shiftByUser.get(r.id) ?? '') ?? null,
 		hasPicture: withPictures.has(r.id),
+		weekOffRosterId: weekOffByUser.get(r.id)?.rosterId ?? null,
+		weekOffName: weekOffByUser.get(r.id)?.name ?? null,
+		weekOffSummary: weekOffByUser.get(r.id)?.summary ?? 'Every Sat + Sun',
 		role: r.role,
 		isActive: r.isActive,
 		leaveLeft: balanceByUser.get(r.id) ?? 0,
@@ -232,6 +272,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 		creatableRoles,
 		shiftGroups: groupsWithPublishedCalendar,
 		allShiftGroups,
+		weekOffRosters: weekOffRosterOptions,
+		// A roster can be scoped to one team, so the author needs the list.
+		allTeams: user.role === 'super_admin' ? await db.select({ id: teams.id, name: teams.name }).from(teams) : [],
+		// Team leads assign rosters but don't author them. Employees never reach
+		// this page at all — the load redirects them above.
+		canAssignWeekOff: true,
 		isSuperAdmin: user.role === 'super_admin',
 		// The roster hides the delete control on your own row; the API refuses it too.
 		currentUserId: user.id,

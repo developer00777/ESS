@@ -160,6 +160,8 @@
 	prohanceDays={data.monthProhance}
 	prohanceEnabled={data.prohanceEnabled}
 	shifts={data.shifts}
+	weekOffRosters={data.weekOffRosters}
+	weekOffAssignments={data.weekOffAssignments}
 />
 
 <!-- SOP: comp-off and attendance-deviation self-service. Placed below the
