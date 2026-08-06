@@ -40,6 +40,34 @@
 			alert(body.message ?? 'Could not process this request');
 		}
 	}
+
+	/* Overturning a decision that has already been communicated is not a routine
+	   click, so it takes a second deliberate one — and the balance effect is
+	   spelled out before it happens rather than after. */
+	let confirmingReversal = $state<string | null>(null);
+	let reversingId = $state<string | null>(null);
+	let reversalError = $state('');
+
+	async function reverse(applicationId: string, currentStatus: string) {
+		reversalError = '';
+		reversingId = applicationId;
+		try {
+			const res = await fetch(`/api/leave/${applicationId}/approve`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				// Flip to the opposite of where it stands now.
+				body: JSON.stringify({ decision: currentStatus === 'approved' ? 'reject' : 'approve' })
+			});
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				reversalError = body.message ?? 'Could not reverse this decision';
+				return;
+			}
+			location.reload();
+		} finally {
+			reversingId = null;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -183,6 +211,65 @@
 				<p class="ess-empty">No pending approvals right now.</p>
 			{/each}
 		</div>
+
+		{#if data.canReverseDecisions}
+			<span class="ess-eyebrow section-gap">Recently Decided</span>
+			<p class="reverse-note">
+				A decision can be overturned here. Reversing an approval returns the days to the employee's
+				balance; re-approving spends them again, so it is refused if the balance no longer covers it.
+			</p>
+
+			{#if reversalError}
+				<p class="ess-error section-gap">{reversalError}</p>
+			{/if}
+
+			<div class="applications-list">
+				{#each data.decidedQueue as row (row.application.id)}
+					{@const status = row.application.status}
+					<div class="application-row">
+						<div class="app-meta">
+							<strong>{row.applicant.fullName}</strong>
+							<span>
+								{row.type.name} · {row.application.startDate} → {row.application.endDate}
+								({row.application.days} days)
+							</span>
+						</div>
+						<div class="approve-actions">
+							<span class="ess-badge ess-badge--{status}">{status}</span>
+							{#if confirmingReversal === row.application.id}
+								<button
+									class="ess-btn ess-btn--sm ess-btn--danger"
+									onclick={() => reverse(row.application.id, status)}
+									disabled={reversingId === row.application.id}
+								>
+									{reversingId === row.application.id
+										? 'Reversing…'
+										: status === 'approved'
+											? 'Confirm reject'
+											: 'Confirm approve'}
+								</button>
+								<button
+									class="ess-btn ess-btn--sm ess-btn--ghost"
+									onclick={() => (confirmingReversal = null)}
+									disabled={reversingId === row.application.id}
+								>
+									Cancel
+								</button>
+							{:else}
+								<button
+									class="ess-btn ess-btn--sm ess-btn--ghost"
+									onclick={() => (confirmingReversal = row.application.id)}
+								>
+									{status === 'approved' ? 'Reverse to rejected' : 'Reverse to approved'}
+								</button>
+							{/if}
+						</div>
+					</div>
+				{:else}
+					<p class="ess-empty">Nothing decided yet.</p>
+				{/each}
+			</div>
+		{/if}
 	</section>
 {/if}
 
@@ -231,6 +318,13 @@
 	.approvals-section .ess-eyebrow {
 		display: block;
 		margin-bottom: 0.75rem;
+	}
+
+	.reverse-note {
+		font-size: var(--ess-fs-caption);
+		color: var(--ess-text-secondary);
+		max-width: 78ch;
+		margin-bottom: 0.85rem;
 	}
 
 	.layout {

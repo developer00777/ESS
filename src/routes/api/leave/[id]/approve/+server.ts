@@ -12,6 +12,9 @@ import { requireRole } from '$lib/server/rbac';
 import { eq, and } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 
+const newStatusFor = (decision: 'approve' | 'reject') =>
+	decision === 'approve' ? ('approved' as const) : ('rejected' as const);
+
 export const POST: RequestHandler = async (event) => {
 	const approver = requireRole(event, ['team_lead', 'super_admin']);
 	const applicationId = event.params.id!;
@@ -28,12 +31,30 @@ export const POST: RequestHandler = async (event) => {
 		.limit(1);
 
 	if (!application) throw error(404, 'Leave application not found');
-	if (application.status !== 'pending') throw error(400, 'Application already decided');
+
+	// A decided application is normally final. A Super Admin may still overturn
+	// it — an approval given in error otherwise has no route back, and the
+	// employee's balance stays spent. Reversing settles the balance below rather
+	// than only flipping the status.
+	const isReversal = application.status !== 'pending';
+	if (isReversal) {
+		if (approver.role !== 'super_admin') {
+			throw error(403, 'Only a Super Admin can change a decision that has already been made');
+		}
+		if (application.status !== 'approved' && application.status !== 'rejected') {
+			throw error(400, `A ${application.status} application cannot be reversed`);
+		}
+		if (application.status === newStatusFor(decision)) {
+			throw error(400, `This application is already ${application.status}`);
+		}
+	}
 
 	const [applicant] = await db.select().from(users).where(eq(users.id, application.userId)).limit(1);
 	if (!applicant) throw error(404, 'Applicant not found');
 
-	if (approver.role === 'team_lead') {
+	// Reversal is Super-Admin-only (enforced above), so these Team Lead limits
+	// only ever apply to a first decision.
+	if (!isReversal && approver.role === 'team_lead') {
 		const isOwnTeam = applicant.teamId === approver.teamId;
 		if (!isOwnTeam) throw error(403, 'Not authorized for this team');
 
@@ -52,7 +73,39 @@ export const POST: RequestHandler = async (event) => {
 		}
 	}
 
-	const newStatus = decision === 'approve' ? 'approved' : 'rejected';
+	const newStatus = newStatusFor(decision);
+	const days = Number(application.days);
+
+	// The balance only moves when the *approved-ness* changes: pending→rejected
+	// never spent anything, and approved→rejected has to give it back.
+	const wasApproved = application.status === 'approved';
+	const nowApproved = newStatus === 'approved';
+	const balanceDelta = (nowApproved ? days : 0) - (wasApproved ? days : 0);
+
+	const year = new Date(application.startDate).getFullYear();
+	const [allocation] = await db
+		.select()
+		.from(leaveAllocations)
+		.where(
+			and(
+				eq(leaveAllocations.userId, application.userId),
+				eq(leaveAllocations.leaveTypeId, application.leaveTypeId),
+				eq(leaveAllocations.year, year)
+			)
+		)
+		.limit(1);
+
+	// Re-approving something previously rejected spends the balance again, so it
+	// has to be affordable now — the days may have been used elsewhere since.
+	if (balanceDelta > 0 && allocation) {
+		const remaining = Number(allocation.allocatedDays) - Number(allocation.usedDays);
+		if (balanceDelta > remaining) {
+			throw error(
+				400,
+				`Cannot approve: ${applicant.fullName} has ${remaining} day(s) left but this request needs ${days}`
+			);
+		}
+	}
 
 	await db
 		.update(leaveApplications)
@@ -64,42 +117,46 @@ export const POST: RequestHandler = async (event) => {
 		})
 		.where(eq(leaveApplications.id, applicationId));
 
-	if (newStatus === 'approved') {
-		const year = new Date(application.startDate).getFullYear();
-		const [allocation] = await db
-			.select()
-			.from(leaveAllocations)
-			.where(
-				and(
-					eq(leaveAllocations.userId, application.userId),
-					eq(leaveAllocations.leaveTypeId, application.leaveTypeId),
-					eq(leaveAllocations.year, year)
-				)
-			)
-			.limit(1);
-
+	if (balanceDelta !== 0) {
 		if (allocation) {
+			// Clamped at zero so a double-reversal can never drive usedDays negative
+			// and hand out days the employee was never allocated.
+			const nextUsed = Math.max(0, Number(allocation.usedDays) + balanceDelta);
 			await db
 				.update(leaveAllocations)
-				.set({ usedDays: String(Number(allocation.usedDays) + Number(application.days)) })
+				.set({ usedDays: String(nextUsed) })
 				.where(eq(leaveAllocations.id, allocation.id));
 		}
 
+		// The original approval entry is left in place — the ledger records what
+		// happened, so a reversal reads as approve-then-refund rather than the
+		// approval never having existed.
 		await db.insert(leaveLedger).values({
 			userId: application.userId,
 			leaveTypeId: application.leaveTypeId,
-			delta: String(-Number(application.days)),
-			reason: 'Leave approved',
+			delta: String(-balanceDelta),
+			reason: isReversal
+				? nowApproved
+					? 'Rejection reversed — leave re-approved'
+					: 'Approval reversed by Super Admin'
+				: 'Leave approved',
 			relatedApplicationId: application.id
 		});
 	}
 
 	await logActivity({
 		actorUserId: approver.id,
-		action: `leave.${newStatus}`,
+		action: isReversal ? `leave.reversed_to_${newStatus}` : `leave.${newStatus}`,
 		targetType: 'leave_application',
-		targetId: application.id
+		targetId: application.id,
+		details: {
+			previousStatus: application.status,
+			newStatus,
+			days,
+			balanceDelta,
+			reversal: isReversal
+		}
 	});
 
-	return json({ status: newStatus });
+	return json({ status: newStatus, reversed: isReversal, balanceDelta });
 };

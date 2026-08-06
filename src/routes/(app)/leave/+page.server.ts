@@ -206,6 +206,20 @@ export const load: PageServerLoad = async ({ locals }) => {
 					);
 	}
 
+	// Recently decided applications, so a Super Admin can overturn a decision made
+	// in error. Only they may reverse one, so only they are shown the list.
+	let decidedQueue: typeof approvalQueue = [];
+	if (user.role === 'super_admin') {
+		decidedQueue = await db
+			.select({ application: leaveApplications, type: leaveTypes, applicant: applicantColumns })
+			.from(leaveApplications)
+			.innerJoin(leaveTypes, eq(leaveApplications.leaveTypeId, leaveTypes.id))
+			.innerJoin(users, eq(leaveApplications.userId, users.id))
+			.where(inArray(leaveApplications.status, ['approved', 'rejected']))
+			.orderBy(desc(leaveApplications.decidedAt))
+			.limit(50);
+	}
+
 	const { calendarHolidays, leaveEvents } = await loadCalendarEvents(user);
 
 	// The calendar shades the viewer's own week offs, which are whatever roster
@@ -221,6 +235,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		monthlyBalances,
 		myApplications,
 		approvalQueue,
+		decidedQueue,
+		canReverseDecisions: user.role === 'super_admin',
 		calendarHolidays,
 		leaveEvents,
 		weekOffRosters: rosters,
