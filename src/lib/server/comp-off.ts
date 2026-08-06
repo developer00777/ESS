@@ -18,7 +18,12 @@ export const COMP_OFF_VALIDITY_MONTHS = 3;
 export function compOffExpiryFor(workedDate: string): string {
 	const d = new Date(workedDate + 'T00:00:00');
 	d.setMonth(d.getMonth() + COMP_OFF_VALIDITY_MONTHS);
-	return d.toISOString().slice(0, 10);
+	// Formatted from local date parts, not toISOString(). The date above is parsed
+	// at *local* midnight, so converting to UTC to format it lands the previous
+	// day anywhere east of UTC — in IST every comp-off expired a day early.
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+		d.getDate()
+	).padStart(2, '0')}`;
 }
 
 export interface CompOffEligibility {
