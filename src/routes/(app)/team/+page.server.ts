@@ -124,19 +124,32 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.innerJoin(holidayCalendars, eq(holidayCalendars.shiftGroupId, shiftGroups.id))
 		.where(eq(holidayCalendars.status, 'published'));
 
+	// Every shift group, not just those with a published calendar. Assignment on
+	// an existing employee has to be possible before the calendar exists —
+	// otherwise a group can never be populated in the first place.
+	const allShiftGroups = await db
+		.select({ id: shiftGroups.id, name: shiftGroups.name })
+		.from(shiftGroups)
+		.orderBy(shiftGroups.name);
+
 	// Employee code is the portal-wide identity key — every roster row carries it.
+	// Shift group rides along: it drives holiday-calendar resolution, so HR needs
+	// to see at a glance who is still unassigned.
 	const rosterIdsForCode = roster.map((r) => r.id);
 	const codeRows =
 		rosterIdsForCode.length > 0
 			? await db
 					.select({
 						userId: employeeProfiles.userId,
-						employeeCode: employeeProfiles.employeeCode
+						employeeCode: employeeProfiles.employeeCode,
+						shiftGroupId: employeeProfiles.shiftGroupId
 					})
 					.from(employeeProfiles)
 					.where(inArray(employeeProfiles.userId, rosterIdsForCode))
 			: [];
 	const codeByUser = new Map(codeRows.map((r) => [r.userId, r.employeeCode]));
+	const shiftByUser = new Map(codeRows.map((r) => [r.userId, r.shiftGroupId]));
+	const shiftGroupNameById = new Map(allShiftGroups.map((g) => [g.id, g.name]));
 
 	// One query for the whole roster — avoids an <img> request per row for
 	// employees who have no picture.
@@ -147,6 +160,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		fullName: r.fullName,
 		email: r.email,
 		employeeCode: codeByUser.get(r.id) ?? null,
+		shiftGroupId: shiftByUser.get(r.id) ?? null,
+		shiftGroupName: shiftGroupNameById.get(shiftByUser.get(r.id) ?? '') ?? null,
 		hasPicture: withPictures.has(r.id),
 		role: r.role,
 		isActive: r.isActive,
@@ -216,6 +231,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		pendingApprovals: pendingApprovalRows.length,
 		creatableRoles,
 		shiftGroups: groupsWithPublishedCalendar,
+		allShiftGroups,
 		isSuperAdmin: user.role === 'super_admin',
 		// The roster hides the delete control on your own row; the API refuses it too.
 		currentUserId: user.id,

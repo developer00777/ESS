@@ -187,6 +187,31 @@
 		}
 	}
 
+	/* Shift group drives holiday-calendar resolution, so it has to be editable
+	   for people who already exist — not only at login-creation time. */
+	let shiftSavingId = $state<string | null>(null);
+	let shiftError = $state('');
+
+	async function setShiftGroup(userId: string, value: string) {
+		shiftError = '';
+		shiftSavingId = userId;
+		try {
+			const res = await fetch(`/api/admin/users/${userId}/shift-group`, {
+				method: 'PUT',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ shiftGroupId: value === '' ? null : value })
+			});
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				shiftError = body.message ?? 'Could not update the shift group';
+				return;
+			}
+			await invalidateAll();
+		} finally {
+			shiftSavingId = null;
+		}
+	}
+
 	const filteredRoster = $derived(
 		data.roster.filter((person) => {
 			const q = search.trim().toLowerCase();
@@ -358,12 +383,17 @@
 	</div>
 {/if}
 
+{#if shiftError}
+	<p class="ess-error section-gap">{shiftError}</p>
+{/if}
+
 <div class="ess-table-shell roster-shell">
 	<div class="roster-row roster-head">
 		<span>Name</span>
 		<span>Emp code</span>
 		<span>Email</span>
 		<span>Role</span>
+		<span>Shift</span>
 		<span>Status</span>
 		<span class="align-right">Leave left</span>
 		<span class="align-right">{data.isSuperAdmin ? 'Remove' : ''}</span>
@@ -390,6 +420,27 @@
 			</span>
 			<span class="email-cell">{person.email}</span>
 			<span class="role">{person.role.replace('_', ' ')}</span>
+			<span class="shift-cell">
+				{#if data.isSuperAdmin}
+					<select
+						class="shift-select"
+						class:shift-unset={!person.shiftGroupId}
+						value={person.shiftGroupId ?? ''}
+						disabled={shiftSavingId === person.id}
+						onchange={(e) => setShiftGroup(person.id, e.currentTarget.value)}
+						aria-label="Shift group for {person.fullName}"
+					>
+						<option value="">Not set</option>
+						{#each data.allShiftGroups as group (group.id)}
+							<option value={group.id}>{group.name}</option>
+						{/each}
+					</select>
+				{:else if person.shiftGroupName}
+					{person.shiftGroupName}
+				{:else}
+					<span class="code-missing">Not set</span>
+				{/if}
+			</span>
 			<span><span class="ess-badge ess-badge--{person.status}">{statusLabel[person.status]}</span></span>
 			<span class="align-right">{person.leaveLeft}</span>
 			<span class="align-right">
@@ -797,11 +848,42 @@
 
 	.roster-row {
 		display: grid;
-		grid-template-columns: 1.5fr 0.8fr 1.6fr 0.9fr 1fr 0.7fr 0.9fr;
+		grid-template-columns: 1.5fr 0.8fr 1.6fr 0.9fr 1.1fr 1fr 0.7fr 0.9fr;
 		padding: 0.7rem 1.1rem;
 		font-size: var(--ess-fs-body);
 		align-items: center;
-		min-width: 860px;
+		min-width: 1000px;
+	}
+
+	.shift-cell {
+		min-width: 0;
+	}
+
+	.shift-select {
+		width: 100%;
+		max-width: 150px;
+		background: var(--ess-field-bg);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-xs);
+		color: var(--ess-text);
+		font-size: var(--ess-fs-caption);
+		padding: 4px 6px;
+		cursor: pointer;
+	}
+
+	.shift-select:hover:not(:disabled) {
+		border-color: var(--ess-primary);
+	}
+
+	.shift-select:disabled {
+		opacity: 0.5;
+	}
+
+	/* Unassigned is a real problem — it leaves the employee with no holiday
+	   calendar — so it reads as a warning rather than a neutral empty value. */
+	.shift-select.shift-unset {
+		color: var(--ess-warning);
+		border-color: var(--ess-warning);
 	}
 
 	.code-cell {
