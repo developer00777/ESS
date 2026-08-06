@@ -5,12 +5,13 @@
 	import Clock from '@lucide/svelte/icons/clock';
 	import Wallet from '@lucide/svelte/icons/wallet';
 	import Users from '@lucide/svelte/icons/users';
-	import UploadCloud from '@lucide/svelte/icons/upload-cloud';
-	import FileText from '@lucide/svelte/icons/file-text';
+	import ArrowUpFromLine from '@lucide/svelte/icons/arrow-up-from-line';
+	import BookOpen from '@lucide/svelte/icons/book-open';
 	import LogOut from '@lucide/svelte/icons/log-out';
-	import Sparkles from '@lucide/svelte/icons/sparkles';
-	import Eraser from '@lucide/svelte/icons/eraser';
+	import Palette from '@lucide/svelte/icons/palette';
+	import DatabaseZap from '@lucide/svelte/icons/database-zap';
 	import Moon from '@lucide/svelte/icons/moon';
+	import Sun from '@lucide/svelte/icons/sun';
 	import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
 	import PanelLeftOpen from '@lucide/svelte/icons/panel-left-open';
 	import Avatar from './Avatar.svelte';
@@ -64,13 +65,17 @@
 		{ href: '/leave', label: 'Leave', icon: Calendar },
 		{ href: '/attendance', label: 'Attendance', icon: Clock },
 		{ href: '/payroll', label: 'Payroll', icon: Wallet },
-		{ href: '/policies', label: 'Policies', icon: FileText }
+		{ href: '/policies', label: 'Policies', icon: BookOpen }
 	];
 
+	/* Icons follow the standalone reference's semantics: reading a policy is a
+	   book (▥), publishing one is a push upward (⇧). The old set used a plain
+	   document for both and a vague cloud for publish, so the two policy rows
+	   were near-indistinguishable in the collapsed rail. */
 	const teamItem = { href: '/team', label: 'Team', icon: Users };
-	const adminItem = { href: '/admin/policies', label: 'Publish Policies', icon: UploadCloud };
-	const tweaksItem = { href: '/admin/tweaks', label: 'Design Tweaks', icon: Sparkles };
-	const cleanupItem = { href: '/admin/cleanup', label: 'Data Cleanup', icon: Eraser };
+	const adminItem = { href: '/admin/policies', label: 'Publish Policies', icon: ArrowUpFromLine };
+	const tweaksItem = { href: '/admin/tweaks', label: 'Design Tweaks', icon: Palette };
+	const cleanupItem = { href: '/admin/cleanup', label: 'Data Cleanup', icon: DatabaseZap };
 
 	let sections = $derived.by(() => {
 		const manage = [
@@ -106,26 +111,26 @@
 		</button>
 	</div>
 
-	<div class="theme-toggle" role="group" aria-label="Palette">
+	<div class="theme-toggle" role="group" aria-label="Theme">
 		<button
 			type="button"
 			class="theme-btn"
 			aria-pressed={theme === 'light'}
 			onclick={() => setTheme('light')}
-			title="Nebula palette"
+			title="Light mode"
 		>
-			<Sparkles size={14} />
-			<span class="theme-label">Nebula</span>
+			<Sun size={14} />
+			<span class="theme-label">Light</span>
 		</button>
 		<button
 			type="button"
 			class="theme-btn"
 			aria-pressed={theme === 'dark'}
 			onclick={() => setTheme('dark')}
-			title="Onyx palette"
+			title="Dark mode"
 		>
 			<Moon size={14} />
-			<span class="theme-label">Onyx</span>
+			<span class="theme-label">Dark</span>
 		</button>
 	</div>
 
@@ -136,7 +141,7 @@
 				<a
 					href={item.href}
 					class:active={activePath.startsWith(item.href)}
-					title={item.label}
+					data-tip={item.label}
 					aria-label={item.label}
 				>
 					<item.icon size={18} />
@@ -157,8 +162,9 @@
 			</div>
 		</div>
 		<form method="POST" action="/logout">
-			<button type="submit" class="logout-btn" aria-label="Log out" title="Log out">
+			<button type="submit" class="logout-btn" aria-label="Log out" data-tip="Log out">
 				<LogOut size={18} />
+				<span class="logout-label">Log out</span>
 			</button>
 		</form>
 	</div>
@@ -377,19 +383,64 @@
 		text-transform: capitalize;
 	}
 
+	/* Sign-out reads as a real button at rest, not a bare glyph: it carries a
+	   visible border and surface in both shells. Previously the only styling
+	   was on :hover, so at rest it was indistinguishable from a plain icon. */
 	.logout-btn {
-		background: transparent;
-		border: none;
-		color: var(--ess-text-inverse-secondary);
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border-strong);
+		color: var(--ess-text-inverse);
 		cursor: pointer;
-		padding: 6px;
+		padding: 7px 12px;
 		border-radius: var(--ess-radius-sm);
 		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		font: inherit;
+		font-size: 0.8rem;
+		font-weight: 600;
+		position: relative;
+		transition:
+			background 150ms ease-out,
+			color 150ms ease-out,
+			border-color 150ms ease-out;
 	}
 
+	.logout-label {
+		white-space: nowrap;
+	}
+
+	/* Sign-out is destructive-ish and easy to hit by accident next to the
+	   avatar, so the hover state names it in the danger colour rather than
+	   reading as just another grey icon button. */
 	.logout-btn:hover {
-		background: rgba(255, 255, 255, 0.08);
-		color: var(--ess-text-inverse);
+		background: var(--ess-danger-bg);
+		border-color: var(--ess-danger);
+		color: var(--ess-danger);
+	}
+
+	.logout-btn:focus-visible {
+		outline: none;
+		box-shadow: var(--ess-focus-ring);
+	}
+
+	:global([data-ess-shell='rail']) .logout-label {
+		display: none;
+	}
+
+	/* Collapsed rail: a full-width square button, so it still reads as an
+	   action rather than a stray icon under the avatar. */
+	:global([data-ess-shell='rail']) .logout-btn {
+		padding: 0;
+		width: 40px;
+		height: 40px;
+	}
+
+	:global([data-ess-shell='rail']) .rail-foot form {
+		display: flex;
+		justify-content: center;
+		width: 100%;
 	}
 
 	/* ------------------------------------------------------------
@@ -436,15 +487,63 @@
 		display: none;
 	}
 
+	/* The expanded rail scrolls its nav list, but `overflow:auto` clips the
+	   hover tooltips below. In the collapsed rail every item fits without
+	   scrolling, so the clipping container is removed rather than worked
+	   around with a portal. */
 	:global([data-ess-shell='rail']) .nav-list {
 		width: 100%;
 		gap: 6px;
+		overflow: visible;
 	}
 
 	:global([data-ess-shell='rail']) .nav-list a {
 		justify-content: center;
 		padding: 0;
 		height: 46px;
+		position: relative;
+	}
+
+	/* Collapsed rail shows icons only, so the label has to come back on hover
+	   — a native `title` waits ~1s and can't be styled, which made items like
+	   "Publish Policies" and "Design Tweaks" unidentifiable at a glance. */
+	:global([data-ess-shell='rail']) .nav-list a::after,
+	:global([data-ess-shell='rail']) .logout-btn::after {
+		content: attr(data-tip);
+		position: absolute;
+		left: calc(100% + 10px);
+		top: 50%;
+		transform: translateY(-50%) translateX(-4px);
+		background: var(--ess-text);
+		color: var(--ess-canvas);
+		font-size: 12px;
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		white-space: nowrap;
+		padding: 6px 10px;
+		border-radius: var(--ess-radius-xs);
+		box-shadow: var(--ess-elev-2);
+		opacity: 0;
+		pointer-events: none;
+		transition:
+			opacity 140ms ease-out,
+			transform 140ms ease-out;
+		z-index: 60;
+	}
+
+	:global([data-ess-shell='rail']) .nav-list a:hover::after,
+	:global([data-ess-shell='rail']) .nav-list a:focus-visible::after,
+	:global([data-ess-shell='rail']) .logout-btn:hover::after,
+	:global([data-ess-shell='rail']) .logout-btn:focus-visible::after {
+		opacity: 1;
+		transform: translateY(-50%) translateX(0);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		:global([data-ess-shell='rail']) .nav-list a::after,
+		:global([data-ess-shell='rail']) .logout-btn::after {
+			transition: none;
+		}
 	}
 
 	:global([data-ess-shell='rail']) .rail-foot {
@@ -456,6 +555,28 @@
 
 	:global([data-ess-shell='rail']) .foot-info {
 		display: none;
+	}
+
+	/* ------------------------------------------------------------
+	   LIGHT (OPAL) — the rail is a light pane, so the white-alpha
+	   fills/borders above (correct on the dark Onyx pane) are retuned
+	   to ink-alpha. Scoped to the default palette; dark keeps the above.
+	------------------------------------------------------------ */
+	:global(:root:not([data-ess-theme='dark'])) .theme-toggle {
+		background: rgba(20, 18, 35, 0.05);
+	}
+	:global(:root:not([data-ess-theme='dark'])) .nav-eyebrow {
+		color: rgba(20, 18, 35, 0.6);
+	}
+	:global(:root:not([data-ess-theme='dark'])) .nav-list a:hover {
+		background: rgba(20, 18, 35, 0.05);
+	}
+	:global(:root:not([data-ess-theme='dark'])) .nav-list a.active {
+		color: var(--ess-text);
+	}
+	:global(:root:not([data-ess-theme='dark'])) .collapse-btn:hover {
+		background: rgba(20, 18, 35, 0.06);
+		color: var(--ess-text);
 	}
 
 	/* Below tablet the full 264px rail leaves too little room for content

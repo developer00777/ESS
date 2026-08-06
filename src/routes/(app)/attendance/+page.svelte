@@ -260,6 +260,24 @@
 		border-color: rgba(255, 255, 255, 0.1);
 	}
 
+	/* Light (Opal): the hero band is a light pane now, so the white-alpha
+	   disabled/outline treatments (correct on the dark Onyx band) become
+	   ink-alpha. Scoped to the default palette; dark keeps the above. */
+	:global(:root:not([data-ess-theme='dark'])) .action-btn:disabled {
+		background: rgba(20, 18, 35, 0.08);
+		color: rgba(20, 18, 35, 0.4);
+	}
+	:global(:root:not([data-ess-theme='dark'])) .action-btn-outline {
+		border-color: rgba(20, 18, 35, 0.18);
+	}
+	:global(:root:not([data-ess-theme='dark'])) .action-btn-outline:hover:not(:disabled) {
+		background: rgba(20, 18, 35, 0.06);
+	}
+	:global(:root:not([data-ess-theme='dark'])) .action-btn-outline:disabled {
+		color: rgba(20, 18, 35, 0.4);
+		border-color: rgba(20, 18, 35, 0.1);
+	}
+
 	.stat-of {
 		font-size: 16px;
 		color: var(--ess-text-secondary);

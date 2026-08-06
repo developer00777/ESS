@@ -429,7 +429,7 @@
 
 	.kind-tabs button.active {
 		border-color: var(--ess-primary);
-		color: var(--ess-primary);
+		color: var(--ess-primary-text);
 		font-weight: 700;
 	}
 
@@ -573,7 +573,7 @@
 	}
 
 	.link {
-		color: var(--ess-primary);
+		color: var(--ess-primary-text);
 	}
 
 	.link-danger {

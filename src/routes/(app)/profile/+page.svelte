@@ -340,7 +340,7 @@
 		padding: 0.4rem 0.9rem;
 		border-radius: var(--ess-radius-pill);
 		background: var(--ess-primary-soft);
-		color: var(--ess-primary);
+		color: var(--ess-primary-text);
 		border: 1px solid color-mix(in oklab, var(--acc) 35%, transparent);
 	}
 

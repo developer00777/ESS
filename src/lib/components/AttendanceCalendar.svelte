@@ -696,7 +696,7 @@
 	.today-btn {
 		border: 1px solid var(--ess-border-strong);
 		background: var(--ess-surface);
-		color: var(--ess-primary);
+		color: var(--ess-primary-text);
 		font-weight: 600;
 		font-size: 0.85rem;
 		padding: 0.4rem 0.9rem;

@@ -110,7 +110,7 @@
 
 	.brand-block p {
 		font-size: 1.05rem;
-		color: rgba(242, 248, 247, 0.75);
+		color: var(--ess-text-secondary);
 		max-width: 30ch;
 	}
 

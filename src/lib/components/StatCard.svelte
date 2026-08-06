@@ -71,6 +71,22 @@
 		margin-top: 4px;
 	}
 
+	/* Light (Opal): white label/shadow → ink; keep dark (Onyx) as above. */
+	:global(:root:not([data-ess-theme='dark'])) .stat-label {
+		color: rgba(20, 18, 35, 0.62);
+	}
+	:global(:root:not([data-ess-theme='dark'])) .stat-value {
+		text-shadow: 0 2px 18px rgba(30, 24, 55, 0.12);
+	}
+	:global(:root:not([data-ess-theme='dark'])) .stat-card:hover {
+		border-color: rgba(20, 18, 35, 0.16);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.9),
+			0 34px 64px -34px rgba(30, 24, 55, 0.28),
+			0 0 0 1px var(--ring),
+			0 0 40px -18px var(--glow);
+	}
+
 	.stat-value {
 		font-family: var(--ess-font-display);
 		font-size: var(--ess-fs-stat);

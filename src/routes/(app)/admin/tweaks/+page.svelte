@@ -23,8 +23,8 @@
 			label: 'Palette',
 			hint: 'Also switchable from the sidebar — employees keep their own choice.',
 			options: [
-				{ value: null, label: 'Nebula' },
-				{ value: 'dark', label: 'Onyx' }
+				{ value: null, label: 'Light' },
+				{ value: 'dark', label: 'Dark' }
 			]
 		},
 		{
@@ -74,7 +74,7 @@
 			key: 'glow',
 			attr: 'data-ess-glow',
 			label: 'Ambient glow',
-			hint: 'Nebula background intensity and heading glow.',
+			hint: 'Background gradient intensity and heading glow.',
 			options: [
 				{ value: 'subtle', label: 'Subtle' },
 				{ value: null, label: 'Medium' },

@@ -26,7 +26,7 @@
 		flex-shrink: 0;
 		border-radius: var(--ess-radius-sm);
 		background: var(--ess-primary-soft);
-		color: var(--ess-primary);
+		color: var(--ess-primary-text);
 		display: flex;
 		align-items: center;
 		justify-content: center;
