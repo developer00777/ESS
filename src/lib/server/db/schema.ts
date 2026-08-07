@@ -221,6 +221,11 @@ export const employeeProfiles = pgTable('employee_profiles', {
 	// resolved link lives on users.reportsTo; this one has no equivalent there
 	// because a dotted line does not carry approval rights.
 	dottedLineManagerId: uuid('dotted_line_manager_id').references(() => users.id),
+	// The HR person who handles this employee's second-stage approvals. Set by a
+	// Super Admin from the roster; when null, any admin picks the request up.
+	// Assigning it puts the request in that person's queue first — it does not
+	// lock others out, so nothing stalls when they are away.
+	hrUserId: uuid('hr_user_id').references(() => users.id),
 	sourceReferredBy: text('source_referred_by'),
 	salaryBand: text('salary_band'),
 

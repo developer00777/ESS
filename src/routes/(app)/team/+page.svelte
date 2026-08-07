@@ -7,6 +7,8 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import KeyRound from '@lucide/svelte/icons/key-round';
 	import CalendarDays from '@lucide/svelte/icons/calendar-days';
+	import Settings from '@lucide/svelte/icons/settings';
+	import PersonSettingsPanel from '$lib/components/PersonSettingsPanel.svelte';
 	import { WEEKDAY_LABELS } from '$lib/week-off';
 
 	let { data, form } = $props();
@@ -189,87 +191,12 @@
 		}
 	}
 
-	/* Role decides who approves what and who sees which queue, so it is editable
-	   only by a Super Admin — and never on your own row, which the API refuses
-	   too. Changing it takes effect on that person's next request. */
-	let roleSavingId = $state<string | null>(null);
-	let roleError = $state('');
-
-	async function setRole(userId: string, role: string) {
-		roleError = '';
-		roleSavingId = userId;
-		try {
-			const res = await fetch(`/api/admin/users/${userId}/role`, {
-				method: 'PUT',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ role })
-			});
-			if (!res.ok) {
-				const body = await res.json().catch(() => ({}));
-				roleError = body.message ?? 'Could not change this role';
-				await invalidateAll(); // put the select back to the real value
-				return;
-			}
-			await invalidateAll();
-		} finally {
-			roleSavingId = null;
-		}
-	}
-
-	/* Shift group drives holiday-calendar resolution, so it has to be editable
-	   for people who already exist — not only at login-creation time. */
-	let shiftSavingId = $state<string | null>(null);
-	let shiftError = $state('');
-
-	async function setShiftGroup(userId: string, value: string) {
-		shiftError = '';
-		shiftSavingId = userId;
-		try {
-			const res = await fetch(`/api/admin/users/${userId}/shift-group`, {
-				method: 'PUT',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ shiftGroupId: value === '' ? null : value })
-			});
-			if (!res.ok) {
-				const body = await res.json().catch(() => ({}));
-				shiftError = body.message ?? 'Could not update the shift group';
-				return;
-			}
-			await invalidateAll();
-		} finally {
-			shiftSavingId = null;
-		}
-	}
-
-	/* --- Week-off rosters ---------------------------------------------------
-	   A roster is a saved pattern (all Sundays, Sat + Sun, an N-week rotation).
-	   Super Admins author and publish them; team managers apply published ones
-	   to their own team. The assignment is what the leave calendar reads, so
-	   changing it here changes that employee's calendar immediately. */
-	let weekOffSavingId = $state<string | null>(null);
-	let weekOffError = $state('');
-
-	async function setWeekOff(userId: string, rosterId: string) {
-		weekOffError = '';
-		weekOffSavingId = userId;
-		try {
-			const res = await fetch(`/api/admin/users/${userId}/week-off`, {
-				method: 'PUT',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ rosterId: rosterId === '' ? null : rosterId })
-			});
-			if (!res.ok) {
-				const body = await res.json().catch(() => ({}));
-				weekOffError = body.message ?? 'Could not update the week off';
-				return;
-			}
-			await invalidateAll();
-		} finally {
-			weekOffSavingId = null;
-		}
-	}
-
-	const rosterSummaryById = $derived(new Map(data.weekOffRosters.map((r) => [r.id, r.summary])));
+	/* Role, reporting line, HR, shift and week off are all edited together in the
+	   person panel rather than as inline dropdowns: they are related settings,
+	   and one Save is both easier to reason about and one write instead of six.
+	   Selecting a row opens it; `person` is keyed by id so switching rows
+	   remounts the panel with that person's values. */
+	let editingPerson = $state<(typeof data.roster)[number] | null>(null);
 
 	// --- Roster authoring (Super Admin) ---
 	let showRosterEditor = $state(false);
@@ -559,32 +486,50 @@
 	</div>
 {/if}
 
-{#if shiftError}
-	<p class="ess-error section-gap">{shiftError}</p>
-{/if}
+<!-- Save errors surface inside the panel, next to the fields that caused them. -->
 
-{#if weekOffError}
-	<p class="ess-error section-gap">{weekOffError}</p>
-{/if}
-
-{#if roleError}
-	<p class="ess-error section-gap">{roleError}</p>
+{#if editingPerson}
+	{#key editingPerson.id}
+		<PersonSettingsPanel
+			person={editingPerson}
+			people={data.allPeople}
+			shiftGroups={data.allShiftGroups}
+			rosters={data.weekOffRosters}
+			roles={ROLES}
+			currentUserId={data.currentUserId}
+			onclose={() => (editingPerson = null)}
+			onsaved={async () => {
+				editingPerson = null;
+				await invalidateAll();
+			}}
+		/>
+	{/key}
 {/if}
 
 <div class="ess-table-shell roster-shell">
 	<div class="roster-row roster-head">
 		<span>Name</span>
 		<span>Emp code</span>
-		<span>Email</span>
 		<span>Role</span>
+		<span>Reports to</span>
+		<span>Concerned HR</span>
 		<span>Shift</span>
 		<span>Week off</span>
 		<span>Status</span>
 		<span class="align-right">Leave left</span>
-		<span class="align-right">{data.isSuperAdmin ? 'Remove' : ''}</span>
+		<span class="align-right">{data.isSuperAdmin ? '' : ''}</span>
 	</div>
 	{#each filteredRoster as person (person.id)}
-		<div class="roster-row">
+		<!-- The whole row opens the settings panel for Super Admins. Keyboard
+		     users get the same via the Settings button in the last cell, so the
+		     row itself carries no tab stop and no duplicate announcement. -->
+		<div
+			class="roster-row"
+			class:clickable={data.isSuperAdmin}
+			onclick={data.isSuperAdmin ? () => (editingPerson = person) : undefined}
+			onkeydown={undefined}
+			role={data.isSuperAdmin ? 'presentation' : undefined}
+		>
 			<span class="name-cell">
 				<Avatar
 					userId={person.id}
@@ -603,74 +548,46 @@
 					>
 				{/if}
 			</span>
-			<span class="email-cell">{person.email}</span>
-			<span class="role">
-				{#if data.isSuperAdmin && person.id !== data.currentUserId}
-					<select
-						class="shift-select"
-						value={person.role}
-						disabled={roleSavingId === person.id}
-						onchange={(e) => setRole(person.id, e.currentTarget.value)}
-						aria-label="Role for {person.fullName}"
-					>
-						{#each ROLES as r (r)}
-							<option value={r}>{r.replace('_', ' ')}</option>
-						{/each}
-					</select>
+			<span class="role">{person.role.replace('_', ' ')}</span>
+			<span class="link-cell">
+				{#if person.reportsToName}
+					{person.reportsToName}
 				{:else}
-					{person.role.replace('_', ' ')}
+					<span class="code-missing" title="No reporting manager — approvals fall back to HR">
+						Not set
+					</span>
 				{/if}
 			</span>
+			<span class="link-cell">
+				{person.hrName ?? 'Any admin'}
+			</span>
 			<span class="shift-cell">
-				{#if data.isSuperAdmin}
-					<select
-						class="shift-select"
-						class:shift-unset={!person.shiftGroupId}
-						value={person.shiftGroupId ?? ''}
-						disabled={shiftSavingId === person.id}
-						onchange={(e) => setShiftGroup(person.id, e.currentTarget.value)}
-						aria-label="Shift group for {person.fullName}"
-					>
-						<option value="">Not set</option>
-						{#each data.allShiftGroups as group (group.id)}
-							<option value={group.id}>{group.name}</option>
-						{/each}
-					</select>
-				{:else if person.shiftGroupName}
+				{#if person.shiftGroupName}
 					{person.shiftGroupName}
 				{:else}
 					<span class="code-missing">Not set</span>
 				{/if}
 			</span>
 			<span class="weekoff-cell">
-				{#if data.canAssignWeekOff && data.weekOffRosters.length > 0}
-					<select
-						class="shift-select"
-						value={person.weekOffRosterId ?? ''}
-						disabled={weekOffSavingId === person.id}
-						onchange={(e) => setWeekOff(person.id, e.currentTarget.value)}
-						aria-label="Week off roster for {person.fullName}"
-					>
-						<option value="">Sat + Sun (default)</option>
-						{#each data.weekOffRosters as roster (roster.id)}
-							<option value={roster.id}>
-								{roster.name}{roster.status === 'published' ? '' : ' (draft)'}
-							</option>
-						{/each}
-					</select>
-					<span class="weekoff-summary">
-						{person.weekOffRosterId
-							? (rosterSummaryById.get(person.weekOffRosterId) ?? person.weekOffSummary)
-							: 'Every Sat + Sun'}
-					</span>
-				{:else}
-					{person.weekOffName ?? 'Sat + Sun'}
-					<span class="weekoff-summary">{person.weekOffSummary}</span>
-				{/if}
+				{person.weekOffName ?? 'Sat + Sun'}
+				<span class="weekoff-summary">{person.weekOffSummary}</span>
 			</span>
 			<span><span class="ess-badge ess-badge--{person.status}">{statusLabel[person.status]}</span></span>
 			<span class="align-right">{person.leaveLeft}</span>
-			<span class="align-right">
+			<!-- Buttons sit inside the clickable row, so each stops its click from
+			     also opening the panel. -->
+			<span class="align-right" onclick={(e) => e.stopPropagation()} role="presentation">
+				{#if data.isSuperAdmin}
+					<button
+						type="button"
+						class="row-reset"
+						onclick={() => (editingPerson = person)}
+						aria-label="Settings for {person.fullName}"
+						title="Settings for {person.fullName}"
+					>
+						<Settings size={15} />
+					</button>
+				{/if}
 				{#if data.isSuperAdmin && person.id !== data.currentUserId}
 					{#if confirmingDelete === person.id}
 						<span class="confirm-delete">
@@ -1263,11 +1180,29 @@
 
 	.roster-row {
 		display: grid;
-		grid-template-columns: 1.5fr 0.8fr 1.6fr 1.15fr 1.1fr 1.3fr 1fr 0.7fr 0.9fr;
+		grid-template-columns: 1.5fr 0.8fr 0.9fr 1.1fr 1.1fr 1fr 1.2fr 0.9fr 0.6fr 0.8fr;
 		padding: 0.7rem 1.1rem;
 		font-size: var(--ess-fs-body);
 		align-items: center;
-		min-width: 1240px;
+		min-width: 1280px;
+	}
+
+	/* The whole row opens the settings panel, so it reads as a target. */
+	.roster-row.clickable {
+		cursor: pointer;
+		transition: background var(--ess-t-fast);
+	}
+
+	.roster-row.clickable:hover {
+		background: var(--ess-sunken);
+	}
+
+	.link-cell {
+		color: var(--ess-text-secondary);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		min-width: 0;
 	}
 
 	.weekoff-cell {
@@ -1462,12 +1397,6 @@
 		text-transform: capitalize;
 		color: var(--ess-text-secondary);
 		min-width: 0;
-	}
-
-	/* The role select carries the same treatment as the shift one, but needs a
-	   little more room for "super admin". */
-	.role .shift-select {
-		max-width: 130px;
 	}
 
 	.align-right {

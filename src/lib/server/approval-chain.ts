@@ -17,7 +17,7 @@
  */
 
 import { db } from '$lib/server/db/postgres';
-import { users } from '$lib/server/db/schema';
+import { users, employeeProfiles } from '$lib/server/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 
 /** Roles that act as HR for the second stage. */
@@ -117,13 +117,30 @@ export async function canReviewStage(
 
 	const isHr = (HR_ROLES as readonly string[]).includes(actor.role);
 
-	if (stage === 'hr') return isHr;
+	// The assigned HR person handles their own people first, but any admin may
+	// still act — an assignment routes a request, it does not lock others out,
+	// so nothing stalls while that person is on leave.
+	if (stage === 'hr') {
+		if (isHr) return true;
+		const assigned = await assignedHrFor(requesterId);
+		return assigned === actor.id;
+	}
 
 	const manager = await managerFor(requesterId);
 	if (manager) return manager.userId === actor.id || isHr;
 
 	// No manager resolvable — HR picks it up so it does not sit forever.
 	return isHr;
+}
+
+/** The HR person assigned to an employee, if a Super Admin has named one. */
+export async function assignedHrFor(userId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ hrUserId: employeeProfiles.hrUserId })
+		.from(employeeProfiles)
+		.where(eq(employeeProfiles.userId, userId))
+		.limit(1);
+	return row?.hrUserId ?? null;
 }
 
 /**
@@ -140,7 +157,13 @@ export async function reviewableUserIds(
 	const candidateIds = everyone.map((u) => u.id).filter((id) => id !== actor.id);
 
 	if (stage === 'hr') {
-		return (HR_ROLES as readonly string[]).includes(actor.role) ? candidateIds : [];
+		if ((HR_ROLES as readonly string[]).includes(actor.role)) return candidateIds;
+		// Not an admin, but named as someone's HR — they see exactly those people.
+		const assigned = await db
+			.select({ userId: employeeProfiles.userId })
+			.from(employeeProfiles)
+			.where(eq(employeeProfiles.hrUserId, actor.id));
+		return assigned.map((a) => a.userId).filter((id) => id !== actor.id);
 	}
 
 	const managers = await managersFor(candidateIds);

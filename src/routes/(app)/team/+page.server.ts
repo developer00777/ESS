@@ -144,14 +144,26 @@ export const load: PageServerLoad = async ({ locals }) => {
 					.select({
 						userId: employeeProfiles.userId,
 						employeeCode: employeeProfiles.employeeCode,
-						shiftGroupId: employeeProfiles.shiftGroupId
+						shiftGroupId: employeeProfiles.shiftGroupId,
+						hrUserId: employeeProfiles.hrUserId,
+						officeTimings: employeeProfiles.officeTimings,
+						shiftType: employeeProfiles.shiftType
 					})
 					.from(employeeProfiles)
 					.where(inArray(employeeProfiles.userId, rosterIdsForCode))
 			: [];
 	const codeByUser = new Map(codeRows.map((r) => [r.userId, r.employeeCode]));
 	const shiftByUser = new Map(codeRows.map((r) => [r.userId, r.shiftGroupId]));
+	const profileByUser = new Map(codeRows.map((r) => [r.userId, r]));
 	const shiftGroupNameById = new Map(allShiftGroups.map((g) => [g.id, g.name]));
+	// Names for the reporting-manager and HR columns. Drawn from every user, not
+	// just this roster, because a manager can sit outside the team being viewed.
+	const allPeople = await db
+		.select({ id: users.id, fullName: users.fullName, role: users.role })
+		.from(users)
+		.where(eq(users.isActive, true))
+		.orderBy(users.fullName);
+	const nameById = new Map(allPeople.map((p) => [p.id, p.fullName]));
 
 	// One query for the whole roster — avoids an <img> request per row for
 	// employees who have no picture.
@@ -200,6 +212,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 		shiftGroupId: shiftByUser.get(r.id) ?? null,
 		shiftGroupName: shiftGroupNameById.get(shiftByUser.get(r.id) ?? '') ?? null,
 		hasPicture: withPictures.has(r.id),
+		reportsTo: r.reportsTo,
+		reportsToName: r.reportsTo ? (nameById.get(r.reportsTo) ?? null) : null,
+		hrUserId: profileByUser.get(r.id)?.hrUserId ?? null,
+		hrName: profileByUser.get(r.id)?.hrUserId
+			? (nameById.get(profileByUser.get(r.id)!.hrUserId!) ?? null)
+			: null,
+		officeTimings: profileByUser.get(r.id)?.officeTimings ?? null,
+		shiftType: profileByUser.get(r.id)?.shiftType ?? null,
 		weekOffRosterId: weekOffByUser.get(r.id)?.rosterId ?? null,
 		weekOffName: weekOffByUser.get(r.id)?.name ?? null,
 		weekOffSummary: weekOffByUser.get(r.id)?.summary ?? 'Every Sat + Sun',
@@ -273,6 +293,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		shiftGroups: groupsWithPublishedCalendar,
 		allShiftGroups,
 		weekOffRosters: weekOffRosterOptions,
+		// Candidates for the reporting-manager and HR pickers in the person panel.
+		allPeople,
 		// A roster can be scoped to one team, so the author needs the list.
 		allTeams: user.role === 'super_admin' ? await db.select({ id: teams.id, name: teams.name }).from(teams) : [],
 		// Team leads assign rosters but don't author them. Employees never reach
