@@ -14,7 +14,7 @@ import {
 	users as usersTable
 } from '$lib/server/db/schema';
 import { DEVIATION_MONTHLY_CAP, lapseExpiredCompOffs } from '$lib/server/comp-off';
-import { eq, ne, and, gte, lt, lte, desc, inArray } from 'drizzle-orm';
+import { eq, ne, and, or, gte, lt, lte, desc, inArray, sql } from 'drizzle-orm';
 import { isProhanceConfigured } from '$lib/server/prohance';
 import {
 	CYCLE_END_DAY,
@@ -24,6 +24,7 @@ import {
 } from '$lib/attendance-cycle';
 import { pairShifts, gapForShift, STANDARD_SHIFT_MINUTES } from '$lib/shift-hours';
 import { loadWeekOffFor } from '$lib/server/week-off';
+import { reviewableUserIds } from '$lib/server/approval-chain';
 import { prohancePresence } from '$lib/attendance-markers';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -283,29 +284,51 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	let compOffQueue: { credit: typeof compOffCredits.$inferSelect; employeeName: string }[] = [];
 
 	if (canReview) {
-		const scope =
-			user.role === 'team_lead'
-				? and(eq(usersTable.teamId, user.teamId ?? ''), ne(usersTable.id, user.id))
-				: ne(usersTable.id, user.id);
+		// Queues follow the reporting line rather than role and team. Previously a
+		// Super Admin's own request was excluded from everyone's queue and simply
+		// sat pending; now their manager sees it, with HR as the fallback when no
+		// manager is on record.
+		const [manageable, hrReviewable] = await Promise.all([
+			reviewableUserIds(user, 'manager'),
+			reviewableUserIds(user, 'hr')
+		]);
 
-		const devRows = await db
-			.select({ deviation: attendanceDeviations, employeeName: usersTable.fullName })
-			.from(attendanceDeviations)
-			.innerJoin(usersTable, eq(attendanceDeviations.userId, usersTable.id))
-			.where(
-				and(
-					inArray(attendanceDeviations.status, ['pending', 'needs_manager_approval']),
-					scope
-				)
-			)
-			.orderBy(desc(attendanceDeviations.createdAt));
+		// Deviations are two-step: first sign-off is the manager's, and anything
+		// already manager-approved is HR's to finish.
+		const devRows =
+			manageable.length || hrReviewable.length
+				? await db
+						.select({ deviation: attendanceDeviations, employeeName: usersTable.fullName })
+						.from(attendanceDeviations)
+						.innerJoin(usersTable, eq(attendanceDeviations.userId, usersTable.id))
+						.where(
+							or(
+								and(
+									inArray(attendanceDeviations.status, ['pending', 'needs_manager_approval']),
+									manageable.length
+										? inArray(attendanceDeviations.userId, manageable)
+										: sql`false`
+								),
+								and(
+									eq(attendanceDeviations.status, 'manager_approved'),
+									hrReviewable.length
+										? inArray(attendanceDeviations.userId, hrReviewable)
+										: sql`false`
+								)
+							)
+						)
+						.orderBy(desc(attendanceDeviations.createdAt))
+				: [];
 
-		const coRows = await db
-			.select({ credit: compOffCredits, employeeName: usersTable.fullName })
-			.from(compOffCredits)
-			.innerJoin(usersTable, eq(compOffCredits.userId, usersTable.id))
-			.where(and(eq(compOffCredits.status, 'pending'), scope))
-			.orderBy(desc(compOffCredits.workedDate));
+		// Comp-off is one step — the manager decides and that credits it.
+		const coRows = manageable.length
+			? await db
+					.select({ credit: compOffCredits, employeeName: usersTable.fullName })
+					.from(compOffCredits)
+					.innerJoin(usersTable, eq(compOffCredits.userId, usersTable.id))
+					.where(and(eq(compOffCredits.status, 'pending'), inArray(compOffCredits.userId, manageable)))
+					.orderBy(desc(compOffCredits.workedDate))
+			: [];
 
 		deviationQueue = devRows.map((r) => ({
 			...r,
@@ -353,7 +376,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		compOffCredits: myCompOffs.map((c) => ({
 			...c,
 			workedDate: attendanceDateKey(c.workedDate),
-			expiresOn: attendanceDateKey(c.expiresOn)
+			expiresOn: attendanceDateKey(c.expiresOn),
+			usedOn: c.usedOn ? attendanceDateKey(c.usedOn) : null
 		})),
 		myDeviations: myDeviations.map((d) => ({ ...d, date: attendanceDateKey(d.date) })),
 		deviationMonthlyUsed,

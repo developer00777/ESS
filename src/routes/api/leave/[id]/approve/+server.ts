@@ -5,12 +5,15 @@ import {
 	leaveApplications,
 	leaveAllocations,
 	leaveLedger,
+	leaveTypes,
 	teams,
 	users
 } from '$lib/server/db/schema';
 import { requireRole } from '$lib/server/rbac';
 import { eq, and } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
+import { canReviewStage } from '$lib/server/approval-chain';
+import { COMP_OFF_LEAVE_CODE, consumeCredits, releaseCredits } from '$lib/server/comp-off';
 
 const newStatusFor = (decision: 'approve' | 'reject') =>
 	decision === 'approve' ? ('approved' as const) : ('rejected' as const);
@@ -31,18 +34,23 @@ export const POST: RequestHandler = async (event) => {
 		.limit(1);
 
 	if (!application) throw error(404, 'Leave application not found');
+	// A withdrawn request is out of the flow entirely — there is nothing to
+	// decide and nothing to overturn.
+	if (application.status === 'cancelled') {
+		throw error(400, 'This application was cancelled and can no longer be decided');
+	}
 
 	// A decided application is normally final. A Super Admin may still overturn
 	// it — an approval given in error otherwise has no route back, and the
 	// employee's balance stays spent. Reversing settles the balance below rather
 	// than only flipping the status.
-	const isReversal = application.status !== 'pending';
+	// Only a *settled* decision is a reversal. 'escalated' is mid-chain — the
+	// manager has signed off and HR has yet to — so completing it is a normal
+	// second-stage decision, not an overturn.
+	const isReversal = application.status === 'approved' || application.status === 'rejected';
 	if (isReversal) {
 		if (approver.role !== 'super_admin') {
 			throw error(403, 'Only a Super Admin can change a decision that has already been made');
-		}
-		if (application.status !== 'approved' && application.status !== 'rejected') {
-			throw error(400, `A ${application.status} application cannot be reversed`);
 		}
 		if (application.status === newStatusFor(decision)) {
 			throw error(400, `This application is already ${application.status}`);
@@ -52,28 +60,45 @@ export const POST: RequestHandler = async (event) => {
 	const [applicant] = await db.select().from(users).where(eq(users.id, application.userId)).limit(1);
 	if (!applicant) throw error(404, 'Applicant not found');
 
-	// Reversal is Super-Admin-only (enforced above), so these Team Lead limits
-	// only ever apply to a first decision.
-	if (!isReversal && approver.role === 'team_lead') {
-		const isOwnTeam = applicant.teamId === approver.teamId;
-		if (!isOwnTeam) throw error(403, 'Not authorized for this team');
+	// Leave runs manager → HR → approved. `escalated` is the middle of that
+	// chain: the manager has signed off and HR has yet to.
+	const stage = application.status === 'escalated' ? 'hr' : 'manager';
 
-		// A Team Lead cannot approve their own leave — must escalate to Super Admin.
-		if (applicant.id === approver.id) {
-			throw error(403, 'Team Leads cannot approve their own leave; escalate to Super Admin');
-		}
-
-		const [team] = await db.select().from(teams).where(eq(teams.id, approver.teamId ?? '')).limit(1);
-		const threshold = team?.maxLeaveDaysAutoApprove ?? 2;
-		if (Number(application.days) > threshold) {
+	// Reversal is Super-Admin-only (enforced above), so the stage guard and the
+	// Team Lead limits only ever apply to a live request.
+	if (!isReversal) {
+		if (!(await canReviewStage(approver, applicant.id, stage))) {
 			throw error(
 				403,
-				`Exceeds auto-approve threshold of ${threshold} day(s); must be approved by Super Admin`
+				applicant.id === approver.id
+					? 'You cannot approve your own leave'
+					: stage === 'hr'
+						? 'This request has manager sign-off and is now waiting on HR'
+						: "Only this employee's reporting manager can give the first sign-off"
 			);
+		}
+
+		if (approver.role === 'team_lead') {
+			const [team] = await db.select().from(teams).where(eq(teams.id, approver.teamId ?? '')).limit(1);
+			const threshold = team?.maxLeaveDaysAutoApprove ?? 2;
+			if (Number(application.days) > threshold) {
+				throw error(
+					403,
+					`Exceeds auto-approve threshold of ${threshold} day(s); must be approved by Super Admin`
+				);
+			}
 		}
 	}
 
-	const newStatus = newStatusFor(decision);
+	// A rejection ends it at either stage. A reversal is a Super Admin setting the
+	// final state directly, so it skips the chain. Otherwise a manager's approval
+	// hands over to HR; only HR's approval is final.
+	const newStatus =
+		decision === 'reject'
+			? ('rejected' as const)
+			: isReversal || stage === 'hr'
+				? ('approved' as const)
+				: ('escalated' as const);
 	const days = Number(application.days);
 
 	// The balance only moves when the *approved-ness* changes: pending→rejected
@@ -104,6 +129,37 @@ export const POST: RequestHandler = async (event) => {
 				400,
 				`Cannot approve: ${applicant.fullName} has ${remaining} day(s) left but this request needs ${days}`
 			);
+		}
+	}
+
+	// Comp-off leave is paid for in credits, which were reserved at apply time.
+	// A rejection hands them back; a re-approval takes them again, and fails
+	// loudly if they have since expired or been spent elsewhere.
+	const [leaveType] = await db
+		.select({ code: leaveTypes.code })
+		.from(leaveTypes)
+		.where(eq(leaveTypes.id, application.leaveTypeId))
+		.limit(1);
+	const isCompOff = leaveType?.code === COMP_OFF_LEAVE_CODE;
+
+	if (isCompOff) {
+		if (newStatus === 'rejected') {
+			await releaseCredits(application.id);
+		} else if (isReversal && newStatus === 'approved') {
+			// Reversing a rejection: re-reserve what was released.
+			try {
+				await consumeCredits({
+					userId: application.userId,
+					count: days,
+					onDate: String(application.startDate).slice(0, 10),
+					applicationId: application.id
+				});
+			} catch {
+				throw error(
+					400,
+					`Cannot re-approve: ${applicant.fullName} no longer has ${days} comp-off credit(s) available`
+				);
+			}
 		}
 	}
 

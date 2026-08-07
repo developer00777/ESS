@@ -5,6 +5,7 @@ import { attendance, attendanceDeviations, users } from '$lib/server/db/schema';
 import { requireRole } from '$lib/server/rbac';
 import { and, eq } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
+import { canReviewStage } from '$lib/server/approval-chain';
 
 /**
  * SOP §2–§4: HR (or the Reporting Manager) decides an attendance correction.
@@ -31,32 +32,39 @@ export const POST: RequestHandler = async (event) => {
 		.limit(1);
 	if (!deviation) throw error(404, 'Deviation request not found');
 
-	if (deviation.status !== 'pending' && deviation.status !== 'needs_manager_approval') {
+	if (
+		deviation.status !== 'pending' &&
+		deviation.status !== 'needs_manager_approval' &&
+		deviation.status !== 'manager_approved'
+	) {
 		throw error(400, 'This request has already been decided');
 	}
+
+	// Attendance corrections run manager → HR → approved. Which stage this call
+	// is deciding depends on where the request currently sits.
+	const stage = deviation.status === 'manager_approved' ? 'hr' : 'manager';
 
 	const [requester] = await db.select().from(users).where(eq(users.id, deviation.userId)).limit(1);
 	if (!requester) throw error(404, 'Requesting employee not found');
 
-	// Nobody decides their own correction — the request is a claim about your own
-	// attendance, so approving it yourself would defeat the review entirely.
-	if (requester.id === reviewer.id) {
-		throw error(403, 'You cannot decide your own attendance correction request');
+	// Routed by the reporting line. Nobody decides their own correction — the
+	// request is a claim about your own attendance, so approving it yourself
+	// would defeat the review entirely.
+	if (!(await canReviewStage(reviewer, requester.id, stage))) {
+		throw error(
+			403,
+			requester.id === reviewer.id
+				? 'You cannot decide your own attendance correction request'
+				: stage === 'hr'
+					? 'This request has manager sign-off and is now waiting on HR'
+					: "Only this employee's reporting manager can give the first sign-off"
+		);
 	}
 
-	if (reviewer.role === 'team_lead') {
-		if (requester.teamId !== reviewer.teamId) throw error(403, 'Not authorized for this team');
-		// SOP §2: past the monthly cap the request needs HR *and* the manager, so a
-		// Team Lead alone cannot clear it.
-		if (deviation.status === 'needs_manager_approval') {
-			throw error(
-				403,
-				'This request is past the monthly cap and needs HR approval alongside the Reporting Manager'
-			);
-		}
-	}
-
-	const newStatus = decision === 'approve' ? 'approved' : 'rejected';
+	// A rejection at either stage ends it. An approval at the manager stage hands
+	// over to HR rather than crediting straight away; only HR's approval is final.
+	const newStatus =
+		decision === 'reject' ? 'rejected' : stage === 'hr' ? 'approved' : 'manager_approved';
 
 	await db
 		.update(attendanceDeviations)

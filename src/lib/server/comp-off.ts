@@ -182,6 +182,74 @@ export async function lapseExpiredCompOffs(userId?: string): Promise<number> {
 	return rows.length;
 }
 
+/**
+ * The leave type that spends a comp-off credit rather than a leave allocation.
+ * Matched on `leave_types.code`, which is the stable key from the policy doc.
+ */
+export const COMP_OFF_LEAVE_CODE = 'COMPOFF';
+
+/** Approved credits that are still inside their validity window, oldest first. */
+export async function spendableCredits(userId: string, onDate: string) {
+	return db
+		.select()
+		.from(compOffCredits)
+		.where(
+			and(
+				eq(compOffCredits.userId, userId),
+				eq(compOffCredits.status, 'approved'),
+				gte(compOffCredits.expiresOn, onDate)
+			)
+		)
+		// Oldest expiry first, so the credit closest to lapsing is used up before
+		// one with months left — otherwise a usable credit expires while a newer
+		// one is spent in its place.
+		.orderBy(compOffCredits.expiresOn);
+}
+
+/**
+ * Marks `count` credits as used against a leave application.
+ *
+ * Returns the credits actually consumed. The caller checks the balance first;
+ * this refuses rather than partially spending if there are too few, so a leave
+ * application can never be created against credits that do not exist.
+ */
+export async function consumeCredits(params: {
+	userId: string;
+	count: number;
+	onDate: string;
+	applicationId: string;
+}): Promise<(typeof compOffCredits.$inferSelect)[]> {
+	const available = await spendableCredits(params.userId, params.onDate);
+	if (available.length < params.count) {
+		throw new Error(
+			`Only ${available.length} comp-off credit(s) available, ${params.count} required`
+		);
+	}
+
+	const spending = available.slice(0, params.count);
+	for (const credit of spending) {
+		await db
+			.update(compOffCredits)
+			.set({
+				status: 'used',
+				usedOn: params.onDate,
+				usedApplicationId: params.applicationId
+			})
+			.where(eq(compOffCredits.id, credit.id));
+	}
+	return spending;
+}
+
+/** Releases credits back to 'approved' when the leave that spent them is undone. */
+export async function releaseCredits(applicationId: string): Promise<number> {
+	const rows = await db
+		.update(compOffCredits)
+		.set({ status: 'approved', usedOn: null, usedApplicationId: null })
+		.where(eq(compOffCredits.usedApplicationId, applicationId))
+		.returning({ id: compOffCredits.id });
+	return rows.length;
+}
+
 /** SOP §2: at most 3 biometric-related deviation requests per calendar month. */
 export const DEVIATION_MONTHLY_CAP = 3;
 

@@ -9,10 +9,11 @@ import {
 	holidayCalendars,
 	holidays
 } from '$lib/server/db/schema';
-import { eq, and, desc, inArray, ne, gte, lte, sql, isNotNull } from 'drizzle-orm';
+import { eq, and, or, desc, inArray, ne, gte, lte, sql, isNotNull } from 'drizzle-orm';
 import { checkPinkLeaveEligibility, monthBounds } from '$lib/server/leave-eligibility';
 import { ensureLeaveAllocations } from '$lib/server/leave-accrual';
 import { loadWeekOffFor, currentRosterByUser } from '$lib/server/week-off';
+import { reviewableUserIds } from '$lib/server/approval-chain';
 
 /**
  * Every role reads the same published holiday calendar rows and the same
@@ -191,19 +192,33 @@ export const load: PageServerLoad = async ({ locals }) => {
 		applicant: { id: string; fullName: string; email: string; teamId: string | null };
 	}> = [];
 
-	if (user.role === 'team_lead' || user.role === 'super_admin') {
-		const base = db
-			.select({ application: leaveApplications, type: leaveTypes, applicant: applicantColumns })
-			.from(leaveApplications)
-			.innerJoin(leaveTypes, eq(leaveApplications.leaveTypeId, leaveTypes.id))
-			.innerJoin(users, eq(leaveApplications.userId, users.id));
+	if (user.role !== 'employee') {
+		// Leave runs manager → HR → approved, routed by the reporting line:
+		// 'pending' is the manager's to sign off, 'escalated' is HR's to finish.
+		const [manageable, hrReviewable] = await Promise.all([
+			reviewableUserIds(user, 'manager'),
+			reviewableUserIds(user, 'hr')
+		]);
 
-		approvalQueue =
-			user.role === 'super_admin'
-				? await base.where(eq(leaveApplications.status, 'pending'))
-				: await base.where(
-						and(eq(leaveApplications.status, 'pending'), eq(users.teamId, user.teamId ?? ''))
-					);
+		if (manageable.length > 0 || hrReviewable.length > 0) {
+			approvalQueue = await db
+				.select({ application: leaveApplications, type: leaveTypes, applicant: applicantColumns })
+				.from(leaveApplications)
+				.innerJoin(leaveTypes, eq(leaveApplications.leaveTypeId, leaveTypes.id))
+				.innerJoin(users, eq(leaveApplications.userId, users.id))
+				.where(
+					or(
+						and(
+							eq(leaveApplications.status, 'pending'),
+							manageable.length ? inArray(leaveApplications.userId, manageable) : sql`false`
+						),
+						and(
+							eq(leaveApplications.status, 'escalated'),
+							hrReviewable.length ? inArray(leaveApplications.userId, hrReviewable) : sql`false`
+						)
+					)
+				);
+		}
 	}
 
 	// Recently decided applications, so a Super Admin can overturn a decision made

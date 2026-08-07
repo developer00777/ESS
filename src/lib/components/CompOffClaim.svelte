@@ -10,6 +10,7 @@
 			workedDate: string;
 			status: string;
 			expiresOn: string;
+			usedOn?: string | null;
 			workedMinutes: number | null;
 		}>;
 	}
@@ -84,21 +85,28 @@
 		});
 	}
 
-	const available = $derived(credits.filter((c) => c.status === 'approved').length);
+	const todayKey = new Date().toISOString().slice(0, 10);
+	// Approved but past its expiry is not spendable, even before the lapse sweep
+	// has run — counting it would offer a credit that applying would reject.
+	const available = $derived(
+		credits.filter((c) => c.status === 'approved' && c.expiresOn.slice(0, 10) >= todayKey).length
+	);
 	const pending = $derived(credits.filter((c) => c.status === 'pending').length);
+	const used = $derived(credits.filter((c) => c.status === 'used').length);
 </script>
 
 <div class="comp-off">
 	<div class="head">
 		<strong><Gift size={15} /> Comp-off</strong>
 		<span class="tally">
-			{available} available{#if pending}, {pending} awaiting HR{/if}
+			{available} available{#if pending}, {pending} awaiting manager{/if}{#if used}, {used} used{/if}
 		</span>
 	</div>
 
 	<p class="rule">
-		Work 7+ hours on a holiday or weekend to earn one comp-off. It must be used within 3 months and
-		cannot be encashed.
+		Work 7+ hours on a holiday or week off to earn one comp-off. Your reporting manager approves it.
+		Spend it by applying for Comp-Off leave — one credit per day, oldest first — within 3 months.
+		It cannot be encashed.
 	</p>
 
 	{#if credits.length > 0}
@@ -111,7 +119,11 @@
 						{c.status}
 					</span>
 					<span class="c-exp">
-						{c.status === 'approved' ? `expires ${fmt(c.expiresOn)}` : ''}
+						{#if c.status === 'approved'}
+							expires {fmt(c.expiresOn)}
+						{:else if c.status === 'used' && c.usedOn}
+							used {fmt(c.usedOn)}
+						{/if}
 					</span>
 				</li>
 			{/each}

@@ -125,6 +125,12 @@
 								<span class="ess-badge ess-badge--restricted cap-badge">
 									<AlertTriangle size={11} /> Past monthly cap — needs HR + Manager
 								</span>
+							{:else if d.status === 'manager_approved'}
+								<!-- Second stage of manager → HR → approved: the badge says
+								     whose turn it is, so HR knows this is theirs to finish. -->
+								<span class="ess-badge ess-badge--pending cap-badge">
+									Manager approved — awaiting HR
+								</span>
 							{/if}
 						</div>
 

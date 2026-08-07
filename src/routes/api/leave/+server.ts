@@ -13,6 +13,7 @@ import { and, eq, gte, lte, inArray, sql } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { checkPinkLeaveEligibility, monthBounds } from '$lib/server/leave-eligibility';
 import { weekOffResolverForUser } from '$lib/server/week-off';
+import { COMP_OFF_LEAVE_CODE, spendableCredits, consumeCredits } from '$lib/server/comp-off';
 import { workingDaysInRange } from '$lib/week-off';
 
 export const POST: RequestHandler = async (event) => {
@@ -106,22 +107,39 @@ export const POST: RequestHandler = async (event) => {
 		}
 	}
 
-	const [allocation] = await db
-		.select()
-		.from(leaveAllocations)
-		.where(
-			and(
-				eq(leaveAllocations.userId, user.id),
-				eq(leaveAllocations.leaveTypeId, leaveTypeId),
-				eq(leaveAllocations.year, start.getFullYear())
+	// Comp-off leave is paid for out of earned credits, not a yearly allocation:
+	// one credit per day. Checked before the application is created so a request
+	// can never exist against credits that are not there.
+	const isCompOff = type.code === COMP_OFF_LEAVE_CODE;
+	if (isCompOff) {
+		const startKey = String(startDate).slice(0, 10);
+		const credits = await spendableCredits(user.id, startKey);
+		if (credits.length < days) {
+			throw error(
+				400,
+				credits.length === 0
+					? 'You have no comp-off credits available — work 7+ hours on a holiday or week off to earn one'
+					: `Only ${credits.length} comp-off credit(s) available and this request needs ${days}`
+			);
+		}
+	} else {
+		const [allocation] = await db
+			.select()
+			.from(leaveAllocations)
+			.where(
+				and(
+					eq(leaveAllocations.userId, user.id),
+					eq(leaveAllocations.leaveTypeId, leaveTypeId),
+					eq(leaveAllocations.year, start.getFullYear())
+				)
 			)
-		)
-		.limit(1);
+			.limit(1);
 
-	if (allocation) {
-		const remaining = Number(allocation.allocatedDays) - Number(allocation.usedDays);
-		if (days > remaining) {
-			throw error(400, `Insufficient leave balance: ${remaining} day(s) remaining`);
+		if (allocation) {
+			const remaining = Number(allocation.allocatedDays) - Number(allocation.usedDays);
+			if (days > remaining) {
+				throw error(400, `Insufficient leave balance: ${remaining} day(s) remaining`);
+			}
 		}
 	}
 
@@ -141,15 +159,29 @@ export const POST: RequestHandler = async (event) => {
 		})
 		.returning();
 
+	// Credits are reserved at apply time, not at approval: leaving them spendable
+	// while a request is pending would let the same credit back two applications.
+	// A rejection releases them again (see the approve endpoint).
+	let creditsSpent = 0;
+	if (isCompOff) {
+		const spent = await consumeCredits({
+			userId: user.id,
+			count: days,
+			onDate: String(startDate).slice(0, 10),
+			applicationId: applied.id
+		});
+		creditsSpent = spent.length;
+	}
+
 	await logActivity({
 		actorUserId: user.id,
 		action: 'leave.apply',
 		targetType: 'leave_application',
 		targetId: applied.id,
-		details: { days, leaveTypeId }
+		details: { days, leaveTypeId, compOff: isCompOff, creditsSpent }
 	});
 
-	return json({ application: applied }, { status: 201 });
+	return json({ application: applied, creditsSpent }, { status: 201 });
 };
 
 export const GET: RequestHandler = async (event) => {

@@ -6,10 +6,15 @@ import { requireRole } from '$lib/server/rbac';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { evaluateCompOffEligibility } from '$lib/server/comp-off';
+import { canReviewStage } from '$lib/server/approval-chain';
 
 /**
- * SOP §1 HR process: verify attendance, confirm 7+ hours, obtain manager approval
- * where applicable, then credit the comp-off.
+ * SOP §1: verify attendance, confirm 7+ hours, then credit the comp-off.
+ *
+ * Comp-off is a ONE-step approval — the claimant's reporting manager decides and
+ * that credits it. The only question is whether the person really worked the
+ * day, which the manager is the one placed to answer; there is no HR stage to
+ * add. Leave and attendance corrections keep the two-step manager → HR chain.
  *
  * Eligibility is re-checked at decision time rather than trusting the snapshot
  * taken when the employee claimed. A ProHance re-sync between claim and decision
@@ -36,11 +41,17 @@ export const POST: RequestHandler = async (event) => {
 	const [claimant] = await db.select().from(users).where(eq(users.id, credit.userId)).limit(1);
 	if (!claimant) throw error(404, 'Claiming employee not found');
 
-	if (claimant.id === approver.id) {
-		throw error(403, 'You cannot approve your own comp-off claim');
-	}
-	if (approver.role === 'team_lead' && claimant.teamId !== approver.teamId) {
-		throw error(403, 'Not authorized for this team');
+	// Routed by the reporting line, not by role: the claimant's own manager
+	// decides. HR remains the fallback when no manager is resolvable, so a claim
+	// is never stranded — which is what previously left a Super Admin's own
+	// claim pending with nobody able to see it.
+	if (!(await canReviewStage(approver, claimant.id, 'manager'))) {
+		throw error(
+			403,
+			claimant.id === approver.id
+				? 'You cannot approve your own comp-off claim'
+				: "Only this employee's reporting manager can decide their comp-off"
+		);
 	}
 
 	// Re-verify against the current record before crediting.

@@ -47,6 +47,10 @@ export const deviationStatusEnum = pgEnum('deviation_status', [
 	'approved',
 	'rejected',
 	'needs_manager_approval', // SOP §2: 4th+ biometric request in a month
+	// Manager has signed off; waiting on HR. Attendance corrections run
+	// manager → HR → approved, so this is the middle of the chain rather than a
+	// decision. Comp-off deliberately has no equivalent: it is one step.
+	'manager_approved',
 	'cancelled'
 ]);
 
