@@ -189,6 +189,33 @@
 		}
 	}
 
+	/* Role decides who approves what and who sees which queue, so it is editable
+	   only by a Super Admin — and never on your own row, which the API refuses
+	   too. Changing it takes effect on that person's next request. */
+	let roleSavingId = $state<string | null>(null);
+	let roleError = $state('');
+
+	async function setRole(userId: string, role: string) {
+		roleError = '';
+		roleSavingId = userId;
+		try {
+			const res = await fetch(`/api/admin/users/${userId}/role`, {
+				method: 'PUT',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ role })
+			});
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				roleError = body.message ?? 'Could not change this role';
+				await invalidateAll(); // put the select back to the real value
+				return;
+			}
+			await invalidateAll();
+		} finally {
+			roleSavingId = null;
+		}
+	}
+
 	/* Shift group drives holiday-calendar resolution, so it has to be editable
 	   for people who already exist — not only at login-creation time. */
 	let shiftSavingId = $state<string | null>(null);
@@ -540,6 +567,10 @@
 	<p class="ess-error section-gap">{weekOffError}</p>
 {/if}
 
+{#if roleError}
+	<p class="ess-error section-gap">{roleError}</p>
+{/if}
+
 <div class="ess-table-shell roster-shell">
 	<div class="roster-row roster-head">
 		<span>Name</span>
@@ -573,7 +604,23 @@
 				{/if}
 			</span>
 			<span class="email-cell">{person.email}</span>
-			<span class="role">{person.role.replace('_', ' ')}</span>
+			<span class="role">
+				{#if data.isSuperAdmin && person.id !== data.currentUserId}
+					<select
+						class="shift-select"
+						value={person.role}
+						disabled={roleSavingId === person.id}
+						onchange={(e) => setRole(person.id, e.currentTarget.value)}
+						aria-label="Role for {person.fullName}"
+					>
+						{#each ROLES as r (r)}
+							<option value={r}>{r.replace('_', ' ')}</option>
+						{/each}
+					</select>
+				{:else}
+					{person.role.replace('_', ' ')}
+				{/if}
+			</span>
 			<span class="shift-cell">
 				{#if data.isSuperAdmin}
 					<select
@@ -1216,11 +1263,11 @@
 
 	.roster-row {
 		display: grid;
-		grid-template-columns: 1.5fr 0.8fr 1.6fr 0.9fr 1.1fr 1.3fr 1fr 0.7fr 0.9fr;
+		grid-template-columns: 1.5fr 0.8fr 1.6fr 1.15fr 1.1fr 1.3fr 1fr 0.7fr 0.9fr;
 		padding: 0.7rem 1.1rem;
 		font-size: var(--ess-fs-body);
 		align-items: center;
-		min-width: 1180px;
+		min-width: 1240px;
 	}
 
 	.weekoff-cell {
@@ -1414,6 +1461,13 @@
 	.role {
 		text-transform: capitalize;
 		color: var(--ess-text-secondary);
+		min-width: 0;
+	}
+
+	/* The role select carries the same treatment as the shift one, but needs a
+	   little more room for "super admin". */
+	.role .shift-select {
+		max-width: 130px;
 	}
 
 	.align-right {
