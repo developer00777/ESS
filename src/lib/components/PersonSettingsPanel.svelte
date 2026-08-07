@@ -242,13 +242,16 @@
 </aside>
 
 <style>
+	/* z-index is high enough to cover the sticky sidebar: a sticky element with
+	   z-index:auto still paints above non-positioned content, so a lower value
+	   left the nav undimmed and clickable while the panel was open. */
 	.backdrop {
 		position: fixed;
 		inset: 0;
 		background: rgb(0 0 0 / 0.4);
 		border: none;
 		padding: 0;
-		z-index: 40;
+		z-index: 900;
 		animation: fade var(--ess-t-fast) ease-out;
 	}
 
@@ -258,12 +261,21 @@
 		right: 0;
 		bottom: 0;
 		width: min(440px, 100vw);
-		background: var(--ess-surface);
-		border-left: 1px solid var(--ess-border);
+		/* --ess-surface is barely-there by design (0.05 alpha in dark), which is
+		   right for a card sitting on the page but leaves a floating panel
+		   see-through and its text unreadable over the scrolling roster. The
+		   opaque canvas goes underneath, with the surface tint layered on top —
+		   frosted rather than transparent. */
+		background:
+			linear-gradient(var(--ess-surface), var(--ess-surface)),
+			var(--ess-canvas);
+		backdrop-filter: blur(20px) saturate(1.4);
+		-webkit-backdrop-filter: blur(20px) saturate(1.4);
+		border-left: 1px solid var(--ess-border-strong);
 		box-shadow: -12px 0 32px rgb(0 0 0 / 0.18);
 		display: flex;
 		flex-direction: column;
-		z-index: 41;
+		z-index: 901;
 		animation: slide-in 180ms cubic-bezier(0.32, 0.72, 0, 1);
 	}
 
@@ -385,6 +397,8 @@
 		border-color: var(--ess-warning);
 	}
 
+	/* Sits over the panel's own layered background, so the sunken tint reads as
+	   a subtle step down rather than a window onto the page behind. */
 	.panel-foot {
 		border-top: 1px solid var(--ess-border);
 		padding: 14px 20px;
