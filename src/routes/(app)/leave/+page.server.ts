@@ -94,11 +94,19 @@ export const load: PageServerLoad = async ({ locals }) => {
 	// here so the page always shows the current month's figure.
 	await ensureLeaveAllocations([user.id]);
 
-	const allocations = await db
+	const allocationRows = await db
 		.select({ allocation: leaveAllocations, type: leaveTypes })
 		.from(leaveAllocations)
 		.innerJoin(leaveTypes, eq(leaveAllocations.leaveTypeId, leaveTypes.id))
 		.where(and(eq(leaveAllocations.userId, user.id), eq(leaveAllocations.year, year)));
+
+	// A monthly-quota type should never have an allocation row, and a
+	// gender-restricted one should never reach someone it does not apply to.
+	// Filtered on read as well as on write, so rows created before those rules
+	// existed stop being shown rather than waiting on a cleanup.
+	const allocations = allocationRows.filter(
+		(r) => r.type.monthlyQuotaDays == null && !r.type.genderEligibility
+	);
 
 	// Monthly-quota leave (pink leave) has no allocation row — its entitlement
 	// refreshes each month and doesn't accumulate — so its balance is computed

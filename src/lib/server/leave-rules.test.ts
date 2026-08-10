@@ -102,6 +102,84 @@ describe('how many days a leave request costs', () => {
 	});
 });
 
+describe('which leave types accrue a balance', () => {
+	/**
+	 * Mirrors the filter in ensureLeaveAllocations. Two rules, both learned the
+	 * hard way: a published pink-leave policy arrived with BOTH an accrual and a
+	 * monthly quota set, and the accrual loop never looked at gender — so every
+	 * employee, male and unrecorded alike, was handed 8 days of pink leave.
+	 */
+	const accrues = (t: {
+		code?: string | null;
+		accrualPerMonth: number;
+		monthlyQuotaDays?: number | null;
+	}) => Boolean(t.code) && t.accrualPerMonth > 0 && t.monthlyQuotaDays == null;
+
+	test('an ordinary accruing type accrues', () => {
+		expect(accrues({ code: 'EL', accrualPerMonth: 1.5 })).toBe(true);
+	});
+
+	test('a monthly-quota type never does, even with an accrual set', () => {
+		// The quota wins: it refreshes and lapses rather than building up.
+		expect(accrues({ code: 'PINK', accrualPerMonth: 1, monthlyQuotaDays: 1 })).toBe(false);
+	});
+
+	test('an event-based type with no accrual does not', () => {
+		expect(accrues({ code: 'MATERNITY', accrualPerMonth: 0 })).toBe(false);
+	});
+
+	test('a seed placeholder with no code does not', () => {
+		expect(accrues({ code: null, accrualPerMonth: 1.5 })).toBe(false);
+	});
+});
+
+describe('who a gender-restricted leave accrues for', () => {
+	const grants = (
+		type: { genderEligibility: string | null },
+		profile: { gender: string | null; pinkLeaveEligibleOverride: boolean | null }
+	) => {
+		if (!type.genderEligibility) return true;
+		if (profile.pinkLeaveEligibleOverride === false) return false;
+		if (profile.pinkLeaveEligibleOverride === true) return true;
+		return (profile.gender ?? '').trim().toLowerCase() === type.genderEligibility.toLowerCase();
+	};
+
+	const pink = { genderEligibility: 'female' };
+	const p = (gender: string | null, override: boolean | null = null) => ({
+		gender,
+		pinkLeaveEligibleOverride: override
+	});
+
+	test('a female employee gets it', () => {
+		expect(grants(pink, p('Female'))).toBe(true);
+		expect(grants(pink, p('female'))).toBe(true);
+	});
+
+	test('a male employee does not', () => {
+		expect(grants(pink, p('Male'))).toBe(false);
+	});
+
+	test('an unrecorded gender does not', () => {
+		// The production roster is mostly blank here; granting on blank is exactly
+		// how it reached everyone.
+		expect(grants(pink, p(null))).toBe(false);
+		expect(grants(pink, p(''))).toBe(false);
+	});
+
+	test('an HR grant overrides a blank or wrong gender', () => {
+		expect(grants(pink, p(null, true))).toBe(true);
+		expect(grants(pink, p('Male', true))).toBe(true);
+	});
+
+	test('an HR withholding beats a matching gender', () => {
+		expect(grants(pink, p('Female', false))).toBe(false);
+	});
+
+	test('an unrestricted type reaches everyone', () => {
+		expect(grants({ genderEligibility: null }, p(null))).toBe(true);
+	});
+});
+
 describe('pink leave eligibility', () => {
 	test('a confirmed female employee is eligible', () => {
 		expect(checkPinkLeaveEligibility(profile()).eligible).toBe(true);

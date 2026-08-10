@@ -65,9 +65,15 @@ export async function ensureLeaveAllocations(userIds: string[]): Promise<void> {
 	const currentMonth = now.getMonth();
 
 	const types = (await db.select().from(leaveTypes).where(eq(leaveTypes.isActive, true))).filter(
-		// Accrual-based types only — and only those published from a policy
-		// document (they carry a code). Seed placeholders never accrue here.
-		(t) => Boolean(t.code) && Number(t.accrualPerMonth) > 0
+		(t) =>
+			// Only types published from a policy document (they carry a code).
+			// Seed placeholders never accrue here.
+			Boolean(t.code) &&
+			Number(t.accrualPerMonth) > 0 &&
+			// A monthly quota refreshes and lapses; it is not a balance that builds,
+			// so it must never get an allocation row. A policy that sets both — as a
+			// published pink-leave policy did — is a quota first.
+			t.monthlyQuotaDays == null
 	);
 	if (types.length === 0) return;
 
@@ -75,7 +81,10 @@ export async function ensureLeaveAllocations(userIds: string[]): Promise<void> {
 		.select({
 			userId: employeeProfiles.userId,
 			dateOfJoining: employeeProfiles.dateOfJoining,
-			dateOfConfirmation: employeeProfiles.dateOfConfirmation
+			dateOfConfirmation: employeeProfiles.dateOfConfirmation,
+			// Decides whether a gender-restricted type accrues for this person.
+			gender: employeeProfiles.gender,
+			pinkLeaveEligibleOverride: employeeProfiles.pinkLeaveEligibleOverride
 		})
 		.from(employeeProfiles)
 		.where(inArray(employeeProfiles.userId, userIds));
@@ -93,6 +102,18 @@ export async function ensureLeaveAllocations(userIds: string[]): Promise<void> {
 		const confirmed = monthOf(profile?.dateOfConfirmation);
 
 		for (const type of types) {
+			// A gender-restricted leave only accrues for those it applies to. HR's
+			// explicit override wins over the recorded gender, and an unrecorded
+			// gender grants nothing — handing the leave to everyone whose profile
+			// is simply blank is how a men's roster ended up with pink leave.
+			if (type.genderEligibility) {
+				const override = profile?.pinkLeaveEligibleOverride;
+				const matches =
+					(profile?.gender ?? '').trim().toLowerCase() === type.genderEligibility.toLowerCase();
+				if (override === false) continue;
+				if (override !== true && !matches) continue;
+			}
+
 			let months: number;
 			if (type.eligibility === 'post_probation' && profile?.dateOfConfirmation) {
 				// Probation ends at confirmation; accrual starts that month.
