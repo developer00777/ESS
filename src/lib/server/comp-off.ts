@@ -185,8 +185,19 @@ export async function lapseExpiredCompOffs(userId?: string): Promise<number> {
 /**
  * The leave type that spends a comp-off credit rather than a leave allocation.
  * Matched on `leave_types.code`, which is the stable key from the policy doc.
+ *
+ * The live policy publishes it as 'COMP_OFF'; the underscore-free spelling is
+ * accepted too, because the code is authored by whoever writes the policy
+ * document and a near-miss would silently spend a leave allocation instead of a
+ * credit — wrong in a way nothing surfaces.
  */
-export const COMP_OFF_LEAVE_CODE = 'COMPOFF';
+export const COMP_OFF_LEAVE_CODE = 'COMP_OFF';
+
+/** True if this leave type is the one paid for out of comp-off credits. */
+export function isCompOffLeaveCode(code: string | null | undefined): boolean {
+	if (!code) return false;
+	return code.replace(/[\s_-]/g, '').toUpperCase() === 'COMPOFF';
+}
 
 /**
  * Either the pool or an open transaction. Credit moves have to be able to join

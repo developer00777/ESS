@@ -13,7 +13,7 @@ import { requireUser } from '$lib/server/rbac';
 import { eq, and } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { canReviewStage } from '$lib/server/approval-chain';
-import { COMP_OFF_LEAVE_CODE, consumeCredits, releaseCredits } from '$lib/server/comp-off';
+import { isCompOffLeaveCode, consumeCredits, releaseCredits } from '$lib/server/comp-off';
 
 const newStatusFor = (decision: 'approve' | 'reject') =>
 	decision === 'approve' ? ('approved' as const) : ('rejected' as const);
@@ -143,7 +143,7 @@ export const POST: RequestHandler = async (event) => {
 		.from(leaveTypes)
 		.where(eq(leaveTypes.id, application.leaveTypeId))
 		.limit(1);
-	const isCompOff = leaveType?.code === COMP_OFF_LEAVE_CODE;
+	const isCompOff = isCompOffLeaveCode(leaveType?.code);
 
 	// One transaction: the status, the balance, the ledger entry and any credit
 	// movement describe a single decision. Applied separately, a failure midway

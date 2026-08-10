@@ -1,4 +1,24 @@
 import { describe, test, expect } from 'vitest';
+import { isCompOffLeaveCode } from './server/comp-off';
+
+describe('recognising the comp-off leave type', () => {
+	// The live policy publishes 'COMP_OFF'. An exact-match on one spelling meant
+	// the other silently spent a leave allocation instead of a credit — wrong in
+	// a way nothing surfaces, since the request still succeeds.
+	test.each(['COMP_OFF', 'COMPOFF', 'comp_off', 'comp-off', 'Comp Off'])(
+		'%s is comp-off leave',
+		(code) => {
+			expect(isCompOffLeaveCode(code)).toBe(true);
+		}
+	);
+
+	test.each(['EL', 'SL', 'MATERNITY', 'COMP', '', null, undefined])(
+		'%s is not',
+		(code) => {
+			expect(isCompOffLeaveCode(code)).toBe(false);
+		}
+	);
+});
 
 /**
  * Spending comp-off credits.

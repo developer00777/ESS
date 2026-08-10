@@ -13,7 +13,7 @@ import { and, eq, gte, lte, inArray, sql } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { checkPinkLeaveEligibility, monthBounds } from '$lib/server/leave-eligibility';
 import { weekOffResolverForUser } from '$lib/server/week-off';
-import { COMP_OFF_LEAVE_CODE, spendableCredits, consumeCredits } from '$lib/server/comp-off';
+import { isCompOffLeaveCode, spendableCredits, consumeCredits } from '$lib/server/comp-off';
 import { workingDaysInRange } from '$lib/week-off';
 
 export const POST: RequestHandler = async (event) => {
@@ -110,7 +110,7 @@ export const POST: RequestHandler = async (event) => {
 	// Comp-off leave is paid for out of earned credits, not a yearly allocation:
 	// one credit per day. Checked before the application is created so a request
 	// can never exist against credits that are not there.
-	const isCompOff = type.code === COMP_OFF_LEAVE_CODE;
+	const isCompOff = isCompOffLeaveCode(type.code);
 	if (isCompOff) {
 		const startKey = String(startDate).slice(0, 10);
 		const credits = await spendableCredits(user.id, startKey);
