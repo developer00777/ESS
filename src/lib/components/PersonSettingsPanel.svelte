@@ -35,9 +35,11 @@
 		currentUserId: string;
 		onclose: () => void;
 		onsaved: () => void;
+		/** Called when saving had a side effect the admin needs to know about. */
+		onnotice?: (message: string) => void;
 	}
 
-	let { person, people, shiftGroups, rosters, roles, currentUserId, onclose, onsaved }: Props =
+	let { person, people, shiftGroups, rosters, roles, currentUserId, onclose, onsaved, onnotice }: Props =
 		$props();
 
 	// Deliberately a one-time seed: these are draft values the user edits until
@@ -100,6 +102,18 @@
 				const body = await res.json().catch(() => ({}));
 				saveError = body.message ?? 'Could not save these settings';
 				return;
+			}
+			// Inverting a reporting line clears whoever's line would have closed the
+			// loop. That is intended, but the admin has to be told — silently
+			// dropping someone's manager would be discovered much later.
+			const body = await res.json().catch(() => ({}));
+			const broken: { fullName: string }[] = body.loopBroken ?? [];
+			if (broken.length > 0) {
+				onnotice?.(
+					`${broken.map((b) => b.fullName).join(', ')} no longer ${
+						broken.length === 1 ? 'has a reporting manager' : 'have reporting managers'
+					} — that line was cleared to make room for this one. Set it from their card.`
+				);
 			}
 			onsaved();
 		} finally {

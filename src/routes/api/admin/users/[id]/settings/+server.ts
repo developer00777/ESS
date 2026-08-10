@@ -63,29 +63,55 @@ export const PUT: RequestHandler = async (event) => {
 	}
 
 	// --- Reporting manager ----------------------------------------------------
+	// A cycle would make the approval chain unresolvable — managerFor() walks up
+	// the line, so a loop would never terminate. But refusing the assignment is
+	// the wrong answer: re-organisations legitimately invert a reporting line
+	// ("Bhavana reports to Prasanna; now Prasanna reports to Deepak, who reports
+	// to Bhavana"), and blocking that leaves the admin stuck with no way to
+	// express what actually happened.
+	//
+	// So the assignment always wins. Anyone on the path who would close the loop
+	// has their own line cleared, which is exactly what a promotion means: the
+	// old chain no longer holds, and the freed person is re-pointed by the same
+	// panel afterwards. Reported in the response so it is never silent.
+	let loopBroken: { userId: string; fullName: string; previousManagerId: string }[] = [];
 	if (has('reportsTo') && body.reportsTo !== target.reportsTo) {
 		const managerId: string | null = body.reportsTo || null;
 		if (managerId) {
 			if (managerId === userId) {
 				throw error(400, 'Someone cannot report to themselves');
 			}
-			const [manager] = await db.select({ id: users.id }).from(users).where(eq(users.id, managerId)).limit(1);
+			const [manager] = await db
+				.select({ id: users.id })
+				.from(users)
+				.where(eq(users.id, managerId))
+				.limit(1);
 			if (!manager) throw error(404, 'Reporting manager not found');
-			// A cycle would make the approval chain unresolvable — walking up from
-			// the new manager must never arrive back at this employee.
+
+			// Walk up from the new manager. If we arrive back at this employee, the
+			// step that points back at them is the one to cut.
+			const path: { id: string; fullName: string; reportsTo: string | null }[] = [];
 			let cursor: string | null = managerId;
-			const seen = new Set<string>([userId]);
-			while (cursor) {
-				if (seen.has(cursor)) {
-					throw error(400, 'That would create a reporting loop');
-				}
+			const seen = new Set<string>();
+			while (cursor && !seen.has(cursor)) {
 				seen.add(cursor);
-				const [next] = await db
-					.select({ reportsTo: users.reportsTo })
+				const [row] = await db
+					.select({ id: users.id, fullName: users.fullName, reportsTo: users.reportsTo })
 					.from(users)
 					.where(eq(users.id, cursor))
 					.limit(1);
-				cursor = next?.reportsTo ?? null;
+				if (!row) break;
+				path.push(row);
+				if (row.reportsTo === userId) {
+					// This person's line closes the loop; clear it.
+					loopBroken.push({
+						userId: row.id,
+						fullName: row.fullName,
+						previousManagerId: userId
+					});
+					break;
+				}
+				cursor = row.reportsTo;
 			}
 		}
 		changes.reportsTo = { from: target.reportsTo, to: managerId };
@@ -154,9 +180,22 @@ export const PUT: RequestHandler = async (event) => {
 	const userPatch: Record<string, unknown> = {};
 	if (changes.role) userPatch.role = (changes.role as { to: Role }).to;
 	if (changes.reportsTo) userPatch.reportsTo = (changes.reportsTo as { to: string | null }).to;
-	if (Object.keys(userPatch).length > 0) {
-		userPatch.updatedAt = new Date();
-		await db.update(users).set(userPatch).where(eq(users.id, userId));
+	if (Object.keys(userPatch).length > 0 || loopBroken.length > 0) {
+		// Cutting the old line and setting the new one are one change: leaving
+		// either half applied would either strand a loop or drop a reporting line
+		// for no reason.
+		await db.transaction(async (tx) => {
+			for (const broken of loopBroken) {
+				await tx
+					.update(users)
+					.set({ reportsTo: null, updatedAt: new Date() })
+					.where(eq(users.id, broken.userId));
+			}
+			if (Object.keys(userPatch).length > 0) {
+				userPatch.updatedAt = new Date();
+				await tx.update(users).set(userPatch).where(eq(users.id, userId));
+			}
+		});
 	}
 
 	const profilePatch: Record<string, unknown> = {};
@@ -203,8 +242,10 @@ export const PUT: RequestHandler = async (event) => {
 		action: 'user.settings_update',
 		targetType: 'user',
 		targetId: userId,
-		details: { email: target.email, changes, teamCreated }
+		details: { email: target.email, changes, teamCreated, loopBroken }
 	});
 
-	return json({ changed: true, changes, teamCreated });
+	// loopBroken names whose reporting line was cleared to make room for this
+	// one, so the panel can say so rather than leaving it to be discovered.
+	return json({ changed: true, changes, teamCreated, loopBroken });
 };

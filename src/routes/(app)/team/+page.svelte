@@ -197,6 +197,9 @@
 	   Selecting a row opens it; `person` is keyed by id so switching rows
 	   remounts the panel with that person's values. */
 	let editingPerson = $state<(typeof data.roster)[number] | null>(null);
+	// Side effects of a save that the admin needs to see after the panel closes —
+	// currently: whose reporting line was cleared to make room for a new one.
+	let settingsNotice = $state('');
 
 	// --- Roster authoring (Super Admin) ---
 	let showRosterEditor = $state(false);
@@ -488,6 +491,15 @@
 
 <!-- Save errors surface inside the panel, next to the fields that caused them. -->
 
+{#if settingsNotice}
+	<p class="settings-notice section-gap">
+		{settingsNotice}
+		<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (settingsNotice = '')}>
+			Dismiss
+		</button>
+	</p>
+{/if}
+
 {#if editingPerson}
 	{#key editingPerson.id}
 		<PersonSettingsPanel
@@ -497,6 +509,7 @@
 			rosters={data.weekOffRosters}
 			roles={ROLES}
 			currentUserId={data.currentUserId}
+			onnotice={(m) => (settingsNotice = m)}
 			onclose={() => (editingPerson = null)}
 			onsaved={async () => {
 				editingPerson = null;
@@ -1195,6 +1208,20 @@
 
 	.roster-row.clickable:hover {
 		background: var(--ess-sunken);
+	}
+
+	/* An advisory outcome, not an error: the save worked, but it had a
+	   consequence worth naming. */
+	.settings-notice {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+		background: var(--ess-warning-bg);
+		color: var(--ess-warning);
+		border-radius: var(--ess-radius-sm);
+		padding: 0.7rem 1rem;
+		font-size: var(--ess-fs-caption);
 	}
 
 	.link-cell {

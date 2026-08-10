@@ -30,7 +30,92 @@ function createsLoop(userId: string, managerId: string | null, people: Person[])
 	return false;
 }
 
-describe('reporting-line loops', () => {
+describe('assigning a manager always succeeds', () => {
+	/**
+	 * Mirrors the settings endpoint: walk up from the new manager, and if the
+	 * chain arrives back at this employee, clear the line that closes it rather
+	 * than refusing the assignment. Refusing left an admin unable to express a
+	 * real re-organisation — the production data has exactly this shape
+	 * (Bhavana → Prasanna, Deepak → Bhavana), so pointing Prasanna at Deepak was
+	 * blocked outright.
+	 */
+	function assign(userId: string, managerId: string | null, people: Person[]) {
+		if (!managerId) return { ok: true, cleared: [] as string[] };
+		if (managerId === userId) return { ok: false, cleared: [] };
+		const byId = new Map(people.map((p) => [p.id, p]));
+		const cleared: string[] = [];
+		const seen = new Set<string>();
+		let cursor: string | null = managerId;
+		while (cursor && !seen.has(cursor)) {
+			seen.add(cursor);
+			const row = byId.get(cursor);
+			if (!row) break;
+			if (row.reportsTo === userId) {
+				cleared.push(row.id);
+				break;
+			}
+			cursor = row.reportsTo;
+		}
+		return { ok: true, cleared };
+	}
+
+	// The production shape: bhavana → prasanna, deepak → bhavana.
+	const org: Person[] = [
+		{ id: 'prasanna', reportsTo: null },
+		{ id: 'bhavana', reportsTo: 'prasanna' },
+		{ id: 'deepak', reportsTo: 'bhavana' }
+	];
+
+	test('inverting a reporting line is allowed, not refused', () => {
+		const r = assign('prasanna', 'deepak', org);
+		expect(r.ok).toBe(true);
+	});
+
+	test('the line that would close the loop is the one cleared', () => {
+		// bhavana → prasanna is what makes it a cycle, so bhavana is freed.
+		expect(assign('prasanna', 'deepak', org).cleared).toEqual(['bhavana']);
+	});
+
+	test('an assignment with no cycle clears nobody', () => {
+		expect(assign('bhavana', 'deepak', [
+			{ id: 'bhavana', reportsTo: null },
+			{ id: 'deepak', reportsTo: null }
+		]).cleared).toEqual([]);
+	});
+
+	test('a direct swap frees the other person', () => {
+		const pair: Person[] = [
+			{ id: 'a', reportsTo: null },
+			{ id: 'b', reportsTo: 'a' }
+		];
+		expect(assign('a', 'b', pair)).toEqual({ ok: true, cleared: ['b'] });
+	});
+
+	test('reporting to yourself is still refused', () => {
+		// Not a re-organisation, just invalid.
+		expect(assign('a', 'a', org).ok).toBe(false);
+	});
+
+	test('clearing a manager needs no walk at all', () => {
+		expect(assign('bhavana', null, org)).toEqual({ ok: true, cleared: [] });
+	});
+
+	test('the walk terminates on a pre-existing cycle', () => {
+		// Defensive: bad data must not hang the request.
+		const broken: Person[] = [
+			{ id: 'x', reportsTo: 'y' },
+			{ id: 'y', reportsTo: 'x' }
+		];
+		expect(assign('z', 'x', broken).ok).toBe(true);
+	});
+});
+
+/**
+ * Cycle detection itself. No longer used to refuse an assignment — the endpoint
+ * clears the offending line instead — but the detection has to stay correct,
+ * since it is what decides *which* line gets cleared.
+ */
+describe('detecting a reporting-line cycle', () => {
 	// a → b → c (c reports to nobody)
 	const people: Person[] = [
 		{ id: 'a', reportsTo: 'b' },
