@@ -48,6 +48,59 @@ const credit = (id: string, expiresOn: string, status: Credit['status'] = 'appro
 	expiresOn
 });
 
+describe('withdrawing your own claim', () => {
+	/**
+	 * Mirrors the DELETE endpoint. The line that matters: a credited comp-off is
+	 * a real balance the employee may already have spent, so withdrawing it would
+	 * silently take back leave that was granted. That is HR's to reverse, not the
+	 * claimant's to delete.
+	 */
+	const canWithdraw = (
+		credit: { userId: string; status: string; usedApplicationId?: string | null },
+		actorId: string
+	) => {
+		if (credit.userId !== actorId) return false;
+		if (credit.status === 'used' || credit.usedApplicationId) return false;
+		return credit.status === 'pending' || credit.status === 'manager_approved';
+	};
+
+	const mine = (status: string, usedApplicationId: string | null = null) => ({
+		userId: 'me',
+		status,
+		usedApplicationId
+	});
+
+	test('an undecided claim can be withdrawn', () => {
+		expect(canWithdraw(mine('pending'), 'me')).toBe(true);
+	});
+
+	test('one the manager has signed off can still be withdrawn', () => {
+		// Nothing has been credited yet, so there is no balance to take back.
+		expect(canWithdraw(mine('manager_approved'), 'me')).toBe(true);
+	});
+
+	test('a credited comp-off cannot — that is HR reversing a decision', () => {
+		expect(canWithdraw(mine('approved'), 'me')).toBe(false);
+	});
+
+	test('one already spent on leave cannot', () => {
+		expect(canWithdraw(mine('used', 'leave-1'), 'me')).toBe(false);
+		// Belt and braces: the link alone blocks it even if the status lagged.
+		expect(canWithdraw(mine('approved', 'leave-1'), 'me')).toBe(false);
+	});
+
+	test('a lapsed or rejected claim cannot', () => {
+		expect(canWithdraw(mine('lapsed'), 'me')).toBe(false);
+		expect(canWithdraw(mine('rejected'), 'me')).toBe(false);
+	});
+
+	test('you cannot withdraw somebody else’s claim', () => {
+		// A manager rejects; they do not delete, which would look like a decision
+		// without being recorded as one.
+		expect(canWithdraw({ userId: 'someone', status: 'pending' }, 'me')).toBe(false);
+	});
+});
+
 describe('which credits can be spent', () => {
 	test('only approved credits count', () => {
 		const credits = [

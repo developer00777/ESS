@@ -3,6 +3,7 @@
 	import Gift from '@lucide/svelte/icons/gift';
 	import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
 	import XCircle from '@lucide/svelte/icons/x-circle';
+	import X from '@lucide/svelte/icons/x';
 
 	interface Props {
 		credits?: Array<{
@@ -73,6 +74,28 @@
 		}
 	}
 
+	/* Withdrawing a claim you raised. Allowed while it is still undecided; the
+	   server refuses anything credited or already spent on leave. */
+	let confirmingWithdraw = $state<string | null>(null);
+	let withdrawingId = $state<string | null>(null);
+
+	async function withdraw(creditId: string) {
+		errorMsg = '';
+		withdrawingId = creditId;
+		try {
+			const res = await fetch(`/api/attendance/comp-off/${creditId}`, { method: 'DELETE' });
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				errorMsg = body.message ?? 'Could not withdraw this claim';
+				return;
+			}
+			confirmingWithdraw = null;
+			await invalidateAll();
+		} finally {
+			withdrawingId = null;
+		}
+	}
+
 	function hours(min: number | null) {
 		return min == null ? '—' : `${(min / 60).toFixed(1)}h`;
 	}
@@ -135,6 +158,43 @@
 							used {fmt(c.usedOn)}
 						{/if}
 					</span>
+					<!-- Withdrawable only while undecided: once credited the day is a
+					     real balance that may already be spent. Two clicks, since a
+					     manager may already have reviewed it. -->
+					{#if c.status === 'pending' || c.status === 'manager_approved'}
+						{#if confirmingWithdraw === c.id}
+							<span class="c-withdraw">
+								<button
+									type="button"
+									class="ess-btn ess-btn--sm ess-btn--danger"
+									onclick={() => withdraw(c.id)}
+									disabled={withdrawingId === c.id}
+								>
+									{withdrawingId === c.id ? 'Withdrawing…' : 'Confirm'}
+								</button>
+								<button
+									type="button"
+									class="ess-btn ess-btn--sm ess-btn--ghost"
+									onclick={() => (confirmingWithdraw = null)}
+									disabled={withdrawingId === c.id}
+								>
+									Keep
+								</button>
+							</span>
+						{:else}
+							<button
+								type="button"
+								class="c-remove"
+								onclick={() => (confirmingWithdraw = c.id)}
+								aria-label="Withdraw comp-off claim for {fmt(c.workedDate)}"
+								title="Withdraw this claim"
+							>
+								<X size={14} />
+							</button>
+						{/if}
+					{:else}
+						<span class="c-remove-spacer"></span>
+					{/if}
 				</li>
 			{/each}
 		</ul>
@@ -251,12 +311,44 @@
 
 	.credit-list li {
 		display: grid;
-		grid-template-columns: 7.5rem 3.5rem auto 1fr;
+		/* Trailing column holds the withdraw control; a fixed width keeps the rows
+		   aligned whether or not a given claim can still be withdrawn. */
+		grid-template-columns: 7.5rem 3.5rem auto 1fr auto;
 		align-items: center;
 		gap: 0.5rem;
 		font-size: 0.78rem;
 		padding: 0.35rem 0;
 		border-bottom: 1px solid var(--ess-border-subtle);
+	}
+
+	.c-remove {
+		background: transparent;
+		border: none;
+		color: var(--ess-text-muted);
+		cursor: pointer;
+		padding: 3px;
+		border-radius: 5px;
+		display: inline-flex;
+		transition:
+			color var(--ess-t-fast),
+			background var(--ess-t-fast);
+	}
+
+	.c-remove:hover {
+		color: var(--ess-danger);
+		background: var(--ess-danger-bg);
+	}
+
+	/* Keeps the column width when the row has no control, so nothing shifts. */
+	.c-remove-spacer {
+		display: inline-block;
+		width: 20px;
+	}
+
+	.c-withdraw {
+		display: inline-flex;
+		gap: 0.3rem;
+		white-space: nowrap;
 	}
 
 	.credit-list li:last-child {
