@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
-	import { dayMarker, leaveLetter, isHalfDayLeave, prohancePresence } from '$lib/attendance-markers';
+	import { dayMarker, leaveLetter, isHalfDayLeave, isPinkLeave, prohancePresence } from '$lib/attendance-markers';
 	import { financialYearLabel } from '$lib/financial-year';
 	import { cycleDates, cycleForDate, cycleForKey, cycleLabel } from '$lib/attendance-cycle';
 	import type { ShiftDay } from '$lib/shift-hours';
@@ -167,13 +167,17 @@
 	 * letters on screen instead of listing every type in the policy.
 	 */
 	const legendLeaveTypes = $derived.by(() => {
-		const seen = new Map<string, string>();
+		const seen = new Map<string, { name: string; tone: string }>();
 		for (const l of leaves) {
 			if (isHalfDayLeave(l)) continue; // half days show H, covered above
 			const letter = leaveLetter(l);
-			if (!seen.has(letter)) seen.set(letter, l.typeName);
+			// Tone matches the cell marker, so the legend explains the colour on
+			// screen rather than showing every leave type in the same blue.
+			if (!seen.has(letter)) {
+				seen.set(letter, { name: l.typeName, tone: isPinkLeave(l) ? 'pink' : 'leave' });
+			}
 		}
-		return [...seen].map(([letter, name]) => ({ letter, name }));
+		return [...seen].map(([letter, v]) => ({ letter, ...v }));
 	});
 
 	interface Cell {
@@ -426,7 +430,10 @@
 		<!-- Leave markers come from each type's policy code, so the legend names
 		     the types actually in use this month rather than a fixed list. -->
 		{#each legendLeaveTypes as lt (lt.letter)}
-			<span class="legend-item"><span class="marker marker-leave">{lt.letter}</span> {lt.name}</span>
+			<span class="legend-item">
+				<span class="marker marker-{lt.tone}">{lt.letter}</span>
+				{lt.name}
+			</span>
 		{/each}
 		<span class="legend-item"><i class="dot dot-portal"></i> Portal</span>
 		<span class="legend-item"><i class="dot dot-biometric"></i> Biometric</span>
@@ -1031,6 +1038,12 @@
 	.marker-weekoff {
 		background: var(--ess-neutral-bg);
 		color: var(--ess-neutral);
+	}
+
+	/* Pink leave reads as itself rather than as generic leave. */
+	.marker-pink {
+		background: var(--ess-pink-bg);
+		color: var(--ess-pink);
 	}
 
 	.day-detail {

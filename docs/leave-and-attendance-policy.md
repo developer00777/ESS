@@ -75,6 +75,20 @@ In the event of the death of an immediate family member, employees are provided 
 of bereavement leave. Employees must provide formal email notification of the incident and
 apply for the leave through the HRone application in accordance with company policy.
 
+### Pink Leave
+
+**Eligibility**
+
+Employees are eligible to avail Pink Leave as per the company's leave policy. Pink Leave is
+available to female employees, at 1 day per calendar month.
+
+**Validity**
+
+- Pink Leave must be utilized within the same calendar month in which it is credited.
+- Unused Pink Leave cannot be carried forward to the next month.
+- Any unutilized Pink Leave will automatically lapse at the end of the month.
+- Pink Leave cannot be encashed or converted into any other type of leave or compensation.
+
 ---
 
 ## Part B — SOP: Attendance, Comp-Off & Attendance Deviations

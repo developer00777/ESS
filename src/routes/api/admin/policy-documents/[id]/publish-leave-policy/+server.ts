@@ -15,6 +15,10 @@ interface PublishLeaveType {
 	requires_documentation: boolean;
 	documentation_note: string | null;
 	fixed_days: number | null;
+	/** Refreshes monthly and lapses — pink leave. Not an accruing balance. */
+	monthly_quota_days?: number | null;
+	/** Restricts who may apply at all; 'female' for pink leave. */
+	gender_eligibility?: 'female' | 'male' | null;
 	notes: string | null;
 }
 
@@ -54,6 +58,13 @@ export const POST: RequestHandler = async (event) => {
 			requiresDocumentation: lt.requires_documentation ?? false,
 			documentationNote: lt.documentation_note,
 			fixedDays: lt.fixed_days,
+			// A monthly quota refreshes and lapses rather than building a balance,
+			// and a gender restriction decides who may apply at all. Both were
+			// extracted but never persisted, so a published pink-leave policy
+			// arrived as an ordinary accrual leave open to everyone.
+			monthlyQuotaDays:
+				lt.monthly_quota_days != null ? String(lt.monthly_quota_days) : null,
+			genderEligibility: lt.gender_eligibility ?? null,
 			notes: lt.notes,
 			sourceDocumentId: documentId,
 			effectiveFrom

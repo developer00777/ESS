@@ -56,6 +56,44 @@ describe('week off', () => {
 	});
 });
 
+describe('pink leave is marked in its own colour', () => {
+	const pink = (over = {}) => ({
+		status: 'approved',
+		typeName: 'Pink Leave',
+		typeCode: 'PINK',
+		days: 1,
+		...over
+	});
+
+	test('an approved pink leave carries the pink tone', () => {
+		expect(dayMarker(day({ leaves: [pink()] }))?.tone).toBe('pink');
+	});
+
+	test('other leave keeps the ordinary leave tone', () => {
+		const el = { status: 'approved', typeName: 'Earned Leave', typeCode: 'EL', days: 1 };
+		expect(dayMarker(day({ leaves: [el] }))?.tone).toBe('leave');
+	});
+
+	test('a half day keeps the half-day tone', () => {
+		// How much of the day was taken is the more useful fact on a calendar.
+		expect(dayMarker(day({ leaves: [pink({ days: 0.5 })] }))?.tone).toBe('half');
+	});
+
+	test('it is recognised however the policy spells the code', () => {
+		expect(dayMarker(day({ leaves: [pink({ typeCode: 'PINK' })] }))?.tone).toBe('pink');
+		expect(dayMarker(day({ leaves: [pink({ typeCode: 'MENSTRUAL' })] }))?.tone).toBe('pink');
+		// Falls back to the name when a published policy carries no code.
+		expect(
+			dayMarker(day({ leaves: [pink({ typeCode: null, typeName: 'Menstrual Leave' })] }))?.tone
+		).toBe('pink');
+	});
+
+	test('a leave merely named pink-ish is not mistaken for it', () => {
+		const other = { status: 'approved', typeName: 'Pinkerton Award Day', typeCode: 'PAD', days: 1 };
+		expect(dayMarker(day({ leaves: [other] }))?.tone).toBe('leave');
+	});
+});
+
 describe('the existing ranking is unchanged', () => {
 	test('a plain working day with a check-in is Present', () => {
 		expect(dayMarker(day({ hasCheckIn: true }))?.letter).toBe('P');

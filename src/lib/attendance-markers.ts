@@ -19,7 +19,7 @@ export interface DayMarker {
 	/** The letter shown in the cell. */
 	letter: string;
 	/** Drives the colour; maps to a --ess-* token in the calendar's styles. */
-	tone: 'present' | 'half' | 'leave' | 'absent' | 'holiday' | 'weekoff';
+	tone: 'present' | 'half' | 'leave' | 'absent' | 'holiday' | 'weekoff' | 'pink';
 	/** Full wording for the tooltip and the accessible label. */
 	label: string;
 }
@@ -46,6 +46,20 @@ export function leaveLetter(leave: MarkerLeave): string {
 	// padding it to two ("P" → "PL") both resolves that and reads as leave.
 	const marker = code.length <= 2 ? code : code.slice(0, 2);
 	return RESERVED_MARKERS.has(marker) ? `${marker}L` : marker;
+}
+
+/**
+ * True for pink (menstrual) leave, which is shown in its own colour.
+ *
+ * Matched on the policy code rather than the display name, since the name is
+ * whatever HR wrote in the document. Both spellings are accepted because the
+ * code is authored by whoever publishes the policy.
+ */
+export function isPinkLeave(leave: MarkerLeave): boolean {
+	const code = leave.typeCode?.trim().toUpperCase().replace(/[^A-Z]/g, '');
+	if (code === 'PINK' || code === 'MENSTRUAL') return true;
+	// Falls back to the name when a policy omits the code entirely.
+	return /\bpink\b|\bmenstrual\b/i.test(leave.typeName ?? '');
 }
 
 /** A leave application counts as a half day when it books 0.5 days. */
@@ -98,7 +112,10 @@ export function dayMarker(day: DayInputs): DayMarker | null {
 		const half = isHalfDayLeave(approved);
 		return {
 			letter: half ? 'H' : leaveLetter(approved),
-			tone: half ? 'half' : 'leave',
+			// Pink leave carries its own tone so it reads at a glance as what it is.
+			// A half day keeps the half-day tone: how much of the day was taken is
+			// the more useful fact on the calendar.
+			tone: half ? 'half' : isPinkLeave(approved) ? 'pink' : 'leave',
 			label: half ? `Half day · ${approved.typeName}` : approved.typeName
 		};
 	}

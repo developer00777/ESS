@@ -138,6 +138,10 @@
 	--ess-info-bg: rgba(37, 99, 168, 0.12);
 	--ess-neutral: #3a4356;
 	--ess-neutral-bg: rgba(58, 67, 86, 0.1);
+	/* Pink (menstrual) leave. Darkened from the obvious magenta so it still
+	   clears AA as small marker text on its own tint — 5.1:1 here. */
+	--ess-pink: #a81260;
+	--ess-pink-bg: rgba(168, 18, 96, 0.12);
 
 	/* ---------- Radius (cosmic "soft" scale) ---------- */
 	--ess-radius-xs: 8px;
@@ -273,6 +277,8 @@
 	--ess-info-bg: rgba(125, 211, 252, 0.13);
 	--ess-neutral: #cbd5e1; /* 11.9:1 */
 	--ess-neutral-bg: rgba(203, 213, 225, 0.1);
+	--ess-pink: #f9a8d4; /* 9.3:1 on its own tint */
+	--ess-pink-bg: rgba(249, 168, 212, 0.13);
 
 	--ess-primary: var(--acc);
 	--ess-primary-hover: #9dc0ea;

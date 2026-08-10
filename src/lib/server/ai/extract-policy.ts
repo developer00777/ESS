@@ -27,6 +27,14 @@ export interface ExtractedLeaveType {
 	requires_documentation: boolean;
 	documentation_note: string | null;
 	fixed_days: number | null;
+	/**
+	 * Entitlement that refreshes every month and does NOT accumulate — pink
+	 * (menstrual) leave is the current case. Distinct from accrual_per_month,
+	 * which builds a balance: an unused monthly quota lapses at month end.
+	 */
+	monthly_quota_days: number | null;
+	/** 'female' | 'male' | null. Restricts who may apply at all. */
+	gender_eligibility: 'female' | 'male' | null;
 	notes: string | null;
 }
 
@@ -43,8 +51,18 @@ Output JSON matching exactly this shape, nothing else, no markdown fences, no co
 {"tables":[{"shift_group_key":"...","shift_group_label":"...","holidays":[{"date":"YYYY-MM-DD","name":"...","type":"PUBLIC|RESTRICTED|OPTIONAL"}]}]}`;
 
 const LEAVE_POLICY_PROMPT = `Extract the leave policy rules from this document into strict JSON matching exactly this shape, nothing else, no markdown fences, no commentary:
-{"leave_types":[{"code":"EL|SL|MATERNITY|PATERNITY|BEREAVEMENT|...","name":"...","accrual_per_month":number_or_null,"eligibility":"post_probation|pre_probation|all|null","carry_forward_cap_days":number_or_null,"requires_documentation":true_or_false,"documentation_note":string_or_null,"fixed_days":number_or_null,"notes":string_or_null}],"general_rules":["..."]}
-Use a short stable "code" per leave type (uppercase, no spaces). "fixed_days" is for event-based leave (e.g. maternity/paternity/bereavement) rather than monthly accrual — set accrual_per_month to null in that case.`;
+{"leave_types":[{"code":"EL|SL|PINK|MATERNITY|PATERNITY|BEREAVEMENT|...","name":"...","accrual_per_month":number_or_null,"monthly_quota_days":number_or_null,"gender_eligibility":"female|male|null","eligibility":"post_probation|pre_probation|all|null","carry_forward_cap_days":number_or_null,"requires_documentation":true_or_false,"documentation_note":string_or_null,"fixed_days":number_or_null,"notes":string_or_null}],"general_rules":["..."]}
+
+Use a short stable "code" per leave type (uppercase, no spaces).
+
+Three mutually exclusive ways a leave type is granted — set exactly one and leave the others null:
+- "accrual_per_month": builds a balance that carries over (e.g. Earned Leave 1.5/month).
+- "monthly_quota_days": refreshes each calendar month and does NOT accumulate. Use this when the document says the leave must be used within the month it is credited, cannot be carried forward, or lapses at month end. Pink Leave (also written menstrual leave) is this kind — code it "PINK".
+- "fixed_days": event-based, granted per occurrence (maternity/paternity/bereavement).
+
+Set "gender_eligibility" only when the document restricts the leave to one gender; Pink/menstrual leave is "female". Otherwise null.
+Set "carry_forward_cap_days" to 0 when the document says the leave cannot be carried forward.
+Put non-machine-readable rules ("cannot be encashed", "lapses at month end") in "notes" so they are shown to employees verbatim.`;
 
 interface OpenRouterMessage {
 	role: 'user';
