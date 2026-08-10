@@ -30,6 +30,54 @@ import { error } from '@sveltejs/kit';
 
 const DEFAULT_BULK_PASSWORD = 'Champ@123';
 
+/**
+ * Fills blank profile columns for someone the import skipped as already
+ * existing.
+ *
+ * An import run before a field was mapped stages that field as null, and
+ * re-uploading the same sheet does not repair it: the row matches on email, is
+ * marked skipped_existing, and the apply step moves on. The column then stays
+ * empty forever — which is how a full roster ended up with no recorded gender,
+ * and so no pink-leave eligibility.
+ *
+ * Only writes where the profile currently has nothing. A value HR corrected in
+ * the portal outranks whatever an older spreadsheet says.
+ */
+async function backfillProfile(
+	userId: string,
+	row: { employeeCode: string | null; designation: string | null; teamAndFloor: string | null; profileData: unknown }
+): Promise<string[]> {
+	const [profile] = await db
+		.select()
+		.from(employeeProfiles)
+		.where(eq(employeeProfiles.userId, userId))
+		.limit(1);
+	if (!profile) return [];
+
+	const incoming: Record<string, unknown> = {
+		...profileValuesFromImport(row.profileData as Record<string, unknown> | null),
+		...(row.employeeCode ? { employeeCode: row.employeeCode.trim().toUpperCase() } : {}),
+		...(row.designation ? { designation: row.designation } : {}),
+		...(row.teamAndFloor ? { teamAndFloor: row.teamAndFloor } : {})
+	};
+
+	const patch: Record<string, unknown> = {};
+	const filled: string[] = [];
+	for (const [key, value] of Object.entries(incoming)) {
+		if (value === null || value === undefined || value === '') continue;
+		const current = (profile as Record<string, unknown>)[key];
+		if (current === null || current === undefined || current === '') {
+			patch[key] = value;
+			filled.push(key);
+		}
+	}
+
+	if (filled.length === 0) return [];
+	patch.updatedAt = new Date();
+	await db.update(employeeProfiles).set(patch).where(eq(employeeProfiles.userId, userId));
+	return filled;
+}
+
 const PASSWORD_ACTION_LABELS: Record<string, string> = {
 	'password.change': 'Changed own password',
 	'user.password_reset': "Reset another user's password",
@@ -558,10 +606,21 @@ export const actions: Actions = {
 
 		const passwordHash = await hashPassword(DEFAULT_BULK_PASSWORD);
 		const rowIdToUserId = new Map<string, string>();
+		// Existing people whose blank profile columns this run filled in.
+		let backfilledCount = 0;
 
 		for (const row of rows) {
 			if (row.status === 'skipped_existing') {
-				if (row.existingUserId) rowIdToUserId.set(row.id, row.existingUserId);
+				if (row.existingUserId) {
+					rowIdToUserId.set(row.id, row.existingUserId);
+					// The account already exists, but its profile may not have been
+					// filled — an import run before a field was mapped leaves that
+					// column null forever, since re-uploading only ever skips the row.
+					// Fills blanks only: a value HR has since corrected in the portal
+					// is never overwritten by an older spreadsheet.
+					const filled = await backfillProfile(row.existingUserId, row);
+					if (filled.length > 0) backfilledCount++;
+				}
 				continue;
 			}
 			if (row.status !== 'ready') continue;
@@ -663,9 +722,9 @@ export const actions: Actions = {
 			action: 'bulk_import.apply',
 			targetType: 'bulk_import',
 			targetId: importId,
-			details: { createdCount, skippedCount }
+			details: { createdCount, skippedCount, backfilledCount }
 		});
 
-		return { bulkImportApplied: { createdCount, skippedCount } };
+		return { bulkImportApplied: { createdCount, skippedCount, backfilledCount } };
 	}
 };
