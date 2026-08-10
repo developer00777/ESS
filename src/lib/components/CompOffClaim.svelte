@@ -158,10 +158,11 @@
 							used {fmt(c.usedOn)}
 						{/if}
 					</span>
-					<!-- Withdrawable only while undecided: once credited the day is a
-					     real balance that may already be spent. Two clicks, since a
-					     manager may already have reviewed it. -->
-					{#if c.status === 'pending' || c.status === 'manager_approved'}
+					<!-- Withdrawable until it has actually been spent on leave: a
+					     credit backing a leave application cannot be removed without
+					     leaving that leave unfunded. Two clicks, since a manager may
+					     already have reviewed it. -->
+					{#if ['pending', 'manager_approved', 'approved'].includes(c.status) && !c.usedOn}
 						{#if confirmingWithdraw === c.id}
 							<span class="c-withdraw">
 								<button

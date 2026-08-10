@@ -35,16 +35,16 @@ export const DELETE: RequestHandler = async (event) => {
 		throw error(403, 'You can only withdraw your own comp-off claim');
 	}
 
+	// The one hard stop: a spent credit is backing a leave application, so
+	// removing it would leave that leave unfunded.
 	if (credit.status === 'used' || credit.usedApplicationId) {
 		throw error(400, 'This comp-off has been spent on leave and can no longer be withdrawn');
 	}
-	if (credit.status !== 'pending' && credit.status !== 'manager_approved') {
-		throw error(
-			400,
-			credit.status === 'approved'
-				? 'This comp-off has been credited — ask HR to reverse it'
-				: `A ${credit.status} claim cannot be withdrawn`
-		);
+	// Credited but unspent is still the employee's to give up — it is their own
+	// day off to decline, and holding one they did not want is not something they
+	// should have to ask HR to undo.
+	if (!['pending', 'manager_approved', 'approved'].includes(credit.status)) {
+		throw error(400, `A ${credit.status} claim cannot be withdrawn`);
 	}
 
 	await db.delete(compOffCredits).where(eq(compOffCredits.id, creditId));

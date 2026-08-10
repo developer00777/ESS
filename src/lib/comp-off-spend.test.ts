@@ -60,8 +60,9 @@ describe('withdrawing your own claim', () => {
 		actorId: string
 	) => {
 		if (credit.userId !== actorId) return false;
+		// The one hard stop: a spent credit backs a leave application.
 		if (credit.status === 'used' || credit.usedApplicationId) return false;
-		return credit.status === 'pending' || credit.status === 'manager_approved';
+		return ['pending', 'manager_approved', 'approved'].includes(credit.status);
 	};
 
 	const mine = (status: string, usedApplicationId: string | null = null) => ({
@@ -79,8 +80,10 @@ describe('withdrawing your own claim', () => {
 		expect(canWithdraw(mine('manager_approved'), 'me')).toBe(true);
 	});
 
-	test('a credited comp-off cannot — that is HR reversing a decision', () => {
-		expect(canWithdraw(mine('approved'), 'me')).toBe(false);
+	test('a credited but unspent comp-off can be given up', () => {
+		// It is the employee's own day off to decline; needing HR to undo an
+		// unwanted credit is friction with nothing behind it.
+		expect(canWithdraw(mine('approved'), 'me')).toBe(true);
 	});
 
 	test('one already spent on leave cannot', () => {

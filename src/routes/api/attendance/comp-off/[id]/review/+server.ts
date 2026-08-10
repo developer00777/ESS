@@ -39,14 +39,27 @@ export const POST: RequestHandler = async (event) => {
 		.where(eq(compOffCredits.id, creditId))
 		.limit(1);
 	if (!credit) throw error(404, 'Comp-off claim not found');
-	if (credit.status !== 'pending' && credit.status !== 'manager_approved') {
+
+	// A credited comp-off can still be overturned — an approval given in error
+	// (or under the old single-step flow) otherwise leaves the employee holding a
+	// day they were never really owed. Refused once spent: the credit is backing
+	// a leave application, and revoking it would leave that leave unfunded.
+	const isReversal = credit.status === 'approved';
+	if (isReversal) {
+		if (credit.usedApplicationId || credit.status === 'used') {
+			throw error(400, 'This comp-off has been spent on leave and can no longer be reversed');
+		}
+		if (decision === 'approve') {
+			throw error(400, 'This comp-off is already credited');
+		}
+	} else if (credit.status !== 'pending' && credit.status !== 'manager_approved') {
 		throw error(400, 'This claim has already been decided');
 	}
 
 	// Comp-off runs manager → HR → credited, the same chain as leave and
 	// attendance corrections. Which stage this call decides depends on where the
-	// claim currently sits.
-	const stage = credit.status === 'manager_approved' ? 'hr' : 'manager';
+	// claim currently sits. Reversing a credited one is HR's call.
+	const stage = credit.status === 'manager_approved' || isReversal ? 'hr' : 'manager';
 
 	const [claimant] = await db.select().from(users).where(eq(users.id, credit.userId)).limit(1);
 	if (!claimant) throw error(404, 'Claiming employee not found');
