@@ -341,7 +341,8 @@
 			leaves: dayLeaves,
 			isHoliday: dayHolidays.length > 0,
 			isAbsent: isAbsent(cell),
-			prohanceMinutes: prohanceByDate.get(cell.key)?.timeOnSystemMinutes
+			prohanceMinutes: prohanceByDate.get(cell.key)?.timeOnSystemMinutes,
+			isWeekOff: cell.isWeekend
 		});
 
 		const parts = [base];
@@ -421,6 +422,7 @@
 		<span class="legend-item"><span class="marker marker-present">P</span> Present</span>
 		<span class="legend-item"><span class="marker marker-half">H</span> Half day</span>
 		<span class="legend-item"><span class="marker marker-absent">A</span> Absent</span>
+		<span class="legend-item"><span class="marker marker-weekoff">WO</span> Week off</span>
 		<!-- Leave markers come from each type's policy code, so the legend names
 		     the types actually in use this month rather than a fixed list. -->
 		{#each legendLeaveTypes as lt (lt.letter)}
@@ -457,7 +459,8 @@
 					leaves: dayLeaves,
 					isHoliday: dayHolidays.length > 0,
 					isAbsent: absent,
-					prohanceMinutes: ph?.timeOnSystemMinutes
+					prohanceMinutes: ph?.timeOnSystemMinutes,
+					isWeekOff: cell.isWeekend
 				})}
 				<button
 					class="day-cell"
@@ -515,6 +518,10 @@
 							<span class="mid-prohance" title="ProHance time on system"
 								>{minutesLabel(ph.timeOnSystemMinutes)}</span
 							>
+						{:else if cell.isWeekend}
+							<!-- Said in words, not just implied by a dimmer cell: an empty
+							     day off and an empty day with no data looked identical. -->
+							<span class="mid-tag mid-weekoff">Week off</span>
 						{/if}
 					</span>
 
@@ -833,13 +840,17 @@
 		cursor: default;
 	}
 
+	/* A week off is a real state, not an absence of one — it was previously
+	   transparent, so it read as an empty working day. The tinted fill and left
+	   rule make the non-working stretch visible at a glance across the month. */
 	.day-cell.is-weekend:not(.is-today) {
-		background: transparent;
+		background: var(--ess-neutral-bg);
 		border-color: var(--ess-border-subtle);
+		box-shadow: inset 3px 0 0 var(--ess-neutral-bg);
 	}
 
-	.day-cell.is-weekend .day-number {
-		color: var(--ess-text-muted);
+	.day-cell.is-weekend:not(.is-today) .day-number {
+		color: var(--ess-neutral);
 	}
 
 	/* Marks the tail of the opening month ("26 Jul") so the cycle boundary is
@@ -948,6 +959,15 @@
 		color: var(--ess-danger);
 	}
 
+	/* Slate rather than one of the status accents: a week off is neither good
+	   nor bad, and green/amber/red/blue are already spoken for by present,
+	   warning, absent and leave. 7.3:1 light, 11.8:1 dark on the cell. */
+	.mid-tag.mid-weekoff {
+		color: var(--ess-neutral);
+		font-weight: 700;
+		letter-spacing: 0.01em;
+	}
+
 	/* "+1" after a check-out that happened the following morning. */
 	.next-day {
 		font-size: 0.52rem;
@@ -1006,6 +1026,11 @@
 	.marker-holiday {
 		background: var(--ess-info-bg);
 		color: var(--ess-info);
+	}
+
+	.marker-weekoff {
+		background: var(--ess-neutral-bg);
+		color: var(--ess-neutral);
 	}
 
 	.day-detail {

@@ -19,7 +19,7 @@ export interface DayMarker {
 	/** The letter shown in the cell. */
 	letter: string;
 	/** Drives the colour; maps to a --ess-* token in the calendar's styles. */
-	tone: 'present' | 'half' | 'leave' | 'absent' | 'holiday';
+	tone: 'present' | 'half' | 'leave' | 'absent' | 'holiday' | 'weekoff';
 	/** Full wording for the tooltip and the accessible label. */
 	label: string;
 }
@@ -79,6 +79,8 @@ export interface DayInputs {
 	isAbsent: boolean;
 	/** ProHance time-on-system for the day, when the day has one. */
 	prohanceMinutes?: number | null;
+	/** True when the employee's roster (or the Sat/Sun default) makes this a day off. */
+	isWeekOff?: boolean;
 }
 
 /**
@@ -130,6 +132,11 @@ export function dayMarker(day: DayInputs): DayMarker | null {
 	// A holiday is only marked when nothing else happened that day — someone who
 	// worked a holiday should still read as Present.
 	if (day.isHoliday) return { letter: 'HO', tone: 'holiday', label: 'Holiday' };
+
+	// Same rule for a week off: it is what the day *was* when nothing else
+	// happened. Ranked below holiday so a public holiday falling on a week off
+	// still reads as the holiday, which is the more specific fact.
+	if (day.isWeekOff) return { letter: 'WO', tone: 'weekoff', label: 'Week off' };
 
 	if (day.isAbsent) return { letter: 'A', tone: 'absent', label: 'Absent' };
 	return null;

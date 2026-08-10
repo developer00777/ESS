@@ -195,6 +195,7 @@
 	let selectedKey = $state<string | null>(null);
 	const selectedHolidays = $derived(selectedKey ? (holidaysByDate.get(selectedKey) ?? []) : []);
 	const selectedLeave = $derived(selectedKey ? (leaveByDate.get(selectedKey) ?? []) : []);
+	const selectedIsWeekOff = $derived(selectedKey ? isWeekOff(selectedKey) : false);
 </script>
 
 <div class="calendar-box" class:large={size === 'large'}>
@@ -250,6 +251,10 @@
 					<span class="day-tag tag-holiday" title={dayHolidays.map((h) => h.name).join(', ')}>
 						{dayHolidays[0].name}
 					</span>
+				{:else if cell.isWeekOff && cell.inMonth}
+					<!-- Only when no holiday shares the day: a public holiday is the more
+					     specific fact, and two tags would not fit the cell anyway. -->
+					<span class="day-tag tag-weekoff">Week off</span>
 				{/if}
 				{#if showNames && dayLeave.length > 0}
 					<span class="day-tag" class:tag-approved={hasApproved} class:tag-pending={!hasApproved && hasPending}>
@@ -265,9 +270,15 @@
 		{/each}
 	</div>
 
-	{#if selectedKey && (selectedHolidays.length > 0 || selectedLeave.length > 0)}
+	{#if selectedKey && (selectedHolidays.length > 0 || selectedLeave.length > 0 || selectedIsWeekOff)}
 		<div class="day-detail">
 			<strong>{selectedKey}</strong>
+			{#if selectedIsWeekOff}
+				<p class="detail-row">
+					<i class="swatch swatch-weekoff"></i> Week off
+					{#if weekOffLabel}<span class="detail-type">{weekOffLabel}</span>{/if}
+				</p>
+			{/if}
 			{#each selectedHolidays as h (h.name)}
 				<p class="detail-row"><i class="dot dot-holiday"></i> {h.name} <span class="detail-type">{h.type}</span></p>
 			{/each}
@@ -463,13 +474,25 @@
 	/* A week off is a non-working day, so it recedes rather than competing with
 	   holidays and leave — the day number stays readable, the cell does not
 	   invite a click. Today keeps its own emphasis. */
+	/* Tinted rather than merely dimmed: --ess-surface is nearly the same as the
+	   cell's own background, so a week off was indistinguishable from a working
+	   day with nothing on it. */
 	.day-cell.is-week-off:not(.is-today) {
-		background: var(--ess-surface);
+		background: var(--ess-neutral-bg);
 		border-color: var(--ess-border-subtle);
+		box-shadow: inset 3px 0 0 var(--ess-neutral-bg);
 	}
 
 	.day-cell.is-week-off:not(.is-today) .day-number {
-		color: var(--ess-text-muted);
+		color: var(--ess-neutral);
+	}
+
+	/* Slate, so it never competes with holiday (blue), approved (green) or
+	   pending (amber) leave. 7.3:1 light, 11.8:1 dark. */
+	.tag-weekoff {
+		background: var(--ess-neutral-bg);
+		color: var(--ess-neutral);
+		font-weight: 700;
 	}
 
 	.swatch {
@@ -481,8 +504,8 @@
 	}
 
 	.swatch-weekoff {
-		background: var(--ess-surface);
-		border: 1px solid var(--ess-border-strong);
+		background: var(--ess-neutral-bg);
+		border: 1px solid var(--ess-neutral);
 	}
 
 	.day-cell.is-today {
