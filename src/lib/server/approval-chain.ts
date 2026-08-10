@@ -103,9 +103,11 @@ export async function managerFor(userId: string): Promise<Reviewer | null> {
 /**
  * True if `actor` may act on `stage` for `requesterId`.
  *
- * The manager stage is the requester's own manager — or, when they have none,
- * HR, so a request is never stranded. This is what lets a Super Admin's own
- * comp-off be reviewed by *their* manager instead of nobody.
+ * An explicit assignment *routes* the request: when a reporting manager or a
+ * concerned HR is named, the request is theirs and it appears in their queue
+ * alone. Admins are the fallback only for people with nobody assigned, so a
+ * request is never stranded — but naming someone no longer leaves every admin
+ * holding a copy of it, which made one Super Admin the queue for the whole org.
  */
 export async function canReviewStage(
 	actor: { id: string; role: string; teamId: string | null },
@@ -117,17 +119,16 @@ export async function canReviewStage(
 
 	const isHr = (HR_ROLES as readonly string[]).includes(actor.role);
 
-	// The assigned HR person handles their own people first, but any admin may
-	// still act — an assignment routes a request, it does not lock others out,
-	// so nothing stalls while that person is on leave.
 	if (stage === 'hr') {
-		if (isHr) return true;
 		const assigned = await assignedHrFor(requesterId);
-		return assigned === actor.id;
+		// Named HR owns it. A Super Admin keeps an override so a request is never
+		// truly stuck if that person leaves, but ordinary admins do not see it.
+		if (assigned) return assigned === actor.id || actor.role === 'super_admin';
+		return isHr;
 	}
 
 	const manager = await managerFor(requesterId);
-	if (manager) return manager.userId === actor.id || isHr;
+	if (manager) return manager.userId === actor.id || actor.role === 'super_admin';
 
 	// No manager resolvable — HR picks it up so it does not sit forever.
 	return isHr;
@@ -156,22 +157,33 @@ export async function reviewableUserIds(
 	const everyone = await db.select({ id: users.id }).from(users).where(eq(users.isActive, true));
 	const candidateIds = everyone.map((u) => u.id).filter((id) => id !== actor.id);
 
+	const isHr = (HR_ROLES as readonly string[]).includes(actor.role);
+	const isSuperAdmin = actor.role === 'super_admin';
+
 	if (stage === 'hr') {
-		if ((HR_ROLES as readonly string[]).includes(actor.role)) return candidateIds;
-		// Not an admin, but named as someone's HR — they see exactly those people.
-		const assigned = await db
-			.select({ userId: employeeProfiles.userId })
-			.from(employeeProfiles)
-			.where(eq(employeeProfiles.hrUserId, actor.id));
-		return assigned.map((a) => a.userId).filter((id) => id !== actor.id);
+		// Who each candidate's HR is, in one query rather than per-person.
+		const rows = candidateIds.length
+			? await db
+					.select({ userId: employeeProfiles.userId, hrUserId: employeeProfiles.hrUserId })
+					.from(employeeProfiles)
+					.where(inArray(employeeProfiles.userId, candidateIds))
+			: [];
+		const hrByUser = new Map(rows.map((r) => [r.userId, r.hrUserId]));
+
+		return candidateIds.filter((id) => {
+			const assigned = hrByUser.get(id) ?? null;
+			// Assigned → that person's queue (Super Admin retains an override).
+			if (assigned) return assigned === actor.id || isSuperAdmin;
+			// Nobody named → any admin covers it.
+			return isHr;
+		});
 	}
 
 	const managers = await managersFor(candidateIds);
-	const isHr = (HR_ROLES as readonly string[]).includes(actor.role);
 
 	return candidateIds.filter((id) => {
 		const manager = managers.get(id);
-		if (manager) return manager.userId === actor.id || isHr;
+		if (manager) return manager.userId === actor.id || isSuperAdmin;
 		// Unassigned reporting line — HR is the safety net.
 		return isHr;
 	});

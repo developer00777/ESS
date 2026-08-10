@@ -9,7 +9,7 @@ import {
 	teams,
 	users
 } from '$lib/server/db/schema';
-import { requireRole } from '$lib/server/rbac';
+import { requireUser } from '$lib/server/rbac';
 import { eq, and } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { canReviewStage } from '$lib/server/approval-chain';
@@ -19,7 +19,10 @@ const newStatusFor = (decision: 'approve' | 'reject') =>
 	decision === 'approve' ? ('approved' as const) : ('rejected' as const);
 
 export const POST: RequestHandler = async (event) => {
-	const approver = requireRole(event, ['team_lead', 'super_admin']);
+	// Authorisation is by assignment, not role — canReviewStage below is the real
+	// gate. A named reporting manager or concerned HR may hold no admin role, and
+	// a role check here refused them before that logic ever ran.
+	const approver = requireUser(event);
 	const applicationId = event.params.id!;
 	const { decision, note } = await event.request.json(); // decision: 'approve' | 'reject'
 

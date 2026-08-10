@@ -276,7 +276,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	// --- SOP review queue (Team Lead / HR / Super Admin) ---
 	// Leads see their own team; HR and Super Admin see everyone. Nobody reviews
 	// their own request, so the reviewer's own rows are excluded from the queue.
-	const canReview = user.role !== 'employee';
+	// Not a role check: someone named as a colleague's reporting manager or
+	// concerned HR may hold no admin role, and gating on role hid their queue.
+	// The queues below are empty for anyone with nobody assigned to them, so
+	// this stays true only for people who actually have something to decide.
+	const canReview = true;
 	let deviationQueue: {
 		deviation: typeof attendanceDeviations.$inferSelect;
 		employeeName: string;
@@ -382,8 +386,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		myDeviations: myDeviations.map((d) => ({ ...d, date: attendanceDateKey(d.date) })),
 		deviationMonthlyUsed,
 		deviationMonthlyCap: DEVIATION_MONTHLY_CAP,
-		// SOP review queues — empty for employees.
-		canReview,
+		// The queue section shows only when there is genuinely something in it, or
+		// for the roles that expect to see an empty queue rather than no section.
+		canReview:
+			deviationQueue.length > 0 ||
+			compOffQueue.length > 0 ||
+			user.role === 'team_lead' ||
+			user.role === 'admin' ||
+			user.role === 'super_admin',
 		deviationQueue,
 		compOffQueue
 	};

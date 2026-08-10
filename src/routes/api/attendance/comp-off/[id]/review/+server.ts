@@ -2,7 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { compOffCredits, users } from '$lib/server/db/schema';
-import { requireRole } from '$lib/server/rbac';
+import { requireUser } from '$lib/server/rbac';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { evaluateCompOffEligibility } from '$lib/server/comp-off';
@@ -22,7 +22,10 @@ import { canReviewStage } from '$lib/server/approval-chain';
  * supports is exactly what the verification step is meant to prevent.
  */
 export const POST: RequestHandler = async (event) => {
-	const approver = requireRole(event, ['team_lead', 'admin', 'super_admin']);
+	// Authorisation is by assignment — canReviewStage below is the real gate. A
+	// named reporting manager may hold no admin role, and a role check here
+	// refused them before that logic ever ran.
+	const approver = requireUser(event);
 	const creditId = event.params.id!;
 	const { decision, note } = await event.request.json();
 

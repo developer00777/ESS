@@ -15,19 +15,25 @@ interface Person {
 	id: string;
 	role: 'employee' | 'team_lead' | 'admin' | 'super_admin';
 	managerId: string | null;
+	/** The named concerned HR, when a Super Admin has assigned one. */
+	hrId?: string | null;
 }
 
 const HR_ROLES = ['admin', 'super_admin'];
 const isHr = (role: string) => HR_ROLES.includes(role);
 
-function canReview(
-	actor: Person,
-	requester: Person,
-	stage: 'manager' | 'hr'
-): boolean {
+function canReview(actor: Person, requester: Person, stage: 'manager' | 'hr'): boolean {
 	if (actor.id === requester.id) return false; // never your own
-	if (stage === 'hr') return isHr(actor.role);
-	if (requester.managerId) return requester.managerId === actor.id || isHr(actor.role);
+	const isSuperAdmin = actor.role === 'super_admin';
+
+	// An explicit assignment routes the request to that person. Admins are the
+	// fallback only when nobody is named; a Super Admin keeps an override so a
+	// request cannot be permanently stuck behind someone who has left.
+	if (stage === 'hr') {
+		if (requester.hrId) return requester.hrId === actor.id || isSuperAdmin;
+		return isHr(actor.role);
+	}
+	if (requester.managerId) return requester.managerId === actor.id || isSuperAdmin;
 	return isHr(actor.role); // no manager on record — HR is the safety net
 }
 
@@ -59,9 +65,17 @@ describe('the manager stage', () => {
 		expect(canReview(hr, hr, 'hr')).toBe(false);
 	});
 
-	test('HR can act at the manager stage as a fallback', () => {
-		// Keeps a request moving when a manager is away or unset.
-		expect(canReview(hr, emp, 'manager')).toBe(true);
+	test('an ordinary admin does NOT see a request that has a named manager', () => {
+		// The whole point of naming a manager: the request is theirs, not
+		// everyone's. Before this, every admin held a copy and one Super Admin
+		// was effectively the queue for the entire org.
+		expect(canReview(hr, emp, 'manager')).toBe(false);
+	});
+
+	test('a Super Admin keeps an override', () => {
+		// So a request cannot be permanently stuck behind someone who has left.
+		const other: Person = { id: 'boss', role: 'super_admin', managerId: null };
+		expect(canReview(other, emp, 'manager')).toBe(true);
 	});
 
 	test('someone with no manager on record falls to HR', () => {
@@ -71,7 +85,7 @@ describe('the manager stage', () => {
 });
 
 describe('the HR stage', () => {
-	test('only HR roles may give the second sign-off', () => {
+	test('with nobody named, any admin may give the second sign-off', () => {
 		expect(canReview(hr, emp, 'hr')).toBe(true);
 		expect(canReview(sa, emp, 'hr')).toBe(true);
 		expect(canReview(mgr, emp, 'hr')).toBe(false);
@@ -79,6 +93,36 @@ describe('the HR stage', () => {
 
 	test('a Super Admin cannot HR-approve their own request', () => {
 		expect(canReview(sa, sa, 'hr')).toBe(false);
+	});
+});
+
+describe('a named concerned HR owns the request', () => {
+	// hrX is not an admin — being named is what gives them the request.
+	const hrX: Person = { id: 'hrX', role: 'employee', managerId: null };
+	const hrY: Person = { id: 'hrY', role: 'employee', managerId: null };
+	const assigned: Person = { id: 'emp1', role: 'employee', managerId: 'mgr', hrId: 'hrX' };
+
+	test('the named person may approve even without an admin role', () => {
+		expect(canReview(hrX, assigned, 'hr')).toBe(true);
+	});
+
+	test('a different named HR may not', () => {
+		expect(canReview(hrY, assigned, 'hr')).toBe(false);
+	});
+
+	test('an ordinary admin no longer sees it', () => {
+		// This is the fix: naming an HR routes the request instead of leaving a
+		// copy in every admin's queue.
+		expect(canReview(hr, assigned, 'hr')).toBe(false);
+	});
+
+	test('a Super Admin keeps an override', () => {
+		expect(canReview(sa, assigned, 'hr')).toBe(true);
+	});
+
+	test('being named does not let you approve your own request', () => {
+		const selfHr: Person = { id: 'solo', role: 'admin', managerId: null, hrId: 'solo' };
+		expect(canReview(selfHr, selfHr, 'hr')).toBe(false);
 	});
 });
 

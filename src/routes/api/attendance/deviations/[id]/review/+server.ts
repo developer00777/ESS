@@ -2,7 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { attendance, attendanceDeviations, users } from '$lib/server/db/schema';
-import { requireRole } from '$lib/server/rbac';
+import { requireUser } from '$lib/server/rbac';
 import { and, eq } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { canReviewStage } from '$lib/server/approval-chain';
@@ -17,7 +17,10 @@ import { canReviewStage } from '$lib/server/approval-chain';
  * wrong, which is the whole problem the SOP exists to solve.
  */
 export const POST: RequestHandler = async (event) => {
-	const reviewer = requireRole(event, ['team_lead', 'admin', 'super_admin']);
+	// Authorisation is by assignment — canReviewStage below is the real gate. A
+	// named reporting manager or concerned HR may hold no admin role, and a role
+	// check here refused them before that logic ever ran.
+	const reviewer = requireUser(event);
 	const deviationId = event.params.id!;
 	const { decision, note } = await event.request.json();
 

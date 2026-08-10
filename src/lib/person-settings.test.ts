@@ -115,11 +115,13 @@ describe('the HR stage after an assignment', () => {
 	const canApproveHr = (
 		actor: { id: string; isAdmin: boolean },
 		assignedHrId: string | null,
-		requesterId: string
+		requesterId: string,
+		isSuperAdmin = false
 	) => {
 		if (actor.id === requesterId) return false;
-		if (actor.isAdmin) return true;
-		return assignedHrId === actor.id;
+		// A named HR owns the request; admins only cover the unassigned.
+		if (assignedHrId) return assignedHrId === actor.id || isSuperAdmin;
+		return actor.isAdmin;
 	};
 
 	test('the assigned HR person may approve', () => {
@@ -130,8 +132,12 @@ describe('the HR stage after an assignment', () => {
 		expect(canApproveHr({ id: 'hr2', isAdmin: false }, 'hr1', 'emp')).toBe(false);
 	});
 
-	test('any admin may still act as a fallback', () => {
-		expect(canApproveHr({ id: 'boss', isAdmin: true }, 'hr1', 'emp')).toBe(true);
+	test('an ordinary admin does not see a request with a named HR', () => {
+		expect(canApproveHr({ id: 'boss', isAdmin: true }, 'hr1', 'emp')).toBe(false);
+	});
+
+	test('a Super Admin keeps an override', () => {
+		expect(canApproveHr({ id: 'boss', isAdmin: true }, 'hr1', 'emp', true)).toBe(true);
 	});
 
 	test('with nobody assigned, admins still cover it', () => {

@@ -192,9 +192,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 		applicant: { id: string; fullName: string; email: string; teamId: string | null };
 	}> = [];
 
-	if (user.role !== 'employee') {
+	{
 		// Leave runs manager → HR → approved, routed by the reporting line:
 		// 'pending' is the manager's to sign off, 'escalated' is HR's to finish.
+		//
+		// Not gated on role: being named as someone's reporting manager or
+		// concerned HR is what grants the review, and such a person may hold no
+		// admin role. Anyone with nobody assigned to them gets two empty lists
+		// and no queue, which is the same outcome the role check gave.
 		const [manageable, hrReviewable] = await Promise.all([
 			reviewableUserIds(user, 'manager'),
 			reviewableUserIds(user, 'hr')
@@ -250,6 +255,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 		monthlyBalances,
 		myApplications,
 		approvalQueue,
+		// The tab appears for anyone who actually has something to decide, which
+		// includes a named HR holding no admin role.
+		canApprove: approvalQueue.length > 0 || user.role === 'team_lead' || user.role === 'super_admin',
 		decidedQueue,
 		canReverseDecisions: user.role === 'super_admin',
 		calendarHolidays,
