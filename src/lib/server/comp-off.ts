@@ -188,6 +188,13 @@ export async function lapseExpiredCompOffs(userId?: string): Promise<number> {
  */
 export const COMP_OFF_LEAVE_CODE = 'COMPOFF';
 
+/**
+ * Either the pool or an open transaction. Credit moves have to be able to join
+ * the caller's transaction — spending a credit and approving the leave that
+ * spent it must commit together or not at all.
+ */
+type DbExecutor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Approved credits that are still inside their validity window, oldest first. */
 export async function spendableCredits(userId: string, onDate: string) {
 	return db
@@ -218,6 +225,8 @@ export async function consumeCredits(params: {
 	count: number;
 	onDate: string;
 	applicationId: string;
+	/** Pass the tx when this runs inside a transaction, so it commits or rolls back with it. */
+	tx?: DbExecutor;
 }): Promise<(typeof compOffCredits.$inferSelect)[]> {
 	const available = await spendableCredits(params.userId, params.onDate);
 	if (available.length < params.count) {
@@ -226,9 +235,10 @@ export async function consumeCredits(params: {
 		);
 	}
 
+	const exec = params.tx ?? db;
 	const spending = available.slice(0, params.count);
 	for (const credit of spending) {
-		await db
+		await exec
 			.update(compOffCredits)
 			.set({
 				status: 'used',
@@ -241,8 +251,8 @@ export async function consumeCredits(params: {
 }
 
 /** Releases credits back to 'approved' when the leave that spent them is undone. */
-export async function releaseCredits(applicationId: string): Promise<number> {
-	const rows = await db
+export async function releaseCredits(applicationId: string, tx?: DbExecutor): Promise<number> {
+	const rows = await (tx ?? db)
 		.update(compOffCredits)
 		.set({ status: 'approved', usedOn: null, usedApplicationId: null })
 		.where(eq(compOffCredits.usedApplicationId, applicationId))
