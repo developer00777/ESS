@@ -41,6 +41,8 @@
 			expiresOn: string;
 			note: string | null;
 			evidenceSnapshot: unknown;
+			/** 'pending' at the manager stage, 'manager_approved' at HR's. */
+			status: string;
 		};
 		employeeName: string;
 	}
@@ -221,10 +223,19 @@
 									{fmtDate(c.expiresOn)}
 								</span>
 							</div>
+							{#if c.status === 'manager_approved'}
+								<!-- Second stage: the manager has confirmed the day was worked
+								     and this is HR's to credit. -->
+								<span class="ess-badge ess-badge--pending cap-badge">
+									Manager approved — awaiting HR
+								</span>
+							{/if}
 						</div>
 						{#if c.note}<p class="statement">“{c.note}”</p>{/if}
 						<p class="ai-absent">
-							Eligibility is re-verified against the attendance record when you approve.
+							{c.status === 'manager_approved'
+								? 'Eligibility is re-verified against the attendance record when you credit this.'
+								: 'Approving passes this to the concerned HR, who credits it.'}
 						</p>
 						<div class="actions">
 							<button
@@ -232,7 +243,11 @@
 								disabled={busy === c.id}
 								onclick={() => decide('comp-off', c.id, 'approve')}
 							>
-								{busy === c.id ? 'Saving…' : 'Credit comp-off'}
+								{busy === c.id
+									? 'Saving…'
+									: c.status === 'manager_approved'
+										? 'Credit comp-off'
+										: 'Approve — send to HR'}
 							</button>
 							<button
 								class="ess-btn ess-btn--ghost ess-btn--sm"

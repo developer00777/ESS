@@ -56,6 +56,11 @@ export const deviationStatusEnum = pgEnum('deviation_status', [
 
 export const compOffStatusEnum = pgEnum('comp_off_status', [
 	'pending',
+	// The reporting manager has confirmed the day was worked; the concerned HR
+	// has yet to credit it. Comp-off runs the same manager → HR chain as leave
+	// and attendance corrections, so a credit only becomes spendable once HR
+	// signs off — 'approved' still means exactly that.
+	'manager_approved',
 	'approved',
 	'rejected',
 	'used',

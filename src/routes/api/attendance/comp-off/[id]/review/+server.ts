@@ -39,27 +39,39 @@ export const POST: RequestHandler = async (event) => {
 		.where(eq(compOffCredits.id, creditId))
 		.limit(1);
 	if (!credit) throw error(404, 'Comp-off claim not found');
-	if (credit.status !== 'pending') throw error(400, 'This claim has already been decided');
+	if (credit.status !== 'pending' && credit.status !== 'manager_approved') {
+		throw error(400, 'This claim has already been decided');
+	}
+
+	// Comp-off runs manager → HR → credited, the same chain as leave and
+	// attendance corrections. Which stage this call decides depends on where the
+	// claim currently sits.
+	const stage = credit.status === 'manager_approved' ? 'hr' : 'manager';
 
 	const [claimant] = await db.select().from(users).where(eq(users.id, credit.userId)).limit(1);
 	if (!claimant) throw error(404, 'Claiming employee not found');
 
-	// Routed by the reporting line, not by role: the claimant's own manager
-	// decides. HR remains the fallback when no manager is resolvable, so a claim
-	// is never stranded — which is what previously left a Super Admin's own
-	// claim pending with nobody able to see it.
-	if (!(await canReviewStage(approver, claimant.id, 'manager'))) {
+	// Routed by the reporting line, not by role: the claimant's own manager gives
+	// the first sign-off, then their concerned HR credits it. Admins remain the
+	// fallback when nobody is assigned, so a claim is never stranded — which is
+	// what previously left a Super Admin's own claim pending with nobody able to
+	// see it.
+	if (!(await canReviewStage(approver, claimant.id, stage))) {
 		throw error(
 			403,
 			claimant.id === approver.id
 				? 'You cannot approve your own comp-off claim'
-				: "Only this employee's reporting manager can decide their comp-off"
+				: stage === 'hr'
+					? 'This claim has manager sign-off and is now waiting on HR'
+					: "Only this employee's reporting manager can give the first sign-off"
 		);
 	}
 
-	// Re-verify against the current record before crediting.
+	// Re-verify against the current record before crediting. Only at the HR
+	// stage: that is the point the credit becomes real, and a ProHance re-sync
+	// between the manager's sign-off and HR's could change the worked hours.
 	let recheck: Awaited<ReturnType<typeof evaluateCompOffEligibility>> | null = null;
-	if (decision === 'approve') {
+	if (decision === 'approve' && stage === 'hr') {
 		recheck = await evaluateCompOffEligibility(credit.userId, credit.workedDate);
 		// The claim itself is the one live row for this date, so "already claimed"
 		// is expected here and is not a reason to refuse.
@@ -69,7 +81,10 @@ export const POST: RequestHandler = async (event) => {
 		}
 	}
 
-	const newStatus = decision === 'approve' ? 'approved' : 'rejected';
+	// A rejection ends it at either stage. The manager's approval hands over to
+	// HR; only HR's approval credits the day.
+	const newStatus =
+		decision === 'reject' ? 'rejected' : stage === 'hr' ? 'approved' : 'manager_approved';
 
 	const [updated] = await db
 		.update(compOffCredits)

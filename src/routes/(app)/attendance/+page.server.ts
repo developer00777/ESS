@@ -325,14 +325,28 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 				: [];
 
 		// Comp-off is one step — the manager decides and that credits it.
-		const coRows = manageable.length
-			? await db
-					.select({ credit: compOffCredits, employeeName: usersTable.fullName })
-					.from(compOffCredits)
-					.innerJoin(usersTable, eq(compOffCredits.userId, usersTable.id))
-					.where(and(eq(compOffCredits.status, 'pending'), inArray(compOffCredits.userId, manageable)))
-					.orderBy(desc(compOffCredits.workedDate))
-			: [];
+		// Comp-off is two-step like the rest: 'pending' is the manager's to sign
+		// off, 'manager_approved' is the concerned HR's to credit.
+		const coRows =
+			manageable.length || hrReviewable.length
+				? await db
+						.select({ credit: compOffCredits, employeeName: usersTable.fullName })
+						.from(compOffCredits)
+						.innerJoin(usersTable, eq(compOffCredits.userId, usersTable.id))
+						.where(
+							or(
+								and(
+									eq(compOffCredits.status, 'pending'),
+									manageable.length ? inArray(compOffCredits.userId, manageable) : sql`false`
+								),
+								and(
+									eq(compOffCredits.status, 'manager_approved'),
+									hrReviewable.length ? inArray(compOffCredits.userId, hrReviewable) : sql`false`
+								)
+							)
+						)
+						.orderBy(desc(compOffCredits.workedDate))
+				: [];
 
 		deviationQueue = devRows.map((r) => ({
 			...r,

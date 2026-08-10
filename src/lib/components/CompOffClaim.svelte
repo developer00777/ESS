@@ -91,7 +91,11 @@
 	const available = $derived(
 		credits.filter((c) => c.status === 'approved' && c.expiresOn.slice(0, 10) >= todayKey).length
 	);
-	const pending = $derived(credits.filter((c) => c.status === 'pending').length);
+	// 'manager_approved' is mid-chain — the manager has signed off and HR has yet
+	// to credit it — so it counts as awaiting, not available.
+	const pending = $derived(
+		credits.filter((c) => c.status === 'pending' || c.status === 'manager_approved').length
+	);
 	const used = $derived(credits.filter((c) => c.status === 'used').length);
 </script>
 
@@ -115,8 +119,14 @@
 				<li>
 					<span class="c-date">{fmt(c.workedDate)}</span>
 					<span class="c-hours">{hours(c.workedMinutes)}</span>
-					<span class="ess-badge ess-badge--{c.status === 'approved' ? 'present' : c.status === 'pending' ? 'restricted' : 'absent'}">
-						{c.status}
+					<span
+						class="ess-badge ess-badge--{c.status === 'approved'
+							? 'present'
+							: c.status === 'pending' || c.status === 'manager_approved'
+								? 'restricted'
+								: 'absent'}"
+					>
+						{c.status === 'manager_approved' ? 'awaiting HR' : c.status}
 					</span>
 					<span class="c-exp">
 						{#if c.status === 'approved'}

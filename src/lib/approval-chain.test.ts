@@ -128,18 +128,24 @@ describe('a named concerned HR owns the request', () => {
 
 describe('how far a request advances on approval', () => {
 	// Comp-off is one step; leave and deviations are two.
+	// All three run manager → HR → approved. Comp-off was single-step at first;
+	// it now matches the others, so a credit only becomes spendable once the
+	// concerned HR has signed off.
 	const nextStatus = (
-		kind: 'comp_off' | 'leave' | 'deviation',
+		_kind: 'comp_off' | 'leave' | 'deviation',
 		stage: 'manager' | 'hr',
 		decision: 'approve' | 'reject'
 	) => {
 		if (decision === 'reject') return 'rejected';
-		if (kind === 'comp_off') return 'approved'; // manager's approval credits it
 		return stage === 'hr' ? 'approved' : 'awaiting_hr';
 	};
 
-	test('a manager approving a comp-off credits it outright', () => {
-		expect(nextStatus('comp_off', 'manager', 'approve')).toBe('approved');
+	test('a manager approving a comp-off hands it to HR rather than crediting', () => {
+		expect(nextStatus('comp_off', 'manager', 'approve')).toBe('awaiting_hr');
+	});
+
+	test('only HR crediting makes a comp-off spendable', () => {
+		expect(nextStatus('comp_off', 'hr', 'approve')).toBe('approved');
 	});
 
 	test('a manager approving leave hands over to HR', () => {
