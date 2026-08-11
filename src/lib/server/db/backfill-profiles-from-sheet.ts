@@ -3,110 +3,37 @@
  *
  * Why this exists: an early bulk import saved only the columns needed to create
  * a login — every staged row's profile_data is null — so the roster it created
- * carries no gender, joining or confirmation date. Pink leave is restricted to
- * female employees, so a blank gender means nobody accrues it. The staged rows
- * hold nothing to re-apply, which leaves the original spreadsheet as the only
- * source for the missing values.
+ * carries no gender, no contact details, no bank or ID fields. Pink leave is
+ * restricted to female employees, so a blank gender also meant nobody accrued
+ * it. The staged rows hold nothing to re-apply, which leaves the original
+ * spreadsheet as the only source for the missing values.
+ *
+ * Parsing goes through parseHrTeamSheet — the SAME code the portal's bulk
+ * import runs, including its column-drift repair — so a backfilled profile is
+ * indistinguishable from one the portal imported. A reimplementation here would
+ * drift from the app and produce subtly different profiles.
  *
  * People are matched on employee code, falling back to work email. Values are
  * written with coalesce so ONLY blank columns are filled: anything HR has since
  * corrected in the portal outranks the spreadsheet and is left untouched.
  *
  * Usage (dry run prints the plan and writes nothing):
- *   DATABASE_URL=... tsx src/lib/server/db/backfill-profiles-from-sheet.ts <file.xlsx>
- *   DATABASE_URL=... tsx src/lib/server/db/backfill-profiles-from-sheet.ts <file.xlsx> --apply
+ *   DATABASE_URL=... npm run backfill:profiles -- <file.xlsx>
+ *   DATABASE_URL=... npm run backfill:profiles -- <file.xlsx> --apply
  */
-import ExcelJS from 'exceljs';
+import fs from 'node:fs';
 import pg from 'pg';
+import { parseHrTeamSheet } from '../bulk-import';
+import { profileValuesFromImport } from '../import-profile-fields';
 import { checkPinkLeaveEligibility } from '../leave-eligibility';
 
-/**
- * Reads the tracker's identity, gender and date columns.
- *
- * Deliberately does NOT go through parseHrTeamSheet: that pulls in the LLM
- * mapping fallback, which needs SvelteKit's $env and cannot load outside the
- * app. This script only needs four well-known columns from a sheet whose
- * headers already match, so it reads them directly.
- */
-interface SheetRow {
-	fullName: string;
-	officialEmail: string;
-	employeeCode: string | null;
-	gender: string | null;
-	dateOfJoining: string | null;
-	dateOfConfirmation: string | null;
+/** camelCase profile key → employee_profiles column. */
+function toSnakeCase(key: string): string {
+	return key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
 }
 
-const HEADERS: Record<string, keyof SheetRow> = {
-	'name of the champion': 'fullName',
-	'official e mail': 'officialEmail',
-	'cipl emp code': 'employeeCode',
-	gender: 'gender',
-	'date of joining': 'dateOfJoining',
-	'date of confirmation': 'dateOfConfirmation'
-};
-
-/** HR sheets use "-", "NA" and friends to mean "nothing here". */
-const PLACEHOLDERS = new Set(['-', '--', 'na', 'n/a', 'nil', 'none', 'null']);
-
-function cellText(value: unknown): string | null {
-	if (value === null || value === undefined) return null;
-	// Excel dates arrive as Date objects; a date column needs ISO, not a locale string.
-	if (value instanceof Date) {
-		return Number.isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10);
-	}
-	if (typeof value === 'object' && 'text' in (value as Record<string, unknown>)) {
-		return String((value as { text: unknown }).text).trim() || null;
-	}
-	const text = String(value).trim().replace(/'+$/, '');
-	if (text === '' || PLACEHOLDERS.has(text.toLowerCase())) return null;
-	return text;
-}
-
-async function readSheet(file: string): Promise<SheetRow[]> {
-	const workbook = new ExcelJS.Workbook();
-	await workbook.xlsx.readFile(file);
-	const sheet = workbook.worksheets[0];
-	if (!sheet) throw new Error('This workbook has no sheets');
-
-	const columns: Partial<Record<keyof SheetRow, number>> = {};
-	sheet.getRow(1).eachCell({ includeEmpty: false }, (cell, colNumber) => {
-		const field = HEADERS[String(cell.value ?? '').trim().toLowerCase()];
-		// First occurrence wins — the tracker repeats several header names.
-		if (field && columns[field] === undefined) columns[field] = colNumber;
-	});
-	if (!columns.fullName || !columns.officialEmail) {
-		throw new Error(`Could not find name and work-email columns in "${sheet.name}"`);
-	}
-
-	const rows: SheetRow[] = [];
-	sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-		if (rowNumber === 1) return;
-		const at = (field: keyof SheetRow) => {
-			const col = columns[field];
-			return col ? cellText(row.getCell(col).value) : null;
-		};
-		const fullName = at('fullName');
-		const officialEmail = at('officialEmail');
-		if (!fullName || !officialEmail) return;
-		rows.push({
-			fullName,
-			officialEmail: officialEmail.toLowerCase(),
-			employeeCode: at('employeeCode'),
-			gender: at('gender'),
-			dateOfJoining: at('dateOfJoining'),
-			dateOfConfirmation: at('dateOfConfirmation')
-		});
-	});
-	return rows;
-}
-
-/** Profile columns this script is allowed to fill. Deliberately narrow. */
-const COLUMNS = [
-	['gender', 'gender'],
-	['dateOfJoining', 'date_of_joining'],
-	['dateOfConfirmation', 'date_of_confirmation']
-] as const;
+/** Columns holding structured JSON rather than a scalar. */
+const JSON_COLUMNS = new Set(['children']);
 
 async function main() {
 	const [file, ...flags] = process.argv.slice(2);
@@ -115,8 +42,11 @@ async function main() {
 	const connectionString = process.env.DATABASE_URL;
 	if (!connectionString) throw new Error('DATABASE_URL is required');
 
-	const sheetRows = await readSheet(file);
-	console.log(`${apply ? 'APPLY' : 'DRY RUN'} — ${sheetRows.length} rows from ${file}\n`);
+	// exceljs's Buffer type predates newer @types/node Buffer fields.
+	const parsed = await parseHrTeamSheet(fs.readFileSync(file) as Parameters<typeof parseHrTeamSheet>[0]);
+	console.log(
+		`${apply ? 'APPLY' : 'DRY RUN'} — ${parsed.rows.length} rows from "${parsed.sheetName}" (${parsed.strategy})\n`
+	);
 
 	const client = new pg.Client({
 		connectionString,
@@ -138,14 +68,45 @@ async function main() {
 		);
 		const byEmail = new Map(profiles.map((p) => [p.email.toLowerCase(), p]));
 
+		// Only columns that actually exist are written — the parser knows fields
+		// that predate or postdate a given database.
+		const { rows: columnRows } = await client.query<{ column_name: string }>(
+			`select column_name from information_schema.columns where table_name = 'employee_profiles'`
+		);
+		const existingColumns = new Set(columnRows.map((r) => r.column_name));
+
 		let matched = 0;
 		let updated = 0;
+		let fieldsWritten = 0;
 		const unmatched: string[] = [];
 
-		for (const row of sheetRows) {
-			const code = row.employeeCode?.trim().toUpperCase();
-			const target = (code ? byCode.get(code) : undefined) ?? byEmail.get(row.officialEmail);
+		for (const row of parsed.rows) {
+			// Identity and org fields are applied explicitly below; the rest is the
+			// profile payload, exactly as the portal's own import splits it.
+			const {
+				fullName: _fullName,
+				officialEmail: _officialEmail,
+				employeeCode: _employeeCode,
+				salaryBankRaw: _salaryBankRaw,
+				designation,
+				teamAndFloor,
+				reportingAuthorityRaw,
+				dottedLineAuthorityRaw,
+				...profileData
+			} = row;
 
+			const values: Record<string, unknown> = {
+				...profileValuesFromImport(profileData),
+				// Org fields the parser returns separately from the profile payload.
+				...(designation ? { designation } : {}),
+				...(teamAndFloor ? { teamAndFloor } : {}),
+				...(reportingAuthorityRaw ? { directReportingAuthority: reportingAuthorityRaw } : {}),
+				...(dottedLineAuthorityRaw ? { dottedLineReportingAuthority: dottedLineAuthorityRaw } : {})
+			};
+
+			const code = row.employeeCode?.trim().toUpperCase();
+			const target =
+				(code ? byCode.get(code) : undefined) ?? byEmail.get(row.officialEmail.toLowerCase());
 			if (!target) {
 				unmatched.push(`${row.fullName} (${code ?? row.officialEmail})`);
 				continue;
@@ -154,18 +115,19 @@ async function main() {
 
 			const sets: string[] = [];
 			const params: unknown[] = [];
-			for (const [field, column] of COLUMNS) {
-				const value = row[field];
-				if (!value) continue;
-				params.push(value);
+			for (const [key, value] of Object.entries(values)) {
+				if (value === null || value === undefined || value === '') continue;
+				const column = toSnakeCase(key);
+				if (!existingColumns.has(column)) continue;
+				params.push(JSON_COLUMNS.has(column) ? JSON.stringify(value) : value);
 				// coalesce: fill the blank, never overwrite what is already recorded.
 				sets.push(`${column} = coalesce(${column}, $${params.length})`);
 			}
 
 			const verdict = checkPinkLeaveEligibility({
-				gender: row.gender,
-				dateOfJoining: row.dateOfJoining,
-				dateOfConfirmation: row.dateOfConfirmation,
+				gender: (values.gender as string) ?? null,
+				dateOfJoining: (values.dateOfJoining as string) ?? null,
+				dateOfConfirmation: (values.dateOfConfirmation as string) ?? null,
 				pinkLeaveEligibleOverride: null
 			});
 
@@ -178,16 +140,27 @@ async function main() {
 				);
 				updated++;
 			}
+			fieldsWritten += sets.length;
 
 			console.log(
-				`${row.fullName.padEnd(25)} ${(row.gender ?? '-').padEnd(7)} ` +
-					`doj=${(row.dateOfJoining ?? '-').padEnd(11)} ` +
+				`${row.fullName.padEnd(25)} ${String(values.gender ?? '-').padEnd(7)} ` +
+					`fields=${String(sets.length).padStart(2)} ` +
 					`=> ${verdict.eligible ? 'PINK YES' : `no (${verdict.reason})`}`
 			);
 		}
 
-		console.log(`\nmatched ${matched}/${sheetRows.length}, ${apply ? 'updated' : 'would update'} ${updated}`);
+		console.log(
+			`\nmatched ${matched}/${parsed.rows.length}, ` +
+				`${apply ? 'updated' : 'would update'} ${updated} profiles, ` +
+				`${fieldsWritten} field writes offered`
+		);
 		for (const name of unmatched) console.log(`NO MATCH: ${name}`);
+		if (Object.keys(parsed.repairs).length > 0) {
+			console.log(`\nrows with data-quality repairs: ${Object.keys(parsed.repairs).length}`);
+			for (const [index, notes] of Object.entries(parsed.repairs)) {
+				console.log(`  ${parsed.rows[Number(index)]?.fullName}: ${notes.join('; ')}`);
+			}
+		}
 		if (!apply) console.log('\nDry run — nothing written. Re-run with --apply.');
 	} finally {
 		await client.end();

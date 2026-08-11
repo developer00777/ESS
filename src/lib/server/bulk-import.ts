@@ -253,6 +253,9 @@ const looksLikeIfsc = (v: string) => /^[A-Z]{4}0[A-Z0-9]{6}$/i.test(v.trim());
 const looksLikeUan = (v: string) => /^\d{12}$/.test(v.replace(/\s/g, ''));
 const looksLikePhone = (v: string) => /^(\+?91[-\s]?)?[6-9]\d{9}$/.test(v.replace(/[-\s]/g, ''));
 const looksLikeExperience = (v: string) => /^\d+(\.\d+)?\s*(yrs?|years?)$/i.test(v.trim());
+// An Indian driving licence is state-code + digits, e.g. "KA5120170071762".
+// Requiring a letter keeps bare 12-digit Aadhaar/UAN values out of the field.
+const looksLikeDrivingLicense = (v: string) => /^[A-Z]{2}[\s-]?\d[\d\s-]{6,}$/i.test(v.trim());
 const looksLikeEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
 /**
@@ -297,21 +300,38 @@ function repairMisalignedValues(row: ParsedImportRow): string[] {
 			row.totalExperience !== rebuiltIds.totalExperience ||
 			row.aadharNumber !== rebuiltIds.aadharNumber ||
 			row.panNumber !== rebuiltIds.panNumber ||
-			row.uanNumber !== rebuiltIds.uanNumber;
+			row.uanNumber !== rebuiltIds.uanNumber ||
+			// A row whose only fault is a non-licence in the licence column still
+			// needs the rebuild to run so that value gets cleared.
+			(row.drivingLicenseNumber != null && !looksLikeDrivingLicense(row.drivingLicenseNumber));
 
 		if (idsChanged) {
 			// Anything left over that wasn't claimed (e.g. a licence number) stays
 			// on drivingLicenseNumber rather than being silently dropped.
-			const claimed = new Set(
-				[foundExperience, foundAadhaar, foundPan, foundUan].filter(Boolean) as string[]
-			);
-			const leftover = idPool.find((v) => !claimed.has(v));
+			//
+			// Claims are consumed BY POSITION, not by value: a row with a UAN but no
+			// Aadhaar has one 12-digit number filling one pool slot, and matching on
+			// the string alone left that same slot looking unclaimed — so the UAN was
+			// copied into the licence field as well.
+			const claimedIndexes = new Set<number>();
+			for (const claim of [foundExperience, foundAadhaar, foundPan, foundUan]) {
+				if (claim == null) continue;
+				const at = idPool.findIndex((v, i) => v === claim && !claimedIndexes.has(i));
+				if (at !== -1) claimedIndexes.add(at);
+			}
+			const leftover = idPool.find((v, i) => !claimedIndexes.has(i));
 
 			row.totalExperience = rebuiltIds.totalExperience;
 			row.aadharNumber = rebuiltIds.aadharNumber;
 			row.panNumber = rebuiltIds.panNumber;
 			row.uanNumber = rebuiltIds.uanNumber;
-			if (leftover && row.drivingLicenseNumber == null) row.drivingLicenseNumber = leftover;
+			// The licence column is part of the same drifted block, so whatever sat
+			// under its header is rebuilt too rather than left in place. An Indian DL
+			// carries a state code ("KA5120170071762"); a bare number there is an
+			// unlabelled Aadhaar/UAN or a stray figure like "14.5" years of service,
+			// and recording either as a licence is worse than leaving it empty.
+			row.drivingLicenseNumber =
+				leftover && looksLikeDrivingLicense(leftover) ? leftover : null;
 			notes.push('government IDs re-matched by value shape');
 		}
 	}
@@ -437,6 +457,33 @@ function repairMisalignedValues(row: ParsedImportRow): string[] {
 			(/[/,]/.test(value) && !looksLikeQualification(value))
 		) {
 			row[field] = null;
+		}
+	}
+
+	// The education block drifts as a unit too, which lands a bachelor's degree
+	// under "Masters" — the tracker's own header order puts Masters immediately
+	// after Graduate, so a one-column shift is enough. Re-sort what survived by
+	// the level the qualification actually names rather than by the column it
+	// arrived in; a postgraduate token (MBA, MCom, MSc, PhD) is a master's and a
+	// bachelor token (BBA, BCom, BA, BTech) is not.
+	const isMastersLevel = (v: string) => /^(m\.?[a-z]{1,4}|phd|ca)\b/i.test(v.trim());
+	const isBachelorsLevel = (v: string) => /^(b\.?[a-z]{1,4})\b/i.test(v.trim());
+
+	const educationPool = [row.underGraduate, row.graduate, row.masters].filter(
+		(v): v is string => v != null
+	);
+	if (educationPool.length > 0) {
+		const masters = educationPool.find(isMastersLevel) ?? null;
+		const bachelors = educationPool.find(isBachelorsLevel) ?? null;
+		// Anything that is neither (SSLC, PUC, a diploma) is schooling below a
+		// degree, which is what the tracker's "Under Graduate" column records.
+		const preDegree = educationPool.find((v) => !isMastersLevel(v) && !isBachelorsLevel(v)) ?? null;
+
+		if (row.masters !== masters || row.graduate !== bachelors || row.underGraduate !== preDegree) {
+			row.underGraduate = preDegree;
+			row.graduate = bachelors;
+			row.masters = masters;
+			notes.push('education re-matched by qualification level');
 		}
 	}
 
