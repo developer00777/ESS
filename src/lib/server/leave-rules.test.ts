@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { checkPinkLeaveEligibility, isConfirmed, monthBounds } from './leave-eligibility';
+import { checkPinkLeaveEligibility, hasJoined, monthBounds } from './leave-eligibility';
 import { makeWeekOffResolver, workingDaysInRange, DEFAULT_WEEKDAYS_OFF } from '$lib/week-off';
 
 /**
@@ -200,13 +200,25 @@ describe('pink leave eligibility', () => {
 		expect(verdict.reason).toBe('withheld_by_hr');
 	});
 
-	test('an unconfirmed employee is not yet eligible', () => {
+	test('an unconfirmed employee is eligible from her joining date', () => {
+		// The policy grants pink leave to female employees outright; it sets no
+		// probation bar. The tracker leaves Date of Confirmation blank for recent
+		// joiners, so requiring it withheld the leave from women the policy covers.
 		const verdict = checkPinkLeaveEligibility(
 			profile({ dateOfJoining: '2026-07-01', dateOfConfirmation: null }),
 			new Date('2026-08-06')
 		);
-		expect(verdict.eligible).toBe(false);
-		expect(verdict.reason).toBe('not_confirmed');
+		expect(verdict.eligible).toBe(true);
+		expect(verdict.reason).toBe('eligible');
+	});
+
+	test('eligibility starts the day she joins, not before', () => {
+		const notYet = checkPinkLeaveEligibility(
+			profile({ dateOfJoining: '2026-09-01', dateOfConfirmation: null }),
+			new Date('2026-08-06')
+		);
+		expect(notYet.eligible).toBe(false);
+		expect(notYet.reason).toBe('not_joined');
 	});
 
 	test('a missing profile is refused rather than assumed eligible', () => {
@@ -223,23 +235,27 @@ describe('pink leave eligibility', () => {
 	});
 });
 
-describe('confirmation fallback', () => {
-	test('a recorded confirmation date wins', () => {
-		expect(isConfirmed({ dateOfJoining: '2026-01-01', dateOfConfirmation: '2026-02-01' }, new Date('2026-03-01')))
-			.toEqual({ confirmed: true, known: true });
+describe('joining date', () => {
+	test('a past joining date counts as joined', () => {
+		expect(hasJoined({ dateOfJoining: '2026-01-01', dateOfConfirmation: null }, new Date('2026-03-01')))
+			.toEqual({ joined: true, known: true });
 	});
 
-	test('without one, joining + 6 months stands in', () => {
-		// So a missing HR field does not block someone who has clearly served.
-		expect(isConfirmed({ dateOfJoining: '2026-01-01', dateOfConfirmation: null }, new Date('2026-08-01')))
-			.toEqual({ confirmed: true, known: true });
-		expect(isConfirmed({ dateOfJoining: '2026-01-01', dateOfConfirmation: null }, new Date('2026-03-01')))
-			.toEqual({ confirmed: false, known: true });
+	test('a future joining date has not started yet', () => {
+		expect(hasJoined({ dateOfJoining: '2026-09-01', dateOfConfirmation: null }, new Date('2026-03-01')))
+			.toEqual({ joined: false, known: true });
+	});
+
+	test('a confirmation date stands in when the joining date is missing', () => {
+		// Confirmation implies employment began, so the older records in the
+		// tracker are not treated as unknown just because DOJ is blank.
+		expect(hasJoined({ dateOfJoining: null, dateOfConfirmation: '2026-02-01' }, new Date('2026-03-01')))
+			.toEqual({ joined: true, known: true });
 	});
 
 	test('neither date recorded reads as unknown, not zero tenure', () => {
-		expect(isConfirmed({ dateOfJoining: null, dateOfConfirmation: null }))
-			.toEqual({ confirmed: false, known: false });
+		expect(hasJoined({ dateOfJoining: null, dateOfConfirmation: null }))
+			.toEqual({ joined: false, known: false });
 	});
 });
 

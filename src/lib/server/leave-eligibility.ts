@@ -2,8 +2,14 @@
  * Eligibility rules for restricted leave types.
  *
  * Pink leave (menstrual leave) is the current case: one day per calendar month
- * for confirmed female employees. The quota refreshes monthly and does not
- * accumulate — an unused day expires at month end.
+ * for female employees, from their joining date. The quota refreshes monthly and
+ * does not accumulate — an unused day expires at month end.
+ *
+ * The written policy states only "available to female employees, at 1 day per
+ * calendar month" — it imposes no probation or confirmation requirement. The
+ * master tracker also leaves Date of Confirmation blank for recent joiners, so
+ * gating on confirmation withheld the leave from women the policy covers.
+ * Joining date is what every row actually carries, and it is what this rule uses.
  *
  * This module is the single source of truth: the Leave page, the apply form and
  * the API all call it, so what an employee is shown and what the server allows
@@ -11,9 +17,6 @@
  */
 
 export const PINK_LEAVE_CODE = 'PINK';
-
-/** Months of service after joining that stand in for confirmation when HR hasn't recorded a date. */
-const CONFIRMATION_FALLBACK_MONTHS = 6;
 
 export interface EligibilityProfile {
 	gender: string | null;
@@ -27,7 +30,8 @@ export type EligibilityReason =
 	| 'granted_by_hr'
 	| 'withheld_by_hr'
 	| 'not_female'
-	| 'not_confirmed'
+	/** Joining date is in the future — employment hasn't started yet. */
+	| 'not_joined'
 	| 'unknown_tenure';
 
 export interface EligibilityResult {
@@ -42,32 +46,23 @@ function isFemale(gender: string | null): boolean {
 }
 
 /**
- * True once the employee is confirmed. Confirmation date wins when recorded;
- * otherwise fall back to joining + 6 months so a missing HR field doesn't
- * silently block someone who has clearly served long enough.
+ * True once employment has actually begun.
+ *
+ * A confirmation date implies the person joined, so it stands in when the
+ * joining date itself is missing — the tracker records confirmation for older
+ * staff and leaves it blank for recent joiners, so between them one is always
+ * present.
  */
-export function isConfirmed(
+export function hasJoined(
 	profile: Pick<EligibilityProfile, 'dateOfJoining' | 'dateOfConfirmation'>,
 	now: Date = new Date()
-): { confirmed: boolean; known: boolean } {
-	if (profile.dateOfConfirmation) {
-		const confirmed = new Date(profile.dateOfConfirmation);
-		if (!Number.isNaN(confirmed.getTime())) {
-			return { confirmed: confirmed <= now, known: true };
-		}
+): { joined: boolean; known: boolean } {
+	for (const value of [profile.dateOfJoining, profile.dateOfConfirmation]) {
+		if (!value) continue;
+		const date = new Date(value);
+		if (!Number.isNaN(date.getTime())) return { joined: date <= now, known: true };
 	}
-
-	if (profile.dateOfJoining) {
-		const joined = new Date(profile.dateOfJoining);
-		if (!Number.isNaN(joined.getTime())) {
-			const threshold = new Date(joined);
-			threshold.setMonth(threshold.getMonth() + CONFIRMATION_FALLBACK_MONTHS);
-			return { confirmed: threshold <= now, known: true };
-		}
-	}
-
-	// Neither date recorded — tenure is unknown, not "zero".
-	return { confirmed: false, known: false };
+	return { joined: false, known: false };
 }
 
 export function checkPinkLeaveEligibility(
@@ -96,23 +91,23 @@ export function checkPinkLeaveEligibility(
 		};
 	}
 
-	const { confirmed, known } = isConfirmed(profile, now);
+	const { joined, known } = hasJoined(profile, now);
 	if (!known) {
 		return {
 			eligible: false,
 			reason: 'unknown_tenure',
-			detail: 'No joining or confirmation date recorded — HR can grant this manually.'
+			detail: 'No joining date recorded — HR can grant this manually.'
 		};
 	}
-	if (!confirmed) {
+	if (!joined) {
 		return {
 			eligible: false,
-			reason: 'not_confirmed',
-			detail: `Available after confirmation (or ${CONFIRMATION_FALLBACK_MONTHS} months of service).`
+			reason: 'not_joined',
+			detail: 'Starts from the joining date.'
 		};
 	}
 
-	return { eligible: true, reason: 'eligible', detail: 'Confirmed employee.' };
+	return { eligible: true, reason: 'eligible', detail: 'Female employee, joined.' };
 }
 
 /** First and last instant of the calendar month containing `date`. */
