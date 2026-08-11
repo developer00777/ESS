@@ -96,6 +96,68 @@ describe('government ID repair', () => {
 	});
 });
 
+describe('header-driven parsing', () => {
+	/**
+	 * The repair pass exists for the tracker's misaligned rows. It must never be
+	 * what a correctly-labelled sheet depends on: when every value sits under its
+	 * true header, the headers alone have to produce the whole row, and the
+	 * repair pass has to leave it alone.
+	 */
+	test('a correctly aligned sheet parses from headers, untouched by repair', async () => {
+		const workbook = new ExcelJS.Workbook();
+		const sheet = workbook.addWorksheet('HR Team Master Tracker');
+		sheet.addRow([
+			'CIPL Emp Code', 'Name Of the Champion', 'Designation', 'Gender',
+			'Contact Number', 'Personal E Mail', 'Official E Mail ',
+			'Under Graduate', 'Graduate', 'Masters', 'Total Experience in Years',
+			'Aadhar Number', 'PAN No', 'UAN Number', 'DL #',
+			'Personal Bank Account #', 'Employee Name as Per Bank ', 'Bank Name', 'Bank-IFSC code',
+			'Contact Name in case of Emergency', 'Contact Number'
+		]);
+		sheet.addRow([
+			'CIPL9001', 'Clean Person', 'Analyst', 'Female',
+			'9876543210', 'clean@gmail.com', 'clean@championsmail.com',
+			'SSLC', 'BCom', 'MBA', '5 yrs',
+			'123456789012', 'ABCPD1234K', '987654321098', 'KA0120190001234',
+			'50100509155982', 'Clean Person', 'HDFC Bank', 'HDFC0004274',
+			'Rita Person', '9998887776'
+		]);
+		const buffer = await workbook.xlsx.writeBuffer();
+		const result = await parseHrTeamSheet(Buffer.from(buffer) as never);
+		const row = result.rows[0];
+
+		expect(row.underGraduate).toBe('SSLC');
+		expect(row.graduate).toBe('BCom');
+		expect(row.masters).toBe('MBA');
+		expect(row.aadharNumber).toBe('123456789012');
+		expect(row.panNumber).toBe('ABCPD1234K');
+		expect(row.uanNumber).toBe('987654321098');
+		expect(row.drivingLicenseNumber).toBe('KA0120190001234');
+		expect(row.bankAccountNumber).toBe('50100509155982');
+		expect(row.bankName).toBe('HDFC Bank');
+		expect(row.bankIfsc).toBe('HDFC0004274');
+		// Nothing was moved, so the reviewer is shown no repair notes.
+		expect(result.repairs[0]).toBeUndefined();
+	});
+
+	test('a repeated header fills the field it names the second time', async () => {
+		// The tracker labels both the employee's and the emergency contact's
+		// number "Contact Number". Dropping the duplicate lost the second one.
+		const workbook = new ExcelJS.Workbook();
+		const sheet = workbook.addWorksheet('HR Team Master Tracker');
+		sheet.addRow([
+			'Name Of the Champion', 'Official E Mail ', 'Contact Number',
+			'Contact Name in case of Emergency', 'Contact Number'
+		]);
+		sheet.addRow(['Test Person', 't@example.com', '9876543210', 'Rita Person', '9998887776']);
+		const buffer = await workbook.xlsx.writeBuffer();
+		const row = (await parseHrTeamSheet(Buffer.from(buffer) as never)).rows[0];
+
+		expect(row.phone).toBe('9876543210');
+		expect(row.emergencyContactPhone).toBe('9998887776');
+	});
+});
+
 describe('bank repair', () => {
 	test('a block sitting under the personal headers is read', async () => {
 		const row = await parseBankRow([

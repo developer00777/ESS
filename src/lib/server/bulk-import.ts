@@ -765,6 +765,19 @@ function resolveSheet(workbook: ExcelJS.Workbook, name: string): ExcelJS.Workshe
 	return undefined;
 }
 
+/**
+ * Where a repeated header belongs the second time it appears.
+ *
+ * The tracker labels several distinct columns identically — "Contact Number" is
+ * the employee's and then, further right, the emergency contact's. The first
+ * occurrence is always the one the header names; a repeat carries the next
+ * thing in that group. Without this a duplicate was simply dropped, which lost
+ * the emergency contact number on every correctly-aligned row.
+ */
+const REPEATED_HEADER_FALLBACK: Partial<Record<keyof ParsedImportRow, keyof ParsedImportRow>> = {
+	phone: 'emergencyContactPhone'
+};
+
 /** Tries the known header names against one sheet's given header row. */
 function matchKnownHeaders(
 	sheet: ExcelJS.Worksheet,
@@ -773,11 +786,18 @@ function matchKnownHeaders(
 	const columnIndex: Partial<Record<keyof ParsedImportRow, number>> = {};
 	sheet.getRow(headerRowNumber).eachCell({ includeEmpty: false }, (cell, colNumber) => {
 		const field = HEADER_MAP[normalizeHeader(cell.value)];
-		// First occurrence wins. The tracker repeats several header names —
-		// "Contact Number" is both the employee's and the emergency contact's —
-		// and the employee's own always comes first. Letting a later duplicate
-		// overwrite would silently put the wrong person's number on the profile.
-		if (field && columnIndex[field] === undefined) columnIndex[field] = colNumber;
+		if (!field) return;
+		// First occurrence wins: the employee's own column always precedes the
+		// repeat, and letting a duplicate overwrite would put the wrong person's
+		// number on the profile.
+		if (columnIndex[field] === undefined) {
+			columnIndex[field] = colNumber;
+			return;
+		}
+		// A repeat is real data under a reused label, so it falls through to the
+		// field that label means the second time round rather than being dropped.
+		const fallback = REPEATED_HEADER_FALLBACK[field];
+		if (fallback && columnIndex[fallback] === undefined) columnIndex[fallback] = colNumber;
 	});
 	return columnIndex;
 }
