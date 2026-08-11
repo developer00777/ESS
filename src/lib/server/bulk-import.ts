@@ -79,11 +79,17 @@ export interface ParsedImportRow {
 	bankName: string | null;
 	bankIfsc: string | null;
 	/**
-	 * Staging only. The tracker's salary-bank columns overlap the personal-bank
-	 * ones once a row has drifted, so their values join the same pool during
-	 * repair. Not persisted — see the bank rebuild in repairMisalignedValues().
+	 * Staging only. Every cell across the tracker's bank region, in column order.
+	 *
+	 * The block drifts by a different amount per person — one row's account sits
+	 * under "Employee Name as Per Bank", another's under "Bank-IFSC code", a
+	 * third's under the repeated salary-bank headers further right. Reading only
+	 * the four mapped columns therefore missed whichever fields fell outside
+	 * them, which is how rows ended up with an account number but no bank or
+	 * IFSC. The whole region is captured and the block rebuilt from it by value
+	 * shape. Not persisted — see the bank rebuild in repairMisalignedValues().
 	 */
-	salaryBankRaw: string | null;
+	bankRegionRaw: string[];
 }
 
 /** Fields the review UI treats as sensitive; see maskSensitive(). */
@@ -211,13 +217,21 @@ const HEADER_MAP: Record<string, keyof ParsedImportRow> = {
 	'bank name': 'bankName',
 	'bank-ifsc code': 'bankIfsc',
 	'bank ifsc code': 'bankIfsc',
-	ifsc: 'bankIfsc',
-	// The tracker repeats a salary-bank block after the personal one. Its values
-	// are pooled with the personal block during repair (the columns drift into
-	// each other), so it is read into a staging field rather than dropped.
-	'salary bank account #': 'salaryBankRaw',
-	bank: 'salaryBankRaw'
+	ifsc: 'bankIfsc'
+	// The salary-bank headers repeated after the personal block are not mapped:
+	// every cell in the bank region is captured positionally into
+	// bankRegionRaw instead. See findBankRegion().
 };
+
+/**
+ * Headers that bound the tracker's bank region.
+ *
+ * The region runs from the first bank-ish header to the last, and a drifted row
+ * can place any of its four values anywhere inside it — so the span is read
+ * wholesale rather than column by column.
+ */
+const BANK_REGION_HEADERS =
+	/^(personal bank account|bank account|employee name as per bank|bank name|bank[-\s]?ifsc|salary bank account|bank)\b/i;
 
 function normalizeHeader(value: unknown): string {
 	return String(value ?? '')
@@ -346,17 +360,44 @@ function repairMisalignedValues(row: ParsedImportRow): string[] {
 		row.bankAccountHolderName,
 		row.bankName,
 		row.bankIfsc,
-		row.salaryBankRaw
+		...row.bankRegionRaw
 	].filter((v): v is string => v != null);
 	if (bankValues.length > 0) {
-		const account = bankValues.find((v) => /^\d{9,18}$/.test(v));
-		const ifsc = bankValues.find(looksLikeIfsc);
-		// A bank's name contains "bank"/"SBI"; the remaining name is the holder.
+		// An IFSC is four letters, a zero, then six alphanumerics — but the sheet
+		// contains at least one typed with a letter O for that zero ("UBINO900800"),
+		// so a near-miss in an otherwise IFSC-shaped value is accepted and
+		// normalised rather than discarded as "not a code".
+		const ifscRaw = bankValues.find((v) => looksLikeIfsc(v) || /^[A-Z]{4}O[A-Z0-9]{6}$/i.test(v));
+		const ifsc = ifscRaw
+			? `${ifscRaw.slice(0, 4)}0${ifscRaw.slice(5)}`.toUpperCase()
+			: undefined;
+		// A 12-digit value in this region is an Aadhaar or UAN that drifted in from
+		// the ID block, not a bank account. Those are claimed by the ID rebuild, so
+		// exclude anything it already took.
+		const claimedById = new Set(
+			[row.aadharNumber, row.uanNumber, row.panNumber].filter(Boolean) as string[]
+		);
+		const account = bankValues.find(
+			(v) => /^\d{9,18}$/.test(v) && !claimedById.has(v) && v !== ifscRaw
+		);
+		// A bank's name says so ("HDFC Bank", "SBI", "KVB", "BOI"); the remaining
+		// person-like value is the account holder.
 		const bankNamed = bankValues.find(
-			(v) => v !== account && v !== ifsc && /\bbank\b|^sbi$/i.test(v)
+			(v) =>
+				v !== account &&
+				v !== ifscRaw &&
+				// "BANKOF" in "CENTRAL BANKOF INDIA" is a missing space in the source, so
+			// the word is matched without requiring a boundary after it.
+			(/\bbank/i.test(v) || /^(sbi|kvb|boi|hdfc|icici|axis|pnb|idbi)$/i.test(v.trim()))
 		);
 		const holder = bankValues.find(
-			(v) => v !== account && v !== ifsc && v !== bankNamed && /[a-z]/i.test(v)
+			(v) =>
+				v !== account &&
+				v !== ifscRaw &&
+				v !== bankNamed &&
+				!claimedById.has(v) &&
+				// A holder is a written name, not a code or a stray label.
+				/^[a-z][a-z\s.'-]{2,}$/i.test(v)
 		);
 
 		const rebuilt = { account, holder, bankNamed, ifsc };
@@ -517,6 +558,33 @@ function collectChildren(
 	return kids.length > 0 ? kids : null;
 }
 
+/**
+ * Finds the column span covering the tracker's bank headers.
+ *
+ * Returns the first and last bank-ish column so a drifted value sitting under a
+ * neighbouring header is still read. Nothing outside the span is touched.
+ */
+function findBankRegion(
+	sheet: ExcelJS.Worksheet,
+	headerRowNumber: number
+): { start: number; end: number } | null {
+	let start: number | null = null;
+	let end: number | null = null;
+	sheet.getRow(headerRowNumber).eachCell({ includeEmpty: false }, (cell, colNumber) => {
+		if (!BANK_REGION_HEADERS.test(normalizeHeader(cell.value))) return;
+		if (start === null) start = colNumber;
+		end = colNumber;
+	});
+	if (start === null || end === null) return null;
+	// The block drifts rightward, so the furthest-shifted row spills past the last
+	// bank header. Extend by the width of one block so those values are still
+	// read; anything picked up beyond it has to look like bank data to be used.
+	return { start, end: end + BANK_REGION_OVERFLOW };
+}
+
+/** Columns past the last bank header that a drifted block can spill into. */
+const BANK_REGION_OVERFLOW = 4;
+
 function cellText(value: unknown): string | null {
 	if (value === null || value === undefined) return null;
 	// Excel dates arrive as Date objects; String() would render them as
@@ -577,6 +645,7 @@ function readRows(
 	const rows: ParsedImportRow[] = [];
 	const repairs: Record<number, string[]> = {};
 	const childColumns = findChildColumns(sheet, headerRowNumber);
+	const bankRegion = findBankRegion(sheet, headerRowNumber);
 
 	const at = (row: ExcelJS.Row, field: keyof ParsedImportRow) => {
 		const col = columnIndex[field];
@@ -655,7 +724,11 @@ function readRows(
 			bankAccountHolderName: at(row, 'bankAccountHolderName'),
 			bankName: at(row, 'bankName'),
 			bankIfsc: at(row, 'bankIfsc'),
-			salaryBankRaw: at(row, 'salaryBankRaw')
+			bankRegionRaw: bankRegion
+				? Array.from({ length: bankRegion.end - bankRegion.start + 1 }, (_, i) =>
+						meaningful(cellText(row.getCell(bankRegion.start + i).value))
+					).filter((v): v is string => v !== null)
+				: []
 		};
 
 		const notes = repairMisalignedValues(parsed);

@@ -87,7 +87,7 @@ async function main() {
 				fullName: _fullName,
 				officialEmail: _officialEmail,
 				employeeCode: _employeeCode,
-				salaryBankRaw: _salaryBankRaw,
+				bankRegionRaw: _bankRegionRaw,
 				designation,
 				teamAndFloor,
 				reportingAuthorityRaw,

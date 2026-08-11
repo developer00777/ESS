@@ -521,7 +521,7 @@ export const actions: Actions = {
 						reportingAuthorityRaw,
 						dottedLineAuthorityRaw,
 						employeeCode: _code,
-						salaryBankRaw: _salaryBankRaw,
+						bankRegionRaw: _bankRegionRaw,
 						...profileData
 					} = r;
 

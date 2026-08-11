@@ -22,6 +22,33 @@ const HEADERS = [
 	'Masters'
 ];
 
+/**
+ * The tracker's bank region: a personal block followed by a repeated salary
+ * block. A drifted row places its four values anywhere across the span.
+ */
+const BANK_HEADERS = [
+	'Name Of the Champion',
+	'Official E Mail ',
+	'Personal Bank Account #',
+	'Employee Name as Per Bank ',
+	'Bank Name',
+	'Bank-IFSC code',
+	'Salary Bank Account #',
+	'Bank',
+	'Bank-IFSC code',
+	'Salary Bank Account #'
+];
+
+async function parseBankRow(cells: (string | number | null)[]): Promise<ParsedImportRow> {
+	const workbook = new ExcelJS.Workbook();
+	const sheet = workbook.addWorksheet('HR Team Master Tracker');
+	sheet.addRow(BANK_HEADERS);
+	sheet.addRow(cells);
+	const buffer = await workbook.xlsx.writeBuffer();
+	const result = await parseHrTeamSheet(Buffer.from(buffer) as never);
+	return result.rows[0];
+}
+
 /** Builds a one-row workbook with the tracker's header names. */
 async function parseRow(cells: (string | number | null)[]): Promise<ParsedImportRow> {
 	const workbook = new ExcelJS.Workbook();
@@ -66,6 +93,60 @@ describe('government ID repair', () => {
 		expect(row.drivingLicenseNumber).toBe('KA5120170071762');
 		expect(row.aadharNumber).toBe('249293242615');
 		expect(row.uanNumber).toBe('101558316456');
+	});
+});
+
+describe('bank repair', () => {
+	test('a block sitting under the personal headers is read', async () => {
+		const row = await parseBankRow([
+			'Test Person', 't@example.com',
+			null, '50100509155982', 'Prasanna kumar M G', 'HDFC Bank', 'HDFC0004274', null, null, null
+		]);
+		expect(row.bankAccountNumber).toBe('50100509155982');
+		expect(row.bankAccountHolderName).toBe('Prasanna kumar M G');
+		expect(row.bankName).toBe('HDFC Bank');
+		expect(row.bankIfsc).toBe('HDFC0004274');
+	});
+
+	test('a block shifted into the salary columns is still read', async () => {
+		// Reading only the four mapped columns lost the bank and IFSC here, which
+		// is how a profile ended up with an account number but no bank.
+		const row = await parseBankRow([
+			'Test Person', 't@example.com',
+			null, null, null, '1412155000184940', 'Setty Bhavana', 'KVB', 'KVBL0001412', null
+		]);
+		expect(row.bankAccountNumber).toBe('1412155000184940');
+		expect(row.bankAccountHolderName).toBe('Setty Bhavana');
+		expect(row.bankName).toBe('KVB');
+		expect(row.bankIfsc).toBe('KVBL0001412');
+	});
+
+	test('an IFSC typed with a letter O is normalised', async () => {
+		// "UBINO900800" — the fifth character must be a zero.
+		const row = await parseBankRow([
+			'Test Person', 't@example.com',
+			null, '8310840203', 'RENUKA L', 'UNION Bank', 'UBINO900800', null, null, null
+		]);
+		expect(row.bankIfsc).toBe('UBIN0900800');
+	});
+
+	test('a bank name missing a space is still recognised', async () => {
+		const row = await parseBankRow([
+			'Test Person', 't@example.com',
+			null, null, null, '3491744142', 'salomi Siraj Dongre', 'CENTRAL BANKOF INDIA', 'CBIN0283774', null
+		]);
+		expect(row.bankName).toBe('CENTRAL BANKOF INDIA');
+		expect(row.bankAccountHolderName).toBe('salomi Siraj Dongre');
+	});
+
+	test('an empty bank region yields no invented values', async () => {
+		const row = await parseBankRow([
+			'Test Person', 't@example.com', null, '-', '-', '-', '-', '-', '-', '-'
+		]);
+		expect(row.bankAccountNumber).toBeNull();
+		expect(row.bankAccountHolderName).toBeNull();
+		expect(row.bankName).toBeNull();
+		expect(row.bankIfsc).toBeNull();
 	});
 });
 
