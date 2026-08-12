@@ -10,6 +10,7 @@
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import Palette from '@lucide/svelte/icons/palette';
 	import DatabaseZap from '@lucide/svelte/icons/database-zap';
+	import Fingerprint from '@lucide/svelte/icons/fingerprint';
 	import Moon from '@lucide/svelte/icons/moon';
 	import Sun from '@lucide/svelte/icons/sun';
 	import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
@@ -84,10 +85,18 @@
 	};
 	const tweaksItem: NavItem = { href: '/admin/tweaks', label: 'Design Tweaks', icon: Palette };
 	const cleanupItem: NavItem = { href: '/admin/cleanup', label: 'Data Cleanup', icon: DatabaseZap };
+	/* HR uploads the biometric machine's own report for the days its scheduled
+	   feed missed, so this is Admin's as much as the Super Admin's. */
+	const biometricItem: NavItem = {
+		href: '/admin/biometric',
+		label: 'Biometric Upload',
+		icon: Fingerprint
+	};
 
 	let sections = $derived.by(() => {
 		const manage = [
 			...(role !== 'employee' ? [teamItem] : []),
+			...(role === 'super_admin' || role === 'admin' ? [biometricItem] : []),
 			...(role === 'super_admin' ? [adminItem, tweaksItem, cleanupItem] : [])
 		];
 		return [
