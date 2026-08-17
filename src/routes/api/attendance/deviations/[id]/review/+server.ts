@@ -52,8 +52,9 @@ export const POST: RequestHandler = async (event) => {
 
 	// When no distinct manager exists, HR stands in for the manager stage as well
 	// and one approval has to finish the job — otherwise the same person approves
-	// twice, and the first click silently corrects nothing.
-	const singleStage = stage === 'manager' && (await isSingleStageFor(requester.id));
+	// twice, and the first click silently corrects nothing. Keyed on the reviewer
+	// too: a manager approving alone must still hand over to the concerned HR.
+	const singleStage = stage === 'manager' && (await isSingleStageFor(reviewer, requester.id));
 
 	// Routed by the reporting line. Nobody decides their own correction — the
 	// request is a claim about your own attendance, so approving it yourself

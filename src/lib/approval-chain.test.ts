@@ -181,10 +181,15 @@ describe('how far a request advances on approval', () => {
  * only moved the request to 'awaiting_hr', so no comp-off was credited and no
  * attendance was corrected, and it came back to them labelled "awaiting HR".
  *
- * The stages collapse when — and only when — no separate manager exists.
+ * The stages collapse when — and only when — no separate manager exists AND the
+ * person clicking is the one the HR stage would route to anyway. Checking only
+ * the first half is what let a manager approve a deviation on their own: with no
+ * reporting line on record, any manager-stage approver closed the request and the
+ * attendance was corrected without the named concerned HR ever seeing it.
  */
 describe('collapsing the chain for an employee with no manager', () => {
-	const singleStageFor = (requester: Person) => requester.managerId === null;
+	const singleStageFor = (actor: Person, requester: Person) =>
+		requester.managerId === null && canReview(actor, requester, 'hr');
 
 	const nextStatus = (
 		stage: 'manager' | 'hr',
@@ -195,33 +200,64 @@ describe('collapsing the chain for an employee with no manager', () => {
 		return stage === 'hr' || singleStage ? 'approved' : 'awaiting_hr';
 	};
 
-	test('an employee with no manager needs only one approval', () => {
-		expect(singleStageFor(orphan)).toBe(true);
-		expect(nextStatus('manager', 'approve', singleStageFor(orphan))).toBe('approved');
+	test('HR standing in for both stages needs only one approval', () => {
+		expect(singleStageFor(hr, orphan)).toBe(true);
+		expect(nextStatus('manager', 'approve', singleStageFor(hr, orphan))).toBe('approved');
 	});
 
 	test('HR standing in for the manager stage is not asked to approve twice', () => {
 		// The reported bug: HR approves, nothing visibly happens, and the request
 		// reappears in their own queue awaiting HR.
 		expect(canReview(hr, orphan, 'manager')).toBe(true);
-		expect(nextStatus('manager', 'approve', singleStageFor(orphan))).not.toBe('awaiting_hr');
+		expect(nextStatus('manager', 'approve', singleStageFor(hr, orphan))).not.toBe('awaiting_hr');
+	});
+
+	test('a named concerned HR is never bypassed by a manager approving alone', () => {
+		// The reported bug: deviations were approved and the attendance rewritten
+		// on the manager's click alone, with the assigned HR never in the loop.
+		const assigned: Person = { id: 'staff', role: 'employee', managerId: null, hrId: 'hr' };
+		// An admin other than the named HR. With no reporting line they qualify at
+		// the manager stage via the HR safety net, but the HR stage belongs to 'hr'.
+		const otherAdmin: Person = { id: 'other-admin', role: 'admin', managerId: null };
+
+		expect(canReview(otherAdmin, assigned, 'manager')).toBe(true);
+		expect(canReview(otherAdmin, assigned, 'hr')).toBe(false);
+
+		expect(singleStageFor(otherAdmin, assigned)).toBe(false);
+		expect(nextStatus('manager', 'approve', singleStageFor(otherAdmin, assigned))).toBe(
+			'awaiting_hr'
+		);
+
+		// ...and the named HR is the one who closes it.
+		expect(canReview(hr, assigned, 'hr')).toBe(true);
+		expect(nextStatus('hr', 'approve')).toBe('approved');
+	});
+
+	test('the named concerned HR still closes it in one click when they act first', () => {
+		// They own the HR stage and stand in at the manager stage, so the two
+		// genuinely coincide — approving twice would be the old no-op bug.
+		const assigned: Person = { id: 'staff', role: 'employee', managerId: null, hrId: 'hr' };
+		expect(singleStageFor(hr, assigned)).toBe(true);
+		expect(nextStatus('manager', 'approve', singleStageFor(hr, assigned))).toBe('approved');
 	});
 
 	test('an employee WITH a manager still goes through both stages', () => {
-		expect(singleStageFor(emp)).toBe(false);
-		expect(nextStatus('manager', 'approve', singleStageFor(emp))).toBe('awaiting_hr');
-		expect(nextStatus('hr', 'approve', singleStageFor(emp))).toBe('approved');
+		expect(singleStageFor(hr, emp)).toBe(false);
+		expect(nextStatus('manager', 'approve', singleStageFor(hr, emp))).toBe('awaiting_hr');
+		expect(nextStatus('hr', 'approve', singleStageFor(hr, emp))).toBe('approved');
 	});
 
 	test('collapsing keys on the manager, not on the reviewer being an admin', () => {
 		// An admin who genuinely IS someone's named manager must still hand over,
 		// because there a real second reviewer exists.
 		const managedByAdmin: Person = { id: 'staff', role: 'employee', managerId: 'hr' };
-		expect(singleStageFor(managedByAdmin)).toBe(false);
-		expect(nextStatus('manager', 'approve', singleStageFor(managedByAdmin))).toBe('awaiting_hr');
+		expect(singleStageFor(hr, managedByAdmin)).toBe(false);
+		expect(nextStatus('manager', 'approve', singleStageFor(hr, managedByAdmin))).toBe(
+			'awaiting_hr'
+		);
 	});
 
 	test('a rejection still ends it immediately when the chain is collapsed', () => {
-		expect(nextStatus('manager', 'reject', singleStageFor(orphan))).toBe('rejected');
+		expect(nextStatus('manager', 'reject', singleStageFor(hr, orphan))).toBe('rejected');
 	});
 });

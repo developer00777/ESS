@@ -136,7 +136,7 @@ export async function canReviewStage(
 
 /**
  * True when the manager stage would add nothing for `requesterId`, so a single
- * approval finishes the chain.
+ * approval by `actor` finishes the chain.
  *
  * The manager stage exists to put a second, closer pair of eyes on a request
  * before HR decides it. When nobody distinct fills it — no `reportsTo`, no team
@@ -148,12 +148,24 @@ export async function canReviewStage(
  * no attendance was corrected, and the request came straight back to them
  * labelled "awaiting HR". It read as an approval that did nothing.
  *
- * Deliberately keyed on whether a *manager* is resolvable rather than on the
- * reviewer's role: an admin who genuinely is someone's named reporting manager
- * still hands over to the HR stage, because there a real second reviewer exists.
+ * Both halves have to hold, and checking only the first is what let a manager
+ * approve alone: with the reporting line empty, *any* manager-stage approver
+ * collapsed the chain and the correction was written immediately, even when a
+ * concerned HR was named on the profile and had never seen the request. The
+ * stages only genuinely coincide when the person clicking is also the one the
+ * HR stage would route to.
  */
-export async function isSingleStageFor(requesterId: string): Promise<boolean> {
-	return (await managerFor(requesterId)) === null;
+export async function isSingleStageFor(
+	actor: { id: string; role: string; teamId: string | null },
+	requesterId: string
+): Promise<boolean> {
+	// A distinct manager exists, so the manager stage is a real, separate review.
+	if ((await managerFor(requesterId)) !== null) return false;
+
+	// Nobody fills the manager stage, so `actor` is standing in for it via the HR
+	// fallback. Collapse only if the HR stage would land on this same person —
+	// otherwise a second reviewer really is waiting downstream.
+	return canReviewStage(actor, requesterId, 'hr');
 }
 
 /** The HR person assigned to an employee, if a Super Admin has named one. */

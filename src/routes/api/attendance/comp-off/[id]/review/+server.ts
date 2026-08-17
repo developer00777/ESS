@@ -66,8 +66,9 @@ export const POST: RequestHandler = async (event) => {
 
 	// No distinct manager to give the first sign-off means HR covers both stages,
 	// so this one approval credits the day. Without this the same person had to
-	// approve twice and the first click credited nothing.
-	const singleStage = stage === 'manager' && (await isSingleStageFor(claimant.id));
+	// approve twice and the first click credited nothing. Keyed on the approver
+	// too, so a manager acting alone still hands over to the concerned HR.
+	const singleStage = stage === 'manager' && (await isSingleStageFor(approver, claimant.id));
 
 	// Routed by the reporting line, not by role: the claimant's own manager gives
 	// the first sign-off, then their concerned HR credits it. Admins remain the
