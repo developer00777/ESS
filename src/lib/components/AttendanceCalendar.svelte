@@ -489,14 +489,31 @@
 						</span>
 					</span>
 
-					<!-- in-time left / out-time right. An overnight shift shows its own
-					     span on the start date; the morning it ends on shows the tail. -->
+					<!-- The day's three facts on one row: in-time left, ProHance
+					     activity centre, out-time right. Each column has its own source
+					     (biometric/portal for the edges, ProHance for the centre), so no
+					     column may displace another — reading the biometric report used to
+					     knock the ProHance hours out of the middle. An overnight shift
+					     shows its own span on the start date; the morning it ends on shows
+					     the tail. -->
 					<span class="cell-times">
 						{#if tailOf}
 							<span class="t-in t-cont">↳ shift</span>
-							<span class="t-out">{cellTime(tailOf.checkOutAt)}</span>
 						{:else}
 							<span class="t-in">{cellTime(shift?.checkInAt ?? rec?.checkInAt)}</span>
+						{/if}
+
+						<span class="t-mid">
+							{#if ph && minutesLabel(ph.timeOnSystemMinutes)}
+								<span class="mid-prohance" title="ProHance time on system"
+									>{minutesLabel(ph.timeOnSystemMinutes)}</span
+								>
+							{/if}
+						</span>
+
+						{#if tailOf}
+							<span class="t-out">{cellTime(tailOf.checkOutAt)}</span>
+						{:else}
 							<span class="t-out">
 								{cellTime(shift?.checkOutAt ?? rec?.checkOutAt)}{#if shift?.crossesMidnight}<span
 										class="next-day">+1</span
@@ -505,7 +522,8 @@
 						{/if}
 					</span>
 
-					<!-- centre: worked hours, or what the day was instead -->
+					<!-- Below the times: worked hours, or what the day was instead. Kept
+					     out of the centre column so it never competes with ProHance. -->
 					<span class="cell-middle">
 						{#if tailOf}
 							<span class="mid-tag">ends {cellTime(tailOf.checkOutAt)}</span>
@@ -521,10 +539,6 @@
 							<span class="mid-tag" title={dayHolidays.map((h) => h.name).join(', ')}>
 								{dayHolidays[0].name}
 							</span>
-						{:else if ph && minutesLabel(ph.timeOnSystemMinutes)}
-							<span class="mid-prohance" title="ProHance time on system"
-								>{minutesLabel(ph.timeOnSystemMinutes)}</span
-							>
 						{:else if cell.isWeekend}
 							<!-- Said in words, not just implied by a dimmer cell: an empty
 							     day off and an empty day with no data looked identical. -->
@@ -909,12 +923,14 @@
 		display: none;
 	}
 
-	/* In-time and out-time on one line, pinned to opposite edges. */
+	/* In-time, ProHance activity, out-time on one line. A grid rather than
+	   space-between: the centre column stays optically centred in the cell even
+	   when one timestamp is present and the other is missing. */
 	.cell-times {
-		display: flex;
-		justify-content: space-between;
+		display: grid;
+		grid-template-columns: 1fr auto 1fr;
 		align-items: baseline;
-		gap: 0.2rem;
+		gap: 0.15rem;
 		font-size: 0.66rem;
 		color: var(--ess-text-secondary);
 		font-variant-numeric: tabular-nums;
@@ -922,12 +938,25 @@
 		min-height: 0.9rem;
 	}
 
+	.t-in {
+		justify-self: start;
+	}
+
+	/* Reserves the centre column whether or not ProHance reported, so the
+	   in/out times don't slide inward on days without activity. */
+	.t-mid {
+		justify-self: center;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
 	.t-out {
+		justify-self: end;
 		color: var(--ess-text-muted);
 	}
 
-	/* Worked hours (the ProHance slot until that feed is connected), or the
-	   name of whatever the day was instead. */
+	/* Worked hours, or the name of whatever the day was instead. ProHance has
+	   its own column in .cell-times and is never shown here. */
 	.cell-middle {
 		display: flex;
 		align-items: center;
@@ -1137,6 +1166,21 @@
 		.cell-times,
 		.cell-middle {
 			font-size: 0.6rem;
+		}
+	}
+
+	/* Three values stop fitting on one line here. The centre column wraps to its
+	   own row underneath, directly below the gap between the two times, so
+	   in-ProHance-out still reads as one group rather than being dropped. */
+	@media (max-width: 840px) {
+		.cell-times {
+			grid-template-columns: 1fr 1fr;
+			row-gap: 0.1rem;
+		}
+
+		.t-mid {
+			grid-column: 1 / -1;
+			grid-row: 2;
 		}
 	}
 
