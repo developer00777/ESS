@@ -6,7 +6,7 @@ import { requireUser } from '$lib/server/rbac';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { evaluateCompOffEligibility } from '$lib/server/comp-off';
-import { canReviewStage } from '$lib/server/approval-chain';
+import { canReviewStage, isSingleStageFor } from '$lib/server/approval-chain';
 
 /**
  * SOP §1: verify attendance, confirm 7+ hours, then credit the comp-off.
@@ -64,6 +64,11 @@ export const POST: RequestHandler = async (event) => {
 	const [claimant] = await db.select().from(users).where(eq(users.id, credit.userId)).limit(1);
 	if (!claimant) throw error(404, 'Claiming employee not found');
 
+	// No distinct manager to give the first sign-off means HR covers both stages,
+	// so this one approval credits the day. Without this the same person had to
+	// approve twice and the first click credited nothing.
+	const singleStage = stage === 'manager' && (await isSingleStageFor(claimant.id));
+
 	// Routed by the reporting line, not by role: the claimant's own manager gives
 	// the first sign-off, then their concerned HR credits it. Admins remain the
 	// fallback when nobody is assigned, so a claim is never stranded — which is
@@ -80,11 +85,11 @@ export const POST: RequestHandler = async (event) => {
 		);
 	}
 
-	// Re-verify against the current record before crediting. Only at the HR
-	// stage: that is the point the credit becomes real, and a ProHance re-sync
-	// between the manager's sign-off and HR's could change the worked hours.
+	// Re-verify against the current record before crediting. Only at the stage that
+	// actually credits: that is the point the credit becomes real, and a ProHance
+	// re-sync between the manager's sign-off and HR's could change the worked hours.
 	let recheck: Awaited<ReturnType<typeof evaluateCompOffEligibility>> | null = null;
-	if (decision === 'approve' && stage === 'hr') {
+	if (decision === 'approve' && (stage === 'hr' || singleStage)) {
 		recheck = await evaluateCompOffEligibility(credit.userId, credit.workedDate);
 		// The claim itself is the one live row for this date, so "already claimed"
 		// is expected here and is not a reason to refuse.
@@ -95,9 +100,14 @@ export const POST: RequestHandler = async (event) => {
 	}
 
 	// A rejection ends it at either stage. The manager's approval hands over to
-	// HR; only HR's approval credits the day.
+	// HR; only HR's approval credits the day — unless there is no separate manager,
+	// in which case this approval is the one that credits it.
 	const newStatus =
-		decision === 'reject' ? 'rejected' : stage === 'hr' ? 'approved' : 'manager_approved';
+		decision === 'reject'
+			? 'rejected'
+			: stage === 'hr' || singleStage
+				? 'approved'
+				: 'manager_approved';
 
 	const [updated] = await db
 		.update(compOffCredits)

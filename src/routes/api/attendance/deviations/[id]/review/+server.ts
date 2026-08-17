@@ -5,7 +5,7 @@ import { attendance, attendanceDeviations, users } from '$lib/server/db/schema';
 import { requireUser } from '$lib/server/rbac';
 import { and, eq } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
-import { canReviewStage } from '$lib/server/approval-chain';
+import { canReviewStage, isSingleStageFor } from '$lib/server/approval-chain';
 
 /**
  * SOP §2–§4: HR (or the Reporting Manager) decides an attendance correction.
@@ -50,6 +50,11 @@ export const POST: RequestHandler = async (event) => {
 	const [requester] = await db.select().from(users).where(eq(users.id, deviation.userId)).limit(1);
 	if (!requester) throw error(404, 'Requesting employee not found');
 
+	// When no distinct manager exists, HR stands in for the manager stage as well
+	// and one approval has to finish the job — otherwise the same person approves
+	// twice, and the first click silently corrects nothing.
+	const singleStage = stage === 'manager' && (await isSingleStageFor(requester.id));
+
 	// Routed by the reporting line. Nobody decides their own correction — the
 	// request is a claim about your own attendance, so approving it yourself
 	// would defeat the review entirely.
@@ -65,9 +70,15 @@ export const POST: RequestHandler = async (event) => {
 	}
 
 	// A rejection at either stage ends it. An approval at the manager stage hands
-	// over to HR rather than crediting straight away; only HR's approval is final.
+	// over to HR rather than crediting straight away; only HR's approval is final —
+	// unless this employee has no separate manager, in which case this *is* the
+	// final approval.
 	const newStatus =
-		decision === 'reject' ? 'rejected' : stage === 'hr' ? 'approved' : 'manager_approved';
+		decision === 'reject'
+			? 'rejected'
+			: stage === 'hr' || singleStage
+				? 'approved'
+				: 'manager_approved';
 
 	await db
 		.update(attendanceDeviations)

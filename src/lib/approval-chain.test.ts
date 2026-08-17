@@ -134,10 +134,12 @@ describe('how far a request advances on approval', () => {
 	const nextStatus = (
 		_kind: 'comp_off' | 'leave' | 'deviation',
 		stage: 'manager' | 'hr',
-		decision: 'approve' | 'reject'
+		decision: 'approve' | 'reject',
+		/** True when no distinct manager exists, so the two stages collapse to one. */
+		singleStage = false
 	) => {
 		if (decision === 'reject') return 'rejected';
-		return stage === 'hr' ? 'approved' : 'awaiting_hr';
+		return stage === 'hr' || singleStage ? 'approved' : 'awaiting_hr';
 	};
 
 	test('a manager approving a comp-off hands it to HR rather than crediting', () => {
@@ -167,5 +169,59 @@ describe('how far a request advances on approval', () => {
 				expect(nextStatus(kind, stage, 'reject')).toBe('rejected');
 			}
 		}
+	});
+});
+
+/**
+ * When nobody distinct fills the manager stage.
+ *
+ * `canReview` above already lets HR stand in at the manager stage for someone
+ * with no manager on record — otherwise their request would sit forever. But the
+ * status machine then asked that same person to approve twice: the first click
+ * only moved the request to 'awaiting_hr', so no comp-off was credited and no
+ * attendance was corrected, and it came back to them labelled "awaiting HR".
+ *
+ * The stages collapse when — and only when — no separate manager exists.
+ */
+describe('collapsing the chain for an employee with no manager', () => {
+	const singleStageFor = (requester: Person) => requester.managerId === null;
+
+	const nextStatus = (
+		stage: 'manager' | 'hr',
+		decision: 'approve' | 'reject',
+		singleStage = false
+	) => {
+		if (decision === 'reject') return 'rejected';
+		return stage === 'hr' || singleStage ? 'approved' : 'awaiting_hr';
+	};
+
+	test('an employee with no manager needs only one approval', () => {
+		expect(singleStageFor(orphan)).toBe(true);
+		expect(nextStatus('manager', 'approve', singleStageFor(orphan))).toBe('approved');
+	});
+
+	test('HR standing in for the manager stage is not asked to approve twice', () => {
+		// The reported bug: HR approves, nothing visibly happens, and the request
+		// reappears in their own queue awaiting HR.
+		expect(canReview(hr, orphan, 'manager')).toBe(true);
+		expect(nextStatus('manager', 'approve', singleStageFor(orphan))).not.toBe('awaiting_hr');
+	});
+
+	test('an employee WITH a manager still goes through both stages', () => {
+		expect(singleStageFor(emp)).toBe(false);
+		expect(nextStatus('manager', 'approve', singleStageFor(emp))).toBe('awaiting_hr');
+		expect(nextStatus('hr', 'approve', singleStageFor(emp))).toBe('approved');
+	});
+
+	test('collapsing keys on the manager, not on the reviewer being an admin', () => {
+		// An admin who genuinely IS someone's named manager must still hand over,
+		// because there a real second reviewer exists.
+		const managedByAdmin: Person = { id: 'staff', role: 'employee', managerId: 'hr' };
+		expect(singleStageFor(managedByAdmin)).toBe(false);
+		expect(nextStatus('manager', 'approve', singleStageFor(managedByAdmin))).toBe('awaiting_hr');
+	});
+
+	test('a rejection still ends it immediately when the chain is collapsed', () => {
+		expect(nextStatus('manager', 'reject', singleStageFor(orphan))).toBe('rejected');
 	});
 });

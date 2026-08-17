@@ -134,6 +134,28 @@ export async function canReviewStage(
 	return isHr;
 }
 
+/**
+ * True when the manager stage would add nothing for `requesterId`, so a single
+ * approval finishes the chain.
+ *
+ * The manager stage exists to put a second, closer pair of eyes on a request
+ * before HR decides it. When nobody distinct fills it — no `reportsTo`, no team
+ * lead — HR *is* the manager-stage fallback, and the two stages collapse onto
+ * one person.
+ *
+ * Left as two stages, that person had to approve the same request twice: the
+ * first click only moved it to `manager_approved`, so nothing was credited and
+ * no attendance was corrected, and the request came straight back to them
+ * labelled "awaiting HR". It read as an approval that did nothing.
+ *
+ * Deliberately keyed on whether a *manager* is resolvable rather than on the
+ * reviewer's role: an admin who genuinely is someone's named reporting manager
+ * still hands over to the HR stage, because there a real second reviewer exists.
+ */
+export async function isSingleStageFor(requesterId: string): Promise<boolean> {
+	return (await managerFor(requesterId)) === null;
+}
+
 /** The HR person assigned to an employee, if a Super Admin has named one. */
 export async function assignedHrFor(userId: string): Promise<string | null> {
 	const [row] = await db
