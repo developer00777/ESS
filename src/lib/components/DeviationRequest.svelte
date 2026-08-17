@@ -39,7 +39,28 @@
 
 	const selectedCapped = $derived(REASONS.find((r) => r.value === reason)?.capped ?? false);
 	const willExceedCap = $derived(selectedCapped && monthlyUsed >= monthlyCap);
-	const canSubmit = $derived(Boolean(date) && description.trim().length >= 10 && !submitting);
+
+	/** Mirrors the server's rule in deviations/+server.ts. */
+	const MIN_DESCRIPTION = 10;
+	const described = $derived(description.trim().length);
+	const canSubmit = $derived(Boolean(date) && described >= MIN_DESCRIPTION && !submitting);
+
+	/**
+	 * Why the button is disabled, said out loud.
+	 *
+	 * A greyed-out Submit with nothing next to it is indistinguishable from a
+	 * broken form — someone who typed a couple of characters has no way to know a
+	 * minimum exists, so they retry the same thing or give up.
+	 */
+	const blockedBecause = $derived.by(() => {
+		if (!date) return 'Pick the date this applies to.';
+		if (described === 0) return 'Describe what happened before submitting.';
+		if (described < MIN_DESCRIPTION) {
+			const short = MIN_DESCRIPTION - described;
+			return `Please add a little more detail — ${short} more character${short === 1 ? '' : 's'}. HR reads this to decide the request.`;
+		}
+		return null;
+	});
 
 	function reset() {
 		date = initialDate;
@@ -186,8 +207,14 @@
 						class="ess-input"
 						rows="3"
 						bind:value={description}
+						aria-describedby="dev-desc-help"
 						placeholder="e.g. Biometric didn't register my punch at the gate; I was at my desk from 09:20 and my ProHance session shows the full day."
 					></textarea>
+					<!-- The minimum is stated up front rather than only once it is
+					     violated, so nobody types two words and meets a dead button. -->
+					<span class="help" id="dev-desc-help">
+						A sentence or two is enough — at least {MIN_DESCRIPTION} characters.
+					</span>
 				</label>
 
 				{#if errorMsg}<p class="ess-error">{errorMsg}</p>{/if}
@@ -196,6 +223,9 @@
 					<button type="button" class="ess-btn" onclick={submit} disabled={!canSubmit}>
 						{submitting ? 'Submitting…' : 'Submit request'}
 					</button>
+					{#if blockedBecause}
+						<span class="blocked" role="status">{blockedBecause}</span>
+					{/if}
 					<span class="assist">
 						<Sparkles size={12} /> Your description is checked against your attendance and ProHance records
 						to help HR review it faster.
@@ -292,6 +322,20 @@
 		gap: 0.3rem;
 		font-size: 0.72rem;
 		color: var(--ess-text-muted);
+		max-width: 52ch;
+	}
+
+	.help {
+		font-size: 0.7rem;
+		color: var(--ess-text-muted);
+		margin-top: 0.2rem;
+	}
+
+	/* Why Submit is disabled. Amber rather than red: nothing has gone wrong yet,
+	   the form is simply not finished. */
+	.blocked {
+		font-size: 0.75rem;
+		color: var(--ess-warning);
 		max-width: 52ch;
 	}
 
