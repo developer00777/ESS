@@ -109,3 +109,16 @@ export function workingDaysSoFar(
 	const todayKey = `${upTo.getFullYear()}-${pad(upTo.getMonth() + 1)}-${pad(upTo.getDate())}`;
 	return cycleDates(cycle).filter((key) => key <= todayKey && !isWeekOff(key)).length;
 }
+
+/**
+ * Every day elapsed in the cycle up to `upTo`, week offs included.
+ *
+ * The denominator for "present days this month". Week offs count because the
+ * numerator already does: presence is credited for any day with a check-in, so
+ * someone who worked a Saturday was counted in the total while the days
+ * available to them were not — which could read as 17 of 16.
+ */
+export function daysSoFar(cycle: AttendanceCycle, upTo: Date): number {
+	const todayKey = `${upTo.getFullYear()}-${pad(upTo.getMonth() + 1)}-${pad(upTo.getDate())}`;
+	return cycleDates(cycle).filter((key) => key <= todayKey).length;
+}

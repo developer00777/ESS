@@ -20,7 +20,7 @@ import {
 	CYCLE_END_DAY,
 	cycleForDate,
 	cycleForKey,
-	workingDaysSoFar
+	daysSoFar
 } from '$lib/attendance-cycle';
 import { pairShifts, gapForShift, STANDARD_SHIFT_MINUTES } from '$lib/shift-hours';
 import { loadWeekOffFor } from '$lib/server/week-off';
@@ -202,19 +202,19 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		);
 
 	// Week offs come from the roster assigned to this employee — Saturday +
-	// Sunday only when they have none — so both the grid and the counters below
-	// describe the same working days.
+	// Sunday only when they have none. Passed to the calendar so each cell can say
+	// what the day was; the counters below span every day, so they need no resolver.
 	const weekOff = await loadWeekOffFor([user.id]);
-	const isWeekOff = weekOff.resolverFor(user.id);
 
-	// Stats follow the viewed cycle so the counters agree with the grid. The
-	// denominator counts working days only, up to today for the running cycle,
-	// or the whole cycle once past.
+	// Stats follow the viewed cycle so the counters agree with the grid. Every
+	// elapsed day counts, week offs included: presence is credited for any day with
+	// a check-in, so excluding week offs from the denominator alone let someone who
+	// worked a Saturday read as 17 of 16.
 	const businessDaysSoFar =
 		viewMonth === currentCycle.key
-			? workingDaysSoFar(cycle, now, isWeekOff)
+			? daysSoFar(cycle, now)
 			: viewMonth < currentCycle.key
-				? workingDaysSoFar(cycle, new Date(vy, vm - 1, CYCLE_END_DAY), isWeekOff)
+				? daysSoFar(cycle, new Date(vy, vm - 1, CYCLE_END_DAY))
 				: 0;
 
 	// Pair overnight shifts before measuring anything. A night shift arrives as
