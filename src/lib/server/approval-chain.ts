@@ -108,14 +108,25 @@ export async function managerFor(userId: string): Promise<Reviewer | null> {
  * alone. Admins are the fallback only for people with nobody assigned, so a
  * request is never stranded — but naming someone no longer leaves every admin
  * holding a copy of it, which made one Super Admin the queue for the whole org.
+ *
+ * `alreadySignedOffBy` is whoever decided the earlier stage. The two stages are
+ * two *people*, not just two clicks: a Super Admin who is also the reporting
+ * manager passed the manager stage and then passed the HR stage on their own
+ * override, closing the request and correcting the attendance without the named
+ * concerned HR ever seeing it. Their override still covers a request nobody else
+ * can reach — it just cannot be used to countersign their own sign-off.
  */
 export async function canReviewStage(
 	actor: { id: string; role: string; teamId: string | null },
 	requesterId: string,
-	stage: ApprovalStage
+	stage: ApprovalStage,
+	alreadySignedOffBy?: string | null
 ): Promise<boolean> {
 	// Nobody signs off their own request, whatever their role.
 	if (actor.id === requesterId) return false;
+
+	// Nor rubber-stamps the stage they just decided themselves.
+	if (alreadySignedOffBy && alreadySignedOffBy === actor.id) return false;
 
 	const isHr = (HR_ROLES as readonly string[]).includes(actor.role);
 

@@ -59,14 +59,20 @@ export const POST: RequestHandler = async (event) => {
 	// Routed by the reporting line. Nobody decides their own correction — the
 	// request is a claim about your own attendance, so approving it yourself
 	// would defeat the review entirely.
-	if (!(await canReviewStage(reviewer, requester.id, stage))) {
+	// At the HR stage, whoever gave the manager sign-off cannot also close it —
+	// otherwise a Super Admin who is the reporting manager walks both stages.
+	const priorReviewerId = stage === 'hr' ? deviation.reviewerId : null;
+
+	if (!(await canReviewStage(reviewer, requester.id, stage, priorReviewerId))) {
 		throw error(
 			403,
 			requester.id === reviewer.id
 				? 'You cannot decide your own attendance correction request'
-				: stage === 'hr'
-					? 'This request has manager sign-off and is now waiting on HR'
-					: "Only this employee's reporting manager can give the first sign-off"
+				: priorReviewerId === reviewer.id
+					? 'You gave the manager sign-off, so the concerned HR has to close this one'
+					: stage === 'hr'
+						? 'This request has manager sign-off and is now waiting on HR'
+						: "Only this employee's reporting manager can give the first sign-off"
 		);
 	}
 

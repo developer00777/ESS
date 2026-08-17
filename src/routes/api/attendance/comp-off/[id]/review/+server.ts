@@ -75,14 +75,20 @@ export const POST: RequestHandler = async (event) => {
 	// fallback when nobody is assigned, so a claim is never stranded — which is
 	// what previously left a Super Admin's own claim pending with nobody able to
 	// see it.
-	if (!(await canReviewStage(approver, claimant.id, stage))) {
+	// Whoever gave the manager sign-off cannot also credit it at the HR stage, or
+	// a Super Admin who is the reporting manager walks the whole chain alone.
+	const priorApproverId = stage === 'hr' ? credit.approverId : null;
+
+	if (!(await canReviewStage(approver, claimant.id, stage, priorApproverId))) {
 		throw error(
 			403,
 			claimant.id === approver.id
 				? 'You cannot approve your own comp-off claim'
-				: stage === 'hr'
-					? 'This claim has manager sign-off and is now waiting on HR'
-					: "Only this employee's reporting manager can give the first sign-off"
+				: priorApproverId === approver.id
+					? 'You gave the manager sign-off, so the concerned HR has to credit this one'
+					: stage === 'hr'
+						? 'This claim has manager sign-off and is now waiting on HR'
+						: "Only this employee's reporting manager can give the first sign-off"
 		);
 	}
 

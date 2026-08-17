@@ -22,8 +22,16 @@ interface Person {
 const HR_ROLES = ['admin', 'super_admin'];
 const isHr = (role: string) => HR_ROLES.includes(role);
 
-function canReview(actor: Person, requester: Person, stage: 'manager' | 'hr'): boolean {
+function canReview(
+	actor: Person,
+	requester: Person,
+	stage: 'manager' | 'hr',
+	/** Whoever decided the earlier stage, when there was one. */
+	alreadySignedOffBy: string | null = null
+): boolean {
 	if (actor.id === requester.id) return false; // never your own
+	// Nor countersign the stage you just decided yourself.
+	if (alreadySignedOffBy && alreadySignedOffBy === actor.id) return false;
 	const isSuperAdmin = actor.role === 'super_admin';
 
 	// An explicit assignment routes the request to that person. Admins are the
@@ -93,6 +101,40 @@ describe('the HR stage', () => {
 
 	test('a Super Admin cannot HR-approve their own request', () => {
 		expect(canReview(sa, sa, 'hr')).toBe(false);
+	});
+});
+
+/**
+ * The two stages are two people, not two clicks.
+ *
+ * The Super Admin override at the HR stage is meant to keep a request reachable
+ * when the named HR has left. But a Super Admin who is also the employee's
+ * reporting manager passed the manager stage on the reporting line, then passed
+ * the HR stage on the override — closing the request and correcting the
+ * attendance alone, with the concerned HR never in the loop.
+ */
+describe('one person cannot walk both stages', () => {
+	// The reported bug: manager and Super Admin are the same account.
+	const bossMgr: Person = { id: 'boss', role: 'super_admin', managerId: null };
+	const staff: Person = { id: 'staff', role: 'employee', managerId: 'boss', hrId: 'hr' };
+
+	test('the reporting manager gives the first sign-off', () => {
+		expect(canReview(bossMgr, staff, 'manager')).toBe(true);
+	});
+
+	test('that same Super Admin cannot then close it at the HR stage', () => {
+		expect(canReview(bossMgr, staff, 'hr', bossMgr.id)).toBe(false);
+	});
+
+	test('the named concerned HR is the one who closes it', () => {
+		expect(canReview(hr, staff, 'hr', bossMgr.id)).toBe(true);
+	});
+
+	test('the override still works for a Super Admin who did not sign off already', () => {
+		// Someone else gave the manager sign-off, so the override is a genuine
+		// second pair of eyes and must stay available.
+		const otherLead: Person = { id: 'lead2', role: 'team_lead', managerId: null };
+		expect(canReview(bossMgr, staff, 'hr', otherLead.id)).toBe(true);
 	});
 });
 

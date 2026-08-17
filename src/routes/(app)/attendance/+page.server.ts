@@ -370,18 +370,25 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 						.orderBy(desc(compOffCredits.workedDate))
 				: [];
 
-		deviationQueue = devRows.map((r) => ({
-			...r,
-			deviation: { ...r.deviation, date: attendanceDateKey(r.deviation.date) }
-		}));
-		compOffQueue = coRows.map((r) => ({
-			...r,
-			credit: {
-				...r.credit,
-				workedDate: attendanceDateKey(r.credit.workedDate),
-				expiresOn: attendanceDateKey(r.credit.expiresOn)
-			}
-		}));
+		// A request waiting on HR is not yours to close if you gave the manager
+		// sign-off yourself — it is the concerned HR's, and listing it here invited
+		// exactly the same-person double approval the review API now refuses.
+		deviationQueue = devRows
+			.filter((r) => !(r.deviation.status === 'manager_approved' && r.deviation.reviewerId === user.id))
+			.map((r) => ({
+				...r,
+				deviation: { ...r.deviation, date: attendanceDateKey(r.deviation.date) }
+			}));
+		compOffQueue = coRows
+			.filter((r) => !(r.credit.status === 'manager_approved' && r.credit.approverId === user.id))
+			.map((r) => ({
+				...r,
+				credit: {
+					...r.credit,
+					workedDate: attendanceDateKey(r.credit.workedDate),
+					expiresOn: attendanceDateKey(r.credit.expiresOn)
+				}
+			}));
 	}
 
 	return {
