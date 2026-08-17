@@ -302,7 +302,18 @@ export const leaveAllocations = pgTable('leave_allocations', {
 		.notNull(),
 	year: integer('year').notNull(),
 	allocatedDays: numeric('allocated_days', { precision: 5, scale: 2 }).notNull(),
-	usedDays: numeric('used_days', { precision: 5, scale: 2 }).default('0').notNull()
+	usedDays: numeric('used_days', { precision: 5, scale: 2 }).default('0').notNull(),
+
+	// --- HR-set balances (Admin → Leave Balances CSV upload) ---
+	// Set when HR uploads a figure by hand, which pins the row: the monthly
+	// accrual recompute (src/lib/server/leave-accrual.ts) runs on every page load
+	// and overwrites allocatedDays, so without this flag an uploaded balance would
+	// silently revert the next time the employee opened the portal. Carry-forward
+	// from HRone is exactly the case the policy accrual cannot derive on its own.
+	isHrSet: boolean('is_hr_set').default(false).notNull(),
+	hrSetBy: uuid('hr_set_by').references(() => users.id),
+	hrSetAt: timestamp('hr_set_at', { withTimezone: true }),
+	hrSetNote: text('hr_set_note')
 });
 
 export const leaveApplications = pgTable('leave_applications', {

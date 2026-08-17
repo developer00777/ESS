@@ -11,6 +11,7 @@
 	import Palette from '@lucide/svelte/icons/palette';
 	import DatabaseZap from '@lucide/svelte/icons/database-zap';
 	import Fingerprint from '@lucide/svelte/icons/fingerprint';
+	import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
 	import Moon from '@lucide/svelte/icons/moon';
 	import Sun from '@lucide/svelte/icons/sun';
 	import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
@@ -92,11 +93,18 @@
 		label: 'Biometric Upload',
 		icon: Fingerprint
 	};
+	/* Carry-forward balances come from HRone as a spreadsheet, so HR sets them
+	   here rather than waiting on the policy accrual, which cannot know them. */
+	const leaveBalanceItem: NavItem = {
+		href: '/admin/leave-balances',
+		label: 'Leave Balances',
+		icon: CalendarPlus
+	};
 
 	let sections = $derived.by(() => {
 		const manage = [
 			...(role !== 'employee' ? [teamItem] : []),
-			...(role === 'super_admin' || role === 'admin' ? [biometricItem] : []),
+			...(role === 'super_admin' || role === 'admin' ? [biometricItem, leaveBalanceItem] : []),
 			...(role === 'super_admin' ? [adminItem, tweaksItem, cleanupItem] : [])
 		];
 		return [

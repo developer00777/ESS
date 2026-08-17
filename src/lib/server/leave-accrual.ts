@@ -20,9 +20,11 @@ import { and, eq, inArray } from 'drizzle-orm';
  * confirmation date on file are treated as long-settled staff and accrue
  * from January — the HR tracker carries these dates, so the gap is rare.
  *
- * Deliberately out of scope: prior years' carry-forward (max 5 days by
- * policy). That history lives in HRone, which the portal cannot read; when
- * HR provides opening balances they can be added as a one-time adjustment.
+ * Prior years' carry-forward (max 5 days by policy) cannot be derived here —
+ * that history lives in HRone, which the portal cannot read. HR supplies those
+ * figures through Admin → Leave Balances, and any row they set carries
+ * `isHrSet`, which pins it: the recompute below leaves it alone rather than
+ * overwriting the uploaded number on the next page load.
  */
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -129,6 +131,11 @@ export async function ensureLeaveAllocations(userIds: string[]): Promise<void> {
 			const accrued = round2(months * Number(type.accrualPerMonth));
 			const key = `${userId}:${type.id}`;
 			const row = existingByKey.get(key);
+
+			// A balance HR set by hand is authoritative — it is usually carry-forward
+			// the policy accrual has no way to know about. Recomputing over it would
+			// discard HR's figure moments after they uploaded it.
+			if (row?.isHrSet) continue;
 
 			if (!row) {
 				if (accrued > 0) {
