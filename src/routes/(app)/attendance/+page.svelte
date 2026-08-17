@@ -137,10 +137,11 @@
 			>{data.presentDays}{#if data.businessDaysSoFar > 0}
 				<span class="stat-of">/ {data.businessDaysSoFar}</span>{/if}</span
 		>
-		<!-- Names the denominator: "9 / 23" is ambiguous on its own, and the total
-		     counts every day in the cycle rather than working days only. -->
+		<!-- Names the denominator and says week offs are in it: "23 / 23" is
+		     otherwise puzzling for someone who only worked the weekdays. -->
 		<span class="ess-stat__meta"
-			>{#if data.businessDaysSoFar > 0}of {data.businessDaysSoFar} days {statPeriod}{:else}{statPeriod}{/if}</span
+			>{#if data.businessDaysSoFar > 0}of {data.businessDaysSoFar} days {statPeriod} · week offs
+				included{:else}{statPeriod}{/if}</span
 		>
 	</div>
 

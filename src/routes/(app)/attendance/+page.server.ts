@@ -18,6 +18,7 @@ import { eq, ne, and, or, gte, lt, lte, desc, inArray, sql } from 'drizzle-orm';
 import { isProhanceConfigured } from '$lib/server/prohance';
 import {
 	CYCLE_END_DAY,
+	cycleDates,
 	cycleForDate,
 	cycleForKey,
 	daysSoFar
@@ -202,9 +203,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		);
 
 	// Week offs come from the roster assigned to this employee — Saturday +
-	// Sunday only when they have none. Passed to the calendar so each cell can say
-	// what the day was; the counters below span every day, so they need no resolver.
+	// Sunday only when they have none — so the grid and the counters below agree
+	// on which days were days off.
 	const weekOff = await loadWeekOffFor([user.id]);
+	const isWeekOff = weekOff.resolverFor(user.id);
 
 	// Stats follow the viewed cycle so the counters agree with the grid. Every
 	// elapsed day counts, week offs included: presence is credited for any day with
@@ -241,6 +243,26 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			presentDates.add(attendanceDateKey(p.sessionDate));
 		}
 	}
+
+	// A week off counts as present without anyone badging for it: nobody is
+	// expected in, so it is paid time and must not read as a day missed. Only
+	// elapsed days are credited — crediting a week off still in the future would
+	// have the count run ahead of the month.
+	//
+	// Bounded by the same date as the denominator so the two always describe the
+	// same span; a set is used, so a week off that WAS worked stays one day.
+	const countedUpTo =
+		viewMonth === currentCycle.key
+			? attendanceDateKey(now)
+			: viewMonth < currentCycle.key
+				? attendanceDateKey(new Date(vy, vm - 1, CYCLE_END_DAY))
+				: null;
+	if (countedUpTo) {
+		for (const key of cycleDates(cycle)) {
+			if (key <= countedUpTo && isWeekOff(key)) presentDates.add(key);
+		}
+	}
+
 	const presentDays = presentDates.size;
 
 	const measured = shifts.filter((s) => s.workedMinutes !== null);
