@@ -26,9 +26,22 @@ import { matchName } from '$lib/server/name-match';
 import { ensureLeaveAllocations } from '$lib/server/leave-accrual';
 import { currentRosterByUser, loadAssignableRosters } from '$lib/server/week-off';
 import { describeRoster, rotationSummary } from '$lib/week-off';
+import { sendWelcomeEmail, isMailerConfigured } from '$lib/server/mailer';
 import { error } from '@sveltejs/kit';
 
-const DEFAULT_BULK_PASSWORD = 'Champ@123';
+/**
+ * Every account created from the master tracker gets its own random temporary
+ * password, mailed to that person and to nobody else.
+ *
+ * A single shared literal used to be hashed for the whole batch, which was
+ * survivable only while nothing left the building: once credentials go out by
+ * email, one shared password means every new hire is handed a working key to
+ * every other new hire's account. `mustChangePassword` still forces a reset on
+ * first sign-in, so this value is only ever valid for one login.
+ */
+function generateTemporaryPassword(): string {
+	return randomBytes(9).toString('base64url');
+}
 
 /**
  * Fills blank profile columns for someone the import skipped as already
@@ -396,7 +409,7 @@ export const actions: Actions = {
 			return { success: false, message: 'Selected shift group has no published holiday calendar' };
 		}
 
-		const tempPassword = randomBytes(9).toString('base64url');
+		const tempPassword = generateTemporaryPassword();
 		const passwordHash = await hashPassword(tempPassword);
 
 		const [created] = await db
@@ -418,15 +431,36 @@ export const actions: Actions = {
 			shiftGroupId
 		});
 
+		// Same handover as the bulk path. The password stays in the response too:
+		// whoever adds a single joiner is often sitting with them, and mail can be
+		// slow or misconfigured.
+		const mail = await sendWelcomeEmail({
+			fullName: created.fullName,
+			username: created.email,
+			temporaryPassword: tempPassword
+		});
+
 		await logActivity({
 			actorUserId: actor.id,
 			action: 'user.create',
 			targetType: 'user',
 			targetId: created.id,
-			details: { role: requestedRole, shiftGroupId }
+			details: {
+				role: requestedRole,
+				shiftGroupId,
+				welcomeEmail: mail.ok ? 'sent' : 'failed',
+				welcomeEmailId: mail.id ?? null,
+				welcomeEmailError: mail.ok ? null : (mail.error ?? null)
+			}
 		});
 
-		return { success: true, tempPassword, email };
+		return {
+			success: true,
+			tempPassword,
+			email,
+			emailSent: mail.ok,
+			emailError: mail.ok ? null : (mail.error ?? null)
+		};
 	},
 
 	// Super Admin uploads a spreadsheet with the "HR Team Master data" sheet shape.
@@ -604,10 +638,18 @@ export const actions: Actions = {
 			return { bulkImportError: `${pending.length} row(s) still need review before this import can be applied` };
 		}
 
-		const passwordHash = await hashPassword(DEFAULT_BULK_PASSWORD);
+		// When set, every credentials mail for this run goes to this one address
+		// instead of to the employees — for verifying the template and the Resend
+		// setup against a real inbox without mailing the actual roster.
+		const redirectAllMailTo = String(form.get('sendCredentialsTo') ?? '').trim().toLowerCase();
+
 		const rowIdToUserId = new Map<string, string>();
 		// Existing people whose blank profile columns this run filled in.
 		let backfilledCount = 0;
+		// Credentials handover, reported back so the Super Admin can see who still
+		// needs their login passed on by hand.
+		const emailFailures: { email: string; error: string }[] = [];
+		let emailedCount = 0;
 
 		for (const row of rows) {
 			if (row.status === 'skipped_existing') {
@@ -624,6 +666,12 @@ export const actions: Actions = {
 				continue;
 			}
 			if (row.status !== 'ready') continue;
+
+			// Hashed per row, not once per batch: each person gets their own
+			// password, so each needs its own hash. Argon2 at these parameters costs
+			// roughly 50ms, which is the dominant per-row cost of a large import.
+			const temporaryPassword = generateTemporaryPassword();
+			const passwordHash = await hashPassword(temporaryPassword);
 
 			const [createdUser] = await db
 				.insert(users)
@@ -654,12 +702,41 @@ export const actions: Actions = {
 
 			await db.update(bulkImportRows).set({ status: 'created', createdUserId: createdUser.id }).where(eq(bulkImportRows.id, row.id));
 
+			// Hand over the credentials. Deliberately after the account and profile
+			// are committed and the row is marked created: the account is the system
+			// of record, and a Resend outage must not undo an import that otherwise
+			// succeeded. A failure here is collected and reported so HR knows which
+			// people still need their login passed on another way — re-running the
+			// import is not an option, since the row is now `created`.
+			const mail = await sendWelcomeEmail({
+				fullName: createdUser.fullName,
+				username: createdUser.email,
+				temporaryPassword,
+				to: redirectAllMailTo || undefined
+			});
+
+			if (mail.ok) {
+				emailedCount++;
+			} else {
+				emailFailures.push({ email: createdUser.email, error: mail.error ?? 'Unknown error' });
+			}
+
 			await logActivity({
 				actorUserId: actor.id,
 				action: 'user.bulk_create',
 				targetType: 'user',
 				targetId: createdUser.id,
-				details: { email: createdUser.email, importId, role: row.role }
+				// The password itself is never logged — only whether its delivery
+				// worked, which is what an operator needs to chase a missing login.
+				details: {
+					email: createdUser.email,
+					importId,
+					role: row.role,
+					welcomeEmail: mail.ok ? 'sent' : 'failed',
+					welcomeEmailId: mail.id ?? null,
+					welcomeEmailError: mail.ok ? null : (mail.error ?? null),
+					welcomeEmailRedirectedTo: redirectAllMailTo || null
+				}
 			});
 		}
 
@@ -722,9 +799,27 @@ export const actions: Actions = {
 			action: 'bulk_import.apply',
 			targetType: 'bulk_import',
 			targetId: importId,
-			details: { createdCount, skippedCount, backfilledCount }
+			details: {
+				createdCount,
+				skippedCount,
+				backfilledCount,
+				emailedCount,
+				emailFailedCount: emailFailures.length
+			}
 		});
 
-		return { bulkImportApplied: { createdCount, skippedCount, backfilledCount } };
+		return {
+			bulkImportApplied: {
+				createdCount,
+				skippedCount,
+				backfilledCount,
+				emailedCount,
+				// Listed rather than counted: the point of surfacing these is telling
+				// HR exactly whose login still needs delivering by hand.
+				emailFailures,
+				mailerConfigured: isMailerConfigured(),
+				redirectedTo: redirectAllMailTo || null
+			}
+		};
 	}
 };

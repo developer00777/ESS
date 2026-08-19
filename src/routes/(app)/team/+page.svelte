@@ -431,7 +431,17 @@
 	{#if form?.success}
 		<p class="temp-pass">
 			Created {form.email} — temporary password: <code>{form.tempPassword}</code>
+			{#if form.emailSent}
+				<br />Emailed to them as well.
+			{/if}
 		</p>
+		<!-- The account exists either way, so the password above is the fallback. -->
+		{#if !form.emailSent}
+			<p class="mail-warn">
+				Could not email these details{form.emailError ? ` — ${form.emailError}` : ''}. Pass the
+				password above on directly.
+			</p>
+		{/if}
 	{:else if form?.message}
 		<p class="ess-error">{form.message}</p>
 	{/if}
@@ -846,8 +856,9 @@
 			<div>
 				<h2 class="section-title">Bulk Import Logins</h2>
 				<p class="section-sub">
-					Upload any HR spreadsheet — the sheet and columns are detected automatically. New logins use <code>Champ@123</code> and must
-					be changed on first login.
+					Upload any HR spreadsheet — the sheet and columns are detected automatically. Each new
+					login gets its own temporary password, emailed to that employee, and must be changed on
+					first sign-in.
 				</p>
 			</div>
 			<button class="ess-btn ess-btn--secondary" onclick={() => (showBulkImport = !showBulkImport)}>
@@ -907,7 +918,35 @@
 				<p class="temp-pass">
 					Created {form.bulkImportApplied.createdCount} login(s). {form.bulkImportApplied.skippedCount} already
 					existed and were left untouched.
+					{#if form.bulkImportApplied.redirectedTo}
+						<br />Credentials for all of them were sent to
+						<strong>{form.bulkImportApplied.redirectedTo}</strong>, not to the employees.
+					{:else}
+						<br />Emailed login details to {form.bulkImportApplied.emailedCount} of them.
+					{/if}
 				</p>
+				<!--
+					The accounts exist regardless of whether the mail went out, so a failed
+					send is not an error state for the import — but each of these people is
+					someone who cannot log in until HR passes their password on by hand, and
+					re-running the import will not retry them.
+				-->
+				{#if !form.bulkImportApplied.mailerConfigured}
+					<p class="mail-warn">
+						No Resend API key is configured, so no credentials were emailed. Set
+						<code>RESEND_API_KEY</code> and pass these logins on manually.
+					</p>
+				{:else if form.bulkImportApplied.emailFailures.length > 0}
+					<p class="mail-warn">
+						Could not email {form.bulkImportApplied.emailFailures.length} login(s) — these people
+						need their password passed on directly:
+					</p>
+					<ul class="mail-warn-list">
+						{#each form.bulkImportApplied.emailFailures as failure (failure.email)}
+							<li><strong>{failure.email}</strong> — {failure.error}</li>
+						{/each}
+					</ul>
+				{/if}
 			{/if}
 		{/if}
 
@@ -1069,6 +1108,18 @@
 								}}
 							>
 								<input type="hidden" name="importId" value={reviewImport.id} />
+								<!--
+									Dry-run escape hatch: sends every credentials mail for this batch to one
+									reviewer instead of to the employees, for checking the template and the
+									Resend setup against a real inbox. The accounts are still created for
+									real — only the delivery address changes.
+								-->
+								<input
+									class="mail-redirect"
+									type="email"
+									name="sendCredentialsTo"
+									placeholder="Send all logins to this address instead (optional)"
+								/>
 								<button
 									type="submit"
 									class="ess-btn ess-btn--primary"
@@ -1183,6 +1234,35 @@
 		padding: 0.75rem 1rem;
 		font-size: 0.85rem;
 		margin-bottom: 1rem;
+	}
+
+	/* Credentials that never reached their owner — the import still succeeded, so
+	   this warns rather than alarms. */
+	.mail-warn {
+		background: var(--ess-warning-bg);
+		color: var(--ess-warning);
+		border-radius: var(--ess-radius-sm);
+		padding: 0.75rem 1rem;
+		font-size: 0.85rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.mail-warn-list {
+		margin: 0 0 1rem;
+		padding-left: 1.25rem;
+		font-size: 0.8rem;
+		color: var(--ess-text-muted);
+	}
+
+	.mail-redirect {
+		display: block;
+		width: 100%;
+		max-width: 22rem;
+		margin-bottom: 0.5rem;
+		padding: 0.45rem 0.6rem;
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-sm);
+		font-size: 0.8rem;
 	}
 
 	/* The 5-column roster can't compress below ~640px and stay readable, so
@@ -1595,7 +1675,7 @@
 		max-width: 560px;
 	}
 
-	.section-sub code {
+	.mail-warn code {
 		background: var(--ess-sunken);
 		padding: 0.1rem 0.4rem;
 		border-radius: 4px;
