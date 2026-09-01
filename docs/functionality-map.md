@@ -60,7 +60,7 @@ session. `/login` and `/change-password` sit outside it.
 | `/profile` | all | Own profile: view, self-service edit, photo upload |
 | `/leave` | all | Balances, history, embedded leave calendar |
 | `/leave/apply` | all | Submit a leave application |
-| `/attendance` | all | Check in/out, month calendar, per-day detail |
+| `/attendance` | all | Month calendar, per-day detail, attendance corrections. Read-only: punches come from the biometric terminals and ProHance, never from the portal |
 | `/policies` | all | Read published leave policy and holiday calendar |
 | `/hr-contacts` | all | Manager and HR contact cards |
 | `/team` | lead+ | Roster, create employee, bulk import, password activity, delete |

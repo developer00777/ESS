@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
 	import AttendanceCalendar from '$lib/components/AttendanceCalendar.svelte';
 	import CompOffClaim from '$lib/components/CompOffClaim.svelte';
 	import DeviationRequest from '$lib/components/DeviationRequest.svelte';
@@ -7,8 +6,6 @@
 
 	let { data } = $props();
 
-	let busy = $state(false);
-	let error = $state('');
 	const today = $derived(data.today);
 
 	const monthLabel = $derived(
@@ -16,65 +13,6 @@
 			.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 	);
 	const statPeriod = $derived(data.isCurrentMonth ? 'this month' : `in ${monthLabel}`);
-
-	function getPosition(): Promise<GeolocationPosition | null> {
-		return new Promise((resolve) => {
-			if (!navigator.geolocation) return resolve(null);
-			navigator.geolocation.getCurrentPosition(
-				(pos) => resolve(pos),
-				() => resolve(null),
-				{ timeout: 5000 }
-			);
-		});
-	}
-
-	async function checkIn() {
-		error = '';
-		busy = true;
-		try {
-			const pos = await getPosition();
-			const res = await fetch('/api/attendance/checkin', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					lat: pos?.coords.latitude ?? null,
-					lng: pos?.coords.longitude ?? null
-				})
-			});
-			if (!res.ok) {
-				const body = await res.json().catch(() => ({}));
-				error = body.message ?? 'Could not check in';
-				return;
-			}
-			await invalidateAll();
-		} finally {
-			busy = false;
-		}
-	}
-
-	async function checkOut() {
-		error = '';
-		busy = true;
-		try {
-			const pos = await getPosition();
-			const res = await fetch('/api/attendance/checkout', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					lat: pos?.coords.latitude ?? null,
-					lng: pos?.coords.longitude ?? null
-				})
-			});
-			if (!res.ok) {
-				const body = await res.json().catch(() => ({}));
-				error = body.message ?? 'Could not check out';
-				return;
-			}
-			await invalidateAll();
-		} finally {
-			busy = false;
-		}
-	}
 
 	function formatTime(value: string | Date | null | undefined) {
 		if (!value) return '—';
@@ -94,8 +32,6 @@
 		const m = Math.round((hrs - h) * 60);
 		return `${h}h ${m}m`;
 	}
-
-	const hasLocation = $derived(!!today?.checkInLat);
 </script>
 
 <svelte:head>
@@ -115,20 +51,19 @@
 			<span class="today-label">{today?.checkOutAt ? 'checked out' : today?.checkInAt ? 'checked in' : 'not checked in'}</span>
 		</div>
 		<p class="today-meta">
-			{#if hasLocation}location verified · {/if}{elapsedSince(today?.checkInAt) ?? 'no activity yet today'}
+			{elapsedSince(today?.checkInAt) ?? 'no activity yet today'}
 		</p>
-		<div class="today-actions">
-			<button class="ess-btn action-btn" onclick={checkIn} disabled={busy || !!today?.checkInAt}>
-				Check In
-			</button>
-			<button
-				class="ess-btn action-btn-outline"
-				onclick={checkOut}
-				disabled={busy || !today?.checkInAt || !!today?.checkOutAt}
-			>
-				Check Out
-			</button>
-		</div>
+		<!--
+			Read-only. Attendance is recorded by the biometric terminals and ProHance,
+			never typed in here — a self-service button is a second, unverified source
+			for the same fact, and the two disagreeing is what the correction workflow
+			below spends its time resolving. A missed or mis-read punch is raised as an
+			attendance correction, which HR approves, rather than overwritten by hand.
+		-->
+		<p class="today-source">
+			Recorded from your biometric punch. Something wrong? Raise an attendance
+			correction below.
+		</p>
 	</div>
 
 	<div class="ess-stat">
@@ -151,10 +86,6 @@
 		<span class="ess-stat__meta">per completed shift {statPeriod}</span>
 	</div>
 </div>
-
-{#if error}
-	<p class="ess-error section-gap">{error}</p>
-{/if}
 
 <AttendanceCalendar
 	month={data.viewMonth}
@@ -335,77 +266,20 @@
 		margin-top: 6px;
 	}
 
-	.today-actions {
-		display: flex;
-		gap: 10px;
+	/* Says where the figure above came from, in place of the buttons that used to
+	   sit here. Quieter than .today-meta: it is the same sentence every day. */
+	.today-source {
+		font-size: 12px;
+		line-height: 1.5;
+		color: var(--ess-text-inverse-secondary);
 		margin-top: 16px;
-	}
-
-	.action-btn {
-		background: linear-gradient(180deg, color-mix(in oklab, var(--acc) 82%, #fff), var(--acc));
-		color: var(--ess-text-on-primary);
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.6),
-			0 10px 26px -12px var(--glow);
-	}
-
-	.action-btn:hover:not(:disabled) {
-		transform: translateY(-1px);
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.7),
-			0 16px 34px -12px var(--glow);
-	}
-
-	.action-btn:disabled {
-		opacity: 1;
-		background: rgba(255, 255, 255, 0.35);
-		color: rgba(255, 255, 255, 0.9);
-		box-shadow: none;
-	}
-
-	.action-btn-outline {
-		background: transparent;
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		color: var(--ess-text-inverse);
-	}
-
-	.action-btn-outline:hover:not(:disabled) {
-		background: rgba(255, 255, 255, 0.08);
-	}
-
-	.action-btn-outline:disabled {
-		opacity: 1;
-		color: rgba(255, 255, 255, 0.5);
-		border-color: rgba(255, 255, 255, 0.1);
-	}
-
-	/* Light (Opal): the hero band is a light pane now, so the white-alpha
-	   disabled/outline treatments (correct on the dark Onyx band) become
-	   ink-alpha. Scoped to the default palette; dark keeps the above. */
-	:global(:root:not([data-ess-theme='dark'])) .action-btn:disabled {
-		background: rgba(20, 18, 35, 0.08);
-		color: rgba(20, 18, 35, 0.4);
-	}
-	:global(:root:not([data-ess-theme='dark'])) .action-btn-outline {
-		border-color: rgba(20, 18, 35, 0.18);
-	}
-	:global(:root:not([data-ess-theme='dark'])) .action-btn-outline:hover:not(:disabled) {
-		background: rgba(20, 18, 35, 0.06);
-	}
-	:global(:root:not([data-ess-theme='dark'])) .action-btn-outline:disabled {
-		color: rgba(20, 18, 35, 0.4);
-		border-color: rgba(20, 18, 35, 0.1);
+		max-width: 34ch;
 	}
 
 	.stat-of {
 		font-size: 16px;
 		color: var(--ess-text-secondary);
 		font-weight: 600;
-	}
-
-	.section-gap {
-		display: block;
-		margin-bottom: 0.75rem;
 	}
 
 	@media (max-width: 980px) {
