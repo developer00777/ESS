@@ -17,6 +17,23 @@
 	let search = $state('');
 	let filter = $state<'all' | 'present' | 'absent'>('all');
 
+	// Which row's temporary password was last copied, for the button's confirmation.
+	let copiedPasswordFor = $state<string | null>(null);
+
+	async function copyTemporaryPassword(personId: string, password: string) {
+		try {
+			await navigator.clipboard.writeText(password);
+			copiedPasswordFor = personId;
+			setTimeout(() => {
+				if (copiedPasswordFor === personId) copiedPasswordFor = null;
+			}, 2000);
+		} catch {
+			// Clipboard access can be refused (an insecure origin, a locked-down
+			// browser). The password is on screen either way, so this is not worth
+			// an error state — the button simply doesn't say "Copied".
+		}
+	}
+
 	// --- Bulk import (Super Admin only) ---
 	const ROLES = ['employee', 'team_lead', 'admin', 'super_admin'] as const;
 
@@ -37,6 +54,8 @@
 		existingUser: { id: string; fullName: string; email: string } | null;
 		role: 'super_admin' | 'admin' | 'team_lead' | 'employee';
 		status: 'ready' | 'needs_review' | 'created' | 'skipped_existing';
+		/** Parser findings for this row — a drifted column, or an unusable login id. */
+		repairNotes: string[] | null;
 	};
 
 	let reviewImport = $state<{ id: string; filename: string; status: string; appliedAt: string | null } | null>(null);
@@ -44,9 +63,12 @@
 	let loadingReview = $state(false);
 	let savingRowId = $state<string | null>(null);
 	let applyingBulk = $state(false);
+	let reissuingBulk = $state(false);
 
 	let needsReviewCount = $derived(reviewRows.filter((r) => r.status === 'needs_review').length);
 	let readyCount = $derived(reviewRows.filter((r) => r.status === 'ready').length);
+	// Rows that actually became accounts — what the re-issue button acts on.
+	let createdCount = $derived(reviewRows.filter((r) => r.status === 'created').length);
 	let rowById = $derived(new Map(reviewRows.map((r) => [r.id, r])));
 
 	function onBulkFileChange(e: Event) {
@@ -69,6 +91,12 @@
 		}
 	}
 
+	// A rejected edit, per row. The API refuses an email that isn't an address or
+	// that another row has already claimed, and those are exactly the edits someone
+	// is making when a row is flagged — swallowing the refusal would leave them
+	// retyping into a field that silently keeps reverting.
+	let rowErrors = $state<Record<string, string>>({});
+
 	async function patchRow(rowId: string, patch: Record<string, unknown>) {
 		if (!selectedImportId) return;
 		savingRowId = rowId;
@@ -81,6 +109,10 @@
 			const body = await res.json();
 			if (res.ok) {
 				reviewRows = reviewRows.map((r) => (r.id === rowId ? { ...r, ...body.row } : r));
+				const { [rowId]: _cleared, ...rest } = rowErrors;
+				rowErrors = rest;
+			} else {
+				rowErrors = { ...rowErrors, [rowId]: body.message ?? 'Could not save this change' };
 			}
 		} finally {
 			savingRowId = null;
@@ -653,6 +685,26 @@
 					{/if}
 				{/if}
 			</span>
+			<!--
+				The login this person has not used yet. Spans the whole row rather than
+				taking an eleventh column: it is present for a handful of people at a
+				time, and it disappears on its own the moment they sign in and set their
+				own password. Stops its own clicks so selecting or copying the password
+				doesn't open the settings panel behind it.
+			-->
+			{#if person.temporaryPassword}
+				<span class="pending-login" onclick={(e) => e.stopPropagation()} role="presentation">
+					<span class="pending-login-label">Hasn't signed in yet — temporary password</span>
+					<code>{person.temporaryPassword}</code>
+					<button
+						type="button"
+						class="ess-btn ess-btn--sm ess-btn--ghost"
+						onclick={() => copyTemporaryPassword(person.id, person.temporaryPassword!)}
+					>
+						{copiedPasswordFor === person.id ? 'Copied' : 'Copy'}
+					</button>
+				</span>
+			{/if}
 		</div>
 	{:else}
 		<p class="ess-empty">No employees match this search.</p>
@@ -929,21 +981,68 @@
 					The accounts exist regardless of whether the mail went out, so a failed
 					send is not an error state for the import — but each of these people is
 					someone who cannot log in until HR passes their password on by hand, and
-					re-running the import will not retry them.
+					re-running the import will not retry them. The password is shown here
+					because this is the only moment it exists in plaintext; once this screen
+					is left, only its hash remains and the login has to be re-issued.
 				-->
 				{#if !form.bulkImportApplied.mailerConfigured}
 					<p class="mail-warn">
 						No Resend API key is configured, so no credentials were emailed. Set
 						<code>RESEND_API_KEY</code> and pass these logins on manually.
 					</p>
-				{:else if form.bulkImportApplied.emailFailures.length > 0}
+				{/if}
+				{#if form.bulkImportApplied.emailFailures.length > 0}
 					<p class="mail-warn">
-						Could not email {form.bulkImportApplied.emailFailures.length} login(s) — these people
-						need their password passed on directly:
+						Could not email {form.bulkImportApplied.emailFailures.length} login(s) — copy these
+						down now and pass them on directly. They are not recoverable after you leave this
+						screen; re-issue the batch below if you lose them.
 					</p>
 					<ul class="mail-warn-list">
 						{#each form.bulkImportApplied.emailFailures as failure (failure.email)}
-							<li><strong>{failure.email}</strong> — {failure.error}</li>
+							<li>
+								<strong>{failure.email}</strong> — <code>{failure.temporaryPassword}</code>
+								<span class="mail-warn-reason">{failure.error}</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			{/if}
+
+			{#if form?.bulkImportReissued}
+				<p class="temp-pass">
+					Re-issued {form.bulkImportReissued.reissuedCount} login(s) with a fresh temporary
+					password.
+					{#if form.bulkImportReissued.redirectedTo}
+						<br />All of them were sent to
+						<strong>{form.bulkImportReissued.redirectedTo}</strong>, not to the employees.
+					{:else}
+						<br />Emailed {form.bulkImportReissued.emailedCount} of them.
+					{/if}
+					{#if form.bulkImportReissued.alreadyOnboardedCount > 0}
+						<br />{form.bulkImportReissued.alreadyOnboardedCount} had already signed in and set
+						their own password — those were left alone.
+					{/if}
+					{#if form.bulkImportReissued.inactiveCount > 0}
+						<br />{form.bulkImportReissued.inactiveCount} deactivated account(s) skipped.
+					{/if}
+				</p>
+				{#if !form.bulkImportReissued.mailerConfigured}
+					<p class="mail-warn">
+						No Resend API key is configured, so nothing was emailed. Set
+						<code>RESEND_API_KEY</code> and pass these logins on manually.
+					</p>
+				{/if}
+				{#if form.bulkImportReissued.emailFailures.length > 0}
+					<p class="mail-warn">
+						Could not email {form.bulkImportReissued.emailFailures.length} of them — copy these
+						down now and pass them on directly:
+					</p>
+					<ul class="mail-warn-list">
+						{#each form.bulkImportReissued.emailFailures as failure (failure.email)}
+							<li>
+								<strong>{failure.email}</strong> — <code>{failure.temporaryPassword}</code>
+								<span class="mail-warn-reason">{failure.error}</span>
+							</li>
 						{/each}
 					</ul>
 				{/if}
@@ -975,8 +1074,9 @@
 			<div class="review-block">
 				{#if needsReviewCount > 0 && !locked}
 					<p class="ess-error section-gap">
-						{needsReviewCount} row(s) need a decision before applying — either a reporting-line manager couldn't be
-						confidently matched, or the name closely matches an existing account under a different email.
+						{needsReviewCount} row(s) need a decision before applying — a reporting-line manager couldn't be
+						confidently matched, the name closely matches an existing account under a different email, or the
+						sheet's email column doesn't hold a usable login id. Each row says which below.
 					</p>
 				{/if}
 
@@ -1058,7 +1158,30 @@
 										</span>
 									</td>
 								</tr>
-								{#if row.status === 'needs_review' && row.existingUser}
+								<!--
+								What the parser noticed about this row. Shown on every row that has
+								notes, not just flagged ones: a row can be applied with a drifted
+								column, but "the email column is not an email" is the one that makes
+								the resulting account unusable, and it has to be readable here or the
+								flag is a dead end — the email cell to its left is the fix.
+							-->
+							{#if rowErrors[row.id] || (row.repairNotes && row.repairNotes.length > 0 && row.status !== 'skipped_existing')}
+								<tr class="notes-row">
+									<td colspan="6">
+										<ul class="row-notes">
+											{#if rowErrors[row.id]}
+												<li class="row-note-error">{rowErrors[row.id]}</li>
+											{/if}
+											{#each row.repairNotes ?? [] as note (note)}
+												{#if row.status !== 'skipped_existing'}
+													<li>{note}</li>
+												{/if}
+											{/each}
+										</ul>
+									</td>
+								</tr>
+							{/if}
+							{#if row.status === 'needs_review' && row.existingUser}
 									<tr class="duplicate-row">
 										<td colspan="6">
 											<div class="duplicate-banner">
@@ -1092,7 +1215,13 @@
 						</tbody>
 					</table>
 					<div class="ess-table-foot">
-						<span>{readyCount} ready · {needsReviewCount} needs review</span>
+						<span>
+							{#if locked}
+								{createdCount} login(s) created from this import
+							{:else}
+								{readyCount} ready · {needsReviewCount} needs review
+							{/if}
+						</span>
 						{#if !locked}
 							<form
 								method="POST"
@@ -1128,6 +1257,46 @@
 									{applyingBulk ? 'Creating logins…' : `Create ${readyCount} login(s)`}
 								</button>
 							</form>
+						{:else}
+							<!--
+								Applied imports keep this: the credentials mail is the only copy of a
+								temporary password ever made, so a batch whose mail didn't land (no
+								Resend key at the time, an unverified sending domain, the provider's
+								rate limit, or an address the sheet got wrong) leaves people holding a
+								password that does not work. Nothing can be re-sent — the plaintext is
+								gone — so this mints a new one per account and mails it again.
+							-->
+							<form
+								method="POST"
+								action="?/resendBulkImportLogins"
+								use:enhance={() => {
+									reissuingBulk = true;
+									return async ({ update }) => {
+										reissuingBulk = false;
+										await update();
+										await invalidateAll();
+										if (selectedImportId) await loadReview(selectedImportId);
+									};
+								}}
+							>
+								<input type="hidden" name="importId" value={reviewImport.id} />
+								<input
+									class="mail-redirect"
+									type="email"
+									name="sendCredentialsTo"
+									placeholder="Send all logins to this address instead (optional)"
+								/>
+								<button
+									type="submit"
+									class="ess-btn ess-btn--secondary"
+									disabled={reissuingBulk || createdCount === 0}
+									title="Gives every account this import created a new temporary password and emails it again. Anyone who has already set their own password is left alone."
+								>
+									{reissuingBulk
+										? 'Re-issuing logins…'
+										: `Re-issue & email ${createdCount} login(s)`}
+								</button>
+							</form>
 						{/if}
 					</div>
 				</div>
@@ -1138,8 +1307,10 @@
 	<section class="password-activity-section">
 		<h2 class="section-title">Password Activity</h2>
 		<p class="section-sub">
-			Who changed or reset whose password, and when. Actual passwords are never stored or shown — they're one-way
-			hashed and cannot be recovered by anyone, including a Super Admin.
+			Who changed or reset whose password, and when. A password someone has chosen for themselves is never stored
+			or shown — it is one-way hashed and cannot be recovered by anyone, including a Super Admin. An unused
+			temporary password is the exception: it stays readable on the roster above so it can be passed on, and is
+			erased the moment that person signs in and sets their own.
 		</p>
 		<div class="ess-table-shell">
 			<table class="ess-table">
@@ -1254,6 +1425,26 @@
 		color: var(--ess-text-muted);
 	}
 
+	.mail-warn-list li {
+		margin-bottom: 0.35rem;
+	}
+
+	.mail-warn-list code {
+		font-family: var(--ess-font-mono, Consolas, Menlo, monospace);
+		background: var(--ess-surface-alt, rgba(0, 0, 0, 0.05));
+		border-radius: 3px;
+		padding: 0.05rem 0.3rem;
+		color: var(--ess-text);
+	}
+
+	/* Why the send failed, secondary to the credentials themselves — the operator
+	   is here to copy a password down, not to read a provider error. */
+	.mail-warn-reason {
+		display: block;
+		font-size: 0.75rem;
+		opacity: 0.8;
+	}
+
 	.mail-redirect {
 		display: block;
 		width: 100%;
@@ -1269,6 +1460,36 @@
 	   it scrolls inside its own shell instead of overflowing the page. */
 	.roster-shell {
 		overflow-x: auto;
+	}
+
+	/* Full-width second line under a roster row, for the one person in ten who
+	   still hasn't used their login. */
+	.pending-login {
+		grid-column: 1 / -1;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+		padding: 0.35rem 0.6rem;
+		border-radius: var(--ess-radius-sm);
+		background: var(--ess-warning-bg);
+		color: var(--ess-warning);
+		font-size: 0.75rem;
+	}
+
+	.pending-login code {
+		font-family: var(--ess-font-mono, Consolas, Menlo, monospace);
+		font-size: 0.8rem;
+		letter-spacing: 0.02em;
+		color: var(--ess-text);
+		background: var(--ess-surface);
+		border-radius: 3px;
+		padding: 0.1rem 0.4rem;
+		user-select: all;
+	}
+
+	.pending-login-label {
+		opacity: 0.85;
 	}
 
 	.roster-row {
@@ -1750,6 +1971,24 @@
 	.duplicate-row td {
 		padding: 0;
 		border-bottom: 1px solid var(--ess-border-subtle);
+	}
+
+	.notes-row td {
+		padding: 0;
+		border-bottom: 1px solid var(--ess-border-subtle);
+	}
+
+	.row-notes {
+		margin: 0;
+		padding: 0.4rem 1rem 0.5rem 2.25rem;
+		font-size: 0.75rem;
+		color: var(--ess-warning);
+		background: var(--ess-warning-bg);
+	}
+
+	.row-note-error {
+		color: var(--ess-danger, var(--ess-error, #b3261e));
+		font-weight: 600;
 	}
 
 	.duplicate-banner {

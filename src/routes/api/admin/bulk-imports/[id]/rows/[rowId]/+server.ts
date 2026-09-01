@@ -1,9 +1,10 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db/postgres';
-import { bulkImports, bulkImportRows } from '$lib/server/db/schema';
+import { bulkImports, bulkImportRows, users } from '$lib/server/db/schema';
 import { requireRole } from '$lib/server/rbac';
-import { eq, and } from 'drizzle-orm';
+import { looksLikeEmail } from '$lib/server/bulk-import';
+import { eq, and, ne } from 'drizzle-orm';
 
 const VALID_ROLES = ['super_admin', 'admin', 'team_lead', 'employee'] as const;
 
@@ -32,10 +33,43 @@ export const PATCH: RequestHandler = async (event) => {
 	const patch: Partial<typeof bulkImportRows.$inferInsert> = {};
 
 	if ('officialEmail' in body) {
-		if (typeof body.officialEmail !== 'string' || !body.officialEmail.includes('@')) {
-			throw error(400, 'officialEmail must be a valid email string');
+		// Held to the same shape the parser requires, because this is the screen
+		// where an unusable login id gets corrected — accepting anything containing
+		// an "@" would let the bad value straight back through.
+		if (typeof body.officialEmail !== 'string' || !looksLikeEmail(body.officialEmail)) {
+			throw error(400, 'officialEmail must be a valid email address');
 		}
-		patch.officialEmail = body.officialEmail.toLowerCase();
+		const officialEmail = body.officialEmail.trim().toLowerCase();
+
+		// `users.email` is unique, and apply inserts row by row with no transaction
+		// around the batch. A collision therefore doesn't fail the edit — it fails
+		// halfway through creating accounts, after some have already been made and
+		// mailed. Cheaper to refuse it here.
+		const [clashingRow] = await db
+			.select({ id: bulkImportRows.id, fullName: bulkImportRows.fullName })
+			.from(bulkImportRows)
+			.where(
+				and(
+					eq(bulkImportRows.importId, importId),
+					eq(bulkImportRows.officialEmail, officialEmail),
+					ne(bulkImportRows.id, rowId)
+				)
+			)
+			.limit(1);
+		if (clashingRow) {
+			throw error(400, `"${officialEmail}" is already used by another row in this import (${clashingRow.fullName})`);
+		}
+
+		const [clashingUser] = await db
+			.select({ fullName: users.fullName })
+			.from(users)
+			.where(eq(users.email, officialEmail))
+			.limit(1);
+		if (clashingUser) {
+			throw error(400, `"${officialEmail}" already belongs to an existing account (${clashingUser.fullName})`);
+		}
+
+		patch.officialEmail = officialEmail;
 	}
 
 	if ('role' in body) {

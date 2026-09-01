@@ -47,7 +47,10 @@ export const POST: RequestHandler = async (event) => {
 			teamId: resolvedTeamId,
 			reportsTo: actor.id,
 			isActive: true,
-			mustChangePassword: true
+			mustChangePassword: true,
+			// Readable on the Team roster until this person sets their own password,
+			// so the login survives a caller that drops this response.
+			temporaryPassword: tempPassword
 		})
 		.returning();
 

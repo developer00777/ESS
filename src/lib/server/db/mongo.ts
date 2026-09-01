@@ -26,7 +26,12 @@ export async function logActivity(entry: Omit<ActivityLogEntry, 'createdAt'>) {
 	});
 }
 
-const PASSWORD_ACTIONS = ['password.change', 'user.password_reset', 'user.bulk_create'];
+const PASSWORD_ACTIONS = [
+	'password.change',
+	'user.password_reset',
+	'user.bulk_create',
+	'user.bulk_reissue'
+];
 
 // Audit trail of who changed/reset whose password and when — never the password
 // value itself, which isn't recoverable from a one-way hash by design.

@@ -270,7 +270,13 @@ const looksLikeExperience = (v: string) => /^\d+(\.\d+)?\s*(yrs?|years?)$/i.test
 // An Indian driving licence is state-code + digits, e.g. "KA5120170071762".
 // Requiring a letter keeps bare 12-digit Aadhaar/UAN values out of the field.
 const looksLikeDrivingLicense = (v: string) => /^[A-Z]{2}[\s-]?\d[\d\s-]{6,}$/i.test(v.trim());
-const looksLikeEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+/**
+ * Exported because the official-email column is not just another field: it
+ * becomes the account's login id, and this portal authenticates by email. A
+ * value that isn't an address here produces an account nobody can ever sign in
+ * to, so the upload step holds such a row for review instead of creating it.
+ */
+export const looksLikeEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
 /**
  * Repairs a parsed row whose values landed under the wrong headers.
@@ -528,6 +534,14 @@ function repairMisalignedValues(row: ParsedImportRow): string[] {
 		}
 	}
 
+	// The official email is the login id. Anything else in that column — a
+	// "yet to be created", a name, a formula the parser could not resolve —
+	// would otherwise become an account address that its owner can never sign
+	// in with, so say so loudly on the review screen.
+	if (!looksLikeEmail(row.officialEmail)) {
+		notes.push(`officialEmail "${row.officialEmail}" is not an email address — this would be the login id`);
+	}
+
 	// Flag rather than move: a non-email in the personal-email column means the
 	// row drifted somewhere upstream, which a reviewer should see.
 	if (row.personalEmail && !looksLikeEmail(row.personalEmail)) {
@@ -593,9 +607,32 @@ function cellText(value: unknown): string | null {
 	if (value instanceof Date) {
 		return Number.isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10);
 	}
-	if (typeof value === 'object' && 'text' in (value as Record<string, unknown>)) {
-		return String((value as { text: unknown }).text).trim() || null;
+
+	// ExcelJS hands back an object for every cell that isn't a bare scalar, and
+	// each shape carries its value under a different key. String() on any of them
+	// yields the literal "[object Object]" — which used to sail through as a real
+	// value and, in the official-email column, became somebody's login id. Every
+	// shape is unwrapped here, and an unrecognised one reads as empty rather than
+	// as that placeholder text.
+	if (typeof value === 'object') {
+		const cell = value as Record<string, unknown>;
+		// { formula, result } and { sharedFormula, result }. The master tracker
+		// builds official emails from the name columns, so this is the common case
+		// for the one field the whole login depends on. `result` may itself be a
+		// date, an error, or rich text, hence the recursion.
+		if ('formula' in cell || 'sharedFormula' in cell) return cellText(cell.result);
+		// #N/A, #REF!, #VALUE! — the absence of a value, not the text "#N/A".
+		if ('error' in cell) return null;
+		// Rich text is a run list; the cell's value is the runs joined.
+		if (Array.isArray(cell.richText)) {
+			return cellText(cell.richText.map((run) => (run as { text?: unknown }).text ?? '').join(''));
+		}
+		// { text, hyperlink } — a mailto: link on an email cell. The display text
+		// is the value; the href is not.
+		if ('text' in cell) return cellText(cell.text);
+		return null;
 	}
+
 	const s = String(value).trim();
 	return s === '' ? null : s;
 }

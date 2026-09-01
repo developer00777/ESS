@@ -18,9 +18,14 @@ import { eq, and, inArray, lte, gte, desc, isNotNull } from 'drizzle-orm';
 import { hashPassword } from '$lib/server/auth';
 import { randomBytes } from 'node:crypto';
 import { logActivity, getPasswordActivity, getUsersWithProfilePicture } from '$lib/server/db/mongo';
-import { requireRole, canCreateRole } from '$lib/server/rbac';
-import { type Role } from '$lib/server/auth';
-import { parseHrTeamSheet, suggestReportsToIndex, suggestExistingUserMatch } from '$lib/server/bulk-import';
+import { requireRole, canCreateRole, canActOnUser } from '$lib/server/rbac';
+import { type Role, type SessionUser } from '$lib/server/auth';
+import {
+	parseHrTeamSheet,
+	suggestReportsToIndex,
+	suggestExistingUserMatch,
+	looksLikeEmail
+} from '$lib/server/bulk-import';
 import { profileValuesFromImport } from '$lib/server/import-profile-fields';
 import { matchName } from '$lib/server/name-match';
 import { ensureLeaveAllocations } from '$lib/server/leave-accrual';
@@ -91,10 +96,30 @@ async function backfillProfile(
 	return filled;
 }
 
+/**
+ * Who may read an account's pending temporary password on the roster.
+ *
+ * Deliberately the same test the admin reset endpoint applies, including its
+ * extra rule that a Team Lead may only act on Employees: seeing the credential
+ * and being able to replace it should never come apart, or the roster leaks
+ * something the viewer has no authority over.
+ */
+function canViewTemporaryPassword(
+	viewer: SessionUser,
+	target: { id: string; role: Role; teamId: string | null }
+): boolean {
+	if (!canActOnUser(viewer, target.id, target.teamId)) return false;
+	if (viewer.role === 'team_lead' && target.role !== 'employee' && target.id !== viewer.id) {
+		return false;
+	}
+	return true;
+}
+
 const PASSWORD_ACTION_LABELS: Record<string, string> = {
 	'password.change': 'Changed own password',
 	'user.password_reset': "Reset another user's password",
-	'user.bulk_create': 'Created via bulk import (default password)'
+	'user.bulk_create': 'Created via bulk import',
+	'user.bulk_reissue': 'Re-issued a bulk-import login'
 };
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -286,6 +311,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 		weekOffSummary: weekOffByUser.get(r.id)?.summary ?? 'Every Sat + Sun',
 		role: r.role,
 		isActive: r.isActive,
+		// The pending temporary password, for people who haven't signed in and set
+		// their own yet. Shown only for accounts this viewer could already reset —
+		// the same authorization the reset endpoint applies — so it never hands a
+		// Team Lead a credential they couldn't replace anyway. Null the instant the
+		// person changes their password.
+		temporaryPassword: canViewTemporaryPassword(user, r) ? r.temporaryPassword : null,
 		leaveLeft: balanceByUser.get(r.id) ?? 0,
 		status: attendanceByUser.get(r.id)?.checkInAt
 			? attendanceByUser.get(r.id)?.checkOutAt
@@ -422,7 +453,10 @@ export const actions: Actions = {
 				teamId: actor.teamId,
 				reportsTo: actor.id,
 				isActive: true,
-				mustChangePassword: true
+				mustChangePassword: true,
+				// Readable on the roster until this person sets their own password,
+				// so a mail that never arrives doesn't strand the account.
+				temporaryPassword: tempPassword
 			})
 			.returning();
 
@@ -530,6 +564,13 @@ export const actions: Actions = {
 			.values({ filename: file.name, uploadedBy: actor.id, rowCount: parsedRows.length })
 			.returning();
 
+		// Two rows in the same sheet claiming one address pass every check above —
+		// neither is in `users` yet — and then collide on the unique email index
+		// halfway through apply, leaving accounts created, credentials mailed, and
+		// the import stuck part-applied. Caught here for the same reason duplicate
+		// employee codes are.
+		const seenInSheet = new Set<string>();
+
 		const insertedRows = await db
 			.insert(bulkImportRows)
 			.values(
@@ -539,11 +580,28 @@ export const actions: Actions = {
 					const code = r.employeeCode?.trim().toUpperCase() ?? null;
 					const codeOwner = code ? takenCodes.get(code) : undefined;
 
+					const duplicateInSheet = seenInSheet.has(r.officialEmail);
+					seenInSheet.add(r.officialEmail);
+					// The login id has to be an actual address — the portal
+					// authenticates by email, so anything else creates an account its
+					// owner can never sign in to, whatever password is mailed out.
+					const emailUsable = looksLikeEmail(r.officialEmail);
+
 					let status: 'ready' | 'needs_review' | 'skipped_existing' = 'ready';
 					if (emailMatchId) status = 'skipped_existing';
+					// Both of these produce an unusable login rather than a merely
+					// questionable one, so they outrank the softer name/code flags.
+					else if (!emailUsable || duplicateInSheet) status = 'needs_review';
 					else if (nameMatch) status = 'needs_review';
 					// A code already held by someone else can't be applied as-is.
 					else if (codeOwner) status = 'needs_review';
+
+					const notes = [
+						...(parseResult.repairs[rowIndex] ?? []),
+						...(duplicateInSheet
+							? [`officialEmail "${r.officialEmail}" is used by an earlier row in this sheet`]
+							: [])
+					];
 
 					// Everything beyond the columns needed to create the login is
 					// carried as-is and written to the profile on apply.
@@ -569,7 +627,7 @@ export const actions: Actions = {
 						reportingAuthorityRaw,
 						dottedLineAuthorityRaw,
 						profileData,
-						repairNotes: parseResult.repairs[rowIndex] ?? null,
+						repairNotes: notes.length > 0 ? notes : null,
 						existingUserId: emailMatchId ?? nameMatch?.id ?? null,
 						status
 					};
@@ -647,8 +705,12 @@ export const actions: Actions = {
 		// Existing people whose blank profile columns this run filled in.
 		let backfilledCount = 0;
 		// Credentials handover, reported back so the Super Admin can see who still
-		// needs their login passed on by hand.
-		const emailFailures: { email: string; error: string }[] = [];
+		// needs their login passed on by hand. The password travels with the
+		// failure: a hash is one-way, so if the only copy of the plaintext went out
+		// with a mail that never landed, that account is stranded — nobody, Super
+		// Admin included, can say what it is. Carried only for the sends that
+		// actually failed, and only to the person who just ran the import.
+		const emailFailures: { email: string; error: string; temporaryPassword: string }[] = [];
 		let emailedCount = 0;
 
 		for (const row of rows) {
@@ -681,7 +743,12 @@ export const actions: Actions = {
 					role: row.role,
 					fullName: row.fullName,
 					isActive: true,
-					mustChangePassword: true
+					mustChangePassword: true,
+					// Kept readable on the roster until this person signs in and
+					// chooses their own. A master-tracker batch is exactly where the
+					// credentials mail goes wrong at scale, and re-running the import
+					// cannot re-issue a row it has already created.
+					temporaryPassword
 				})
 				.returning();
 
@@ -718,7 +785,11 @@ export const actions: Actions = {
 			if (mail.ok) {
 				emailedCount++;
 			} else {
-				emailFailures.push({ email: createdUser.email, error: mail.error ?? 'Unknown error' });
+				emailFailures.push({
+					email: createdUser.email,
+					error: mail.error ?? 'Unknown error',
+					temporaryPassword
+				});
 			}
 
 			await logActivity({
@@ -816,6 +887,152 @@ export const actions: Actions = {
 				emailedCount,
 				// Listed rather than counted: the point of surfacing these is telling
 				// HR exactly whose login still needs delivering by hand.
+				emailFailures,
+				mailerConfigured: isMailerConfigured(),
+				redirectedTo: redirectAllMailTo || null
+			}
+		};
+	},
+
+	// Re-issues the logins an already-applied import created.
+	//
+	// A temporary password exists as plaintext for exactly as long as the apply
+	// loop holds it — after that there is only an argon2 hash, so there is nothing
+	// to "re-send". These accounts get a NEW temporary password and the credentials
+	// mail goes out again.
+	//
+	// Needed whenever the first handover didn't reach people: a batch that outran
+	// Resend's rate limit, a run made before the sending domain was verified, or an
+	// import whose email column parsed wrong, where the original mail was addressed
+	// to something that was never a mailbox. In every one of those cases the
+	// account exists, the person has a password they were told to use, and it does
+	// not work — re-running the import can't help, because its rows are `created`.
+	//
+	// Anyone who has already set their own password is skipped. They are
+	// demonstrably not stuck, and resetting them would lock out precisely the
+	// people the import worked for.
+	resendBulkImportLogins: async (event) => {
+		const actor = requireRole(event, ['super_admin']);
+		const form = await event.request.formData();
+		const importId = String(form.get('importId') ?? '');
+		if (!importId) return { bulkImportError: 'Missing importId' };
+
+		const [importRow] = await db.select().from(bulkImports).where(eq(bulkImports.id, importId)).limit(1);
+		if (!importRow) throw error(404, 'Import not found');
+
+		// Same dry-run escape hatch as apply: route the whole batch to one reviewer
+		// instead of to the employees.
+		const redirectAllMailTo = String(form.get('sendCredentialsTo') ?? '').trim().toLowerCase();
+
+		const createdRows = await db
+			.select({ createdUserId: bulkImportRows.createdUserId })
+			.from(bulkImportRows)
+			.where(and(eq(bulkImportRows.importId, importId), eq(bulkImportRows.status, 'created')));
+
+		const createdUserIds = createdRows
+			.map((r) => r.createdUserId)
+			.filter((id): id is string => Boolean(id));
+
+		if (createdUserIds.length === 0) {
+			return { bulkImportError: 'This import created no logins, so there is nothing to re-issue' };
+		}
+
+		const accounts = await db.select().from(users).where(inArray(users.id, createdUserIds));
+
+		let reissuedCount = 0;
+		let emailedCount = 0;
+		// People who already signed in and chose their own password. Left untouched.
+		let alreadyOnboardedCount = 0;
+		let inactiveCount = 0;
+		const emailFailures: { email: string; error: string; temporaryPassword: string }[] = [];
+
+		for (const account of accounts) {
+			if (!account.mustChangePassword) {
+				alreadyOnboardedCount++;
+				continue;
+			}
+			if (!account.isActive) {
+				inactiveCount++;
+				continue;
+			}
+
+			const temporaryPassword = generateTemporaryPassword();
+			const passwordHash = await hashPassword(temporaryPassword);
+			await db
+				.update(users)
+				.set({
+					passwordHash,
+					mustChangePassword: true,
+					temporaryPassword,
+					updatedAt: new Date()
+				})
+				.where(eq(users.id, account.id));
+			reissuedCount++;
+
+			// An account whose login id isn't an address can't be mailed — and can't
+			// be signed in to either, which is usually why this button was pressed.
+			// Reported with its password rather than attempted, so the operator can
+			// correct the address on the roster and hand the login over meanwhile.
+			const deliverTo = redirectAllMailTo || (looksLikeEmail(account.email) ? account.email : null);
+
+			const mail = deliverTo
+				? await sendWelcomeEmail({
+						fullName: account.fullName,
+						username: account.email,
+						temporaryPassword,
+						to: deliverTo
+					})
+				: {
+						ok: false as const,
+						error: `"${account.email}" is not an email address — correct it on the roster, then pass this password on directly`
+					};
+
+			if (mail.ok) {
+				emailedCount++;
+			} else {
+				emailFailures.push({
+					email: account.email,
+					error: mail.error ?? 'Unknown error',
+					temporaryPassword
+				});
+			}
+
+			await logActivity({
+				actorUserId: actor.id,
+				action: 'user.bulk_reissue',
+				targetType: 'user',
+				targetId: account.id,
+				details: {
+					email: account.email,
+					importId,
+					welcomeEmail: mail.ok ? 'sent' : 'failed',
+					welcomeEmailId: mail.ok ? (mail.id ?? null) : null,
+					welcomeEmailError: mail.ok ? null : (mail.error ?? null),
+					welcomeEmailRedirectedTo: redirectAllMailTo || null
+				}
+			});
+		}
+
+		await logActivity({
+			actorUserId: actor.id,
+			action: 'bulk_import.reissue',
+			targetType: 'bulk_import',
+			targetId: importId,
+			details: {
+				reissuedCount,
+				emailedCount,
+				alreadyOnboardedCount,
+				inactiveCount,
+				emailFailedCount: emailFailures.length
+			}
+		});
+
+		return {
+			bulkImportReissued: {
+				reissuedCount,
+				emailedCount,
+				alreadyOnboardedCount,
+				inactiveCount,
 				emailFailures,
 				mailerConfigured: isMailerConfigured(),
 				redirectedTo: redirectAllMailTo || null

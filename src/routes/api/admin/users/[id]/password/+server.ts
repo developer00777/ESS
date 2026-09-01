@@ -39,7 +39,15 @@ export const PUT: RequestHandler = async (event) => {
 
 	const [updated] = await db
 		.update(users)
-		.set({ passwordHash, mustChangePassword: true, updatedAt: new Date() })
+		.set({
+			passwordHash,
+			mustChangePassword: true,
+			// Readable on the roster until the target sets their own password. The
+			// actor chose this value and already knows it; holding it means a second
+			// admin, or the same one a day later, can still pass it on.
+			temporaryPassword: newPassword,
+			updatedAt: new Date()
+		})
 		.where(eq(users.id, targetUserId))
 		.returning();
 

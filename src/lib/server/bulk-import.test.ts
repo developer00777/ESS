@@ -246,3 +246,115 @@ describe('education repair', () => {
 		expect(row.masters).toBeNull();
 	});
 });
+
+/**
+ * The login id comes out of the official-email column, and ExcelJS represents
+ * anything but a bare string as an object whose value lives under a different
+ * key per cell type. Stringifying those produced the literal "[object Object]",
+ * which passed every emptiness check and became the account's email address —
+ * an account nobody could ever sign in to, whatever password was mailed out.
+ * Master trackers build that column by formula often enough that this was the
+ * common case, not the exotic one.
+ */
+describe('non-scalar cell values', () => {
+	/** Builds a one-row workbook, writing raw ExcelJS cell values. */
+	async function parseCellValues(values: unknown[]): Promise<ParsedImportRow> {
+		const workbook = new ExcelJS.Workbook();
+		const sheet = workbook.addWorksheet('HR Team Master Tracker');
+		sheet.addRow(HEADERS);
+		const row = sheet.getRow(2);
+		values.forEach((value, i) => {
+			if (value !== null && value !== undefined) row.getCell(i + 1).value = value as never;
+		});
+		row.commit();
+		const buffer = await workbook.xlsx.writeBuffer();
+		const result = await parseHrTeamSheet(Buffer.from(buffer) as never);
+		return result.rows[0];
+	}
+
+	test('a formula cell reads as its computed result, not its formula', async () => {
+		const row = await parseCellValues([
+			'Test Person',
+			{ formula: 'LOWER(A2)&"@example.com"', result: 'test.person@example.com' }
+		]);
+		expect(row.officialEmail).toBe('test.person@example.com');
+	});
+
+	// A tracker fills the email column by dragging one formula down the sheet, so
+	// every row below the first is a shared clone rather than a formula of its own.
+	test('a shared-formula clone reads as its computed result', async () => {
+		const workbook = new ExcelJS.Workbook();
+		const sheet = workbook.addWorksheet('HR Team Master Tracker');
+		sheet.addRow(HEADERS);
+		sheet.getCell('A2').value = 'First Person';
+		sheet.getCell('B2').value = {
+			formula: 'LOWER(A2)&"@example.com"',
+			result: 'first.person@example.com'
+		} as never;
+		sheet.getCell('A3').value = 'Second Person';
+		sheet.getCell('B3').value = {
+			sharedFormula: 'B2',
+			result: 'second.person@example.com'
+		} as never;
+		const buffer = await workbook.xlsx.writeBuffer();
+		const result = await parseHrTeamSheet(Buffer.from(buffer) as never);
+		expect(result.rows.map((r) => r.officialEmail)).toEqual([
+			'first.person@example.com',
+			'second.person@example.com'
+		]);
+	});
+
+	test('a rich-text cell reads as its runs joined', async () => {
+		const row = await parseCellValues([
+			{ richText: [{ text: 'Test ' }, { text: 'Person' }] },
+			{ richText: [{ text: 'test.person@' }, { text: 'example.com' }] }
+		]);
+		expect(row.fullName).toBe('Test Person');
+		expect(row.officialEmail).toBe('test.person@example.com');
+	});
+
+	test('a hyperlinked email reads as its display text, not its mailto: href', async () => {
+		const row = await parseCellValues([
+			'Test Person',
+			{ text: 'test.person@example.com', hyperlink: 'mailto:test.person@example.com' }
+		]);
+		expect(row.officialEmail).toBe('test.person@example.com');
+	});
+
+	/**
+	 * A formula that errored is the absence of a value. Reading it as the text
+	 * "#N/A" would put that in the profile; reading it as "[object Object]" was
+	 * worse still.
+	 */
+	test('an errored formula reads as empty, not as the text of the error', async () => {
+		const workbook = new ExcelJS.Workbook();
+		const sheet = workbook.addWorksheet('HR Team Master Tracker');
+		sheet.addRow(HEADERS);
+		sheet.getCell('A2').value = 'Good Person';
+		sheet.getCell('B2').value = 'good.person@example.com';
+		sheet.getCell('E2').value = { error: '#REF!' } as never;
+		sheet.getCell('A3').value = 'Broken Person';
+		sheet.getCell('B3').value = {
+			formula: 'VLOOKUP(A3,X:Y,2,0)',
+			result: { error: '#N/A' }
+		} as never;
+		const buffer = await workbook.xlsx.writeBuffer();
+		const result = await parseHrTeamSheet(Buffer.from(buffer) as never);
+		// #REF! is the absence of a PAN, not a PAN reading "#REF!".
+		expect(result.rows[0].panNumber).toBeNull();
+		// And a row whose email never resolved has no login to create, so it is
+		// left out entirely rather than imported under "[object object]".
+		expect(result.rows).toHaveLength(1);
+	});
+
+	test('a value that is not an address is flagged rather than made a login id', async () => {
+		const workbook = new ExcelJS.Workbook();
+		const sheet = workbook.addWorksheet('HR Team Master Tracker');
+		sheet.addRow(HEADERS);
+		sheet.addRow(['Test Person', 'yet to be created']);
+		const buffer = await workbook.xlsx.writeBuffer();
+		const result = await parseHrTeamSheet(Buffer.from(buffer) as never);
+		expect(result.rows[0].officialEmail).toBe('yet to be created');
+		expect(result.repairs[0].join(' ')).toMatch(/officialEmail .* is not an email address/);
+	});
+});

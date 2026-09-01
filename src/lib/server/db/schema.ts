@@ -121,6 +121,26 @@ export const users = pgTable('users', {
 	reportsTo: uuid('reports_to').references((): any => users.id),
 	isActive: boolean('is_active').default(true).notNull(),
 	mustChangePassword: boolean('must_change_password').default(true).notNull(),
+	/**
+	 * The issued temporary password, readable, for exactly as long as it is still
+	 * the account's password.
+	 *
+	 * A hash is one-way, so before this column the plaintext existed only inside
+	 * the request that created the account: if the credentials mail didn't land —
+	 * no Resend key configured yet, an unverified sending domain, the provider's
+	 * rate limit part-way through a master-tracker import, an address the sheet
+	 * got wrong — the account was stranded, and nobody, Super Admin included,
+	 * could say what its password was. A roster of people who cannot sign in and
+	 * cannot be told why is worse than holding a value that is single-use by
+	 * construction.
+	 *
+	 * It is not a credential store. `passwordHash` remains the only thing login
+	 * checks; this is never read during authentication. It is set null the moment
+	 * the person chooses their own password, so it only ever describes an account
+	 * still sitting on `mustChangePassword`, and it is only ever shown to someone
+	 * who could reset that same account anyway.
+	 */
+	temporaryPassword: text('temporary_password'),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
 });

@@ -38,7 +38,15 @@ export const POST: RequestHandler = async (event) => {
 
 	const [updated] = await db
 		.update(users)
-		.set({ passwordHash, mustChangePassword: false, updatedAt: new Date() })
+		.set({
+			passwordHash,
+			mustChangePassword: false,
+			// The issued temporary password is kept readable only while it is still
+			// the way into the account. This is the moment that stops being true, so
+			// it goes — the person now has a password nobody else has ever seen.
+			temporaryPassword: null,
+			updatedAt: new Date()
+		})
 		.where(eq(users.id, actor.id))
 		.returning();
 
