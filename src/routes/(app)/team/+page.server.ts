@@ -108,6 +108,22 @@ function canViewTemporaryPassword(
 	viewer: SessionUser,
 	target: { id: string; role: Role; teamId: string | null }
 ): boolean {
+	return canEditPersonSettings(viewer, target);
+}
+
+/**
+ * Who may open the settings panel on a given row.
+ *
+ * The same test the settings endpoint applies, so the roster never offers a
+ * panel whose Save would come back 403. A Team Lead reaches the Employees on
+ * their own team and themselves — enough to keep their team's shifts, week offs
+ * and reporting lines right, and no further. Role is not editable here for
+ * anyone but a Super Admin; that is enforced separately, on the field.
+ */
+function canEditPersonSettings(
+	viewer: SessionUser,
+	target: { id: string; role: Role; teamId: string | null }
+): boolean {
 	if (!canActOnUser(viewer, target.id, target.teamId)) return false;
 	if (viewer.role === 'team_lead' && target.role !== 'employee' && target.id !== viewer.id) {
 		return false;
@@ -245,11 +261,18 @@ export const load: PageServerLoad = async ({ locals }) => {
 	// Names for the reporting-manager and HR columns. Drawn from every user, not
 	// just this roster, because a manager can sit outside the team being viewed.
 	const allPeople = await db
-		.select({ id: users.id, fullName: users.fullName, role: users.role })
+		.select({ id: users.id, fullName: users.fullName, role: users.role, teamId: users.teamId })
 		.from(users)
 		.where(eq(users.isActive, true))
 		.orderBy(users.fullName);
 	const nameById = new Map(allPeople.map((p) => [p.id, p.fullName]));
+
+	// The manager/HR pickers in the settings panel. A Team Lead may only point a
+	// reporting line inside their own team, so offering them the whole company
+	// would be offering choices Save is going to reject.
+	const assignablePeople = (
+		user.role === 'team_lead' ? allPeople.filter((p) => p.teamId === user.teamId) : allPeople
+	).map((p) => ({ id: p.id, fullName: p.fullName, role: p.role }));
 
 	// One query for the whole roster — avoids an <img> request per row for
 	// employees who have no picture.
@@ -317,6 +340,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 		// Team Lead a credential they couldn't replace anyway. Null the instant the
 		// person changes their password.
 		temporaryPassword: canViewTemporaryPassword(user, r) ? r.temporaryPassword : null,
+		// Whether this viewer may open the settings panel on this row. Decided
+		// here rather than from a blanket isSuperAdmin so a Team Lead is offered
+		// exactly the rows the settings endpoint will actually accept.
+		canEditSettings: canEditPersonSettings(user, r),
 		leaveLeft: balanceByUser.get(r.id) ?? 0,
 		status: attendanceByUser.get(r.id)?.checkInAt
 			? attendanceByUser.get(r.id)?.checkOutAt
@@ -386,7 +413,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		allShiftGroups,
 		weekOffRosters: weekOffRosterOptions,
 		// Candidates for the reporting-manager and HR pickers in the person panel.
-		allPeople,
+		allPeople: assignablePeople,
 		// A roster can be scoped to one team, so the author needs the list.
 		allTeams: user.role === 'super_admin' ? await db.select({ id: teams.id, name: teams.name }).from(teams) : [],
 		// Team leads assign rosters but don't author them. Employees never reach

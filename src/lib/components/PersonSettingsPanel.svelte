@@ -32,6 +32,12 @@
 		shiftGroups: Array<{ id: string; name: string }>;
 		rosters: Array<{ id: string; name: string; summary: string; status: string }>;
 		roles: readonly string[];
+		/**
+		 * Whether this viewer may change the privilege level. Super Admin only —
+		 * a Team Lead manages their team's shifts, week offs and reporting lines,
+		 * but granting privileges is not theirs to do, least of all to themselves.
+		 */
+		canEditRole: boolean;
 		currentUserId: string;
 		onclose: () => void;
 		onsaved: () => void;
@@ -39,8 +45,18 @@
 		onnotice?: (message: string) => void;
 	}
 
-	let { person, people, shiftGroups, rosters, roles, currentUserId, onclose, onsaved, onnotice }: Props =
-		$props();
+	let {
+		person,
+		people,
+		shiftGroups,
+		rosters,
+		roles,
+		canEditRole,
+		currentUserId,
+		onclose,
+		onsaved,
+		onnotice
+	}: Props = $props();
 
 	// Deliberately a one-time seed: these are draft values the user edits until
 	// they hit Save, so they must NOT track the prop. The call site wraps this
@@ -69,8 +85,19 @@
 	// Nobody can be their own manager or their own HR contact.
 	const candidates = $derived(people.filter((p) => p.id !== person.id));
 
+	/*
+		The role appears beside a candidate's name only for the viewer who assigns
+		roles. A Super Admin picking a manager out of the whole company needs it to
+		tell two similar names apart; a Team Lead picking from their own handful of
+		people does not, and showing it would put the team's privilege levels back
+		on screen through a side door.
+	*/
+	function optionLabel(p: { fullName: string; role: string }) {
+		return canEditRole ? `${p.fullName} (${p.role.replace('_', ' ')})` : p.fullName;
+	}
+
 	const dirty = $derived(
-		role !== person.role ||
+		(canEditRole && role !== person.role) ||
 			reportsTo !== (person.reportsTo ?? '') ||
 			hrUserId !== (person.hrUserId ?? '') ||
 			shiftGroupId !== (person.shiftGroupId ?? '') ||
@@ -87,9 +114,10 @@
 				method: 'PUT',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
-					// Role is omitted on your own row: the server refuses it, and
-					// sending an unchanged value would be a needless no-op.
-					...(isSelf ? {} : { role }),
+					// Omitted on your own row and for anyone who may not set it: the
+					// server refuses both, and sending an unchanged value would be a
+					// needless no-op.
+					...(isSelf || !canEditRole ? {} : { role }),
 					reportsTo: reportsTo || null,
 					hrUserId: hrUserId || null,
 					shiftGroupId: shiftGroupId || null,
@@ -156,26 +184,33 @@
 		<section class="group">
 			<h3>Organisation</h3>
 
-			<label class="field">
-				<span class="label">Role</span>
-				{#if isSelf}
-					<span class="static-value">{role.replace('_', ' ')}</span>
-					<span class="hint">You cannot change your own role.</span>
-				{:else}
-					<select class="ess-select" bind:value={role}>
-						{#each roles as r (r)}
-							<option value={r}>{r.replace('_', ' ')}</option>
-						{/each}
-					</select>
-				{/if}
-			</label>
+			<!--
+				Hidden outright rather than shown disabled for anyone who may not set
+				it: a greyed-out "employee" still tells the viewer their own standing,
+				which is the thing the portal deliberately no longer says out loud.
+			-->
+			{#if canEditRole}
+				<label class="field">
+					<span class="label">Role</span>
+					{#if isSelf}
+						<span class="static-value">{role.replace('_', ' ')}</span>
+						<span class="hint">You cannot change your own role.</span>
+					{:else}
+						<select class="ess-select" bind:value={role}>
+							{#each roles as r (r)}
+								<option value={r}>{r.replace('_', ' ')}</option>
+							{/each}
+						</select>
+					{/if}
+				</label>
+			{/if}
 
 			<label class="field">
 				<span class="label">Reports to</span>
 				<select class="ess-select" bind:value={reportsTo}>
 					<option value="">— not set —</option>
 					{#each candidates as p (p.id)}
-						<option value={p.id}>{p.fullName} ({p.role.replace('_', ' ')})</option>
+						<option value={p.id}>{optionLabel(p)}</option>
 					{/each}
 				</select>
 				<span class="hint">Gives the first approval on leave, comp-off and attendance corrections.</span>
@@ -186,7 +221,7 @@
 				<select class="ess-select" bind:value={hrUserId}>
 					<option value="">— any admin —</option>
 					{#each candidates as p (p.id)}
-						<option value={p.id}>{p.fullName} ({p.role.replace('_', ' ')})</option>
+						<option value={p.id}>{optionLabel(p)}</option>
 					{/each}
 				</select>
 				<span class="hint">

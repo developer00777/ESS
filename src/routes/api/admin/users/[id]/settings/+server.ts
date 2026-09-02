@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireRole } from '$lib/server/rbac';
+import { requireRole, canActOnUser } from '$lib/server/rbac';
 import { db } from '$lib/server/db/postgres';
 import { users, teams, employeeProfiles, shiftGroups, weekOffRosters } from '$lib/server/db/schema';
 import { logActivity } from '$lib/server/db/mongo';
@@ -19,16 +19,36 @@ const ROLES: Role[] = ['super_admin', 'admin', 'team_lead', 'employee'];
  * state nobody chose. Only the fields present in the body are touched, so the
  * panel can send just what changed.
  *
- * Super Admin only: role and reporting line decide who approves what, which is
- * the sharpest privilege in the portal.
+ * Who may call it, and over whom:
+ *
+ *   Super Admin  anyone, every field.
+ *   Admin        anyone, every field but role.
+ *   Team Lead    Employees on their own team (and themselves), every field but
+ *                role — the same reach the password-reset endpoint gives them.
+ *
+ * Role stays Super Admin's alone. It decides who can approve, who can create
+ * accounts and who can administer the portal, so it is the one setting a Team
+ * Lead running their own team has no business granting — least of all to
+ * themselves. Everything else here is scheduling and reporting detail that the
+ * person closest to the team is best placed to keep right.
  */
 export const PUT: RequestHandler = async (event) => {
-	const actor = requireRole(event, ['super_admin']);
+	const actor = requireRole(event, ['super_admin', 'admin', 'team_lead']);
 	const userId = event.params.id;
 	const body = await event.request.json();
 
 	const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
 	if (!target) throw error(404, 'Employee not found');
+
+	if (!canActOnUser(actor, target.id, target.teamId)) {
+		throw error(403, "Insufficient privileges to change this employee's settings");
+	}
+	// A Team Lead runs their own team, not their peers: same-team is not enough
+	// on its own, or one lead could re-shift another, or an admin who happens to
+	// sit on their team. Mirrors the password-reset rule exactly.
+	if (actor.role === 'team_lead' && target.role !== 'employee' && target.id !== actor.id) {
+		throw error(403, 'Team Leads may only change settings for employees on their team');
+	}
 
 	const [profile] = await db
 		.select()
@@ -43,6 +63,9 @@ export const PUT: RequestHandler = async (event) => {
 	// --- Role -----------------------------------------------------------------
 	let teamCreated: string | null = null;
 	if (has('role') && body.role !== target.role) {
+		if (actor.role !== 'super_admin') {
+			throw error(403, "Only a Super Admin may change someone's role");
+		}
 		if (!ROLES.includes(body.role)) {
 			throw error(400, `role must be one of: ${ROLES.join(', ')}`);
 		}
@@ -82,11 +105,19 @@ export const PUT: RequestHandler = async (event) => {
 				throw error(400, 'Someone cannot report to themselves');
 			}
 			const [manager] = await db
-				.select({ id: users.id })
+				.select({ id: users.id, teamId: users.teamId })
 				.from(users)
 				.where(eq(users.id, managerId))
 				.limit(1);
 			if (!manager) throw error(404, 'Reporting manager not found');
+
+			// A Team Lead may rearrange the line inside their own team; pointing it
+			// at someone outside would hand their report's leave approvals to a
+			// person the lead has no authority over, and quietly move them out from
+			// under their own oversight.
+			if (actor.role === 'team_lead' && manager.teamId !== actor.teamId) {
+				throw error(403, 'A Team Lead can only set a reporting manager from their own team');
+			}
 
 			// Walk up from the new manager. If we arrive back at this employee, the
 			// step that points back at them is the one to cut.

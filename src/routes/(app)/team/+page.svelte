@@ -550,6 +550,7 @@
 			shiftGroups={data.allShiftGroups}
 			rosters={data.weekOffRosters}
 			roles={ROLES}
+			canEditRole={data.isSuperAdmin}
 			currentUserId={data.currentUserId}
 			onnotice={(m) => (settingsNotice = m)}
 			onclose={() => (editingPerson = null)}
@@ -579,10 +580,10 @@
 		     row itself carries no tab stop and no duplicate announcement. -->
 		<div
 			class="roster-row"
-			class:clickable={data.isSuperAdmin}
-			onclick={data.isSuperAdmin ? () => (editingPerson = person) : undefined}
+			class:clickable={person.canEditSettings}
+			onclick={person.canEditSettings ? () => (editingPerson = person) : undefined}
 			onkeydown={undefined}
-			role={data.isSuperAdmin ? 'presentation' : undefined}
+			role={person.canEditSettings ? 'presentation' : undefined}
 		>
 			<span class="name-cell">
 				<Avatar
@@ -630,7 +631,7 @@
 			<!-- Buttons sit inside the clickable row, so each stops its click from
 			     also opening the panel. -->
 			<span class="align-right" onclick={(e) => e.stopPropagation()} role="presentation">
-				{#if data.isSuperAdmin}
+				{#if person.canEditSettings}
 					<button
 						type="button"
 						class="row-reset"
