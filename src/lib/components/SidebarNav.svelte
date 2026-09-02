@@ -194,9 +194,16 @@
 			<a href="/profile" class="foot-avatar-link" title="My Profile">
 				<Avatar {userId} {fullName} {hasPicture} size="md" version={pictureVersion ?? undefined} />
 			</a>
+			<!--
+				Name only. A privilege level — employee, team lead, admin — is a
+				permissions setting, not a job title, and printing it under someone's
+				own photo on every screen turns an access-control detail into a public
+				ranking of colleagues. It is shown only where it is being assigned,
+				to the person assigning it. `role` still drives which nav rows appear;
+				it is just never spelled out to its owner.
+			-->
 			<div class="foot-info">
 				<strong>{fullName}</strong>
-				<span>{role.replace('_', ' ')}</span>
 			</div>
 		</div>
 		<form method="POST" action="/logout">
@@ -455,12 +462,6 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-	}
-
-	.foot-info span {
-		font-size: var(--ess-fs-caption);
-		color: var(--ess-text-inverse-secondary);
-		text-transform: capitalize;
 	}
 
 	/* Sign-out reads as a real button at rest, not a bare glyph: it carries a

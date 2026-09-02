@@ -565,7 +565,6 @@
 	<div class="roster-row roster-head">
 		<span>Name</span>
 		<span>Emp code</span>
-		<span>Role</span>
 		<span>Reports to</span>
 		<span>Concerned HR</span>
 		<span>Shift</span>
@@ -603,7 +602,6 @@
 					>
 				{/if}
 			</span>
-			<span class="role">{person.role.replace('_', ' ')}</span>
 			<span class="link-cell">
 				{#if person.reportsToName}
 					{person.reportsToName}
@@ -1494,7 +1492,7 @@
 
 	.roster-row {
 		display: grid;
-		grid-template-columns: 1.5fr 0.8fr 0.9fr 1.1fr 1.1fr 1fr 1.2fr 0.9fr 0.6fr 0.8fr;
+		grid-template-columns: 1.5fr 0.8fr 1.1fr 1.1fr 1fr 1.2fr 0.9fr 0.6fr 0.8fr;
 		padding: 0.7rem 1.1rem;
 		font-size: var(--ess-fs-body);
 		align-items: center;

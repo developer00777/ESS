@@ -5,11 +5,13 @@
 
 	let { data } = $props();
 
-	const roleLabel: Record<string, string> = {
-		super_admin: 'Super Admin',
-		team_lead: 'Team Lead',
-		employee: 'Employee'
-	};
+	/*
+		Only the job designation is shown. This used to fall back to the account's
+		privilege level when no designation was on file, which published "Super
+		Admin" or "Team Lead" to every employee who opened the page — a permissions
+		setting standing in for a job title. A missing designation now shows
+		nothing, which says less but says nothing wrong.
+	*/
 </script>
 
 <svelte:head>
@@ -27,7 +29,9 @@
 			<IconChip icon={Headset} size="lg" />
 			<div class="contact-body">
 				<strong>{contact.fullName}</strong>
-				<span class="role">{contact.designation || roleLabel[contact.role]}</span>
+				{#if contact.designation}
+					<span class="role">{contact.designation}</span>
+				{/if}
 				<a href="mailto:{contact.email}" class="email-link">
 					<Mail size={14} />
 					{contact.email}
