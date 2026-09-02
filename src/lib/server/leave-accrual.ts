@@ -23,8 +23,17 @@ import { and, eq, inArray } from 'drizzle-orm';
  * Prior years' carry-forward (max 5 days by policy) cannot be derived here —
  * that history lives in HRone, which the portal cannot read. HR supplies those
  * figures through Admin → Leave Balances, and any row they set carries
- * `isHrSet`, which pins it: the recompute below leaves it alone rather than
- * overwriting the uploaded number on the next page load.
+ * `isHrSet`.
+ *
+ * An uploaded figure is an OPENING balance, not a closing one. Earned leave
+ * goes on accruing on top of it, so an HR-set row is recomputed as its recorded
+ * baseline (`hrSetDays`) plus the months elapsed since HR set it — not
+ * recomputed from the policy alone, which would throw their figure away, and
+ * not frozen, which would stop 1.5 days a month ever landing. Keeping the
+ * baseline in its own column is what makes that safe to run on every page load:
+ * reading it back out of `allocatedDays` would compound the same month over and
+ * over. Rows uploaded before that column existed have no baseline to build on
+ * and stay pinned exactly as given.
  */
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -46,12 +55,48 @@ function accrualMonths(
 	year: number,
 	currentMonth: number
 ): number {
-	let startMonth = 0;
-	if (from) {
-		if (from.year > year) return 0;
-		if (from.year === year) startMonth = from.month;
-	}
-	return Math.max(0, currentMonth - startMonth + 1);
+	const start = accrualStartMonth(from, year);
+	if (start === null) return 0;
+	return Math.max(0, currentMonth - start + 1);
+}
+
+/**
+ * The first month of `year` that accrues, or null when accrual has not started
+ * by then. Split out of accrualMonths because an HR-set baseline needs the
+ * boundary itself, not the count: months already covered by the uploaded figure
+ * must not be added to it a second time.
+ */
+export function accrualStartMonth(
+	from: { year: number; month: number } | null,
+	year: number
+): number | null {
+	if (!from) return 0;
+	if (from.year > year) return null;
+	return from.year === year ? from.month : 0;
+}
+
+/**
+ * Days to add on top of a balance HR uploaded.
+ *
+ * The uploaded figure is the balance as at the moment it was uploaded, so
+ * accrual resumes the FOLLOWING month — counting the upload month again would
+ * credit a month the figure already included, and would do it afresh on every
+ * page load. Months before the person was eligible to accrue (probation, a
+ * mid-year joiner) are excluded the same way the normal path excludes them.
+ */
+export function accrualSinceBaseline(
+	hrSetAt: Date | null,
+	startMonth: number | null,
+	year: number,
+	currentMonth: number,
+	perMonth: number
+): number {
+	if (!hrSetAt || startMonth === null) return 0;
+	// A baseline set in an earlier year says nothing about this year's row, and
+	// one set in a later year cannot be reasoned about at all.
+	if (hrSetAt.getFullYear() !== year) return 0;
+	const from = Math.max(startMonth, hrSetAt.getMonth());
+	return round2(Math.max(0, currentMonth - from) * perMonth);
 }
 
 /**
@@ -117,25 +162,49 @@ export async function ensureLeaveAllocations(userIds: string[]): Promise<void> {
 			}
 
 			let months: number;
+			let startMonth: number | null;
 			if (type.eligibility === 'post_probation' && profile?.dateOfConfirmation) {
 				// Probation ends at confirmation; accrual starts that month.
 				months = accrualMonths(confirmed, year, currentMonth);
+				startMonth = accrualStartMonth(confirmed, year);
 			} else if (type.eligibility === 'post_probation' && joined && joined.year === year) {
 				// Joined this year with no confirmation on file yet → still on
 				// probation, no post-probation accrual.
 				months = 0;
+				startMonth = null;
 			} else {
 				months = accrualMonths(joined, year, currentMonth);
+				startMonth = accrualStartMonth(joined, year);
 			}
 
-			const accrued = round2(months * Number(type.accrualPerMonth));
+			const perMonth = Number(type.accrualPerMonth);
+			const accrued = round2(months * perMonth);
 			const key = `${userId}:${type.id}`;
 			const row = existingByKey.get(key);
 
-			// A balance HR set by hand is authoritative — it is usually carry-forward
-			// the policy accrual has no way to know about. Recomputing over it would
-			// discard HR's figure moments after they uploaded it.
-			if (row?.isHrSet) continue;
+			// A balance HR uploaded is the OPENING balance — carry-forward from
+			// HRone, which the policy accrual has no way to derive — and earned
+			// leave goes on accruing on top of it. So the row is recomputed as
+			// "what HR gave us, plus the months since they gave it", never
+			// recomputed from the policy alone (that would discard their figure)
+			// and never left frozen (that would stop 1.5 days a month landing).
+			//
+			// Rows uploaded before hrSetDays existed have no recorded baseline, so
+			// there is nothing to add to: those stay pinned, as they were.
+			if (row?.isHrSet) {
+				if (row.hrSetDays == null) continue;
+				const baseline = Number(row.hrSetDays);
+				const target = round2(
+					baseline + accrualSinceBaseline(row.hrSetAt, startMonth, year, currentMonth, perMonth)
+				);
+				if (Number(row.allocatedDays) !== target) {
+					await db
+						.update(leaveAllocations)
+						.set({ allocatedDays: String(target) })
+						.where(eq(leaveAllocations.id, row.id));
+				}
+				continue;
+			}
 
 			if (!row) {
 				if (accrued > 0) {

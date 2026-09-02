@@ -3,6 +3,7 @@
 	import CalendarDays from '@lucide/svelte/icons/calendar-days';
 	import FileText from '@lucide/svelte/icons/file-text';
 	import CheckCircle from '@lucide/svelte/icons/check-circle';
+	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
 
@@ -79,6 +80,35 @@
 		} finally {
 			deletingTypeId = null;
 			confirmingDeleteType = null;
+		}
+	}
+
+	let savingCapId = $state<string | null>(null);
+	let capError = $state<Record<string, string>>({});
+
+	/**
+	 * Sets the per-month ceiling on a leave type, or clears it when the field is
+	 * emptied. Nothing is done to anyone's balance — this only limits how much of
+	 * it can be taken in one month.
+	 */
+	async function saveMonthlyCap(leaveTypeId: string, raw: string) {
+		savingCapId = leaveTypeId;
+		try {
+			const res = await fetch(`/api/admin/leave-types/${leaveTypeId}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ monthlyUsageCap: raw.trim() === '' ? null : raw.trim() })
+			});
+			const body = await res.json().catch(() => ({}));
+			if (!res.ok) {
+				capError = { ...capError, [leaveTypeId]: body.message ?? 'Could not save the limit' };
+				return;
+			}
+			const { [leaveTypeId]: _cleared, ...rest } = capError;
+			capError = rest;
+			await invalidateAll();
+		} finally {
+			savingCapId = null;
 		}
 	}
 
@@ -351,6 +381,28 @@
 			<div class="current-card">
 				<strong>{lt.code ?? lt.name}</strong>
 				<span>{lt.name} · v{lt.policyVersion}</span>
+				<!--
+					How fast the balance may be drawn down, which is a separate question
+					from how much of it someone has. Blank is no limit, and is what ships:
+					the published policy sets an accrual rate and a carry-forward cap and
+					says nothing about a per-month ceiling.
+				-->
+				<label class="cap-field">
+					<span>Max per month</span>
+					<input
+						type="number"
+						min="0.5"
+						step="0.5"
+						placeholder="no limit"
+						value={lt.monthlyUsageCap ?? ''}
+						disabled={savingCapId === lt.id}
+						onchange={(e) => saveMonthlyCap(lt.id, e.currentTarget.value)}
+					/>
+					<span class="cap-unit">days</span>
+				</label>
+				{#if capError[lt.id]}
+					<span class="cap-error">{capError[lt.id]}</span>
+				{/if}
 				{#if confirmingDeleteType === lt.id}
 					<span class="card-actions">
 						<button
@@ -647,6 +699,34 @@
 		gap: 0.2rem;
 		font-size: 0.8rem;
 		min-width: 140px;
+	}
+
+	.cap-field {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin-top: 0.45rem;
+		font-size: 0.72rem;
+		color: var(--ess-text-muted);
+	}
+
+	.cap-field input {
+		width: 5rem;
+		padding: 0.25rem 0.4rem;
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-sm);
+		background: var(--ess-surface);
+		color: var(--ess-text);
+		font-size: 0.75rem;
+	}
+
+	.cap-unit {
+		opacity: 0.7;
+	}
+
+	.cap-error {
+		font-size: 0.7rem;
+		color: var(--ess-danger, #b3261e);
 	}
 
 	.archive-btn {

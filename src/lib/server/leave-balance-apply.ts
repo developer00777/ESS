@@ -240,10 +240,18 @@ export async function applyLeaveBalances(
 			)
 			.limit(1);
 
+		// The uploaded figure is written twice on purpose: to allocatedDays, which
+		// is the live balance and moves as leave accrues and is taken, and to
+		// hrSetDays, which is the opening figure and does not move. The accrual
+		// recompute needs the second one — it rebuilds the row as "baseline plus
+		// the months since", and reading the baseline back out of a balance it has
+		// already added to would compound it on every page load.
+		const days = String(round2(row.days));
+
 		if (prior) {
 			await db
 				.update(leaveAllocations)
-				.set({ allocatedDays: String(round2(row.days)), ...stamp })
+				.set({ allocatedDays: days, hrSetDays: days, ...stamp })
 				.where(eq(leaveAllocations.id, prior.id));
 			updated++;
 		} else {
@@ -251,7 +259,8 @@ export async function applyLeaveBalances(
 				userId: row.userId,
 				leaveTypeId: row.leaveTypeId,
 				year: summary.year,
-				allocatedDays: String(round2(row.days)),
+				allocatedDays: days,
+				hrSetDays: days,
 				usedDays: '0',
 				...stamp
 			});

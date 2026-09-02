@@ -275,6 +275,21 @@ export const leaveTypes = pgTable('leave_types', {
 	// and does NOT accumulate — unused days expire at month end rather than
 	// building a balance the way accrual leave does.
 	monthlyQuotaDays: numeric('monthly_quota_days', { precision: 5, scale: 2 }),
+	/**
+	 * Ceiling on how much of this type one person may TAKE in a calendar month.
+	 *
+	 * Distinct from `monthlyQuotaDays`, which is an entitlement that refreshes
+	 * and lapses and holds no balance. This one sits on top of an accumulating
+	 * balance: someone with 127 days of earned leave still has 127 days, they
+	 * just cannot spend them all in October. The balance is what they own; this
+	 * is how fast they may draw it down.
+	 *
+	 * Null means no ceiling, which is the shipped default and what the written
+	 * policy currently says — it states an accrual rate and a carry-forward cap,
+	 * and nothing about a per-month limit. Set it per type from
+	 * Admin → Publish Policies when that changes.
+	 */
+	monthlyUsageCap: numeric('monthly_usage_cap', { precision: 5, scale: 2 }),
 	// Restricts who may apply. 'female' is used by pink leave; null = everyone.
 	genderEligibility: text('gender_eligibility'), // 'female' | 'male' | null
 	notes: text('notes'),
@@ -333,7 +348,22 @@ export const leaveAllocations = pgTable('leave_allocations', {
 	isHrSet: boolean('is_hr_set').default(false).notNull(),
 	hrSetBy: uuid('hr_set_by').references(() => users.id),
 	hrSetAt: timestamp('hr_set_at', { withTimezone: true }),
-	hrSetNote: text('hr_set_note')
+	hrSetNote: text('hr_set_note'),
+	/**
+	 * The figure HR uploaded, kept apart from the running `allocatedDays`.
+	 *
+	 * An uploaded balance is an OPENING balance, not a final one: earned leave
+	 * keeps accruing on top of it at the policy's monthly rate. The recompute
+	 * therefore has to answer "baseline plus the months since" every time it
+	 * runs, and it runs on every page load — so it needs the baseline to still
+	 * be there. Reading it back out of `allocatedDays` would compound: 39 would
+	 * become 40.5, then 42 on the next load, then 43.5, all within one month.
+	 *
+	 * Null on rows uploaded before this column existed. Those keep the older
+	 * behaviour of pinning `allocatedDays` exactly as given, because their
+	 * baseline is genuinely unknown and inventing one would move real balances.
+	 */
+	hrSetDays: numeric('hr_set_days', { precision: 6, scale: 2 })
 });
 
 export const leaveApplications = pgTable('leave_applications', {

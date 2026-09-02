@@ -16,6 +16,9 @@ import { weekOffResolverForUser } from '$lib/server/week-off';
 import { isCompOffLeaveCode, spendableCredits, consumeCredits } from '$lib/server/comp-off';
 import { workingDaysInRange } from '$lib/week-off';
 
+/** Leave is booked in half days; float subtraction otherwise yields 2.9999… */
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 export const POST: RequestHandler = async (event) => {
 	const user = requireUser(event);
 	const { leaveTypeId, startDate, endDate, reason } = await event.request.json();
@@ -103,6 +106,49 @@ export const POST: RequestHandler = async (event) => {
 				remaining <= 0
 					? `You have already used this month's ${type.name} (${quota} day${quota === 1 ? '' : 's'} per month, and it doesn't carry over)`
 					: `Only ${remaining} day(s) of ${type.name} left this month`
+			);
+		}
+	}
+
+	// A ceiling on how fast an accumulated balance may be drawn down. Separate
+	// from the balance check below, and from monthlyQuotaDays above: someone with
+	// 127 days of earned leave still has all 127, they just may not spend them
+	// all in one month. Null — the shipped default — means no ceiling, so this is
+	// inert until a policy sets one.
+	if (type.monthlyUsageCap != null) {
+		const cap = Number(type.monthlyUsageCap);
+		const { start: monthStart, end: monthEnd } = monthBounds(start);
+
+		if (end.getMonth() !== start.getMonth() || end.getFullYear() !== start.getFullYear()) {
+			throw error(
+				400,
+				`${type.name} is limited to ${cap} day(s) a month, so a request has to start and end within the same month`
+			);
+		}
+
+		// Pending and escalated count against the cap as well as approved: two
+		// requests that each fit under it but together exceed it must not both be
+		// let through while the first is still awaiting a decision.
+		const [used] = await db
+			.select({ total: sql<string>`coalesce(sum(${leaveApplications.days}), 0)` })
+			.from(leaveApplications)
+			.where(
+				and(
+					eq(leaveApplications.userId, user.id),
+					eq(leaveApplications.leaveTypeId, leaveTypeId),
+					inArray(leaveApplications.status, ['pending', 'approved', 'escalated']),
+					gte(leaveApplications.startDate, monthStart),
+					lte(leaveApplications.startDate, monthEnd)
+				)
+			);
+
+		const remaining = round2(cap - Number(used?.total ?? 0));
+		if (days > remaining) {
+			throw error(
+				400,
+				remaining <= 0
+					? `You have already used this month's ${type.name} limit of ${cap} day(s). Your balance is unaffected — it can be taken from next month.`
+					: `Only ${remaining} day(s) of ${type.name} can be taken this month (limit ${cap} a month). Your balance is unaffected.`
 			);
 		}
 	}
