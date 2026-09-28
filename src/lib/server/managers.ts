@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db/postgres';
 import { employeeProfiles, users } from '$lib/server/db/schema';
 import { eq, inArray } from 'drizzle-orm';
-import { formatManager, matchName } from '$lib/server/name-match';
+import { formatManager, matchNameWithCodeTieBreak } from '$lib/server/name-match';
 
 export interface ResolvedManager {
 	/** Ready to render: "Deepak Guduru (CIPL0225)", or just the name if unlinked. */
@@ -96,26 +96,17 @@ export async function resolveManagers(sources: ManagerSources): Promise<Resolved
 		if (!name) return null;
 
 		// No link — try the roster. An ambiguous name resolves to nothing rather
-		// than guessing between two people.
+		// than guessing between two people. The coded-candidate tie-break lives in
+		// name-match.ts so the reports-to backfill resolves names identically.
 		const candidates = roster.filter((r) => r.id !== sources.selfUserId);
-		let result = matchName(
+		const result = matchNameWithCodeTieBreak(
 			name,
-			candidates.map((r) => ({ key: r.id, fullName: r.fullName }))
+			candidates.map((r) => ({
+				key: r.id,
+				fullName: r.fullName,
+				employeeCode: r.employeeCode
+			}))
 		);
-
-		// A tie between a real employee and a placeholder account is not a real
-		// ambiguity: only someone with an employee code is a person the HR sheet
-		// could have meant. Retrying against coded accounts alone resolves the
-		// common case of a leftover seed login sharing a manager's first name.
-		if (result.status === 'ambiguous') {
-			const coded = candidates.filter((r) => r.employeeCode);
-			if (coded.length > 0 && coded.length < candidates.length) {
-				result = matchName(
-					name,
-					coded.map((r) => ({ key: r.id, fullName: r.fullName }))
-				);
-			}
-		}
 
 		if (result.status === 'matched') {
 			const found = roster.find((r) => r.id === result.key);

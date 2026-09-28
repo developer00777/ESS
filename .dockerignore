@@ -1,0 +1,38 @@
+# The build context is sent to the Docker daemon in full on every build, and
+# `COPY . .` bakes whatever survives into the image. Without this file that was
+# 247MB, 226MB of it host-built node_modules — which the image cannot use
+# anyway: `npm ci` reinstalls them, and native modules like @node-rs/argon2 are
+# compiled for the host, not for the Linux image.
+node_modules
+npm-debug.log
+
+# Build output — regenerated inside the image by `npm run build`.
+build
+.svelte-kit
+
+.git
+.gitignore
+.gitattributes
+.vscode
+
+# Secrets never belong in an image layer. The compose file and Railway supply
+# the real values as environment variables.
+.env
+.env.*
+!.env.example
+
+# Reference material that ships with the repo but has no business in the image.
+*.pptx
+*.pdf
+*.xlsx
+*.jpeg
+*.jpg
+*.png
+docs
+ESS portal design system
+ESS portal design system (6)
+
+Dockerfile
+docker-compose.yml
+README.md
+PRODUCT.md

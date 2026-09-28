@@ -100,6 +100,36 @@ export function matchName(raw: string | null, candidates: NameCandidate[]): Name
 	};
 }
 
+export interface MatchCandidate extends NameCandidate {
+	employeeCode: string | null;
+}
+
+/**
+ * `matchName` plus the tie-break every caller that resolves a raw HR-sheet name
+ * against the live roster needs.
+ *
+ * A tie between a real employee and a placeholder account is not a real
+ * ambiguity: only someone carrying an employee code is a person the sheet could
+ * have meant. Retrying against coded candidates alone resolves the common case
+ * of a leftover seed login sharing a manager's first name.
+ *
+ * Retrying is pointless when every candidate is coded — the same tie comes
+ * back — so that case returns the ambiguity unchanged rather than doing the
+ * work twice.
+ */
+export function matchNameWithCodeTieBreak(
+	raw: string | null,
+	candidates: MatchCandidate[]
+): NameMatchOutcome {
+	const result = matchName(raw, candidates);
+	if (result.status !== 'ambiguous') return result;
+
+	const coded = candidates.filter((c) => c.employeeCode);
+	if (coded.length === 0 || coded.length === candidates.length) return result;
+
+	return matchName(raw, coded);
+}
+
 /**
  * Renders a manager for display as "Name(EMPCODE)".
  *

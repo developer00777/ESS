@@ -58,17 +58,12 @@
 	<title>Data Cleanup — Champ HR ESS Portal</title>
 </svelte:head>
 
-<header class="page-header">
-	<h1 class="ess-page-title">Data Cleanup</h1>
-	<p class="ess-page-sub">
-		Remove seeded and test data so the portal reflects only real records. Your own account
-		(<strong>{data.currentUserName}</strong>) is always kept. Everything here is permanent.
-	</p>
-</header>
+<!-- Title and description come from the Admin Controls layout (src/lib/admin-tabs.ts). -->
 
 <p class="warn-banner">
 	<AlertTriangle size={16} />
-	These actions cannot be undone. Take a database backup first if you're unsure.
+	These actions cannot be undone. Take a database backup first if you're unsure. Your own account
+	(<strong>{data.currentUserName}</strong>) is always kept.
 </p>
 
 <div class="ess-panel options">
@@ -145,10 +140,6 @@
 {/if}
 
 <style>
-	.page-header {
-		margin-bottom: 1rem;
-		max-width: 720px;
-	}
 
 	.warn-banner {
 		display: flex;

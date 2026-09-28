@@ -1,4 +1,3 @@
-import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { attendanceImports, users } from '$lib/server/db/schema';
@@ -13,11 +12,9 @@ import { desc, eq, isNotNull } from 'drizzle-orm';
  * portal. Listing past manual uploads here makes a re-upload obvious rather than
  * something to guess at.
  */
-export const load: PageServerLoad = async ({ locals }) => {
-	const role = locals.user?.role;
-	if (role !== 'super_admin' && role !== 'admin') {
-		throw redirect(303, '/dashboard');
-	}
+export const load: PageServerLoad = async () => {
+	// Role is enforced by (app)/admin/+layout.server.ts — Super Admin and Admin
+	// (HR), which is exactly this page's rule.
 
 	// Manual uploads only — the device job's imports carry a token instead of an
 	// uploader, and they have their own volume.

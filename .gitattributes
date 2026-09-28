@@ -1,0 +1,5 @@
+# Shell scripts must keep LF even when checked out on Windows. With
+# core.autocrlf=true a CRLF checkout turns the shebang into "#!/bin/sh",
+# and the Linux container then fails to start with "./start.sh: not found" —
+# the interpreter is what is missing, not the script.
+*.sh text eol=lf

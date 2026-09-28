@@ -2,7 +2,8 @@
 	import Users from '@lucide/svelte/icons/users';
 	import UploadCloud from '@lucide/svelte/icons/upload-cloud';
 	import { enhance } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, replaceState } from '$app/navigation';
+	import { page } from '$app/state';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import KeyRound from '@lucide/svelte/icons/key-round';
@@ -11,9 +12,51 @@
 	import PersonSettingsPanel from '$lib/components/PersonSettingsPanel.svelte';
 	import { WEEKDAY_LABELS } from '$lib/week-off';
 
-	let { data, form } = $props();
+	import type { ActionData, PageData } from './$types';
 
-	let showCreateForm = $state(false);
+	/* `embedded`: rendered as the People tab inside Admin Controls, whose
+	   layout already titles the page. */
+	let {
+		data,
+		form,
+		embedded = false
+	}: { data: PageData; form: ActionData; embedded?: boolean } = $props();
+
+	type View = 'roster' | 'weekoff' | 'bulk' | 'passwords';
+
+	const views = $derived<{ id: View; label: string }[]>([
+		{ id: 'roster', label: 'Roster' },
+		{ id: 'weekoff', label: 'Week-off rosters' },
+		...(data.isSuperAdmin
+			? [
+					{ id: 'bulk' as const, label: 'Bulk import' },
+					{ id: 'passwords' as const, label: 'Password activity' }
+				]
+			: [])
+	]);
+
+	function initialView(): View {
+		// A bulk-import form result only renders inside that view, so a post
+		// back from it has to land there even though the action URL drops ?view.
+		if (form && Object.keys(form).some((k) => k.startsWith('bulkImport'))) return 'bulk';
+		const asked = page.url.searchParams.get('view');
+		if (asked === 'weekoff') return 'weekoff';
+		if ((asked === 'bulk' || asked === 'passwords') && data.isSuperAdmin) return asked;
+		return 'roster';
+	}
+
+	let view = $state<View>(initialView());
+
+	function setView(next: View) {
+		view = next;
+		const url = new URL(page.url);
+		if (next === 'roster') url.searchParams.delete('view');
+		else url.searchParams.set('view', next);
+		url.searchParams.delete('create');
+		replaceState(url, {});
+	}
+
+	let showCreateForm = $state(page.url.searchParams.has('create'));
 	let search = $state('');
 	let filter = $state<'all' | 'present' | 'absent'>('all');
 
@@ -374,11 +417,26 @@
 	<title>Team — Champ HR ESS Portal</title>
 </svelte:head>
 
-<header class="page-header">
-	<h1 class="ess-page-title">Team Roster</h1>
-	<p class="ess-page-sub">Live status and pending approvals for your team</p>
-</header>
+{#if !embedded}
+	<header class="page-header">
+		<h1 class="ess-page-title">Team Roster</h1>
+		<p class="ess-page-sub">Live status and pending approvals for your team</p>
+	</header>
+{/if}
 
+<!--
+	The page used to be four stacked screens — roster, week-off rosters, bulk
+	import, password activity — scrolling past 2,000 lines of markup. One
+	switch shows one at a time; the choice is kept in the URL (?view=) so a
+	refresh or a shared link lands on the same part.
+-->
+<div class="ess-segmented view-switch" role="group" aria-label="Show">
+	{#each views as v (v.id)}
+		<button type="button" aria-pressed={view === v.id} onclick={() => setView(v.id)}>{v.label}</button>
+	{/each}
+</div>
+
+{#if view === 'roster'}
 <div class="stat-grid">
 	<div class="ess-stat">
 		<span class="ess-stat__label">Team size</span>
@@ -712,7 +770,9 @@
 		<span>{filteredRoster.length} of {data.teamSize} employees</span>
 	</div>
 </div>
+{/if}
 
+{#if view === 'weekoff'}
 <section class="weekoff-section">
 	<div class="section-head">
 		<div>
@@ -900,8 +960,10 @@
 		</p>
 	{/if}
 </section>
+{/if}
 
 {#if data.isSuperAdmin}
+	{#if view === 'bulk'}
 	<section class="bulk-import-section">
 		<div class="section-head">
 			<div>
@@ -1302,7 +1364,9 @@
 			</div>
 		{/if}
 	</section>
+	{/if}
 
+	{#if view === 'passwords'}
 	<section class="password-activity-section">
 		<h2 class="section-title">Password Activity</h2>
 		<p class="section-sub">
@@ -1336,9 +1400,15 @@
 			</table>
 		</div>
 	</section>
+	{/if}
 {/if}
 
 <style>
+	.view-switch {
+		margin-bottom: 1.25rem;
+		flex-wrap: wrap;
+	}
+
 	.page-header {
 		margin-bottom: 1.5rem;
 	}
@@ -1459,6 +1529,9 @@
 	   it scrolls inside its own shell instead of overflowing the page. */
 	.roster-shell {
 		overflow-x: auto;
+		/* Contained so overshooting a sideways scroll does not reach the page —
+		   on a trackpad an uncontained horizontal flick navigates back a route. */
+		overscroll-behavior-x: contain;
 	}
 
 	/* Full-width second line under a roster row, for the one person in ten who
@@ -1943,6 +2016,9 @@
 
 	.review-table-shell {
 		overflow-x: auto;
+		/* Contained so overshooting a sideways scroll does not reach the page —
+		   on a trackpad an uncontained horizontal flick navigates back a route. */
+		overscroll-behavior-x: contain;
 	}
 
 	.review-table-shell .ess-table td input,

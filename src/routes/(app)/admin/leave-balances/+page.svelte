@@ -1,5 +1,6 @@
 <script lang="ts">
 	import UploadCloud from '@lucide/svelte/icons/upload-cloud';
+	import UploadSteps from '$lib/components/UploadSteps.svelte';
 	import CheckCircle from '@lucide/svelte/icons/check-circle';
 	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
@@ -57,6 +58,8 @@
 	let errorMsg = $state('');
 	let successMsg = $state('');
 	let preview = $state<Preview | null>(null);
+	/* Choose → review → applied, for the shared step indicator. */
+	const step = $derived(preview ? 1 : successMsg ? 3 : 0);
 	let showOnlyProblems = $state(false);
 
 	const balanceTypes = $derived(data.leaveTypes.filter((t) => t.holdsBalance));
@@ -155,17 +158,14 @@
 	<title>Leave Balances — Champ HR ESS Portal</title>
 </svelte:head>
 
-<header class="page-header">
-	<h1 class="ess-page-title">Leave Balances</h1>
-	<p class="ess-page-sub">
-		Set leave entitlements from a spreadsheet — employee code and the number of days per leave type
-	</p>
-</header>
+<!-- Title and description come from the Admin Controls layout (src/lib/admin-tabs.ts). -->
 
 <section class="panel">
 	<div class="panel-head">
 		<strong><UploadCloud size={16} /> Upload a balance sheet</strong>
 	</div>
+
+	<UploadSteps steps={['Choose the sheet', 'Review the balances', 'Apply']} current={step} />
 
 	<p class="hint">
 		Monthly accrual is already computed from the published policy. Use this for the figures the
@@ -395,9 +395,6 @@
 {/if}
 
 <style>
-	.page-header {
-		margin-bottom: 1.5rem;
-	}
 
 	.panel {
 		background: var(--ess-surface);
@@ -584,6 +581,13 @@
 		overflow-x: auto;
 		max-height: 30rem;
 		overflow-y: auto;
+		/* Running out of rows must not pass the gesture on to the page — a sheet
+		   this long is scrolled in bursts, and each burst that overshot used to
+		   carry the whole page with it. */
+		overscroll-behavior: contain;
+		/* The sticky header below needs something opaque to sit on: the cosmos
+		   canvas shows straight through an unpainted box. */
+		background: var(--ess-canvas);
 		border: 1px solid var(--ess-border-subtle);
 		border-radius: var(--ess-radius-sm);
 	}
@@ -597,7 +601,15 @@
 	.tbl th {
 		position: sticky;
 		top: 0;
-		background: var(--ess-sunken);
+		/* --ess-sunken is a tint (4% alpha in light, 50% in dark), which is right
+		   for a header that scrolls away with its table and quite wrong for one
+		   that stays put — rows slid visibly through the column names. The opaque
+		   canvas goes underneath and the tint layers on top. */
+		background:
+			linear-gradient(var(--ess-sunken), var(--ess-sunken)),
+			var(--ess-canvas);
+		/* Above the rows passing beneath it. */
+		z-index: 1;
 		text-align: left;
 		font-size: 0.68rem;
 		font-weight: 700;
@@ -605,7 +617,10 @@
 		text-transform: uppercase;
 		color: var(--ess-text-secondary);
 		padding: 0.5rem 0.7rem;
-		border-bottom: 1px solid var(--ess-border);
+		/* An inset shadow rather than a border: with `border-collapse: collapse`
+		   the rule belongs to the table, not the cell, so it stayed behind with
+		   the rows and the stuck header lost its underline. */
+		box-shadow: inset 0 -1px var(--ess-border);
 	}
 
 	.tbl td {

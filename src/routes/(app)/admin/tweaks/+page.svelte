@@ -176,14 +176,7 @@
 	<title>Design Tweaks — Champ HR ESS Portal</title>
 </svelte:head>
 
-<header class="page-header">
-	<h1 class="ess-page-title">Design Tweaks</h1>
-	<p class="ess-page-sub">
-		Preview the Cosmic design variants against real screens. Changes apply to your browser only —
-		employees are unaffected. Once you've settled on a look, share the summary and it gets baked in
-		as the default.
-	</p>
-</header>
+<!-- Title and description come from the Admin Controls layout (src/lib/admin-tabs.ts). -->
 
 <div class="tweak-grid">
 	{#each TWEAKS as tweak (tweak.key)}
@@ -247,10 +240,6 @@
 </div>
 
 <style>
-	.page-header {
-		margin-bottom: 1.5rem;
-		max-width: 720px;
-	}
 
 	.tweak-grid {
 		display: grid;

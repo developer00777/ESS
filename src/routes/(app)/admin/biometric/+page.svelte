@@ -1,8 +1,8 @@
 <script lang="ts">
 	import UploadCloud from '@lucide/svelte/icons/upload-cloud';
+	import UploadSteps from '$lib/components/UploadSteps.svelte';
 	import CheckCircle from '@lucide/svelte/icons/check-circle';
 	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
-	import Fingerprint from '@lucide/svelte/icons/fingerprint';
 	import Moon from '@lucide/svelte/icons/moon';
 
 	let { data } = $props();
@@ -54,6 +54,8 @@
 	let errorMsg = $state('');
 	let successMsg = $state('');
 	let preview = $state<Preview | null>(null);
+	/* Choose → review → applied, for the shared step indicator. */
+	const step = $derived(preview ? 1 : successMsg ? 3 : 0);
 	let showOnlyProblems = $state(false);
 
 	function onFileChange(e: Event) {
@@ -168,16 +170,10 @@
 			: '—';
 </script>
 
-<header class="page-header">
-	<h1><Fingerprint size={22} /> Upload Biometric Report</h1>
-	<p>
-		For the days the biometric machine never sent through. Upload its Excel report and the in/out
-		times are matched to employees by employee code, then written to their attendance — the same
-		place the device’s own feed lands.
-	</p>
-</header>
+<!-- Title and description come from the Admin Controls layout (src/lib/admin-tabs.ts). -->
 
 <div class="upload-card">
+	<UploadSteps steps={['Choose the device report', 'Review the punches', 'Apply to attendance']} current={step} />
 	<form class="upload-form" onsubmit={handleCheck}>
 		<label class="file-drop">
 			<UploadCloud size={22} />
@@ -417,22 +413,8 @@
 </div>
 
 <style>
-	.page-header {
-		margin-bottom: 1.5rem;
-		max-width: 680px;
-	}
 
-	.page-header h1 {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
 
-	.page-header p {
-		font-size: 0.85rem;
-		color: var(--ess-text-secondary);
-		margin-top: 0.35rem;
-	}
 
 	.upload-card,
 	.review-card,
@@ -651,6 +633,9 @@
 
 	.table-scroll {
 		overflow-x: auto;
+		/* Contained so overshooting a sideways scroll does not reach the page —
+		   on a trackpad an uncontained horizontal flick navigates back a route. */
+		overscroll-behavior-x: contain;
 		background: var(--ess-surface);
 		border-radius: var(--ess-radius-md);
 	}

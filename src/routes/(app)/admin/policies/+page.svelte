@@ -1,5 +1,6 @@
 <script lang="ts">
 	import UploadCloud from '@lucide/svelte/icons/upload-cloud';
+	import UploadSteps from '$lib/components/UploadSteps.svelte';
 	import CalendarDays from '@lucide/svelte/icons/calendar-days';
 	import FileText from '@lucide/svelte/icons/file-text';
 	import CheckCircle from '@lucide/svelte/icons/check-circle';
@@ -215,19 +216,22 @@
 	function removeHolidayRow(tableIdx: number, rowIdx: number) {
 		holidayTables[tableIdx].holidays.splice(rowIdx, 1);
 	}
+
+	/* Choose → review → published, for the shared step indicator. */
+	const step = $derived(
+		(kind === 'holiday_calendar' ? holidayTables.length : leaveTypesDraft.length) > 0
+			? 1
+			: successMsg
+				? 3
+				: 0
+	);
 </script>
 
 <svelte:head>
 	<title>Publish Policies — Champ HR ESS Portal</title>
 </svelte:head>
 
-<header class="page-header">
-	<h1 class="ess-page-title">Publish Holiday Calendar &amp; Leave Policy</h1>
-	<p class="ess-page-sub">
-		Upload the source document once — it's parsed automatically and, after your review, becomes the
-		live calendar/policy every employee sees, resolved by their own shift assignment.
-	</p>
-</header>
+<!-- Title and description come from the Admin Controls layout (src/lib/admin-tabs.ts). -->
 
 <div class="upload-card">
 	<div class="kind-tabs">
@@ -238,6 +242,11 @@
 			<FileText size={16} /> Leave Policy
 		</button>
 	</div>
+
+	<UploadSteps
+		steps={['Choose the document', 'Check what was read', 'Publish']}
+		current={step}
+	/>
 
 	<form class="upload-form" onsubmit={handleUpload}>
 		<label class="file-drop">
@@ -446,10 +455,6 @@
 </div>
 
 <style>
-	.page-header {
-		margin-bottom: 1.5rem;
-		max-width: 640px;
-	}
 
 	.upload-card,
 	.review-card,

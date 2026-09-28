@@ -1,6 +1,8 @@
 <script lang="ts">
 	import X from '@lucide/svelte/icons/x';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import { lockPageScroll } from '$lib/scroll-lock';
+	import { overlayIn, overlayOut } from '$lib/motion';
 
 	/**
 	 * Every org setting for one employee, edited together and saved once.
@@ -80,6 +82,43 @@
 	let saving = $state(false);
 	let saveError = $state('');
 
+	let scrimEl: HTMLElement;
+	let panelEl: HTMLElement;
+	/** The one exit animation, shared by every route out. */
+	let exit: Promise<void> | null = null;
+
+	/*
+		The page is held still for as long as this panel is up. It is a fixed
+		overlay, so without the lock a wheel gesture anywhere over the scrim
+		scrolls the roster behind it — and the panel's whole reason for being a
+		slide-over rather than a page is that closing it returns you to the row you
+		opened, not to wherever the scroll happened to drift.
+
+		Releasing is the effect's teardown, so every route out of here — the close
+		button, the scrim, Escape, a successful save, the parent simply dropping the
+		component — gives the page back its scroll exactly once.
+	*/
+	$effect(() => {
+		const release = lockPageScroll();
+		void overlayIn(scrimEl, panelEl);
+		return release;
+	});
+
+	/**
+	 * Plays the panel out, then hands control back to the parent.
+	 *
+	 * The animation is started once and memoised; a second caller awaits the
+	 * same one rather than restarting it or bailing out. Bailing out would lose
+	 * work: hitting Escape while a save is still in flight would leave the save's
+	 * own callback — the one that reloads the roster — never called, so a change
+	 * that did reach the server would not show up in the table behind.
+	 */
+	async function requestClose(then: () => void) {
+		exit ??= overlayOut(scrimEl, panelEl);
+		await exit;
+		then();
+	}
+
 	const isSelf = $derived(person.id === currentUserId);
 
 	// Nobody can be their own manager or their own HR contact.
@@ -143,14 +182,14 @@
 					} — that line was cleared to make room for this one. Set it from their card.`
 				);
 			}
-			onsaved();
+			await requestClose(onsaved);
 		} finally {
 			saving = false;
 		}
 	}
 
 	function onKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') onclose();
+		if (e.key === 'Escape') void requestClose(onclose);
 	}
 </script>
 
@@ -158,15 +197,16 @@
 
 <!-- Clicking the backdrop closes, matching how every other slide-over behaves. -->
 <div
+	bind:this={scrimEl}
 	class="backdrop"
 	role="button"
 	tabindex="-1"
 	aria-label="Close panel"
-	onclick={onclose}
-	onkeydown={(e) => e.key === 'Enter' && onclose()}
+	onclick={() => requestClose(onclose)}
+	onkeydown={(e) => e.key === 'Enter' && requestClose(onclose)}
 ></div>
 
-<aside class="panel" aria-label="Settings for {person.fullName}">
+<aside bind:this={panelEl} class="panel" aria-label="Settings for {person.fullName}">
 	<header class="panel-head">
 		<div class="who">
 			<Avatar userId={person.id} fullName={person.fullName} hasPicture={person.hasPicture} size="sm" />
@@ -175,7 +215,12 @@
 				<span class="meta">{person.employeeCode ?? 'No code'} · {person.email}</span>
 			</div>
 		</div>
-		<button type="button" class="close-btn" onclick={onclose} aria-label="Close">
+		<button
+			type="button"
+			class="close-btn"
+			onclick={() => requestClose(onclose)}
+			aria-label="Close"
+		>
 			<X size={18} />
 		</button>
 	</header>
@@ -275,7 +320,12 @@
 			<p class="ess-error">{saveError}</p>
 		{/if}
 		<div class="actions">
-			<button type="button" class="ess-btn ess-btn--ghost" onclick={onclose} disabled={saving}>
+			<button
+				type="button"
+				class="ess-btn ess-btn--ghost"
+				onclick={() => requestClose(onclose)}
+				disabled={saving}
+			>
 				Cancel
 			</button>
 			<button
@@ -301,7 +351,8 @@
 		border: none;
 		padding: 0;
 		z-index: 900;
-		animation: fade var(--ess-t-fast) ease-out;
+		/* Opacity is Motion's to drive (see $lib/motion) — a CSS entry animation
+		   has no exit half to await before the page is unlocked. */
 	}
 
 	.panel {
@@ -325,28 +376,18 @@
 		display: flex;
 		flex-direction: column;
 		z-index: 901;
-		animation: slide-in 180ms cubic-bezier(0.32, 0.72, 0, 1);
+		/* Motion drives the slide in and out, and honours a reduced-motion
+		   preference by fading the panel in without travel. */
 	}
 
-	@keyframes fade {
-		from {
-			opacity: 0;
-		}
-	}
-
-	@keyframes slide-in {
-		from {
-			transform: translateX(100%);
-		}
-	}
-
-	/* Respect a reduced-motion preference — the panel still appears, it just
-	   does not travel. */
-	@media (prefers-reduced-motion: reduce) {
-		.panel,
-		.backdrop {
-			animation: none;
-		}
+	/* The page is locked while this is open, so a wheel gesture over the scrim
+	   does nothing. Once the panel body reaches its own end, though, the browser
+	   would hand the gesture up to the next scrollable ancestor — containing it
+	   stops the scroll chaining out of the panel and, on touch, stops the
+	   rubber-band pull-to-refresh that a locked page would otherwise still get. */
+	.panel,
+	.backdrop {
+		overscroll-behavior: contain;
 	}
 
 	.panel-head {
@@ -398,6 +439,7 @@
 	.panel-body {
 		flex: 1;
 		overflow-y: auto;
+		overscroll-behavior: contain;
 		padding: 18px 20px;
 	}
 

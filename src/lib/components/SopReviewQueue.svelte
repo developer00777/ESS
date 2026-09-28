@@ -457,6 +457,9 @@
 		line-height: 1.5;
 		color: var(--ess-text-secondary);
 		overflow-x: auto;
+		/* Contained so overshooting a sideways scroll does not reach the page —
+		   on a trackpad an uncontained horizontal flick navigates back a route. */
+		overscroll-behavior-x: contain;
 		max-height: 18rem;
 	}
 

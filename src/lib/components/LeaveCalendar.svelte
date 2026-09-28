@@ -308,6 +308,9 @@
 		.calendar-box {
 			padding: 1rem;
 			overflow-x: auto;
+			/* Contained so overshooting a sideways scroll does not reach the page —
+			   on a trackpad an uncontained horizontal flick navigates back a route. */
+			overscroll-behavior-x: contain;
 		}
 
 		.calendar-header,

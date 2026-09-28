@@ -19,6 +19,16 @@ body {
 	height: 100%;
 }
 
+html {
+	/* Reserve the scrollbar's column whether or not a scrollbar is showing.
+	   Without this the viewport is ~15px wider on short pages (HR Contacts, the
+	   Apply form) than on long ones (Team, Leave Balances), so every navigation
+	   between them slid the whole shell sideways — and so did opening the
+	   settings panel, which locks the page. Reserving the gutter once means
+	   nothing moves in either case. */
+	scrollbar-gutter: stable;
+}
+
 body {
 	font-family: var(--ess-font-sans);
 	font-size: var(--ess-fs-body);
@@ -462,9 +472,17 @@ textarea {
 	border: 1px solid var(--ess-glass-border);
 	border-radius: var(--ess-radius-md);
 	box-shadow: var(--ess-glass-shadow);
-	overflow: hidden;
-	/* Tables scroll inside their own shell rather than pushing the page wide. */
+	/* Tables scroll inside their own shell rather than pushing the page wide.
+	   Spelt out per axis: `overflow: hidden` followed by `overflow-x: auto` does
+	   not leave the vertical axis clipped — the cascade coerces a `visible`
+	   partner into `auto`, so the shell became a vertical scroll container too
+	   and could raise a stray second scrollbar on sub-pixel rounding. `clip`
+	   keeps the rounded corners without ever scrolling. */
 	overflow-x: auto;
+	overflow-y: clip;
+	/* Reaching the end of a sideways table hands the gesture to the page, which
+	   on a trackpad means a horizontal flick navigates back a route. */
+	overscroll-behavior-x: contain;
 }
 
 .ess-table {
@@ -871,7 +889,12 @@ textarea {
 .ess-rail {
 	width: var(--ess-rail-width);
 	flex-shrink: 0;
+	/* 100dvh, not 100vh: with a mobile browser's toolbar showing, 100vh is
+	   taller than what you can see, so the rail's foot — the profile link and
+	   Log out — sat below the fold. The rail is `position: sticky`, so it never
+	   scrolled into reach either; those two controls were simply unusable. */
 	height: 100vh;
+	height: 100dvh;
 	position: sticky;
 	top: 0;
 	background: var(--ess-pane-bg);
@@ -1120,7 +1143,11 @@ textarea {
 
 .ess-shell {
 	display: flex;
+	/* Matches the rail's 100dvh. Left at 100vh, the shell stayed taller than a
+	   mobile viewport by exactly the height of the browser toolbar, so even a
+	   page with nothing on it had a short scroll in it. */
 	min-height: 100vh;
+	min-height: 100dvh;
 	background: transparent;
 }
 

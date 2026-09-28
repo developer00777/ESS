@@ -1,4 +1,3 @@
-import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { leaveTypes, leaveAllocations, users, employeeProfiles } from '$lib/server/db/schema';
@@ -16,11 +15,9 @@ import { alias } from 'drizzle-orm/pg-core';
  * headings the sheet may use — guessing a code and having the row silently skip
  * is the main way this kind of upload wastes someone's afternoon.
  */
-export const load: PageServerLoad = async ({ locals }) => {
-	const role = locals.user?.role;
-	if (role !== 'super_admin' && role !== 'admin') {
-		throw redirect(303, '/dashboard');
-	}
+export const load: PageServerLoad = async () => {
+	// Role is enforced by (app)/admin/+layout.server.ts — Super Admin and Admin
+	// (HR), which is exactly this page's rule.
 
 	const year = new Date().getFullYear();
 

@@ -5,13 +5,9 @@
 	import Clock from '@lucide/svelte/icons/clock';
 	import Wallet from '@lucide/svelte/icons/wallet';
 	import Users from '@lucide/svelte/icons/users';
-	import ArrowUpFromLine from '@lucide/svelte/icons/arrow-up-from-line';
 	import BookOpen from '@lucide/svelte/icons/book-open';
 	import LogOut from '@lucide/svelte/icons/log-out';
-	import Palette from '@lucide/svelte/icons/palette';
-	import DatabaseZap from '@lucide/svelte/icons/database-zap';
-	import Fingerprint from '@lucide/svelte/icons/fingerprint';
-	import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
+	import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
 	import Moon from '@lucide/svelte/icons/moon';
 	import Sun from '@lucide/svelte/icons/sun';
 	import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
@@ -26,9 +22,19 @@
 		userId: string;
 		hasPicture?: boolean;
 		pictureVersion?: number | null;
+		/** Open admin problems, shown on the Admin Controls row. */
+		adminIssueCount?: number;
 	}
 
-	let { activePath, role, fullName, userId, hasPicture = false, pictureVersion }: Props = $props();
+	let {
+		activePath,
+		role,
+		fullName,
+		userId,
+		hasPicture = false,
+		pictureVersion,
+		adminIssueCount = 0
+	}: Props = $props();
 
 	let theme = $state<'light' | 'dark'>('light');
 	let shell = $state<'classic' | 'rail'>('classic');
@@ -74,38 +80,22 @@
 		{ href: '/policies', label: 'Policies', icon: BookOpen }
 	];
 
-	/* Icons follow the standalone reference's semantics: reading a policy is a
-	   book (▥), publishing one is a push upward (⇧). The old set used a plain
-	   document for both and a vague cloud for publish, so the two policy rows
-	   were near-indistinguishable in the collapsed rail. */
 	const teamItem: NavItem = { href: '/team', label: 'Team', icon: Users };
-	const adminItem: NavItem = {
-		href: '/admin/policies',
-		label: 'Publish Policies',
-		icon: ArrowUpFromLine
-	};
-	const tweaksItem: NavItem = { href: '/admin/tweaks', label: 'Design Tweaks', icon: Palette };
-	const cleanupItem: NavItem = { href: '/admin/cleanup', label: 'Data Cleanup', icon: DatabaseZap };
-	/* HR uploads the biometric machine's own report for the days its scheduled
-	   feed missed, so this is Admin's as much as the Super Admin's. */
-	const biometricItem: NavItem = {
-		href: '/admin/biometric',
-		label: 'Biometric Upload',
-		icon: Fingerprint
-	};
-	/* Carry-forward balances come from HRone as a spreadsheet, so HR sets them
-	   here rather than waiting on the policy accrual, which cannot know them. */
-	const leaveBalanceItem: NavItem = {
-		href: '/admin/leave-balances',
-		label: 'Leave Balances',
-		icon: CalendarPlus
+	/* Every admin surface — biometric upload, leave balances, policies, org
+	   chart, access, cleanup, design tweaks — is a tab inside Admin Controls
+	   rather than its own rail row. Seven rows of rarely-used tools pushed the
+	   rail past the fold for admins and hid which of them needed attention; one
+	   entry with a count of open problems says both. */
+	const adminHubItem: NavItem = {
+		href: '/admin',
+		label: 'Admin Controls',
+		icon: SlidersHorizontal
 	};
 
 	let sections = $derived.by(() => {
 		const manage = [
 			...(role !== 'employee' ? [teamItem] : []),
-			...(role === 'super_admin' || role === 'admin' ? [biometricItem, leaveBalanceItem] : []),
-			...(role === 'super_admin' ? [adminItem, tweaksItem, cleanupItem] : [])
+			...(role === 'super_admin' || role === 'admin' ? [adminHubItem] : [])
 		];
 		return [
 			{ label: 'Me', items: meItems },
@@ -183,6 +173,13 @@
 					>
 						<item.icon size={18} />
 						<span class="nav-label">{item.label}</span>
+						{#if item === adminHubItem && adminIssueCount > 0}
+							<span
+								class="issue-count"
+								aria-label="{adminIssueCount} need{adminIssueCount === 1 ? 's' : ''} attention"
+								>{adminIssueCount}</span
+							>
+						{/if}
 					</a>
 				{/if}
 			{/each}
@@ -223,7 +220,12 @@
 		color: var(--ess-text-inverse);
 		display: flex;
 		flex-direction: column;
+		/* 100dvh, not 100vh: with a mobile browser's toolbar showing, 100vh is
+		   taller than the visible viewport, so the rail foot — the profile link
+		   and Log out — sat below the fold. Being `position: sticky`, the rail
+		   never scrolled into reach either, leaving both controls unusable. */
 		height: 100vh;
+		height: 100dvh;
 		position: sticky;
 		top: 0;
 		padding: 20px 14px;
@@ -333,6 +335,10 @@
 		flex: 1;
 		min-height: 0;
 		overflow-y: auto;
+		/* Scrolling past the end of the nav must not carry on into the page
+		   behind it: the rail is sticky, so the page would slide under a list
+		   that looks stationary. */
+		overscroll-behavior: contain;
 	}
 
 	.nav-eyebrow {
@@ -406,6 +412,34 @@
 
 	:global([data-ess-shell='rail']) .soon-badge {
 		display: none;
+	}
+
+	.issue-count {
+		margin-left: auto;
+		min-width: 20px;
+		height: 20px;
+		padding: 0 6px;
+		border-radius: var(--ess-radius-pill);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 11px;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+		background: var(--ess-warning-bg);
+		color: var(--ess-warning);
+	}
+
+	/* Collapsed rail: the count shrinks to a corner dot-with-number so the
+	   icon stays centred. */
+	:global([data-ess-shell='rail']) .issue-count {
+		position: absolute;
+		top: 4px;
+		right: 6px;
+		min-width: 16px;
+		height: 16px;
+		padding: 0 4px;
+		font-size: 9.5px;
 	}
 
 	.nav-list a:hover {
@@ -703,6 +737,17 @@
 			justify-content: center;
 			padding: 0;
 			height: 46px;
+			position: relative;
+		}
+
+		.issue-count {
+			position: absolute;
+			top: 4px;
+			right: 6px;
+			min-width: 16px;
+			height: 16px;
+			padding: 0 4px;
+			font-size: 9.5px;
 		}
 
 		.rail-foot {
