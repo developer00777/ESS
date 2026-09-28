@@ -10,15 +10,20 @@
 		/* Renders the row inert with a "Soon" badge — for modules that are in
 		   the nav but have no route yet, so the row never dead-ends. */
 		soon?: boolean;
+		/** A small count at the end of the row, such as unread announcements. */
+		count?: number;
+		/** Shows the count in the urgent colour. */
+		urgent?: boolean;
 	}
 
-	let { icon, label, href, onclick, soon = false }: Props = $props();
+	let { icon, label, href, onclick, soon = false, count = 0, urgent = false }: Props = $props();
 </script>
 
 {#snippet content()}
 	<IconChip {icon} size="sm" />
 	<span class="label">{label}</span>
 	{#if soon}<span class="soon-badge">Soon</span>{/if}
+	{#if count > 0}<span class="count" class:urgent aria-label="{count} unread">{count}</span>{/if}
 {/snippet}
 
 {#if soon}
@@ -36,6 +41,26 @@
 {/if}
 
 <style>
+	.count {
+		margin-left: auto;
+		min-width: 20px;
+		height: 20px;
+		padding: 0 6px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: var(--ess-radius-pill);
+		font-size: 11px;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
+	}
+	.count.urgent {
+		background: var(--ess-danger);
+		color: #fff;
+	}
+
 	.row {
 		display: flex;
 		align-items: center;

@@ -18,6 +18,7 @@
 		hasPicture={data.hasProfilePicture}
 		pictureVersion={data.profilePictureVersion}
 		{adminIssueCount}
+		announcementBadge={data.announcementBadge}
 	/>
 	<main class="ess-main">
 		{@render children()}

@@ -13,11 +13,15 @@ import { db } from '$lib/server/db/postgres';
 import { users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { startProhancePoller } from '$lib/server/prohance';
+import { startAnnouncementScheduler } from '$lib/server/announcements';
 
 // Kicks off the ProHance attendance poller with the server process. No-op
 // unless PROHANCE_BASE_URL + Prohance_API_KEY are set; guarded internally
 // against dev-HMR double starts.
 startProhancePoller();
+
+// Sends the email copy of scheduled announcements once they go live.
+startAnnouncementScheduler();
 
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.user = null;

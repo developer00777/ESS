@@ -12,7 +12,7 @@ import {
 	pgEnum,
 	uniqueIndex
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('role', ['super_admin', 'admin', 'team_lead', 'employee']);
 
@@ -801,3 +801,62 @@ export const compOffCreditsRelations = relations(compOffCredits, ({ one }) => ({
 	user: one(users, { fields: [compOffCredits.userId], references: [users.id] }),
 	approver: one(users, { fields: [compOffCredits.approverId], references: [users.id] })
 }));
+
+// --- Company announcements ---
+// HR posts; employees see the ones meant for them. The kind decides where a
+// post appears and when it goes away on its own: an urgent notice is shown
+// first for `urgentDays`, an event is listed by its date and drops off the day
+// after, an update sits in a quiet list and moves to "Earlier" after a week.
+// See src/lib/announcements.ts for those rules.
+
+export const announcementKindEnum = pgEnum('announcement_kind', ['urgent', 'event', 'update']);
+export const announcementStatusEnum = pgEnum('announcement_status', ['draft', 'published', 'taken_down']);
+
+export const announcements = pgTable('announcements', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	kind: announcementKindEnum('kind').notNull(),
+	title: text('title').notNull(),
+	/** The one line employees see. Null = first sentence of `body`. */
+	summary: text('summary'),
+	body: text('body').default('').notNull(),
+	eventDate: date('event_date'),
+	eventTime: varchar('event_time', { length: 5 }), // 'HH:MM', IST
+	// Audience: everyone, or anyone in any of the listed teams or shift groups.
+	audienceAll: boolean('audience_all').default(true).notNull(),
+	audienceTeamIds: uuid('audience_team_ids').array().default(sql`'{}'::uuid[]`).notNull(),
+	audienceShiftGroupIds: uuid('audience_shift_group_ids').array().default(sql`'{}'::uuid[]`).notNull(),
+	requiresAck: boolean('requires_ack').default(false).notNull(),
+	urgentDays: integer('urgent_days').default(3).notNull(),
+	emailCopy: boolean('email_copy').default(false).notNull(),
+	/** Set when the email copy is claimed for sending, so it goes out once. */
+	emailSentAt: timestamp('email_sent_at', { withTimezone: true }),
+	attachmentId: text('attachment_id'), // Mongo announcement_files._id
+	attachmentName: text('attachment_name'),
+	status: announcementStatusEnum('status').default('draft').notNull(),
+	/** When it becomes visible. In the future = scheduled. */
+	publishAt: timestamp('publish_at', { withTimezone: true }),
+	createdBy: uuid('created_by').references(() => users.id),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+	/** Set when a published post is changed, so employees see "Edited". */
+	editedAt: timestamp('edited_at', { withTimezone: true })
+});
+
+/** One row per person per announcement they have opened. */
+export const announcementReads = pgTable(
+	'announcement_reads',
+	{
+		announcementId: uuid('announcement_id')
+			.references(() => announcements.id, { onDelete: 'cascade' })
+			.notNull(),
+		userId: uuid('user_id')
+			.references(() => users.id)
+			.notNull(),
+		readAt: timestamp('read_at', { withTimezone: true }).defaultNow().notNull(),
+		/** "I've read this", on posts that ask for it. */
+		acknowledgedAt: timestamp('acknowledged_at', { withTimezone: true }),
+		/** "Got it" on an urgent post: it stops being shown first. */
+		dismissedAt: timestamp('dismissed_at', { withTimezone: true })
+	},
+	(t) => [uniqueIndex('announcement_reads_announcement_user').on(t.announcementId, t.userId)]
+);

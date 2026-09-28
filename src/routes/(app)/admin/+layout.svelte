@@ -4,6 +4,7 @@
 	import { tick } from 'svelte';
 	import LayoutGrid from '@lucide/svelte/icons/layout-grid';
 	import Users from '@lucide/svelte/icons/users';
+	import Megaphone from '@lucide/svelte/icons/megaphone';
 	import Fingerprint from '@lucide/svelte/icons/fingerprint';
 	import Scale from '@lucide/svelte/icons/scale';
 	import BookOpen from '@lucide/svelte/icons/book-open';
@@ -22,6 +23,7 @@
 	const ICONS: Record<AdminTabId, typeof Users> = {
 		overview: LayoutGrid,
 		people: Users,
+		announcements: Megaphone,
 		biometric: Fingerprint,
 		balances: Scale,
 		policies: BookOpen,
@@ -50,6 +52,7 @@
 	const jumps = $derived.by((): Jump[] => [
 		...tabs.map((t) => ({ label: t.label, kind: 'Section' as const, href: t.href })),
 		{ label: 'Create a login', kind: 'Action', href: '/admin/people?create=1' },
+		{ label: 'Post an announcement', kind: 'Action', href: '/admin/announcements' },
 		{ label: 'Week-off rosters', kind: 'Action', href: '/admin/people?view=weekoff' },
 		...(isSuperAdmin
 			? [

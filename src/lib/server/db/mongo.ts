@@ -142,3 +142,32 @@ export async function getUsersWithProfilePicture(userIds: string[]): Promise<Set
 		.toArray();
 	return new Set(rows.map((r) => r.userId));
 }
+
+// --- Announcement attachments ---
+// One file per announcement (a circular, a poster). Kept here beside the policy
+// documents for the same reason: the Postgres row stays small and only the
+// download reads the bytes.
+
+export interface AnnouncementFileEntry {
+	filename: string;
+	mimeType: string;
+	fileBase64: string;
+	byteSize: number;
+	uploadedBy: string;
+	createdAt: Date;
+}
+
+export async function insertAnnouncementFile(entry: Omit<AnnouncementFileEntry, 'createdAt'>): Promise<string> {
+	const db = await getMongo();
+	const result = await db
+		.collection<AnnouncementFileEntry>('announcement_files')
+		.insertOne({ ...entry, createdAt: new Date() });
+	return result.insertedId.toString();
+}
+
+export async function getAnnouncementFile(id: string): Promise<AnnouncementFileEntry | null> {
+	const { ObjectId } = await import('mongodb');
+	if (!ObjectId.isValid(id)) return null;
+	const db = await getMongo();
+	return db.collection<AnnouncementFileEntry>('announcement_files').findOne({ _id: new ObjectId(id) } as never);
+}

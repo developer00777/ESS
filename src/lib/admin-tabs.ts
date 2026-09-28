@@ -12,6 +12,7 @@
 export type AdminTabId =
 	| 'overview'
 	| 'people'
+	| 'announcements'
 	| 'biometric'
 	| 'balances'
 	| 'policies'
@@ -43,6 +44,13 @@ export const ADMIN_TABS: AdminTab[] = [
 		href: '/admin/people',
 		label: 'People',
 		blurb: 'Logins, bulk imports, week-off rosters and password activity.',
+		group: 1
+	},
+	{
+		id: 'announcements',
+		href: '/admin/announcements',
+		label: 'Announcements',
+		blurb: 'Post urgent notices, events and updates, and see who has read them.',
 		group: 1
 	},
 	{

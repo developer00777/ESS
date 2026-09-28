@@ -20,6 +20,7 @@ function facts(over: Partial<AdminFacts> = {}): AdminFacts {
 		publishedCalendarYears: [2026],
 		activeLeaveTypes: 7,
 		hrSetBalancesByYear: {},
+		staleConfirmations: [],
 		...over
 	};
 }

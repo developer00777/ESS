@@ -165,7 +165,13 @@
 			<div class="right-panel">
 				<span class="ess-eyebrow">Also Visible</span>
 				<div class="action-list">
-					<QuickActionRow icon={Megaphone} label="Company Announcements" />
+					<QuickActionRow
+						icon={Megaphone}
+						label="Company Announcements"
+						href="/announcements"
+						count={data.announcementBadge.count}
+						urgent={data.announcementBadge.urgent}
+					/>
 					<QuickActionRow icon={Bell} label="HR Notifications" />
 				</div>
 			</div>

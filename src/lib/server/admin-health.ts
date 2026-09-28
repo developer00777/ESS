@@ -11,6 +11,7 @@ import {
 import { and, count, countDistinct, desc, eq, isNotNull, lt } from 'drizzle-orm';
 import { buildOrgTree } from '$lib/org-chart';
 import type { AdminFacts } from '$lib/admin-issues';
+import { loadStaleConfirmations } from '$lib/server/announcements';
 
 const DAY = 86_400_000;
 
@@ -35,7 +36,8 @@ export async function loadAdminFacts(now = new Date()): Promise<AdminFacts> {
 		pendingImports,
 		calendarYears,
 		[types],
-		hrSet
+		hrSet,
+		staleConfirmations
 	] = await Promise.all([
 		db
 			.select({ id: users.id, fullName: users.fullName, role: users.role, reportsTo: users.reportsTo, teamId: users.teamId })
@@ -87,7 +89,8 @@ export async function loadAdminFacts(now = new Date()): Promise<AdminFacts> {
 			.select({ year: leaveAllocations.year, n: countDistinct(leaveAllocations.userId) })
 			.from(leaveAllocations)
 			.where(eq(leaveAllocations.isHrSet, true))
-			.groupBy(leaveAllocations.year)
+			.groupBy(leaveAllocations.year),
+		loadStaleConfirmations(now)
 	]);
 
 	const chart = buildOrgTree(roster);
@@ -116,6 +119,7 @@ export async function loadAdminFacts(now = new Date()): Promise<AdminFacts> {
 		},
 		publishedCalendarYears: calendarYears.map((r) => r.year).sort(),
 		activeLeaveTypes: types?.n ?? 0,
-		hrSetBalancesByYear: Object.fromEntries(hrSet.map((r) => [r.year, r.n]))
+		hrSetBalancesByYear: Object.fromEntries(hrSet.map((r) => [r.year, r.n])),
+		staleConfirmations
 	};
 }

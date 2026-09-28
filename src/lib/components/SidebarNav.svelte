@@ -6,6 +6,7 @@
 	import Wallet from '@lucide/svelte/icons/wallet';
 	import Users from '@lucide/svelte/icons/users';
 	import BookOpen from '@lucide/svelte/icons/book-open';
+	import Megaphone from '@lucide/svelte/icons/megaphone';
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
 	import Moon from '@lucide/svelte/icons/moon';
@@ -24,6 +25,8 @@
 		pictureVersion?: number | null;
 		/** Open admin problems, shown on the Admin Controls row. */
 		adminIssueCount?: number;
+		/** Unread or waiting announcements; red when one is urgent. */
+		announcementBadge?: { count: number; urgent: boolean };
 	}
 
 	let {
@@ -33,7 +36,8 @@
 		userId,
 		hasPicture = false,
 		pictureVersion,
-		adminIssueCount = 0
+		adminIssueCount = 0,
+		announcementBadge = { count: 0, urgent: false }
 	}: Props = $props();
 
 	let theme = $state<'light' | 'dark'>('light');
@@ -71,6 +75,7 @@
 
 	const meItems: NavItem[] = [
 		{ href: '/dashboard', label: 'Home', icon: LayoutDashboard },
+		{ href: '/announcements', label: 'Announcements', icon: Megaphone },
 		{ href: '/profile', label: 'My Profile', icon: User },
 		{ href: '/leave', label: 'Leave', icon: Calendar },
 		{ href: '/attendance', label: 'Attendance', icon: Clock },
@@ -178,6 +183,14 @@
 								class="issue-count"
 								aria-label="{adminIssueCount} need{adminIssueCount === 1 ? 's' : ''} attention"
 								>{adminIssueCount}</span
+							>
+						{:else if item.href === '/announcements' && announcementBadge.count > 0}
+							<span
+								class="issue-count"
+								class:news={!announcementBadge.urgent}
+								class:urgent={announcementBadge.urgent}
+								aria-label="{announcementBadge.count} unread{announcementBadge.urgent ? ', one is urgent' : ''}"
+								>{announcementBadge.count}</span
 							>
 						{/if}
 					</a>
@@ -428,6 +441,16 @@
 		font-variant-numeric: tabular-nums;
 		background: var(--ess-warning-bg);
 		color: var(--ess-warning);
+	}
+
+	.issue-count.news {
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
+	}
+
+	.issue-count.urgent {
+		background: var(--ess-danger);
+		color: #fff;
 	}
 
 	/* Collapsed rail: the count shrinks to a corner dot-with-number so the

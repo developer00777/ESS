@@ -13,7 +13,9 @@ import {
 	attendanceImports,
 	attendanceImportTokens,
 	bulkImports,
-	bulkImportRows
+	bulkImportRows,
+	announcementReads,
+	announcements
 } from '$lib/server/db/schema';
 import { deleteProfilePicture } from '$lib/server/db/mongo';
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
@@ -126,6 +128,9 @@ export async function deleteEmployee(userId: string): Promise<DeleteEmployeeResu
 			.delete(attendance)
 			.where(eq(attendance.userId, userId))
 			.returning({ id: attendance.id });
+		await tx.delete(announcementReads).where(eq(announcementReads.userId, userId));
+		// Their posts stay up; they just no longer name an author.
+		await tx.update(announcements).set({ createdBy: null }).where(eq(announcements.createdBy, userId));
 		await tx.delete(employeeProfiles).where(eq(employeeProfiles.userId, userId));
 		await tx.delete(users).where(eq(users.id, userId));
 

@@ -30,6 +30,8 @@ export type AdminFacts = {
 	activeLeaveTypes: number;
 	/** People with an HR-set balance, by leave year. */
 	hrSetBalancesByYear: Record<number, number>;
+	/** Live posts asking for confirmation, over three days old, under 80% confirmed. */
+	staleConfirmations: { id: string; title: string; confirmed: number; audience: number }[];
 };
 
 export type Severity = 'bad' | 'warn' | 'info';
@@ -160,6 +162,19 @@ export function deriveAdminIssues(facts: AdminFacts, isSuperAdmin: boolean, now:
 			href: '/admin/people?view=bulk',
 			cta: 'Review import',
 			superAdminOnly: true
+		});
+	}
+
+	for (const post of facts.staleConfirmations) {
+		const pct = post.audience > 0 ? Math.round((post.confirmed / post.audience) * 100) : 0;
+		issues.push({
+			id: `ack-low-${post.id}-${post.confirmed}`,
+			severity: 'warn',
+			title: `Only ${pct}% have confirmed “${post.title}”`,
+			detail: `${post.audience - post.confirmed} of ${post.audience} people still haven't confirmed after 3 days. You can email them a reminder.`,
+			tab: 'announcements',
+			href: '/admin/announcements',
+			cta: 'See who'
 		});
 	}
 
