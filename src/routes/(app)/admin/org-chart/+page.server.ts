@@ -22,6 +22,7 @@ export const load: PageServerLoad = async () => {
 			reportsTo: users.reportsTo,
 			teamId: users.teamId,
 			employeeCode: employeeProfiles.employeeCode,
+			reportsToChief: employeeProfiles.reportsToChief,
 			teamName: teams.name
 		})
 		.from(users)
@@ -37,7 +38,8 @@ export const load: PageServerLoad = async () => {
 		role: r.role,
 		reportsTo: r.reportsTo,
 		teamId: r.teamId,
-		employeeCode: r.employeeCode
+		employeeCode: r.employeeCode,
+		reportsToChief: !r.reportsTo && Boolean(r.reportsToChief)
 	}));
 
 	const chart = buildOrgTree(people);
@@ -45,7 +47,8 @@ export const load: PageServerLoad = async () => {
 	// How much of the roster actually has a manager on file. This is the number
 	// the reports_to backfill is meant to move, so it is worth stating plainly
 	// rather than leaving people to infer it from a flat chart.
-	const withManager = people.filter((p) => p.reportsTo).length;
+	// Reporting to Chief is a real line, not a gap in the data.
+	const withManager = people.filter((p) => p.reportsTo || p.reportsToChief).length;
 
 	return {
 		chart,
@@ -55,6 +58,7 @@ export const load: PageServerLoad = async () => {
 			withManager,
 			withoutManager: people.length - withManager,
 			rootCount: chart.roots.length,
+			chiefCount: chart.underChief.length,
 			orphanCount: chart.orphans.length
 		}
 	};

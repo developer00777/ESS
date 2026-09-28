@@ -609,6 +609,7 @@
 			rosters={data.weekOffRosters}
 			roles={ROLES}
 			canEditRole={data.isSuperAdmin}
+			canPickChief={data.canPickChief}
 			currentUserId={data.currentUserId}
 			onnotice={(m) => (settingsNotice = m)}
 			onclose={() => (editingPerson = null)}
@@ -664,6 +665,8 @@
 			<span class="link-cell">
 				{#if person.reportsToName}
 					{person.reportsToName}
+				{:else if person.reportsToChief}
+					<span class="chief" title="Approvals go straight to the concerned HR.">Chief</span>
 				{:else}
 					<span class="code-missing" title="No reporting manager — approvals fall back to HR">
 						Not set
@@ -1404,6 +1407,11 @@
 {/if}
 
 <style>
+	.chief {
+		font-weight: 600;
+		color: var(--ess-primary-text);
+	}
+
 	.view-switch {
 		margin-bottom: 1.25rem;
 		flex-wrap: wrap;

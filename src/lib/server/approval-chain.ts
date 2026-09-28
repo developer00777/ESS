@@ -14,11 +14,16 @@
  *   Everything    manager → HR → approved.  Two steps. Leave and attendance
  *   else          corrections change balances and the attendance record, so HR
  *                 sees them after the manager has signed off.
+ *
+ * People who report to Chief (src/lib/chief.ts) have no manager to ask: Chief
+ * is the head of the company and has no login. Their manager stage belongs to
+ * their concerned HR, so that one person approves once and it is done — it
+ * never falls through to a team lead the way an unlinked manager does.
  */
 
 import { db } from '$lib/server/db/postgres';
 import { users, employeeProfiles } from '$lib/server/db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 /** Roles that act as HR for the second stage. */
 const HR_ROLES = ['admin', 'super_admin'] as const;
@@ -46,9 +51,11 @@ export async function managersFor(userIds: string[]): Promise<Map<string, Review
 		.select({
 			id: users.id,
 			reportsTo: users.reportsTo,
-			teamId: users.teamId
+			teamId: users.teamId,
+			reportsToChief: employeeProfiles.reportsToChief
 		})
 		.from(users)
+		.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
 		.where(inArray(users.id, userIds));
 
 	const managerIds = staff.map((s) => s.reportsTo).filter((id): id is string => Boolean(id));
@@ -79,6 +86,13 @@ export async function managersFor(userIds: string[]): Promise<Map<string, Review
 		// routing the request into a dead account.
 		if (direct?.isActive) {
 			out.set(person.id, { userId: direct.id, fullName: direct.fullName, role: direct.role });
+			continue;
+		}
+
+		// Reports to Chief: nobody in the portal fills the manager stage, and a
+		// team lead is not a stand-in for the head of the company.
+		if (!person.reportsTo && person.reportsToChief) {
+			out.set(person.id, null);
 			continue;
 		}
 
@@ -141,8 +155,25 @@ export async function canReviewStage(
 	const manager = await managerFor(requesterId);
 	if (manager) return manager.userId === actor.id || actor.role === 'super_admin';
 
+	// Reports to Chief: the concerned HR takes the manager stage too.
+	if (await reportsToChief(requesterId)) {
+		const assigned = await assignedHrFor(requesterId);
+		if (assigned) return assigned === actor.id || actor.role === 'super_admin';
+	}
+
 	// No manager resolvable — HR picks it up so it does not sit forever.
 	return isHr;
+}
+
+/** True when `userId` reports to Chief rather than to a person in the portal. */
+export async function reportsToChief(userId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ reportsTo: users.reportsTo, reportsToChief: employeeProfiles.reportsToChief })
+		.from(users)
+		.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
+		.where(eq(users.id, userId))
+		.limit(1);
+	return !!row && !row.reportsTo && !!row.reportsToChief;
 }
 
 /**
@@ -226,9 +257,27 @@ export async function reviewableUserIds(
 
 	const managers = await managersFor(candidateIds);
 
+	// Chief reporters' manager stage is their concerned HR's (see canReviewStage).
+	const chiefRows = candidateIds.length
+		? await db
+				.select({ userId: employeeProfiles.userId, hrUserId: employeeProfiles.hrUserId })
+				.from(employeeProfiles)
+				.innerJoin(users, eq(users.id, employeeProfiles.userId))
+				.where(
+					and(
+						inArray(employeeProfiles.userId, candidateIds),
+						eq(employeeProfiles.reportsToChief, true),
+						isNull(users.reportsTo)
+					)
+				)
+		: [];
+	const chiefHr = new Map(chiefRows.map((r) => [r.userId, r.hrUserId]));
+
 	return candidateIds.filter((id) => {
 		const manager = managers.get(id);
 		if (manager) return manager.userId === actor.id || isSuperAdmin;
+		const assigned = chiefHr.get(id);
+		if (assigned) return assigned === actor.id || isSuperAdmin;
 		// Unassigned reporting line — HR is the safety net.
 		return isHr;
 	});

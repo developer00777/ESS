@@ -1,4 +1,5 @@
 import { redirect } from '@sveltejs/kit';
+import { isChiefReference } from '$lib/chief';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db/postgres';
 import {
@@ -248,6 +249,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 						employeeCode: employeeProfiles.employeeCode,
 						shiftGroupId: employeeProfiles.shiftGroupId,
 						hrUserId: employeeProfiles.hrUserId,
+						reportsToChief: employeeProfiles.reportsToChief,
 						officeTimings: employeeProfiles.officeTimings,
 						shiftType: employeeProfiles.shiftType
 					})
@@ -323,6 +325,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		hasPicture: withPictures.has(r.id),
 		reportsTo: r.reportsTo,
 		reportsToName: r.reportsTo ? (nameById.get(r.reportsTo) ?? null) : null,
+		reportsToChief: !r.reportsTo && Boolean(profileByUser.get(r.id)?.reportsToChief),
 		hrUserId: profileByUser.get(r.id)?.hrUserId ?? null,
 		hrName: profileByUser.get(r.id)?.hrUserId
 			? (nameById.get(profileByUser.get(r.id)!.hrUserId!) ?? null)
@@ -420,6 +423,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		// this page at all — the load redirects them above.
 		canAssignWeekOff: true,
 		isSuperAdmin: user.role === 'super_admin',
+		// Reporting to Chief moves approvals to HR, so it is an admin's call.
+		canPickChief: user.role === 'super_admin' || user.role === 'admin',
 		// The roster hides the delete control on your own row; the API refuses it too.
 		currentUserId: user.id,
 		bulkImports: bulkImportsList,
@@ -789,6 +794,9 @@ export const actions: Actions = {
 				designation: row.designation,
 				teamAndFloor: row.teamAndFloor,
 				directReportingAuthority: row.reportingAuthorityRaw,
+				// "Chief" in the sheet is the head of the company, not a person to
+				// link — recorded as a flag so approvals go straight to HR.
+				reportsToChief: !row.reportsToRowId && isChiefReference(row.reportingAuthorityRaw),
 				dottedLineReportingAuthority: row.dottedLineAuthorityRaw,
 				// Everything else the spreadsheet carried.
 				...profileValuesFromImport(row.profileData)

@@ -6,7 +6,8 @@ import {
 	leaveAllocations,
 	leaveApplications,
 	leaveTypes,
-	users
+	users,
+	employeeProfiles
 } from '$lib/server/db/schema';
 import { and, count, countDistinct, desc, eq, isNotNull, lt } from 'drizzle-orm';
 import { buildOrgTree } from '$lib/org-chart';
@@ -40,8 +41,16 @@ export async function loadAdminFacts(now = new Date()): Promise<AdminFacts> {
 		staleConfirmations
 	] = await Promise.all([
 		db
-			.select({ id: users.id, fullName: users.fullName, role: users.role, reportsTo: users.reportsTo, teamId: users.teamId })
+			.select({
+				id: users.id,
+				fullName: users.fullName,
+				role: users.role,
+				reportsTo: users.reportsTo,
+				teamId: users.teamId,
+				reportsToChief: employeeProfiles.reportsToChief
+			})
 			.from(users)
+			.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
 			.where(eq(users.isActive, true)),
 		db
 			.select({ createdAt: attendanceImports.createdAt })
@@ -93,12 +102,12 @@ export async function loadAdminFacts(now = new Date()): Promise<AdminFacts> {
 		loadStaleConfirmations(now)
 	]);
 
-	const chart = buildOrgTree(roster);
+	const chart = buildOrgTree(roster.map((p) => ({ ...p, reportsToChief: Boolean(p.reportsToChief) })));
 	const nameById = new Map(roster.map((p) => [p.id, p.fullName]));
 
 	return {
 		activePeople: roster.length,
-		withoutManager: roster.filter((p) => !p.reportsTo && p.role !== 'super_admin').length,
+		withoutManager: roster.filter((p) => !p.reportsTo && !p.reportsToChief && p.role !== 'super_admin').length,
 		loopMemberNames: chart.cycleMemberIds.map((id) => nameById.get(id) ?? 'Unknown'),
 		lastAttendanceImportAt: lastImport?.createdAt.toISOString() ?? null,
 		lastManualUpload: lastManual

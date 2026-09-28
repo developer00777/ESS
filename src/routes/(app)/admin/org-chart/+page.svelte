@@ -12,6 +12,9 @@
 	/** Expanded to this depth on load — the whole org at once is unreadable. */
 	const OPEN_TO_DEPTH = 1;
 
+	/** Everyone under Chief, at any depth. */
+	const chiefTotal = $derived(chart.underChief.reduce((n, node) => n + 1 + reportCount(node), 0));
+
 	function roleLabel(role: string) {
 		return role.replace('_', ' ');
 	}
@@ -34,9 +37,9 @@
 		<span class="ess-stat__meta">{stats.withoutManager} without</span>
 	</div>
 	<div class="ess-stat">
-		<span class="ess-stat__label">Top-level</span>
-		<span class="ess-stat__value ess-num">{stats.rootCount}</span>
-		<span class="ess-stat__meta">people with nobody above them</span>
+		<span class="ess-stat__label">Report to Chief</span>
+		<span class="ess-stat__value ess-num">{stats.chiefCount}</span>
+		<span class="ess-stat__meta">{stats.rootCount} others with nobody above them</span>
 	</div>
 </div>
 
@@ -106,12 +109,39 @@
 {/snippet}
 
 <section class="ess-panel tree-panel section-gap">
-	{#if chart.roots.length === 0 && chart.orphans.length === 0}
+	{#if chart.roots.length === 0 && chart.underChief.length === 0 && chart.orphans.length === 0}
 		<div class="ess-empty">
 			<Network class="ess-empty__icon" size={28} />
 			<p class="ess-empty__title">No active people to chart yet.</p>
 		</div>
 	{:else}
+		<!--
+			Chief heads the chart as a position, not a person: there is no account
+			behind it, so it carries no code or role, and the people under it have
+			their approvals handled by their concerned HR.
+		-->
+		{#if chart.underChief.length > 0}
+			<details class="branch" open>
+				<summary>
+					<div class="node-card chief-card">
+						<div class="node-main">
+							<span class="node-name">Chief</span>
+						</div>
+						<div class="node-meta">
+							<span class="node-reports">{chiefTotal} {chiefTotal === 1 ? 'report' : 'reports'}</span>
+						</div>
+					</div>
+				</summary>
+				<div class="children">
+					{#each chart.underChief as node (node.person.id)}
+						{@render branch(node)}
+					{/each}
+				</div>
+			</details>
+		{/if}
+		{#if chart.underChief.length > 0 && chart.roots.length > 0}
+			<p class="no-line">No reporting line on file</p>
+		{/if}
 		{#each chart.roots as root (root.person.id)}
 			{@render branch(root)}
 		{/each}
@@ -130,6 +160,20 @@
 <style>
 	.section-gap {
 		margin-top: var(--ess-space-6);
+	}
+
+	.chief-card {
+		border: 1px solid color-mix(in oklab, var(--acc) 45%, var(--ess-border));
+		background: linear-gradient(100deg, var(--ess-primary-soft), transparent);
+	}
+
+	.no-line {
+		margin: 16px 0 6px;
+		font-size: var(--ess-fs-eyebrow);
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--ess-text-muted);
 	}
 
 	.tree-panel {

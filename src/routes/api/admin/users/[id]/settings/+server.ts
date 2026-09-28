@@ -148,6 +148,31 @@ export const PUT: RequestHandler = async (event) => {
 		changes.reportsTo = { from: target.reportsTo, to: managerId };
 	}
 
+	// --- Reports to Chief -----------------------------------------------------
+	// Chief is the head of the company and has no login, so reporting to Chief
+	// is a flag on the profile, not a users.reportsTo link. The two are
+	// exclusive: choosing Chief clears the manager, and choosing a manager
+	// clears Chief. Admins only — it moves the person's approvals to HR, which
+	// is not a Team Lead's call.
+	let chiefTo: boolean | undefined;
+	if (body.reportsToChief && body.reportsTo) {
+		throw error(400, 'Pick either a reporting manager or Chief, not both');
+	}
+	if (has('reportsToChief') && Boolean(body.reportsToChief) !== profile.reportsToChief) {
+		if (actor.role === 'team_lead') {
+			throw error(403, 'Only an admin can set someone to report to Chief');
+		}
+		chiefTo = Boolean(body.reportsToChief);
+	}
+	if (chiefTo === true) {
+		loopBroken = [];
+		if (target.reportsTo) changes.reportsTo = { from: target.reportsTo, to: null };
+		else delete changes.reportsTo;
+	}
+	const managerAfter = changes.reportsTo ? (changes.reportsTo as { to: string | null }).to : target.reportsTo;
+	if (managerAfter && profile.reportsToChief) chiefTo = false;
+	if (chiefTo !== undefined) changes.reportsToChief = { from: profile.reportsToChief, to: chiefTo };
+
 	// --- Assigned HR ----------------------------------------------------------
 	if (has('hrUserId') && body.hrUserId !== profile.hrUserId) {
 		const hrId: string | null = body.hrUserId || null;
@@ -230,7 +255,7 @@ export const PUT: RequestHandler = async (event) => {
 	}
 
 	const profilePatch: Record<string, unknown> = {};
-	for (const key of ['hrUserId', 'shiftGroupId', 'officeTimings', 'shiftType'] as const) {
+	for (const key of ['hrUserId', 'shiftGroupId', 'officeTimings', 'shiftType', 'reportsToChief'] as const) {
 		if (changes[key]) profilePatch[key] = (changes[key] as { to: unknown }).to;
 	}
 	if (Object.keys(profilePatch).length > 0) {

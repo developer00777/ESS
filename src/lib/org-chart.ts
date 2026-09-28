@@ -21,6 +21,8 @@ export interface OrgPerson {
 	reportsTo: string | null;
 	teamId: string | null;
 	employeeCode?: string | null;
+	/** Reports to Chief, the head of the company, who has no login. */
+	reportsToChief?: boolean;
 }
 
 export interface OrgNode {
@@ -31,7 +33,12 @@ export interface OrgNode {
 }
 
 export interface OrgChartResult {
-	/** Trees grown from people with no manager inside this set. */
+	/**
+	 * Trees grown from people who report to Chief. Chief is drawn above them
+	 * as a position with no account (src/lib/chief.ts).
+	 */
+	underChief: OrgNode[];
+	/** Trees grown from everyone else with no manager inside this set. */
 	roots: OrgNode[];
 	/**
 	 * People no root could reach — only possible when their chain loops. Shown
@@ -85,10 +92,14 @@ export function buildOrgTree(people: OrgPerson[]): OrgChartResult {
 		return { person: byId.get(id) as OrgPerson, children, depth };
 	};
 
-	const roots = people
+	const tops = people
 		.filter((p) => managerOf(p) === null)
 		.map((p) => grow(p.id, 0))
 		.sort(byName);
+	// Only someone with no manager at all hangs from Chief: a real manager in
+	// the set always wins over a stale flag.
+	const underChief = tops.filter((n) => n.person.reportsToChief && !n.person.reportsTo);
+	const roots = tops.filter((n) => !underChief.includes(n));
 
 	// Whatever is still unvisited could not be reached from any root, which
 	// means its chain closes on itself. Walk each one up to name the members.
@@ -120,6 +131,7 @@ export function buildOrgTree(people: OrgPerson[]): OrgChartResult {
 	orphans.sort(byName);
 
 	return {
+		underChief,
 		roots,
 		orphans,
 		cycleMemberIds: [...cycleMemberIds],

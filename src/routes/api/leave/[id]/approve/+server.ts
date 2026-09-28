@@ -12,7 +12,7 @@ import {
 import { requireUser } from '$lib/server/rbac';
 import { eq, and } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
-import { canReviewStage } from '$lib/server/approval-chain';
+import { canReviewStage, isSingleStageFor } from '$lib/server/approval-chain';
 import { isCompOffLeaveCode, consumeCredits, releaseCredits } from '$lib/server/comp-off';
 
 const newStatusFor = (decision: 'approve' | 'reject') =>
@@ -67,6 +67,14 @@ export const POST: RequestHandler = async (event) => {
 	// chain: the manager has signed off and HR has yet to.
 	const stage = application.status === 'escalated' ? 'hr' : 'manager';
 
+	// When no distinct manager fills the first stage — someone who reports to
+	// Chief, or has no reporting line at all — the person who would close it at
+	// HR is standing in for the manager too, and one approval finishes it.
+	// Without this they approved twice: the first click only escalated it back
+	// to themselves. Same rule as comp-off and attendance corrections.
+	const singleStage =
+		!isReversal && stage === 'manager' && (await isSingleStageFor(approver, applicant.id));
+
 	// Reversal is Super-Admin-only (enforced above), so the stage guard and the
 	// Team Lead limits only ever apply to a live request.
 	if (!isReversal) {
@@ -99,7 +107,7 @@ export const POST: RequestHandler = async (event) => {
 	const newStatus =
 		decision === 'reject'
 			? ('rejected' as const)
-			: isReversal || stage === 'hr'
+			: isReversal || stage === 'hr' || singleStage
 				? ('approved' as const)
 				: ('escalated' as const);
 	const days = Number(application.days);

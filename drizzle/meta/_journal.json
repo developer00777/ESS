@@ -141,6 +141,13 @@
       "when": 1790595593588,
       "tag": "0019_announcements",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790598509763,
+      "tag": "0020_reports_to_chief",
+      "breakpoints": true
     }
   ]
 }

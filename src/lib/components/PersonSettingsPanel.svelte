@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { CHIEF_LABEL, CHIEF_PICK } from '$lib/chief';
 	import X from '@lucide/svelte/icons/x';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import { lockPageScroll } from '$lib/scroll-lock';
@@ -21,6 +22,8 @@
 		hasPicture: boolean;
 		role: string;
 		reportsTo: string | null;
+		/** Reports to Chief, the head of the company, who has no login. */
+		reportsToChief?: boolean;
 		hrUserId: string | null;
 		shiftGroupId: string | null;
 		officeTimings: string | null;
@@ -40,6 +43,8 @@
 		 * but granting privileges is not theirs to do, least of all to themselves.
 		 */
 		canEditRole: boolean;
+		/** Whether this viewer may set someone to report to Chief. Admins only. */
+		canPickChief?: boolean;
 		currentUserId: string;
 		onclose: () => void;
 		onsaved: () => void;
@@ -54,6 +59,7 @@
 		rosters,
 		roles,
 		canEditRole,
+		canPickChief = false,
 		currentUserId,
 		onclose,
 		onsaved,
@@ -67,7 +73,9 @@
 	// svelte-ignore state_referenced_locally
 	let role = $state(person.role);
 	// svelte-ignore state_referenced_locally
-	let reportsTo = $state(person.reportsTo ?? '');
+	let reportsTo = $state(person.reportsToChief ? CHIEF_PICK : (person.reportsTo ?? ''));
+	// svelte-ignore state_referenced_locally
+	const initialReportsTo = person.reportsToChief ? CHIEF_PICK : (person.reportsTo ?? '');
 	// svelte-ignore state_referenced_locally
 	let hrUserId = $state(person.hrUserId ?? '');
 	// svelte-ignore state_referenced_locally
@@ -137,7 +145,7 @@
 
 	const dirty = $derived(
 		(canEditRole && role !== person.role) ||
-			reportsTo !== (person.reportsTo ?? '') ||
+			reportsTo !== initialReportsTo ||
 			hrUserId !== (person.hrUserId ?? '') ||
 			shiftGroupId !== (person.shiftGroupId ?? '') ||
 			officeTimings !== (person.officeTimings ?? '') ||
@@ -157,7 +165,8 @@
 					// server refuses both, and sending an unchanged value would be a
 					// needless no-op.
 					...(isSelf || !canEditRole ? {} : { role }),
-					reportsTo: reportsTo || null,
+					reportsTo: reportsTo === CHIEF_PICK ? null : reportsTo || null,
+					reportsToChief: reportsTo === CHIEF_PICK,
 					hrUserId: hrUserId || null,
 					shiftGroupId: shiftGroupId || null,
 					officeTimings,
@@ -254,11 +263,21 @@
 				<span class="label">Reports to</span>
 				<select class="ess-select" bind:value={reportsTo}>
 					<option value="">— not set —</option>
+					{#if canPickChief || initialReportsTo === CHIEF_PICK}
+						<option value={CHIEF_PICK} disabled={!canPickChief}>{CHIEF_LABEL}</option>
+					{/if}
 					{#each candidates as p (p.id)}
 						<option value={p.id}>{optionLabel(p)}</option>
 					{/each}
 				</select>
-				<span class="hint">Gives the first approval on leave, comp-off and attendance corrections.</span>
+				<span class="hint">
+					{#if reportsTo === CHIEF_PICK}
+						Leave, comp-off and attendance corrections go straight to the
+						concerned HR{hrUserId ? '' : ' (any admin while none is set)'} for a single approval.
+					{:else}
+						Gives the first approval on leave, comp-off and attendance corrections.
+					{/if}
+				</span>
 			</label>
 
 			<label class="field">
