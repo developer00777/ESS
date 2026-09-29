@@ -1,15 +1,15 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireRole } from '$lib/server/rbac';
 import { db } from '$lib/server/db/postgres';
 import { weekOffRosters, weekOffAssignments, teams } from '$lib/server/db/schema';
 import { logActivity } from '$lib/server/db/mongo';
 import { eq } from 'drizzle-orm';
 import { validateRosterInput } from '$lib/week-off';
+import { requireCap } from '$lib/server/capabilities';
 
 /** Edits a saved roster. Super Admin only, matching creation. */
 export const PUT: RequestHandler = async (event) => {
-	const actor = requireRole(event, ['super_admin']);
+	const actor = requireCap(event, 'leave.week_off_rosters');
 	const id = event.params.id;
 	const body = await event.request.json();
 
@@ -61,7 +61,7 @@ export const PUT: RequestHandler = async (event) => {
  * would silently return those employees to Sat/Sun.
  */
 export const DELETE: RequestHandler = async (event) => {
-	const actor = requireRole(event, ['super_admin']);
+	const actor = requireCap(event, 'leave.week_off_rosters');
 	const id = event.params.id;
 
 	const [existing] = await db.select().from(weekOffRosters).where(eq(weekOffRosters.id, id)).limit(1);

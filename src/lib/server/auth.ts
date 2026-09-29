@@ -14,6 +14,10 @@ export interface SessionUser {
 	fullName: string;
 	teamId: string | null;
 	mustChangePassword: boolean;
+	/** Effective privileges, loaded per request in hooks.server.ts. */
+	capabilities?: import('$lib/capabilities').CapabilityKey[];
+	/** The named role on top of the base role, if any ("IT Support"). */
+	customRoleName?: string | null;
 }
 
 const ACCESS_TOKEN_TTL_SECONDS = 15 * 60; // 15 min

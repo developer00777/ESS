@@ -168,7 +168,7 @@
 					<QuickActionRow
 						icon={Megaphone}
 						label="Company Announcements"
-						href="/announcements"
+						href="/chat?c=announcements"
 						count={data.announcementBadge.count}
 						urgent={data.announcementBadge.urgent}
 					/>

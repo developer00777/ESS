@@ -3,6 +3,7 @@ import { db } from '$lib/server/db/postgres';
 import { leaveTypes, leaveAllocations, users, employeeProfiles } from '$lib/server/db/schema';
 import { and, desc, eq, isNotNull } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
+import { gateAdminPage } from '$lib/server/capabilities';
 
 /**
  * HR leave-balance upload — Super Admin and Admin (HR).
@@ -15,7 +16,8 @@ import { alias } from 'drizzle-orm/pg-core';
  * headings the sheet may use — guessing a code and having the row silently skip
  * is the main way this kind of upload wastes someone's afternoon.
  */
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
+	gateAdminPage(locals, ['leave.set_balances']);
 	// Role is enforced by (app)/admin/+layout.server.ts — Super Admin and Admin
 	// (HR), which is exactly this page's rule.
 

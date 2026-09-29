@@ -7,6 +7,7 @@ import { logActivity } from '$lib/server/db/mongo';
 import { eq } from 'drizzle-orm';
 import { validateRosterInput } from '$lib/week-off';
 import { loadAssignableRosters } from '$lib/server/week-off';
+import { requireCap } from '$lib/server/capabilities';
 
 /** Rosters this actor may see — everything for a Super Admin, published + own-team for a lead. */
 export const GET: RequestHandler = async (event) => {
@@ -20,7 +21,7 @@ export const GET: RequestHandler = async (event) => {
  * does not author them, so there is one place the patterns are defined.
  */
 export const POST: RequestHandler = async (event) => {
-	const actor = requireRole(event, ['super_admin']);
+	const actor = requireCap(event, 'leave.week_off_rosters');
 	const body = await event.request.json();
 
 	const invalid = validateRosterInput(body);

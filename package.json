@@ -26,6 +26,7 @@
 		"@sveltejs/kit": "^2.63.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@types/pg": "^8.20.0",
+		"@types/web-push": "^3.6.4",
 		"drizzle-kit": "^0.31.10",
 		"svelte": "^5.56.1",
 		"svelte-check": "^4.6.0",
@@ -43,6 +44,7 @@
 		"jose": "^6.2.4",
 		"mongodb": "^7.5.0",
 		"motion": "^13.4.0",
-		"pg": "^8.22.0"
+		"pg": "^8.22.0",
+		"web-push": "^3.6.7"
 	}
 }

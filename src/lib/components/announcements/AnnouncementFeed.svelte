@@ -1,14 +1,16 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
-	import CircleCheck from '@lucide/svelte/icons/circle-check';
+		import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import NeedsYouCard from '$lib/components/announcements/NeedsYouCard.svelte';
 	import PostRow from '$lib/components/announcements/PostRow.svelte';
-	import { weekGroup, type ComingUpItem } from '$lib/announcements';
+	import { weekGroup, type ComingUpItem, type Feed } from '$lib/announcements';
 
-	let { data } = $props();
+	/**
+	 * The #announcements channel in Champ Chat: what needs you, what is coming
+	 * up by date, and updates. `onchanged` re-reads the feed after an action.
+	 */
+	let { feed, now: nowIso, onchanged }: { feed: Feed; now: string; onchanged: () => Promise<void> | void } = $props();
 
-	const now = $derived(new Date(data.now));
-	const feed = $derived(data.feed);
+	const now = $derived(new Date(nowIso));
 
 	let openId = $state<string | null>(null);
 	let busyId = $state<string | null>(null);
@@ -50,7 +52,7 @@
 			readLocally = new Set(readLocally).add(item.id);
 			// Only the badge depends on this, so a failure is not worth an error.
 			post(`/api/announcements/${item.id}`, { action: 'read' })
-				.then(() => invalidateAll())
+				.then(() => onchanged())
 				.catch(() => {});
 		}
 	}
@@ -61,7 +63,7 @@
 		try {
 			await post(`/api/announcements/${id}`, { action });
 			openId = null;
-			await invalidateAll();
+			await onchanged();
 		} catch (e) {
 			errorMsg =
 				action === 'ack'
@@ -76,18 +78,9 @@
 		const ids = unreadUpdates.map((p) => p.id);
 		readLocally = new Set([...readLocally, ...ids]);
 		await post('/api/announcements/read-all', { ids }).catch(() => {});
-		await invalidateAll();
+		await onchanged();
 	}
 </script>
-
-<svelte:head>
-	<title>Announcements — Champ HR ESS Portal</title>
-</svelte:head>
-
-<header class="head">
-	<h1 class="ess-page-title">Announcements</h1>
-	<p class="ess-page-sub">What needs you first, then what's coming up by date.</p>
-</header>
 
 {#if errorMsg}
 	<p class="ess-error" role="alert">{errorMsg}</p>
@@ -171,15 +164,6 @@
 </div>
 
 <style>
-	.head {
-		margin-bottom: var(--ess-space-6);
-	}
-	.head .ess-page-title {
-		margin: 0;
-	}
-	.head .ess-page-sub {
-		margin: 4px 0 0;
-	}
 	.feed {
 		display: grid;
 		gap: 28px;

@@ -1,10 +1,10 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireRole } from '$lib/server/rbac';
 import { db } from '$lib/server/db/postgres';
 import { leaveTypes } from '$lib/server/db/schema';
 import { updatePolicyDocument, logActivity } from '$lib/server/db/mongo';
 import { eq } from 'drizzle-orm';
+import { requireCap } from '$lib/server/capabilities';
 
 interface PublishLeaveType {
 	code: string;
@@ -28,7 +28,7 @@ interface PublishLeaveType {
  * updates existing rows instead of duplicating them, and bumps policyVersion.
  */
 export const POST: RequestHandler = async (event) => {
-	const user = requireRole(event, ['super_admin']);
+	const user = requireCap(event, 'policies.publish');
 	const documentId = event.params.id;
 
 	const body = await event.request.json();

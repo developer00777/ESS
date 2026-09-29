@@ -2,7 +2,8 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { users } from '$lib/server/db/schema';
-import { requireRole, canActOnUser } from '$lib/server/rbac';
+import { requireUser, canActOnUser } from '$lib/server/rbac';
+import { hasCap } from '$lib/server/capabilities';
 import { hashPassword } from '$lib/server/auth';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
@@ -12,7 +13,14 @@ import { logActivity } from '$lib/server/db/mongo';
 // a Team Lead may reset only members of their own team, and self-reset is always allowed
 // here too (though self-service /api/auth/change-password is the normal path for that).
 export const PUT: RequestHandler = async (event) => {
-	const actor = requireRole(event, ['super_admin', 'admin', 'team_lead']);
+	const actor = requireUser(event);
+	// A named role such as IT Support can hold the reset privilege without an
+	// admin base role. It reaches Employees and Team Leads only: resetting an
+	// admin's password would let it sign in as that admin.
+	const viaPrivilege = actor.role !== 'super_admin' && actor.role !== 'admin' && hasCap(actor, 'people.reset_password');
+	if (!viaPrivilege && actor.role === 'employee') {
+		throw error(403, 'Insufficient privileges');
+	}
 	const targetUserId = event.params.id;
 	const { newPassword } = await event.request.json();
 
@@ -20,18 +28,23 @@ export const PUT: RequestHandler = async (event) => {
 		throw error(400, 'newPassword is required and must be at least 8 characters');
 	}
 
+	if (!/^[0-9a-f-]{36}$/i.test(targetUserId)) throw error(404, 'User not found');
 	const [target] = await db.select().from(users).where(eq(users.id, targetUserId)).limit(1);
 	if (!target) {
 		throw error(404, 'User not found');
 	}
 
-	if (!canActOnUser(actor, target.id, target.teamId)) {
+	if (viaPrivilege) {
+		if (target.role === 'admin' || target.role === 'super_admin') {
+			throw error(403, 'Only an HR Admin or Super Admin can reset an admin account password');
+		}
+	} else if (!canActOnUser(actor, target.id, target.teamId)) {
 		throw error(403, 'Insufficient privileges to reset this user\'s password');
 	}
 
 	// A Team Lead may only reset passwords for Employees on their team, never peers or
 	// escalate to admin/super_admin accounts even if teamId happens to line up.
-	if (actor.role === 'team_lead' && target.role !== 'employee' && target.id !== actor.id) {
+	if (!viaPrivilege && actor.role === 'team_lead' && target.role !== 'employee' && target.id !== actor.id) {
 		throw error(403, 'Team Leads may only reset passwords for employees on their team');
 	}
 

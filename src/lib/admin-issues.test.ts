@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { adminStrips, deriveAdminIssues, tabSeverities, type AdminFacts } from './admin-issues';
 import { adminTabForPath, visibleAdminTabs } from './admin-tabs';
+import { CAPABILITY_KEYS, defaultCapabilities } from './capabilities';
+
+/** A Super Admin sees every issue; HR Admin sees what their defaults can fix. */
+const SA = CAPABILITY_KEYS;
+const HR = defaultCapabilities('admin');
 
 // 28 Sep 2026, midday IST.
 const NOW = new Date('2026-09-28T06:30:00Z');
@@ -21,20 +26,21 @@ function facts(over: Partial<AdminFacts> = {}): AdminFacts {
 		activeLeaveTypes: 7,
 		hrSetBalancesByYear: {},
 		staleConfirmations: [],
+		chat: { activePeople: 0, messages: 0, openDeskQuestions: 0 },
 		...over
 	};
 }
 
 describe('deriveAdminIssues', () => {
 	it('reports nothing for a healthy portal', () => {
-		expect(deriveAdminIssues(facts(), true, NOW)).toEqual([]);
+		expect(deriveAdminIssues(facts(), SA, NOW)).toEqual([]);
 	});
 
 	it('grades a silent attendance feed by how long it has been quiet', () => {
 		const at = (days: number) => new Date(NOW.getTime() - days * DAY).toISOString();
-		expect(deriveAdminIssues(facts({ lastAttendanceImportAt: at(1) }), true, NOW)).toEqual([]);
-		expect(deriveAdminIssues(facts({ lastAttendanceImportAt: at(2) }), true, NOW)[0].severity).toBe('warn');
-		const [stale] = deriveAdminIssues(facts({ lastAttendanceImportAt: at(3) }), true, NOW);
+		expect(deriveAdminIssues(facts({ lastAttendanceImportAt: at(1) }), SA, NOW)).toEqual([]);
+		expect(deriveAdminIssues(facts({ lastAttendanceImportAt: at(2) }), SA, NOW)[0].severity).toBe('warn');
+		const [stale] = deriveAdminIssues(facts({ lastAttendanceImportAt: at(3) }), SA, NOW);
 		expect(stale.severity).toBe('bad');
 		expect(stale.title).toBe('No attendance has arrived for 3 days');
 		expect(stale.href).toBe('/admin/biometric');
@@ -46,28 +52,28 @@ describe('deriveAdminIssues', () => {
 			activeLeaveTypes: 0,
 			pendingBulkImports: { count: 1, latestFilename: 'joiners.xlsx', latestRows: 42 }
 		});
-		expect(deriveAdminIssues(f, true, NOW).map((i) => i.tab)).toEqual(['policies', 'policies', 'people']);
-		expect(deriveAdminIssues(f, false, NOW)).toEqual([]);
+		expect(deriveAdminIssues(f, SA, NOW).map((i) => i.tab)).toEqual(['policies', 'policies', 'people']);
+		expect(deriveAdminIssues(f, HR, NOW)).toEqual([]);
 	});
 
 	it('asks for next year’s calendar only from October', () => {
-		const sept = deriveAdminIssues(facts(), true, NOW);
+		const sept = deriveAdminIssues(facts(), SA, NOW);
 		const october = new Date('2026-10-02T06:30:00Z');
-		const oct = deriveAdminIssues(facts({ lastAttendanceImportAt: october.toISOString() }), true, october);
+		const oct = deriveAdminIssues(facts({ lastAttendanceImportAt: october.toISOString() }), SA, october);
 		expect(sept).toEqual([]);
 		expect(oct.map((i) => i.title)).toEqual(['The 2027 holiday calendar is not published']);
 	});
 
 	it('changes an issue id when its size changes, so a dismissal does not stick forever', () => {
-		const a = deriveAdminIssues(facts({ withoutManager: 23 }), true, NOW)[0];
-		const b = deriveAdminIssues(facts({ withoutManager: 24 }), true, NOW)[0];
+		const a = deriveAdminIssues(facts({ withoutManager: 23 }), SA, NOW)[0];
+		const b = deriveAdminIssues(facts({ withoutManager: 24 }), SA, NOW)[0];
 		expect(a.id).not.toBe(b.id);
 	});
 
 	it('puts the worst problems first', () => {
 		const issues = deriveAdminIssues(
 			facts({ withoutManager: 3, staleTemporaryPasswords: 2, loopMemberNames: ['A', 'B'] }),
-			true,
+			SA,
 			NOW
 		);
 		expect(issues.map((i) => i.severity)).toEqual(['bad', 'warn', 'info']);
@@ -78,7 +84,7 @@ describe('tabSeverities', () => {
 	it('keeps the worst severity per tab and ignores links outside Admin Controls', () => {
 		const issues = deriveAdminIssues(
 			facts({ withoutManager: 3, loopMemberNames: ['A'], pendingLeaveOld: 2, pendingLeave: 5 }),
-			true,
+			SA,
 			NOW
 		);
 		expect(tabSeverities(issues)).toEqual({ org: 'bad' });
@@ -106,7 +112,7 @@ describe('admin tabs', () => {
 	});
 
 	it('leaves Super Admin tools out for HR admins', () => {
-		const ids = visibleAdminTabs(false).map((t) => t.id);
+		const ids = visibleAdminTabs(HR).map((t) => t.id);
 		expect(ids).not.toContain('policies');
 		expect(ids).not.toContain('cleanup');
 		expect(ids).not.toContain('tweaks');

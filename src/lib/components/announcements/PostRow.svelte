@@ -168,6 +168,10 @@
 		clip: rect(0 0 0 0);
 	}
 	@media (max-width: 560px) {
+		.t,
+		.s {
+			white-space: normal;
+		}
 		.more,
 		.more.update {
 			padding-left: 14px;

@@ -1,14 +1,12 @@
-import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { shiftGroups, holidayCalendars, holidays, leaveTypes } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+import { gateAdminPage } from '$lib/server/capabilities';
 
 export const load: PageServerLoad = async ({ locals }) => {
+	gateAdminPage(locals, ['policies.publish']);
 	const user = locals.user!;
-	if (user.role !== 'super_admin') {
-		throw redirect(303, '/dashboard');
-	}
 
 	const groups = await db.select().from(shiftGroups);
 	const groupById = new Map(groups.map((g) => [g.id, g]));

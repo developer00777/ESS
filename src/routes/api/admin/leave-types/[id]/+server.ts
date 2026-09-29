@@ -3,9 +3,9 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { leaveTypes } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { requireRole } from '$lib/server/rbac';
 import { logActivity } from '$lib/server/db/mongo';
 import { deleteLeaveType } from '$lib/server/admin-cleanup';
+import { requireCap } from '$lib/server/capabilities';
 
 /**
  * Permanently deletes a leave type along with every allocation, application
@@ -25,7 +25,7 @@ import { deleteLeaveType } from '$lib/server/admin-cleanup';
  * nothing about a monthly limit, so nothing is capped until someone decides to.
  */
 export const PATCH: RequestHandler = async (event) => {
-	const actor = requireRole(event, ['super_admin']);
+	const actor = requireCap(event, 'policies.publish');
 	const leaveTypeId = event.params.id;
 
 	const body = await event.request.json().catch(() => null);
@@ -68,7 +68,7 @@ export const PATCH: RequestHandler = async (event) => {
 };
 
 export const DELETE: RequestHandler = async (event) => {
-	const actor = requireRole(event, ['super_admin']);
+	const actor = requireCap(event, 'policies.publish');
 	const leaveTypeId = event.params.id;
 
 	let result;

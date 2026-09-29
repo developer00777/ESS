@@ -9,7 +9,49 @@
 	import { daysUntil, weekGroup, type AnnouncementKind, type FeedPost } from '$lib/announcements';
 	import { lockPageScroll } from '$lib/scroll-lock';
 
-	let { data, form } = $props();
+	/**
+	 * Posting and managing announcements, inside Champ Chat's #announcements
+	 * channel, for anyone holding "Post announcements". `draft` pre-fills the
+	 * form from a Champ card.
+	 */
+	let {
+		data,
+		form,
+		draft = null
+	}: {
+		data: {
+			now: string;
+			mailerConfigured: boolean;
+			teams: { id: string; name: string }[];
+			shiftGroups: { id: string; name: string }[];
+			membership: { t: string | null; s: string | null }[];
+			posts: {
+				id: string;
+				kind: AnnouncementKind;
+				title: string;
+				summary: string | null;
+				body: string;
+				eventDate: string | null;
+				eventTime: string | null;
+				audienceAll: boolean;
+				audienceTeamIds: string[];
+				audienceShiftGroupIds: string[];
+				requiresAck: boolean;
+				urgentDays: number;
+				emailCopy: boolean;
+				emailSentAt: string | null;
+				attachmentName: string | null;
+				status: string;
+				publishAt: string | null;
+				editedAt: string | null;
+				audienceSize: number;
+				reads: number;
+				acks: number;
+			}[];
+		};
+		form: { saveError?: string; savedMessage?: string } | null | undefined;
+		draft?: { kind?: string; title?: string; summary?: string; body?: string; eventDate?: string; eventTime?: string } | null;
+	} = $props();
 
 	const now = $derived(new Date(data.now));
 	type Post = (typeof data.posts)[number];
@@ -50,7 +92,20 @@
 		};
 	}
 
-	let f = $state(blank());
+	// svelte-ignore state_referenced_locally
+	let f = $state({
+		...blank(),
+		...(draft
+			? {
+					kind: (['urgent', 'event', 'update'].includes(draft.kind ?? '') ? draft.kind : 'update') as AnnouncementKind,
+					title: draft.title ?? '',
+					summary: draft.summary ?? '',
+					body: draft.body ?? '',
+					eventDate: draft.eventDate ?? '',
+					eventTime: draft.eventTime ?? ''
+				}
+			: {})
+	});
 	let fileName = $state<string | null>(null);
 	let fileInput = $state<HTMLInputElement | null>(null);
 	let formEl = $state<HTMLFormElement | null>(null);
@@ -187,10 +242,6 @@
 	$effect(() => () => unlock?.());
 </script>
 
-<svelte:head>
-	<title>Announcements · Admin Controls — Champ HR ESS Portal</title>
-</svelte:head>
-
 <svelte:window onkeydown={(e) => e.key === 'Escape' && pendingFor && closePending()} />
 
 {#if form?.saveError}
@@ -203,7 +254,7 @@
 	<form
 		class="ess-panel form"
 		method="POST"
-		action="?/save"
+		action="?/saveAnnouncement"
 		enctype="multipart/form-data"
 		bind:this={formEl}
 		use:enhance={() => {

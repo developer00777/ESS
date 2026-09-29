@@ -9,6 +9,7 @@ import {
 	compOffExpiryFor,
 	lapseExpiredCompOffs
 } from '$lib/server/comp-off';
+import { notifyNewRequest, notifyDecision } from '$lib/server/chat/cards';
 
 /** The employee's own comp-off credits, with expired ones lapsed first (SOP §1). */
 export const GET: RequestHandler = async ({ locals, url }) => {
@@ -75,5 +76,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 		details: { workedDate, workedMinutes: eligibility.workedMinutes, dayBasis: eligibility.dayBasis }
 	});
 
+	// Champ Chat: a card in each approver's ESS feed, and every copy kept current.
+	void notifyNewRequest('comp_off', created.id).catch((err) => console.error('[chat] card failed:', err));
 	return json({ credit: created });
 };

@@ -1,8 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireRole } from '$lib/server/rbac';
 import { logActivity } from '$lib/server/db/mongo';
 import { runCleanup, type CleanupOptions } from '$lib/server/admin-cleanup';
+import { requireCap } from '$lib/server/capabilities';
 
 /**
  * Bulk maintenance reset — Super Admin only. Each part is opt-in and the
@@ -10,7 +10,7 @@ import { runCleanup, type CleanupOptions } from '$lib/server/admin-cleanup';
  * Intended for clearing seeded/test data from a portal before real use.
  */
 export const POST: RequestHandler = async (event) => {
-	const actor = requireRole(event, ['super_admin']);
+	const actor = requireCap(event, 'system.cleanup');
 	const body = await event.request.json();
 
 	const options: CleanupOptions = {

@@ -1,10 +1,10 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireRole } from '$lib/server/rbac';
 import { db } from '$lib/server/db/postgres';
 import { shiftGroups, holidayCalendars, holidays } from '$lib/server/db/schema';
 import { updatePolicyDocument, logActivity } from '$lib/server/db/mongo';
 import { eq, and } from 'drizzle-orm';
+import { requireCap } from '$lib/server/capabilities';
 
 interface PublishTable {
 	shift_group_key: string;
@@ -20,7 +20,7 @@ interface PublishTable {
  * this is the ONLY write path admins need — nothing per-employee to touch.
  */
 export const POST: RequestHandler = async (event) => {
-	const user = requireRole(event, ['super_admin']);
+	const user = requireCap(event, 'policies.publish');
 	const documentId = event.params.id;
 
 	const body = await event.request.json();

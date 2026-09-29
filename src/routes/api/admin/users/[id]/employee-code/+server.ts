@@ -1,10 +1,10 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireRole } from '$lib/server/rbac';
 import { db } from '$lib/server/db/postgres';
 import { employeeProfiles } from '$lib/server/db/schema';
 import { logActivity } from '$lib/server/db/mongo';
 import { and, eq, ne } from 'drizzle-orm';
+import { requireCap } from '$lib/server/capabilities';
 
 /**
  * Sets an employee's company code (e.g. "CIPL2666") — the value that identifies
@@ -13,7 +13,7 @@ import { and, eq, ne } from 'drizzle-orm';
  * stored uppercase and must be unique.
  */
 export const PUT: RequestHandler = async (event) => {
-	const actor = requireRole(event, ['super_admin', 'admin']);
+	const actor = requireCap(event, 'people.employee_code');
 	const userId = event.params.id;
 	const { employeeCode } = await event.request.json();
 

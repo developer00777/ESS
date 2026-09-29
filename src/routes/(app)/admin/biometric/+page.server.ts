@@ -2,6 +2,7 @@ import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { attendanceImports, users } from '$lib/server/db/schema';
 import { desc, eq, isNotNull } from 'drizzle-orm';
+import { gateAdminPage } from '$lib/server/capabilities';
 
 /**
  * Manual biometric report upload — Super Admin and Admin (HR).
@@ -12,7 +13,8 @@ import { desc, eq, isNotNull } from 'drizzle-orm';
  * portal. Listing past manual uploads here makes a re-upload obvious rather than
  * something to guess at.
  */
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
+	gateAdminPage(locals, ['attendance.biometric_upload']);
 	// Role is enforced by (app)/admin/+layout.server.ts — Super Admin and Admin
 	// (HR), which is exactly this page's rule.
 

@@ -32,6 +32,8 @@ export type AdminFacts = {
 	hrSetBalancesByYear: Record<number, number>;
 	/** Live posts asking for confirmation, over three days old, under 80% confirmed. */
 	staleConfirmations: { id: string; title: string; confirmed: number; audience: number }[];
+	/** Champ Chat in the last 7 days. */
+	chat: { activePeople: number; messages: number; openDeskQuestions: number };
 };
 
 export type Severity = 'bad' | 'warn' | 'info';
@@ -45,7 +47,8 @@ export type AdminIssue = {
 	severity: Severity;
 	title: string;
 	detail: string;
-	tab: AdminTabId | 'leave';
+	/** 'leave' and 'chat' link outside Admin Controls, so they carry no tab dot. */
+	tab: AdminTabId | 'leave' | 'chat';
 	href: string;
 	cta: string;
 	superAdminOnly?: boolean;
@@ -84,7 +87,12 @@ function istYearMonth(now: Date): { year: number; month: number } {
 	return { year: ist.getUTCFullYear(), month: ist.getUTCMonth() };
 }
 
-export function deriveAdminIssues(facts: AdminFacts, isSuperAdmin: boolean, now: Date): AdminIssue[] {
+/**
+ * `caps` are the viewer's privileges (src/lib/capabilities.ts): a problem only
+ * shows to someone who can fix it.
+ */
+export function deriveAdminIssues(facts: AdminFacts, caps: readonly string[], now: Date): AdminIssue[] {
+	const can = (key: string) => caps.includes(key);
 	const issues: AdminIssue[] = [];
 	const { year, month } = istYearMonth(now);
 
@@ -149,7 +157,7 @@ export function deriveAdminIssues(facts: AdminFacts, isSuperAdmin: boolean, now:
 		});
 	}
 
-	if (isSuperAdmin && facts.pendingBulkImports.count > 0) {
+	if (can('people.bulk_import') && facts.pendingBulkImports.count > 0) {
 		const { count, latestFilename, latestRows } = facts.pendingBulkImports;
 		issues.push({
 			id: `bulk-pending-${count}-${latestFilename}`,
@@ -172,8 +180,8 @@ export function deriveAdminIssues(facts: AdminFacts, isSuperAdmin: boolean, now:
 			severity: 'warn',
 			title: `Only ${pct}% have confirmed “${post.title}”`,
 			detail: `${post.audience - post.confirmed} of ${post.audience} people still haven't confirmed after 3 days. You can email them a reminder.`,
-			tab: 'announcements',
-			href: '/admin/announcements',
+			tab: 'chat',
+			href: '/chat?c=announcements',
 			cta: 'See who'
 		});
 	}
@@ -190,7 +198,7 @@ export function deriveAdminIssues(facts: AdminFacts, isSuperAdmin: boolean, now:
 		});
 	}
 
-	if (isSuperAdmin) {
+	if (can('policies.publish')) {
 		if (facts.activeLeaveTypes === 0) {
 			issues.push({
 				id: 'policy-no-leave-types',
@@ -249,7 +257,7 @@ export function tabSeverities(issues: AdminIssue[]): Partial<Record<AdminTabId, 
 	const out: Partial<Record<AdminTabId, Severity>> = {};
 	const rank: Record<Severity, number> = { bad: 0, warn: 1, info: 2 };
 	for (const issue of issues) {
-		if (issue.tab === 'leave') continue;
+		if (issue.tab === 'leave' || issue.tab === 'chat') continue;
 		const current = out[issue.tab];
 		if (!current || rank[issue.severity] < rank[current]) out[issue.tab] = issue.severity;
 	}
@@ -286,6 +294,12 @@ export function adminStrips(facts: AdminFacts, now: Date): Partial<Record<AdminT
 	return {
 		overview: [
 			{ value: String(facts.activePeople), label: 'Active people' },
+			{
+				value: facts.activePeople ? `${Math.round((facts.chat.activePeople / facts.activePeople) * 100)}%` : '—',
+				label: 'Used Champ Chat this week',
+				detail: `${facts.chat.messages} messages · ${facts.chat.openDeskQuestions} open Ask HR ${facts.chat.openDeskQuestions === 1 ? 'question' : 'questions'}`,
+				tone: facts.chat.openDeskQuestions > 0 ? 'warn' : 'muted'
+			},
 			importItem,
 			{
 				value: String(facts.pendingLeave),

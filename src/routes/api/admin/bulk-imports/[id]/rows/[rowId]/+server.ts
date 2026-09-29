@@ -2,9 +2,9 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { bulkImports, bulkImportRows, users } from '$lib/server/db/schema';
-import { requireRole } from '$lib/server/rbac';
 import { looksLikeEmail } from '$lib/server/bulk-import';
 import { eq, and, ne } from 'drizzle-orm';
+import { requireCap } from '$lib/server/capabilities';
 
 const VALID_ROLES = ['super_admin', 'admin', 'team_lead', 'employee'] as const;
 
@@ -12,7 +12,7 @@ const VALID_ROLES = ['super_admin', 'admin', 'team_lead', 'employee'] as const;
 // manager (or clears it). Only allowed while the parent import is still pending_review;
 // once applied, rows are historical record and shouldn't be mutated.
 export const PATCH: RequestHandler = async (event) => {
-	requireRole(event, ['super_admin']);
+	requireCap(event, 'people.bulk_import');
 	const importId = event.params.id;
 	const rowId = event.params.rowId;
 

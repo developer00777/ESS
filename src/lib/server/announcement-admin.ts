@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import type { Actions, PageServerLoad } from './$types';
+import type { RequestEvent } from '@sveltejs/kit';
 import { db } from '$lib/server/db/postgres';
 import { announcementReads, announcements, shiftGroups, teams } from '$lib/server/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
@@ -12,12 +12,14 @@ import {
 } from '$lib/server/announcements';
 import { insertAnnouncementFile } from '$lib/server/db/mongo';
 import { isMailerConfigured } from '$lib/server/mailer';
+import { hasCap } from '$lib/server/capabilities';
 
 /**
- * Admin Controls › Announcements. Role is enforced by (app)/admin/+layout —
- * HR Admin and Super Admin both post.
+ * Posting and managing announcements — the composer and "Posted" list shown
+ * in Champ Chat's #announcements channel to anyone holding "Post
+ * announcements". Every action re-checks that privilege.
  */
-export const load: PageServerLoad = async () => {
+export async function loadAnnouncementAdmin() {
 	const [members, teamRows, shiftRows, list] = await Promise.all([
 		loadMembers(),
 		db.select({ id: teams.id, name: teams.name }).from(teams).orderBy(teams.name),
@@ -66,8 +68,9 @@ function str(form: FormData, key: string): string {
 	return String(form.get(key) ?? '').trim();
 }
 
-export const actions: Actions = {
-	save: async ({ request, locals }) => {
+export const announcementActions = {
+	saveAnnouncement: async ({ request, locals }: RequestEvent) => {
+		if (!hasCap(locals.user, 'announcements.post')) return fail(403, { saveError: 'Only HR can post announcements' });
 		const form = await request.formData();
 		const id = str(form, 'id');
 		const intent = str(form, 'intent'); // 'publish' | 'draft'
@@ -211,14 +214,16 @@ export const actions: Actions = {
 		};
 	},
 
-	takeDown: async ({ request }) => {
+	takeDown: async ({ request, locals }: RequestEvent) => {
+		if (!hasCap(locals.user, 'announcements.post')) return fail(403, { saveError: 'Only HR can take announcements down' });
 		const id = String((await request.formData()).get('id') ?? '');
 		if (!UUID.test(id)) return fail(400, { saveError: 'That announcement no longer exists.' });
 		await db.update(announcements).set({ status: 'taken_down', updatedAt: new Date() }).where(eq(announcements.id, id));
 		return { savedMessage: 'Taken down. Employees no longer see it.' };
 	},
 
-	restore: async ({ request }) => {
+	restore: async ({ request, locals }: RequestEvent) => {
+		if (!hasCap(locals.user, 'announcements.post')) return fail(403, { saveError: 'Only HR can restore announcements' });
 		const id = String((await request.formData()).get('id') ?? '');
 		if (!UUID.test(id)) return fail(400, { saveError: 'That announcement no longer exists.' });
 		const [row] = await db.select().from(announcements).where(eq(announcements.id, id)).limit(1);
@@ -230,7 +235,8 @@ export const actions: Actions = {
 		return { savedMessage: 'Restored.' };
 	},
 
-	remind: async ({ request }) => {
+	remind: async ({ request, locals }: RequestEvent) => {
+		if (!hasCap(locals.user, 'announcements.post')) return fail(403, { saveError: 'Only HR can send reminders' });
 		const id = String((await request.formData()).get('id') ?? '');
 		if (!UUID.test(id)) return fail(400, { saveError: 'That announcement no longer exists.' });
 		const result = await sendConfirmationReminder(id);

@@ -1,10 +1,10 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireRole } from '$lib/server/rbac';
 import { db } from '$lib/server/db/postgres';
 import { weekOffRosters } from '$lib/server/db/schema';
 import { logActivity } from '$lib/server/db/mongo';
 import { eq } from 'drizzle-orm';
+import { requireCap } from '$lib/server/capabilities';
 
 /**
  * Publishing is what makes a saved roster usable by team managers — a draft is
@@ -15,7 +15,7 @@ import { eq } from 'drizzle-orm';
  * alone — unpublishing stops new assignments, it does not rewrite calendars).
  */
 export const POST: RequestHandler = async (event) => {
-	const actor = requireRole(event, ['super_admin']);
+	const actor = requireCap(event, 'leave.week_off_rosters');
 	const id = event.params.id;
 
 	const [existing] = await db.select().from(weekOffRosters).where(eq(weekOffRosters.id, id)).limit(1);
@@ -44,7 +44,7 @@ export const POST: RequestHandler = async (event) => {
 };
 
 export const DELETE: RequestHandler = async (event) => {
-	const actor = requireRole(event, ['super_admin']);
+	const actor = requireCap(event, 'leave.week_off_rosters');
 	const id = event.params.id;
 
 	const [updated] = await db

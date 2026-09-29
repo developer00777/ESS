@@ -1,12 +1,20 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 
 	let { data } = $props();
 
-	let leaveTypeId = $state(data.types[0]?.id ?? '');
-	let startDate = $state('');
-	let endDate = $state('');
-	let reason = $state('');
+	// Pre-filled by Champ Chat's /leave command and Champ's leave card:
+	// ?start=YYYY-MM-DD&end=…&type=<code or id>&reason=…
+	const q = page.url.searchParams;
+	const askedType = q.get('type');
+	// svelte-ignore state_referenced_locally
+	let leaveTypeId = $state(
+		data.types.find((t) => askedType && (t.id === askedType || t.code === askedType))?.id ?? data.types[0]?.id ?? ''
+	);
+	let startDate = $state(q.get('start') ?? '');
+	let endDate = $state(q.get('end') ?? q.get('start') ?? '');
+	let reason = $state(q.get('reason') ?? '');
 	let error = $state('');
 	let submitting = $state(false);
 

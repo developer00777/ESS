@@ -14,6 +14,7 @@ import { eq, and } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { canReviewStage, isSingleStageFor } from '$lib/server/approval-chain';
 import { isCompOffLeaveCode, consumeCredits, releaseCredits } from '$lib/server/comp-off';
+import { notifyNewRequest, notifyDecision } from '$lib/server/chat/cards';
 
 const newStatusFor = (decision: 'approve' | 'reject') =>
 	decision === 'approve' ? ('approved' as const) : ('rejected' as const);
@@ -245,5 +246,7 @@ export const POST: RequestHandler = async (event) => {
 		}
 	});
 
+	// Champ Chat: a card in each approver's ESS feed, and every copy kept current.
+	void notifyDecision('leave', applicationId, approver.id).catch((err) => console.error('[chat] card failed:', err));
 	return json({ status: newStatus, reversed: isReversal, balanceDelta });
 };

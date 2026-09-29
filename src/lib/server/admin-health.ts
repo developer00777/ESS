@@ -9,7 +9,7 @@ import {
 	users,
 	employeeProfiles
 } from '$lib/server/db/schema';
-import { and, count, countDistinct, desc, eq, isNotNull, lt } from 'drizzle-orm';
+import { and, count, countDistinct, desc, eq, isNotNull, lt, sql } from 'drizzle-orm';
 import { buildOrgTree } from '$lib/org-chart';
 import type { AdminFacts } from '$lib/admin-issues';
 import { loadStaleConfirmations } from '$lib/server/announcements';
@@ -38,7 +38,8 @@ export async function loadAdminFacts(now = new Date()): Promise<AdminFacts> {
 		calendarYears,
 		[types],
 		hrSet,
-		staleConfirmations
+		staleConfirmations,
+		chatWeek
 	] = await Promise.all([
 		db
 			.select({
@@ -99,8 +100,18 @@ export async function loadAdminFacts(now = new Date()): Promise<AdminFacts> {
 			.from(leaveAllocations)
 			.where(eq(leaveAllocations.isHrSet, true))
 			.groupBy(leaveAllocations.year),
-		loadStaleConfirmations(now)
+		loadStaleConfirmations(now),
+		// Adoption: who wrote at least one message this week, how many, and
+		// Ask HR questions still open.
+		db.execute(sql`
+			select
+				(select count(distinct author_id)::int from chat_messages where created_at > now() - interval '7 days' and author_id is not null) as people,
+				(select count(*)::int from chat_messages where created_at > now() - interval '7 days' and author_id is not null) as messages,
+				(select count(*)::int from chat_channels where kind = 'desk' and desk_status = 'open'
+					and exists (select 1 from chat_messages m where m.channel_id = chat_channels.id)) as desk
+		`)
 	]);
+	const cw = (chatWeek.rows[0] ?? {}) as { people?: number; messages?: number; desk?: number };
 
 	const chart = buildOrgTree(roster.map((p) => ({ ...p, reportsToChief: Boolean(p.reportsToChief) })));
 	const nameById = new Map(roster.map((p) => [p.id, p.fullName]));
@@ -129,6 +140,7 @@ export async function loadAdminFacts(now = new Date()): Promise<AdminFacts> {
 		publishedCalendarYears: calendarYears.map((r) => r.year).sort(),
 		activeLeaveTypes: types?.n ?? 0,
 		hrSetBalancesByYear: Object.fromEntries(hrSet.map((r) => [r.year, r.n])),
-		staleConfirmations
+		staleConfirmations,
+		chat: { activePeople: cw.people ?? 0, messages: cw.messages ?? 0, openDeskQuestions: cw.desk ?? 0 }
 	};
 }

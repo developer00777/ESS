@@ -2,11 +2,11 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { bulkImports, bulkImportRows, users } from '$lib/server/db/schema';
-import { requireRole } from '$lib/server/rbac';
 import { eq, inArray } from 'drizzle-orm';
+import { requireCap } from '$lib/server/capabilities';
 
 export const GET: RequestHandler = async (event) => {
-	requireRole(event, ['super_admin']);
+	requireCap(event, 'people.bulk_import');
 	const importId = event.params.id;
 
 	const [importRow] = await db.select().from(bulkImports).where(eq(bulkImports.id, importId)).limit(1);

@@ -1,9 +1,9 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireRole } from '$lib/server/rbac';
 import { insertPolicyDocument, updatePolicyDocument, logActivity } from '$lib/server/db/mongo';
 import { extractHolidayCalendar, extractLeavePolicy } from '$lib/server/ai/extract-policy';
 import { env } from '$env/dynamic/private';
+import { requireCap } from '$lib/server/capabilities';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10MB — well above any real policy doc/scan
 
@@ -15,7 +15,7 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10MB — well above any real polic
  * (see POST .../publish-holiday-calendar and .../publish-leave-policy).
  */
 export const POST: RequestHandler = async (event) => {
-	const user = requireRole(event, ['super_admin']);
+	const user = requireCap(event, 'policies.publish');
 
 	const form = await event.request.formData();
 	const file = form.get('file');

@@ -2,13 +2,13 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { prohanceSyncs } from '$lib/server/db/schema';
-import { requireRole } from '$lib/server/rbac';
 import { isProhanceConfigured, runProhanceSync, syncWindow } from '$lib/server/prohance';
 import { desc } from 'drizzle-orm';
+import { requireCap } from '$lib/server/capabilities';
 
 /** Sync status + recent runs, for the admin UI and for functional testing. */
 export const GET: RequestHandler = async (event) => {
-	requireRole(event, ['super_admin']);
+	requireCap(event, 'attendance.device_sync');
 
 	const syncs = await db
 		.select()
@@ -34,7 +34,7 @@ const MAX_BACKFILL_DAYS = 190;
  * unauthorized IP is diagnosable from the response alone.
  */
 export const POST: RequestHandler = async (event) => {
-	requireRole(event, ['super_admin']);
+	requireCap(event, 'attendance.device_sync');
 
 	if (!isProhanceConfigured()) {
 		throw error(400, 'ProHance is not configured — set PROHANCE_BASE_URL and the credentials');

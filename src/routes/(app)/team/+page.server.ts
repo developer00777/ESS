@@ -13,13 +13,17 @@ import {
 	employeeProfiles,
 	bulkImports,
 	bulkImportRows,
-	prohanceDays
+	prohanceDays,
+	customRoles
 } from '$lib/server/db/schema';
 import { eq, and, inArray, lte, gte, desc, isNotNull } from 'drizzle-orm';
 import { hashPassword } from '$lib/server/auth';
 import { randomBytes } from 'node:crypto';
 import { logActivity, getPasswordActivity, getUsersWithProfilePicture } from '$lib/server/db/mongo';
-import { requireRole, canCreateRole, canActOnUser } from '$lib/server/rbac';
+import { canActOnUser } from '$lib/server/rbac';
+import { hasCap, hasAnyCap, requireCap } from '$lib/server/capabilities';
+import { createLogin, creatableBaseRoles } from '$lib/server/logins';
+import { syncMembershipFor } from '$lib/server/chat/sync';
 import { type Role, type SessionUser } from '$lib/server/auth';
 import {
 	parseHrTeamSheet,
@@ -109,6 +113,11 @@ function canViewTemporaryPassword(
 	viewer: SessionUser,
 	target: { id: string; role: Role; teamId: string | null }
 ): boolean {
+	// A named role holding the reset privilege (IT Support) sees the pending
+	// password of the accounts it may reset: Employees and Team Leads.
+	if (viewer.role !== 'super_admin' && viewer.role !== 'admin' && hasCap(viewer, 'people.reset_password')) {
+		return target.role === 'employee' || target.role === 'team_lead';
+	}
 	return canEditPersonSettings(viewer, target);
 }
 
@@ -125,6 +134,10 @@ function canEditPersonSettings(
 	viewer: SessionUser,
 	target: { id: string; role: Role; teamId: string | null }
 ): boolean {
+	// Same reach as the settings endpoint's privilege path.
+	if (viewer.role !== 'super_admin' && viewer.role !== 'admin' && hasCap(viewer, 'people.edit_settings')) {
+		return target.role === 'employee' || target.role === 'team_lead';
+	}
 	if (!canActOnUser(viewer, target.id, target.teamId)) return false;
 	if (viewer.role === 'team_lead' && target.role !== 'employee' && target.id !== viewer.id) {
 		return false;
@@ -141,14 +154,23 @@ const PASSWORD_ACTION_LABELS: Record<string, string> = {
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = locals.user!;
-	if (user.role === 'employee') {
+	// Team Leads always reach their team. Anyone else needs a People privilege
+	// — an HR Admin by default, or a named role such as IT Support.
+	const peopleCaps = hasAnyCap(user, [
+		'people.directory',
+		'people.create_login',
+		'people.reset_password',
+		'people.password_activity',
+		'people.bulk_import'
+	]);
+	if (user.role === 'employee' && !peopleCaps) {
 		throw redirect(303, '/dashboard');
 	}
+	const seesEveryone = hasCap(user, 'people.directory');
 
-	const roster =
-		user.role === 'super_admin'
-			? await db.select().from(users)
-			: await db.select().from(users).where(eq(users.teamId, user.teamId ?? ''));
+	const roster = seesEveryone
+		? await db.select().from(users)
+		: await db.select().from(users).where(eq(users.teamId, user.teamId ?? ''));
 
 	const today = new Date().toISOString().slice(0, 10);
 	const todaysAttendance = await db.select().from(attendance).where(eq(attendance.date, today));
@@ -214,12 +236,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 					)
 			: [];
 
-	const creatableRoles: Role[] =
-		user.role === 'super_admin'
-			? ['super_admin', 'admin', 'team_lead', 'employee']
-			: user.role === 'admin'
-				? ['team_lead', 'employee']
-				: ['employee'];
+	const creatableRoles = creatableBaseRoles(user);
+	// Named roles (IT Support, Operations…) a Super Admin can give at creation.
+	const namedRoles = hasCap(user, 'people.assign_roles')
+		? await db
+				.select({ id: customRoles.id, name: customRoles.name, baseRole: customRoles.baseRole, description: customRoles.description })
+				.from(customRoles)
+				.orderBy(customRoles.name)
+		: [];
 
 	// Only shift groups with a currently-published holiday calendar are offered when
 	// creating a login, so every new employee resolves to a real calendar immediately.
@@ -315,6 +339,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 		})
 	}));
 
+	// Names of the named roles on this roster, for the role column and panel.
+	const namedRoleName = new Map(
+		(await db.select({ id: customRoles.id, name: customRoles.name }).from(customRoles)).map((r) => [r.id, r.name])
+	);
+
 	const rosterWithStatus = roster.map((r) => ({
 		id: r.id,
 		fullName: r.fullName,
@@ -336,6 +365,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		weekOffName: weekOffByUser.get(r.id)?.name ?? null,
 		weekOffSummary: weekOffByUser.get(r.id)?.summary ?? 'Every Sat + Sun',
 		role: r.role,
+		customRoleId: r.customRoleId,
+		customRoleName: r.customRoleId ? (namedRoleName.get(r.customRoleId) ?? null) : null,
 		isActive: r.isActive,
 		// The pending temporary password, for people who haven't signed in and set
 		// their own yet. Shown only for accounts this viewer could already reset —
@@ -374,7 +405,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		createdAt: Date;
 	}> = [];
 
-	if (user.role === 'super_admin') {
+	if (hasCap(user, 'people.bulk_import')) {
 		bulkImportsList = await db
 			.select({
 				id: bulkImports.id,
@@ -385,7 +416,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 			})
 			.from(bulkImports)
 			.orderBy(desc(bulkImports.createdAt));
+	}
 
+	if (hasCap(user, 'people.password_activity')) {
 		const entries = await getPasswordActivity();
 		const involvedIds = [
 			...new Set(entries.flatMap((e) => [e.actorUserId, e.targetId].filter((id): id is string => Boolean(id))))
@@ -412,13 +445,27 @@ export const load: PageServerLoad = async ({ locals }) => {
 		onLeave: new Set(onLeaveToday.map((r) => r.userId)).size,
 		pendingApprovals: pendingApprovalRows.length,
 		creatableRoles,
+		namedRoles,
+		canCreateLogin: user.role === 'team_lead' || hasCap(user, 'people.create_login'),
+		canBulkImport: hasCap(user, 'people.bulk_import'),
+		canSeePasswordActivity: hasCap(user, 'people.password_activity'),
+		canDeletePeople: hasCap(user, 'people.delete'),
+		canAuthorRosters: hasCap(user, 'leave.week_off_rosters'),
+		// People who can be someone's concerned HR: the HR roles.
+		hrPeople: allPeople
+			.filter((p) => p.role === 'admin' || p.role === 'super_admin')
+			.map((p) => ({ id: p.id, fullName: p.fullName })),
+		teamLeadTeamId: user.role === 'team_lead' ? user.teamId : null,
 		shiftGroups: groupsWithPublishedCalendar,
 		allShiftGroups,
 		weekOffRosters: weekOffRosterOptions,
 		// Candidates for the reporting-manager and HR pickers in the person panel.
 		allPeople: assignablePeople,
 		// A roster can be scoped to one team, so the author needs the list.
-		allTeams: user.role === 'super_admin' ? await db.select({ id: teams.id, name: teams.name }).from(teams) : [],
+		allTeams:
+			user.role === 'team_lead'
+				? []
+				: await db.select({ id: teams.id, name: teams.name }).from(teams).orderBy(teams.name),
 		// Team leads assign rosters but don't author them. Employees never reach
 		// this page at all — the load redirects them above.
 		canAssignWeekOff: true,
@@ -434,106 +481,35 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
 	createEmployee: async (event) => {
-		const actor = requireRole(event, ['super_admin', 'admin', 'team_lead']);
-		const { request } = event;
-		const form = await request.formData();
-		const email = String(form.get('email') ?? '').toLowerCase();
-		const fullName = String(form.get('fullName') ?? '');
-		const requestedRole = (String(form.get('role') ?? 'employee') || 'employee') as Role;
-		const shiftGroupId = String(form.get('shiftGroupId') ?? '');
-
-		if (!email || !fullName) {
-			return { success: false, message: 'Email and name are required' };
-		}
-
-		if (!shiftGroupId) {
-			return { success: false, message: 'Shift group is required' };
-		}
-
-		if (!canCreateRole(actor, requestedRole)) {
-			return { success: false, message: `${actor.role} accounts may not create ${requestedRole} accounts` };
-		}
-
-		if (actor.role === 'team_lead') {
-			const [team] = await db.select().from(teams).where(eq(teams.id, actor.teamId ?? '')).limit(1);
-			if (!team?.canCreateEmployeeLogins) {
-				return { success: false, message: 'This Team Lead does not have permission to create employee logins' };
-			}
-		}
-
-		const [eligibleGroup] = await db
-			.select({ id: shiftGroups.id })
-			.from(shiftGroups)
-			.innerJoin(holidayCalendars, eq(holidayCalendars.shiftGroupId, shiftGroups.id))
-			.where(and(eq(shiftGroups.id, shiftGroupId), eq(holidayCalendars.status, 'published')))
-			.limit(1);
-
-		if (!eligibleGroup) {
-			return { success: false, message: 'Selected shift group has no published holiday calendar' };
-		}
-
-		const tempPassword = generateTemporaryPassword();
-		const passwordHash = await hashPassword(tempPassword);
-
-		const [created] = await db
-			.insert(users)
-			.values({
-				email,
-				passwordHash,
-				role: requestedRole,
-				fullName,
-				teamId: actor.teamId,
-				reportsTo: actor.id,
-				isActive: true,
-				mustChangePassword: true,
-				// Readable on the roster until this person sets their own password,
-				// so a mail that never arrives doesn't strand the account.
-				temporaryPassword: tempPassword
-			})
-			.returning();
-
-		await db.insert(employeeProfiles).values({
-			userId: created.id,
-			shiftGroupId
+		const actor = event.locals.user;
+		if (!actor) return { success: false, message: 'Sign in again to continue' };
+		const form = await event.request.formData();
+		const str = (k: string) => String(form.get(k) ?? '').trim();
+		// Older clients post a bare `role`; the form now posts `access`.
+		const access = str('access') || `base:${str('role') || 'employee'}`;
+		const result = await createLogin(actor, {
+			email: str('email'),
+			fullName: str('fullName'),
+			access,
+			shiftGroupId: str('shiftGroupId'),
+			teamId: str('teamId') || null,
+			reportsTo: str('reportsTo') || null,
+			hrUserId: str('hrUserId') || null
 		});
-
-		// Same handover as the bulk path. The password stays in the response too:
-		// whoever adds a single joiner is often sitting with them, and mail can be
-		// slow or misconfigured.
-		const mail = await sendWelcomeEmail({
-			fullName: created.fullName,
-			username: created.email,
-			temporaryPassword: tempPassword
-		});
-
-		await logActivity({
-			actorUserId: actor.id,
-			action: 'user.create',
-			targetType: 'user',
-			targetId: created.id,
-			details: {
-				role: requestedRole,
-				shiftGroupId,
-				welcomeEmail: mail.ok ? 'sent' : 'failed',
-				welcomeEmailId: mail.id ?? null,
-				welcomeEmailError: mail.ok ? null : (mail.error ?? null)
-			}
-		});
-
-		return {
-			success: true,
-			tempPassword,
-			email,
-			emailSent: mail.ok,
-			emailError: mail.ok ? null : (mail.error ?? null)
-		};
+		if (result.success) {
+			// Straight into their team and shift channels in Champ Chat.
+			void syncMembershipFor(result.userId).catch((err) => console.error('[chat] sync failed:', err));
+			const { userId: _id, ...rest } = result;
+			return rest;
+		}
+		return result;
 	},
 
 	// Super Admin uploads a spreadsheet with the "HR Team Master data" sheet shape.
 	// Parsed immediately into bulk_import_rows for review — nothing touches `users`
 	// yet (see applyBulkImport below).
 	uploadBulkImport: async (event) => {
-		const actor = requireRole(event, ['super_admin']);
+		const actor = requireCap(event, 'people.bulk_import');
 		const form = await event.request.formData();
 		const file = form.get('file');
 
@@ -711,7 +687,7 @@ export const actions: Actions = {
 	// Creates one `users` row (+ employeeProfiles, + a team if the row is a team_lead)
 	// per "ready" row in the given import. Refuses if any row still needs review.
 	applyBulkImport: async (event) => {
-		const actor = requireRole(event, ['super_admin']);
+		const actor = requireCap(event, 'people.bulk_import');
 		const form = await event.request.formData();
 		const importId = String(form.get('importId') ?? '');
 		if (!importId) return { bulkImportError: 'Missing importId' };
@@ -947,7 +923,7 @@ export const actions: Actions = {
 	// demonstrably not stuck, and resetting them would lock out precisely the
 	// people the import worked for.
 	resendBulkImportLogins: async (event) => {
-		const actor = requireRole(event, ['super_admin']);
+		const actor = requireCap(event, 'people.bulk_import');
 		const form = await event.request.formData();
 		const importId = String(form.get('importId') ?? '');
 		if (!importId) return { bulkImportError: 'Missing importId' };

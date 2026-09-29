@@ -141,6 +141,12 @@ export const users = pgTable('users', {
 	 * who could reset that same account anyway.
 	 */
 	temporaryPassword: text('temporary_password'),
+	/**
+	 * A named role a Super Admin created ("IT Support", "Operations"), adding
+	 * privileges on top of the base `role`. Null = base role only. See
+	 * src/lib/capabilities.ts.
+	 */
+	customRoleId: uuid('custom_role_id').references((): any => customRoles.id),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
 });
@@ -864,3 +870,260 @@ export const announcementReads = pgTable(
 	},
 	(t) => [uniqueIndex('announcement_reads_announcement_user').on(t.announcementId, t.userId)]
 );
+
+// --- Named roles and privileges ---
+
+export const customRoles = pgTable('custom_roles', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	name: text('name').notNull().unique(),
+	description: text('description').default('').notNull(),
+	/** The base role people with this named role start from. Never super_admin. */
+	baseRole: roleEnum('base_role').default('employee').notNull(),
+	/** Privilege keys from src/lib/capabilities.ts. */
+	capabilities: text('capabilities').array().default(sql`'{}'::text[]`).notNull(),
+	createdBy: uuid('created_by').references((): any => users.id),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+/** Small key-value settings the app owns, such as the web push keys. */
+export const appSettings = pgTable('app_settings', {
+	key: text('key').primaryKey(),
+	value: jsonb('value').notNull(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// --- Champ Chat ---
+// Channels, DMs, group chats, the #ask-hr desk and each person's ESS notice
+// feed are all rows here, so one message model serves them all. Team and
+// shift channels are kept in step with the roster by src/lib/server/chat/sync.ts.
+
+export const chatChannelKindEnum = pgEnum('chat_channel_kind', [
+	'channel',
+	'dm',
+	'group',
+	'desk',
+	'system',
+	'announcements'
+]);
+export const chatChannelSourceEnum = pgEnum('chat_channel_source', ['manual', 'team', 'shift', 'everyone']);
+
+export const chatChannels = pgTable('chat_channels', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	kind: chatChannelKindEnum('kind').notNull(),
+	name: text('name').default('').notNull(),
+	topic: text('topic').default('').notNull(),
+	source: chatChannelSourceEnum('source').default('manual').notNull(),
+	/** The team or shift group an automatic channel mirrors. */
+	sourceId: uuid('source_id'),
+	isPrivate: boolean('is_private').default(false).notNull(),
+	readOnly: boolean('read_only').default(false).notNull(),
+	/** Set on a channel a Team Lead created for their team: members come from it. */
+	teamId: uuid('team_id').references(() => teams.id),
+	/**
+	 * Uniqueness key for conversations there must only be one of: a DM
+	 * ("dm:<id>:<id>", ids sorted), a person's ESS feed ("system:<id>"), their
+	 * #ask-hr thread ("desk:<id>"), and the automatic channels.
+	 */
+	uniqueKey: text('unique_key').unique(),
+	/** For a desk thread: whose question it is, and whether HR has closed it. */
+	deskOwnerId: uuid('desk_owner_id').references(() => users.id),
+	deskStatus: text('desk_status'),
+	createdBy: uuid('created_by').references(() => users.id),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+	lastMessageAt: timestamp('last_message_at', { withTimezone: true }).defaultNow().notNull(),
+	archivedAt: timestamp('archived_at', { withTimezone: true })
+});
+
+export const chatMembers = pgTable(
+	'chat_members',
+	{
+		channelId: uuid('channel_id')
+			.references(() => chatChannels.id, { onDelete: 'cascade' })
+			.notNull(),
+		userId: uuid('user_id')
+			.references(() => users.id)
+			.notNull(),
+		role: text('role').default('member').notNull(), // 'member' | 'admin'
+		/** 'sync' = put here by the roster, 'person' = added by someone. */
+		addedBy: text('added_by').default('person').notNull(),
+		lastReadAt: timestamp('last_read_at', { withTimezone: true }).defaultNow().notNull(),
+		mutedUntil: timestamp('muted_until', { withTimezone: true }),
+		/** 'all' | 'mentions' | 'none' */
+		notify: text('notify').default('all').notNull(),
+		lastDigestAt: timestamp('last_digest_at', { withTimezone: true }),
+		joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(t) => [uniqueIndex('chat_members_channel_user').on(t.channelId, t.userId)]
+);
+
+export const chatMessages = pgTable('chat_messages', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	channelId: uuid('channel_id')
+		.references(() => chatChannels.id, { onDelete: 'cascade' })
+		.notNull(),
+	threadRootId: uuid('thread_root_id'),
+	/** Null for messages ESS or Champ posts. */
+	authorId: uuid('author_id').references(() => users.id),
+	/** 'text' | 'card' | 'system' | 'poll' | 'champ' */
+	kind: text('kind').default('text').notNull(),
+	body: text('body').default('').notNull(),
+	/** Structured payload for cards and polls, e.g. { type: 'leave', id }. */
+	card: jsonb('card'),
+	fileId: text('file_id'),
+	fileName: text('file_name'),
+	fileMime: text('file_mime'),
+	fileSize: integer('file_size'),
+	mentions: uuid('mentions').array().default(sql`'{}'::uuid[]`).notNull(),
+	mentionsAll: boolean('mentions_all').default(false).notNull(),
+	/** Sent after the sender confirmed the "looks like Aadhaar/PAN" warning. */
+	sensitive: boolean('sensitive').default(false).notNull(),
+	/** Set when only one person may see the message (a private Champ reply). */
+	visibleTo: uuid('visible_to').references(() => users.id),
+	editedAt: timestamp('edited_at', { withTimezone: true }),
+	deletedAt: timestamp('deleted_at', { withTimezone: true }),
+	hiddenAt: timestamp('hidden_at', { withTimezone: true }),
+	hiddenBy: uuid('hidden_by').references(() => users.id),
+	pinnedAt: timestamp('pinned_at', { withTimezone: true }),
+	pinnedBy: uuid('pinned_by').references(() => users.id),
+	replyCount: integer('reply_count').default(0).notNull(),
+	lastReplyAt: timestamp('last_reply_at', { withTimezone: true }),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+export const chatReactions = pgTable(
+	'chat_reactions',
+	{
+		messageId: uuid('message_id')
+			.references(() => chatMessages.id, { onDelete: 'cascade' })
+			.notNull(),
+		userId: uuid('user_id')
+			.references(() => users.id)
+			.notNull(),
+		emoji: text('emoji').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(t) => [uniqueIndex('chat_reactions_message_user_emoji').on(t.messageId, t.userId, t.emoji)]
+);
+
+export const chatSaved = pgTable(
+	'chat_saved',
+	{
+		messageId: uuid('message_id')
+			.references(() => chatMessages.id, { onDelete: 'cascade' })
+			.notNull(),
+		userId: uuid('user_id')
+			.references(() => users.id)
+			.notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(t) => [uniqueIndex('chat_saved_message_user').on(t.messageId, t.userId)]
+);
+
+export const chatReports = pgTable('chat_reports', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	messageId: uuid('message_id')
+		.references(() => chatMessages.id, { onDelete: 'cascade' })
+		.notNull(),
+	reportedBy: uuid('reported_by')
+		.references(() => users.id)
+		.notNull(),
+	reason: text('reason').notNull(),
+	status: text('status').default('open').notNull(), // 'open' | 'hidden' | 'dismissed'
+	decidedBy: uuid('decided_by').references(() => users.id),
+	decidedAt: timestamp('decided_at', { withTimezone: true }),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+export const chatPollVotes = pgTable(
+	'chat_poll_votes',
+	{
+		messageId: uuid('message_id')
+			.references(() => chatMessages.id, { onDelete: 'cascade' })
+			.notNull(),
+		userId: uuid('user_id')
+			.references(() => users.id)
+			.notNull(),
+		optionIndex: integer('option_index').notNull()
+	},
+	(t) => [uniqueIndex('chat_poll_votes_message_user_option').on(t.messageId, t.userId, t.optionIndex)]
+);
+
+export const chatTodos = pgTable('chat_todos', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	channelId: uuid('channel_id')
+		.references(() => chatChannels.id, { onDelete: 'cascade' })
+		.notNull(),
+	text: text('text').notNull(),
+	createdBy: uuid('created_by').references(() => users.id),
+	doneBy: uuid('done_by').references(() => users.id),
+	doneAt: timestamp('done_at', { withTimezone: true }),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+export const chatReminders = pgTable('chat_reminders', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	userId: uuid('user_id')
+		.references(() => users.id)
+		.notNull(),
+	/** Where it was set, so the reminder can link back. */
+	channelId: uuid('channel_id').references(() => chatChannels.id, { onDelete: 'set null' }),
+	text: text('text').notNull(),
+	remindAt: timestamp('remind_at', { withTimezone: true }).notNull(),
+	sentAt: timestamp('sent_at', { withTimezone: true }),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+export const chatPrefs = pgTable('chat_prefs', {
+	userId: uuid('user_id')
+		.primaryKey()
+		.references(() => users.id),
+	emailDigest: boolean('email_digest').default(true).notNull(),
+	sound: boolean('sound').default(true).notNull(),
+	/** Birthday and work-anniversary posts about this person. */
+	celebrations: boolean('celebrations').default(true).notNull(),
+	push: boolean('push').default(true).notNull(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+export const pushSubscriptions = pgTable('push_subscriptions', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	userId: uuid('user_id')
+		.references(() => users.id)
+		.notNull(),
+	endpoint: text('endpoint').notNull().unique(),
+	p256dh: text('p256dh').notNull(),
+	auth: text('auth').notNull(),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+/** One row per celebration posted, so a restart never posts it twice. */
+export const chatCelebrations = pgTable(
+	'chat_celebrations',
+	{
+		userId: uuid('user_id')
+			.references(() => users.id)
+			.notNull(),
+		kind: text('kind').notNull(), // 'birthday' | 'anniversary'
+		onDate: date('on_date').notNull()
+	},
+	(t) => [uniqueIndex('chat_celebrations_user_kind_date').on(t.userId, t.kind, t.onDate)]
+);
+
+// --- Champ tasks (the Requests tab) ---
+
+export const champTasks = pgTable('champ_tasks', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	fromUser: uuid('from_user')
+		.references(() => users.id)
+		.notNull(),
+	toUser: uuid('to_user')
+		.references(() => users.id)
+		.notNull(),
+	title: text('title').notNull(),
+	dueAt: timestamp('due_at', { withTimezone: true }),
+	status: text('status').default('open').notNull(), // 'open' | 'done' | 'declined' | 'withdrawn'
+	note: text('note'),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+	decidedAt: timestamp('decided_at', { withTimezone: true })
+});

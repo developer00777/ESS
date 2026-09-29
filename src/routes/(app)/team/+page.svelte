@@ -11,6 +11,8 @@
 	import Settings from '@lucide/svelte/icons/settings';
 	import PersonSettingsPanel from '$lib/components/PersonSettingsPanel.svelte';
 	import { WEEKDAY_LABELS } from '$lib/week-off';
+	import { BASE_ROLE_LABEL } from '$lib/capabilities';
+	import { CHIEF_PICK } from '$lib/chief';
 
 	import type { ActionData, PageData } from './$types';
 
@@ -27,12 +29,8 @@
 	const views = $derived<{ id: View; label: string }[]>([
 		{ id: 'roster', label: 'Roster' },
 		{ id: 'weekoff', label: 'Week-off rosters' },
-		...(data.isSuperAdmin
-			? [
-					{ id: 'bulk' as const, label: 'Bulk import' },
-					{ id: 'passwords' as const, label: 'Password activity' }
-				]
-			: [])
+		...(data.canBulkImport ? [{ id: 'bulk' as const, label: 'Bulk import' }] : []),
+		...(data.canSeePasswordActivity ? [{ id: 'passwords' as const, label: 'Password activity' }] : [])
 	]);
 
 	function initialView(): View {
@@ -41,7 +39,8 @@
 		if (form && Object.keys(form).some((k) => k.startsWith('bulkImport'))) return 'bulk';
 		const asked = page.url.searchParams.get('view');
 		if (asked === 'weekoff') return 'weekoff';
-		if ((asked === 'bulk' || asked === 'passwords') && data.isSuperAdmin) return asked;
+		if (asked === 'bulk' && data.canBulkImport) return asked;
+		if (asked === 'passwords' && data.canSeePasswordActivity) return asked;
 		return 'roster';
 	}
 
@@ -57,6 +56,24 @@
 	}
 
 	let showCreateForm = $state(page.url.searchParams.has('create'));
+
+	// svelte-ignore state_referenced_locally
+	let newAccess = $state(`base:${data.creatableRoles.at(-1) ?? 'employee'}`);
+	const accessHint = $derived.by(() => {
+		if (newAccess.startsWith('named:')) {
+			const named = data.namedRoles.find((r) => `named:${r.id}` === newAccess);
+			return named
+				? `${named.description || 'A named role.'} Starts as ${BASE_ROLE_LABEL[named.baseRole]}.`
+				: '';
+		}
+		const role = newAccess.slice(5) as keyof typeof BASE_ROLE_LABEL;
+		return {
+			employee: 'Their own leave, attendance and profile.',
+			team_lead: 'Also approves their team and manages its settings.',
+			admin: 'HR: people, balances, uploads and announcements.',
+			super_admin: 'Everything, including roles and data cleanup.'
+		}[role] ?? '';
+	});
 	let search = $state('');
 	let filter = $state<'all' | 'present' | 'absent'>('all');
 
@@ -467,14 +484,21 @@
 		<button type="button" aria-pressed={filter === 'present'} onclick={() => (filter = 'present')}>Present</button>
 		<button type="button" aria-pressed={filter === 'absent'} onclick={() => (filter = 'absent')}>On leave</button>
 	</div>
-	<button class="ess-btn ess-btn--primary create-btn" onclick={() => (showCreateForm = !showCreateForm)}>
-		<Users size={16} />
-		Add Employee
-	</button>
+	{#if data.canCreateLogin}
+		<button class="ess-btn ess-btn--primary create-btn" onclick={() => (showCreateForm = !showCreateForm)}>
+			<Users size={16} />
+			Add Employee
+		</button>
+	{/if}
 </div>
 
-{#if showCreateForm}
-	<form method="POST" action="?/createEmployee" use:enhance class="create-card">
+{#if showCreateForm && data.canCreateLogin}
+	<!--
+		Access is one choice: a base role, or a named role a Super Admin made
+		(IT Support, Operations…). The named role decides the base role too, so the
+		hint under the field says what the person will actually be able to do.
+	-->
+	<form method="POST" action="?/createEmployee" use:enhance class="create-card create-grid">
 		<label class="ess-field">
 			<span class="ess-label">Full Name</span>
 			<input class="ess-input" name="fullName" required />
@@ -483,17 +507,51 @@
 			<span class="ess-label">Email</span>
 			<input class="ess-input" name="email" type="email" required />
 		</label>
-		{#if data.creatableRoles.length > 1}
+		<label class="ess-field">
+			<span class="ess-label">Access role</span>
+			<select class="ess-select" name="access" bind:value={newAccess}>
+				{#each data.creatableRoles as role (role)}
+					<option value="base:{role}">{BASE_ROLE_LABEL[role]}</option>
+				{/each}
+				{#if data.namedRoles.length > 0}
+					<optgroup label="Named roles">
+						{#each data.namedRoles as named (named.id)}
+							<option value="named:{named.id}">{named.name}</option>
+						{/each}
+					</optgroup>
+				{/if}
+			</select>
+			<span class="ess-help">{accessHint}</span>
+		</label>
+		{#if !data.teamLeadTeamId}
 			<label class="ess-field">
-				<span class="ess-label">Role</span>
-				<select class="ess-select" name="role">
-					{#each data.creatableRoles as role (role)}
-						<option value={role}>{role.replace('_', ' ')}</option>
+				<span class="ess-label">Team</span>
+				<select class="ess-select" name="teamId">
+					<option value="">— none yet —</option>
+					{#each data.allTeams as team (team.id)}
+						<option value={team.id}>{team.name}</option>
 					{/each}
 				</select>
 			</label>
-		{:else}
-			<input type="hidden" name="role" value={data.creatableRoles[0]} />
+			<label class="ess-field">
+				<span class="ess-label">Reports to</span>
+				<select class="ess-select" name="reportsTo">
+					<option value="">— not set —</option>
+					{#if data.canPickChief}<option value={CHIEF_PICK}>Chief</option>{/if}
+					{#each data.allPeople as p (p.id)}
+						<option value={p.id}>{p.fullName}</option>
+					{/each}
+				</select>
+			</label>
+			<label class="ess-field">
+				<span class="ess-label">Concerned HR</span>
+				<select class="ess-select" name="hrUserId">
+					<option value="">— any admin —</option>
+					{#each data.hrPeople as p (p.id)}
+						<option value={p.id}>{p.fullName}</option>
+					{/each}
+				</select>
+			</label>
 		{/if}
 		<label class="ess-field">
 			<span class="ess-label">Shift Group</span>
@@ -509,9 +567,11 @@
 				</select>
 			{/if}
 		</label>
-		<button type="submit" class="ess-btn ess-btn--primary" disabled={data.shiftGroups.length === 0}>
-			Create Login
-		</button>
+		<div class="create-actions">
+			<button type="submit" class="ess-btn ess-btn--primary" disabled={data.shiftGroups.length === 0}>
+				Create Login
+			</button>
+		</div>
 	</form>
 	{#if data.shiftGroups.length === 0}
 		<p class="ess-error section-gap">
@@ -703,7 +763,7 @@
 						<Settings size={15} />
 					</button>
 				{/if}
-				{#if data.isSuperAdmin && person.id !== data.currentUserId}
+				{#if data.canDeletePeople && person.id !== data.currentUserId}
 					{#if confirmingDelete === person.id}
 						<span class="confirm-delete">
 							<button
@@ -781,7 +841,7 @@
 		<div>
 			<h2 class="section-title">Week-off Rosters</h2>
 			<p class="section-sub">
-				{#if data.isSuperAdmin}
+				{#if data.canAuthorRosters}
 					Save a week-off pattern once — all Sundays, Saturday + Sunday, or a rotation that repeats over
 					several weeks — then publish it so team managers can apply it. Assigning a roster in the table
 					above reflects on that employee's leave calendar straight away.
@@ -791,7 +851,7 @@
 				{/if}
 			</p>
 		</div>
-		{#if data.isSuperAdmin}
+		{#if data.canAuthorRosters}
 			<button
 				class="ess-btn ess-btn--secondary"
 				onclick={() => {
@@ -809,7 +869,7 @@
 		<p class="ess-error section-gap">{rosterError}</p>
 	{/if}
 
-	{#if data.isSuperAdmin && showRosterEditor}
+	{#if data.canAuthorRosters && showRosterEditor}
 		<div class="create-card roster-editor">
 			<label class="ess-field">
 				<span class="ess-label">Roster name</span>
@@ -933,7 +993,7 @@
 							<span class="roster-desc">{roster.description}</span>
 						{/if}
 					</div>
-					{#if data.isSuperAdmin}
+					{#if data.canAuthorRosters}
 						<div class="roster-card-actions">
 							<button type="button" class="ess-btn ess-btn--sm ess-btn--ghost" onclick={() => editRoster(roster)}>
 								Edit
@@ -957,7 +1017,7 @@
 		</div>
 	{:else}
 		<p class="ess-empty">
-			{data.isSuperAdmin
+			{data.canAuthorRosters
 				? 'No week-off rosters yet — everyone is on the default Saturday + Sunday.'
 				: 'No published rosters yet. Everyone on your team is on the default Saturday + Sunday.'}
 		</p>
@@ -965,8 +1025,8 @@
 </section>
 {/if}
 
-{#if data.isSuperAdmin}
-	{#if view === 'bulk'}
+{#if data.canBulkImport || data.canSeePasswordActivity}
+	{#if view === 'bulk' && data.canBulkImport}
 	<section class="bulk-import-section">
 		<div class="section-head">
 			<div>
@@ -1369,7 +1429,7 @@
 	</section>
 	{/if}
 
-	{#if view === 'passwords'}
+	{#if view === 'passwords' && data.canSeePasswordActivity}
 	<section class="password-activity-section">
 		<h2 class="section-title">Password Activity</h2>
 		<p class="section-sub">
@@ -1407,6 +1467,19 @@
 {/if}
 
 <style>
+	.create-card.create-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 12px 14px;
+		align-items: start;
+	}
+
+	.create-actions {
+		display: flex;
+		align-items: flex-end;
+		min-height: 62px;
+	}
+
 	.chief {
 		font-weight: 600;
 		color: var(--ess-primary-text);

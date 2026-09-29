@@ -1,5 +1,5 @@
-import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { gateAdminPage } from '$lib/server/capabilities';
 
 /**
  * Design preview panel — Super Admin only. This is the prototype's Tweaks
@@ -9,8 +9,6 @@ import type { PageServerLoad } from './$types';
  * this browser's localStorage.
  */
 export const load: PageServerLoad = async ({ locals }) => {
-	if (locals.user?.role !== 'super_admin') {
-		throw redirect(303, '/dashboard');
-	}
+	gateAdminPage(locals, ['system.design_tweaks']);
 	return {};
 };

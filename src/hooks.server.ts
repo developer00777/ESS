@@ -14,6 +14,9 @@ import { users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { startProhancePoller } from '$lib/server/prohance';
 import { startAnnouncementScheduler } from '$lib/server/announcements';
+import { loadCapabilities } from '$lib/server/capabilities';
+import { startChatScheduler } from '$lib/server/chat/scheduler';
+import type { SessionUser } from '$lib/server/auth';
 
 // Kicks off the ProHance attendance poller with the server process. No-op
 // unless PROHANCE_BASE_URL + Prohance_API_KEY are set; guarded internally
@@ -23,6 +26,26 @@ startProhancePoller();
 // Sends the email copy of scheduled announcements once they go live.
 startAnnouncementScheduler();
 
+// Champ Chat: roster sync, reminders, digests, celebrations, retention.
+startChatScheduler();
+
+/** Privileges ride along on the request user (src/lib/capabilities.ts). */
+async function withCapabilities(user: SessionUser): Promise<SessionUser> {
+	const loaded = await loadCapabilities(user);
+	return { ...user, capabilities: loaded.caps, customRoleName: loaded.customRoleName };
+}
+
+// Background work (chat notifications, cards, Champ in chat) is started with
+// `void promise.catch(...)`; this is the net under anything that slips
+// through, so one failed notification can never take the whole portal down.
+const g = globalThis as { __essRejectionNet?: boolean };
+if (!g.__essRejectionNet) {
+	g.__essRejectionNet = true;
+	process.on('unhandledRejection', (reason) => {
+		console.error('[ess] unhandled rejection:', reason instanceof Error ? (reason.stack ?? reason.message) : reason);
+	});
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.user = null;
 
@@ -30,7 +53,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (accessToken) {
 		const user = await verifyAccessToken(accessToken);
 		if (user) {
-			event.locals.user = user;
+			event.locals.user = await withCapabilities(user);
 			return resolve(event);
 		}
 	}
@@ -53,7 +76,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 				const newAccessToken = await issueAccessToken(sessionUser);
 				const newRefreshToken = await issueRefreshToken(dbUser.id);
 				setAuthCookies(event.cookies, newAccessToken, newRefreshToken);
-				event.locals.user = sessionUser;
+				event.locals.user = await withCapabilities(sessionUser);
 				return resolve(event);
 			}
 		}

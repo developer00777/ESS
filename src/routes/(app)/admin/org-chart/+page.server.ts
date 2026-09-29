@@ -3,6 +3,7 @@ import { db } from '$lib/server/db/postgres';
 import { employeeProfiles, teams, users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { buildOrgTree, type OrgPerson } from '$lib/org-chart';
+import { gateAdminPage } from '$lib/server/capabilities';
 
 /**
  * The reporting hierarchy, read-only.
@@ -13,7 +14,8 @@ import { buildOrgTree, type OrgPerson } from '$lib/org-chart';
  * reports_to, and drawing them would show a line manager for someone who has
  * left.
  */
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
+	gateAdminPage(locals, ['org.view']);
 	const rows = await db
 		.select({
 			id: users.id,

@@ -1,8 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireRole } from '$lib/server/rbac';
 import { parseBiometricSheet, BiometricSheetError } from '$lib/server/biometric-sheet';
 import { resolveBiometricDays } from '$lib/server/biometric-apply';
+import { requireCap } from '$lib/server/capabilities';
 
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024; // a year of punches for a few hundred staff
 
@@ -18,7 +18,7 @@ const MAX_UPLOAD_BYTES = 15 * 1024 * 1024; // a year of punches for a few hundre
  * the window where a staged preview is applied after the underlying data moved.
  */
 export const POST: RequestHandler = async (event) => {
-	requireRole(event, ['super_admin', 'admin']);
+	requireCap(event, 'attendance.biometric_upload');
 
 	const form = await event.request.formData();
 	const file = form.get('file');

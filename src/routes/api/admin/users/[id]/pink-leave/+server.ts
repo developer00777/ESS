@@ -1,10 +1,10 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireRole } from '$lib/server/rbac';
 import { db } from '$lib/server/db/postgres';
 import { employeeProfiles } from '$lib/server/db/schema';
 import { logActivity } from '$lib/server/db/mongo';
 import { eq } from 'drizzle-orm';
+import { requireCap } from '$lib/server/capabilities';
 
 /**
  * HR override for pink-leave eligibility.
@@ -19,7 +19,7 @@ import { eq } from 'drizzle-orm';
  * qualify. Every change is logged — this decides who can take leave.
  */
 export const PUT: RequestHandler = async (event) => {
-	const actor = requireRole(event, ['super_admin', 'admin']);
+	const actor = requireCap(event, 'people.edit_settings');
 	const userId = event.params.id;
 	const { eligible } = await event.request.json();
 

@@ -1,12 +1,14 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireRole, canActOnUser } from '$lib/server/rbac';
+import { requireUser, canActOnUser } from '$lib/server/rbac';
 import { db } from '$lib/server/db/postgres';
-import { users, teams, employeeProfiles, shiftGroups, weekOffRosters } from '$lib/server/db/schema';
+import { users, teams, employeeProfiles, shiftGroups, weekOffRosters, customRoles } from '$lib/server/db/schema';
 import { logActivity } from '$lib/server/db/mongo';
 import { eq, and, ne } from 'drizzle-orm';
 import type { Role } from '$lib/server/auth';
 import { assignRoster, clearRoster } from '$lib/server/week-off';
+import { hasCap, invalidateCapabilities } from '$lib/server/capabilities';
+import { syncMembershipFor } from '$lib/server/chat/sync';
 
 const ROLES: Role[] = ['super_admin', 'admin', 'team_lead', 'employee'];
 
@@ -33,20 +35,31 @@ const ROLES: Role[] = ['super_admin', 'admin', 'team_lead', 'employee'];
  * person closest to the team is best placed to keep right.
  */
 export const PUT: RequestHandler = async (event) => {
-	const actor = requireRole(event, ['super_admin', 'admin', 'team_lead']);
+	const actor = requireUser(event);
+	// A named role (say, Operations) may carry the settings privilege without
+	// an admin base role. It reaches Employees and Team Leads, not admins.
+	const viaPrivilege =
+		actor.role !== 'super_admin' && actor.role !== 'admin' && hasCap(actor, 'people.edit_settings');
+	if (!viaPrivilege && actor.role === 'employee') {
+		throw error(403, 'Insufficient privileges');
+	}
 	const userId = event.params.id;
 	const body = await event.request.json();
 
 	const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
 	if (!target) throw error(404, 'Employee not found');
 
-	if (!canActOnUser(actor, target.id, target.teamId)) {
+	if (viaPrivilege) {
+		if (target.role === 'admin' || target.role === 'super_admin') {
+			throw error(403, "Only an HR Admin or Super Admin can change an admin's settings");
+		}
+	} else if (!canActOnUser(actor, target.id, target.teamId)) {
 		throw error(403, "Insufficient privileges to change this employee's settings");
 	}
 	// A Team Lead runs their own team, not their peers: same-team is not enough
 	// on its own, or one lead could re-shift another, or an admin who happens to
 	// sit on their team. Mirrors the password-reset rule exactly.
-	if (actor.role === 'team_lead' && target.role !== 'employee' && target.id !== actor.id) {
+	if (!viaPrivilege && actor.role === 'team_lead' && target.role !== 'employee' && target.id !== actor.id) {
 		throw error(403, 'Team Leads may only change settings for employees on their team');
 	}
 
@@ -83,6 +96,30 @@ export const PUT: RequestHandler = async (event) => {
 			}
 		}
 		changes.role = { from: target.role, to: body.role };
+	}
+
+	// --- Named role -----------------------------------------------------------
+	// Giving someone a named role (IT Support, Operations) also moves their base
+	// role to the one that named role starts from, so "IT Support" means the
+	// same thing for everyone who holds it. Super Admin only.
+	if (has('customRoleId') && (body.customRoleId || null) !== target.customRoleId) {
+		if (!hasCap(actor, 'people.assign_roles')) {
+			throw error(403, 'Only a Super Admin may give someone a named role');
+		}
+		if (userId === actor.id) throw error(400, 'You cannot change your own role');
+		const customId: string | null = body.customRoleId || null;
+		if (customId) {
+			if (target.role === 'super_admin' && !changes.role) {
+				throw error(400, 'A Super Admin already has every privilege. Change their base role first.');
+			}
+			const [named] = await db.select().from(customRoles).where(eq(customRoles.id, customId)).limit(1);
+			if (!named) throw error(404, 'That named role no longer exists');
+			const currentRole = (changes.role as { to: Role } | undefined)?.to ?? target.role;
+			if (named.baseRole !== currentRole) {
+				changes.role = { from: target.role, to: named.baseRole };
+			}
+		}
+		changes.customRoleId = { from: target.customRoleId, to: customId };
 	}
 
 	// --- Reporting manager ----------------------------------------------------
@@ -235,6 +272,9 @@ export const PUT: RequestHandler = async (event) => {
 	// --- Apply ----------------------------------------------------------------
 	const userPatch: Record<string, unknown> = {};
 	if (changes.role) userPatch.role = (changes.role as { to: Role }).to;
+	if (changes.customRoleId) userPatch.customRoleId = (changes.customRoleId as { to: string | null }).to;
+	// Promoting to Super Admin drops any named role: it would add nothing.
+	if (changes.role && (changes.role as { to: Role }).to === 'super_admin') userPatch.customRoleId = null;
 	if (changes.reportsTo) userPatch.reportsTo = (changes.reportsTo as { to: string | null }).to;
 	if (Object.keys(userPatch).length > 0 || loopBroken.length > 0) {
 		// Cutting the old line and setting the new one are one change: leaving
@@ -292,6 +332,10 @@ export const PUT: RequestHandler = async (event) => {
 	if (Object.keys(changes).length === 0) {
 		return json({ changed: false, changes: {} });
 	}
+
+	invalidateCapabilities(userId);
+	// Shift group moves them between shift channels in Champ Chat.
+	void syncMembershipFor(userId).catch((err) => console.error('[chat] sync failed:', err));
 
 	await logActivity({
 		actorUserId: actor.id,

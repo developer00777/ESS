@@ -1,6 +1,5 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireRole } from '$lib/server/rbac';
 import { db } from '$lib/server/db/postgres';
 import { leaveTypes } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
@@ -10,6 +9,7 @@ import {
 } from '$lib/server/leave-balance-sheet';
 import { resolveLeaveBalances } from '$lib/server/leave-balance-apply';
 import { MAX_UPLOAD_BYTES, resolveYear } from '$lib/server/leave-balance-upload';
+import { requireCap } from '$lib/server/capabilities';
 
 /**
  * Previews an HR leave-balance upload — Super Admin and Admin (HR).
@@ -19,7 +19,7 @@ import { MAX_UPLOAD_BYTES, resolveYear } from '$lib/server/leave-balance-upload'
  * POSTs the same file to ./apply.
  */
 export const POST: RequestHandler = async (event) => {
-	requireRole(event, ['super_admin', 'admin']);
+	requireCap(event, 'leave.set_balances');
 
 	const form = await event.request.formData();
 	const file = form.get('file');

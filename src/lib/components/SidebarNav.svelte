@@ -6,7 +6,7 @@
 	import Wallet from '@lucide/svelte/icons/wallet';
 	import Users from '@lucide/svelte/icons/users';
 	import BookOpen from '@lucide/svelte/icons/book-open';
-	import Megaphone from '@lucide/svelte/icons/megaphone';
+	import MessagesSquare from '@lucide/svelte/icons/messages-square';
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
 	import Moon from '@lucide/svelte/icons/moon';
@@ -25,8 +25,8 @@
 		pictureVersion?: number | null;
 		/** Open admin problems, shown on the Admin Controls row. */
 		adminIssueCount?: number;
-		/** Unread or waiting announcements; red when one is urgent. */
-		announcementBadge?: { count: number; urgent: boolean };
+		/** Unread in Champ Chat (DMs, mentions, ESS notices, announcements); red when urgent. */
+		chatBadge?: { count: number; urgent: boolean };
 	}
 
 	let {
@@ -37,7 +37,7 @@
 		hasPicture = false,
 		pictureVersion,
 		adminIssueCount = 0,
-		announcementBadge = { count: 0, urgent: false }
+		chatBadge = { count: 0, urgent: false }
 	}: Props = $props();
 
 	let theme = $state<'light' | 'dark'>('light');
@@ -75,7 +75,7 @@
 
 	const meItems: NavItem[] = [
 		{ href: '/dashboard', label: 'Home', icon: LayoutDashboard },
-		{ href: '/announcements', label: 'Announcements', icon: Megaphone },
+		{ href: '/chat', label: 'Champ Chat', icon: MessagesSquare },
 		{ href: '/profile', label: 'My Profile', icon: User },
 		{ href: '/leave', label: 'Leave', icon: Calendar },
 		{ href: '/attendance', label: 'Attendance', icon: Clock },
@@ -184,13 +184,13 @@
 								aria-label="{adminIssueCount} need{adminIssueCount === 1 ? 's' : ''} attention"
 								>{adminIssueCount}</span
 							>
-						{:else if item.href === '/announcements' && announcementBadge.count > 0}
+						{:else if item.href === '/chat' && chatBadge.count > 0}
 							<span
 								class="issue-count"
-								class:news={!announcementBadge.urgent}
-								class:urgent={announcementBadge.urgent}
-								aria-label="{announcementBadge.count} unread{announcementBadge.urgent ? ', one is urgent' : ''}"
-								>{announcementBadge.count}</span
+								class:news={!chatBadge.urgent}
+								class:urgent={chatBadge.urgent}
+								aria-label="{chatBadge.count} unread{chatBadge.urgent ? ', something is urgent' : ''}"
+								>{chatBadge.count > 99 ? '99+' : chatBadge.count}</span
 							>
 						{/if}
 					</a>

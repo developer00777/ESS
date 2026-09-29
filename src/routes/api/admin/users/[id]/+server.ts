@@ -1,11 +1,11 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireRole } from '$lib/server/rbac';
 import { db } from '$lib/server/db/postgres';
 import { users } from '$lib/server/db/schema';
 import { logActivity } from '$lib/server/db/mongo';
 import { deleteEmployee } from '$lib/server/admin-cleanup';
 import { eq } from 'drizzle-orm';
+import { requireCap } from '$lib/server/capabilities';
 
 /**
  * Permanently deletes an employee and their own records (profile, leave,
@@ -16,7 +16,7 @@ import { eq } from 'drizzle-orm';
  * as would lock you out with no way back.
  */
 export const DELETE: RequestHandler = async (event) => {
-	const actor = requireRole(event, ['super_admin']);
+	const actor = requireCap(event, 'people.delete');
 	const userId = event.params.id;
 
 	if (userId === actor.id) {

@@ -6,6 +6,7 @@ import { requireUser } from '$lib/server/rbac';
 import { and, eq } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { canReviewStage, isSingleStageFor } from '$lib/server/approval-chain';
+import { notifyNewRequest, notifyDecision } from '$lib/server/chat/cards';
 
 /**
  * SOP §2–§4: HR (or the Reporting Manager) decides an attendance correction.
@@ -148,5 +149,7 @@ export const POST: RequestHandler = async (event) => {
 		}
 	});
 
+	// Champ Chat: a card in each approver's ESS feed, and every copy kept current.
+	void notifyDecision('deviation', deviation.id, reviewer.id).catch((err) => console.error('[chat] card failed:', err));
 	return json({ status: newStatus, attendanceCorrected });
 };

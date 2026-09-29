@@ -4,7 +4,6 @@
 	import { tick } from 'svelte';
 	import LayoutGrid from '@lucide/svelte/icons/layout-grid';
 	import Users from '@lucide/svelte/icons/users';
-	import Megaphone from '@lucide/svelte/icons/megaphone';
 	import Fingerprint from '@lucide/svelte/icons/fingerprint';
 	import Scale from '@lucide/svelte/icons/scale';
 	import BookOpen from '@lucide/svelte/icons/book-open';
@@ -23,7 +22,6 @@
 	const ICONS: Record<AdminTabId, typeof Users> = {
 		overview: LayoutGrid,
 		people: Users,
-		announcements: Megaphone,
 		biometric: Fingerprint,
 		balances: Scale,
 		policies: BookOpen,
@@ -33,8 +31,8 @@
 		tweaks: Palette
 	};
 
-	const isSuperAdmin = $derived(data.adminRole === 'super_admin');
-	const tabs = $derived(visibleAdminTabs(isSuperAdmin));
+	const can = (key: string) => (data.adminCaps as string[]).includes(key);
+	const tabs = $derived(visibleAdminTabs(data.adminCaps));
 	const current = $derived(adminTabForPath(page.url.pathname));
 	const severities = $derived(tabSeverities(data.adminIssues));
 	const strip = $derived(current ? data.adminStrips[current.id] : undefined);
@@ -51,18 +49,33 @@
 
 	const jumps = $derived.by((): Jump[] => [
 		...tabs.map((t) => ({ label: t.label, kind: 'Section' as const, href: t.href })),
-		{ label: 'Create a login', kind: 'Action', href: '/admin/people?create=1' },
-		{ label: 'Post an announcement', kind: 'Action', href: '/admin/announcements' },
-		{ label: 'Week-off rosters', kind: 'Action', href: '/admin/people?view=weekoff' },
-		...(isSuperAdmin
-			? [
-					{ label: 'Bulk import logins', kind: 'Action' as const, href: '/admin/people?view=bulk' },
-					{ label: 'Password activity', kind: 'Action' as const, href: '/admin/people?view=passwords' },
-					{ label: 'Publish a holiday calendar', kind: 'Action' as const, href: '/admin/policies' }
-				]
+		...(can('people.create_login')
+			? [{ label: 'Create a login', kind: 'Action' as const, href: '/admin/people?create=1' }]
 			: []),
-		{ label: 'Upload a biometric report', kind: 'Action', href: '/admin/biometric' },
-		{ label: 'Set leave balances', kind: 'Action', href: '/admin/leave-balances' },
+		...(can('announcements.post')
+			? [{ label: 'Post an announcement', kind: 'Action' as const, href: '/chat?c=announcements&compose=1' }]
+			: []),
+		...(can('people.directory')
+			? [{ label: 'Week-off rosters', kind: 'Action' as const, href: '/admin/people?view=weekoff' }]
+			: []),
+		...(can('people.bulk_import')
+			? [{ label: 'Bulk import logins', kind: 'Action' as const, href: '/admin/people?view=bulk' }]
+			: []),
+		...(can('people.password_activity')
+			? [{ label: 'Password activity', kind: 'Action' as const, href: '/admin/people?view=passwords' }]
+			: []),
+		...(can('policies.publish')
+			? [{ label: 'Publish a holiday calendar', kind: 'Action' as const, href: '/admin/policies' }]
+			: []),
+		...(can('system.roles')
+			? [{ label: 'Create a named role', kind: 'Action' as const, href: '/admin/access-control?new=1' }]
+			: []),
+		...(can('attendance.biometric_upload')
+			? [{ label: 'Upload a biometric report', kind: 'Action' as const, href: '/admin/biometric' }]
+			: []),
+		...(can('leave.set_balances')
+			? [{ label: 'Set leave balances', kind: 'Action' as const, href: '/admin/leave-balances' }]
+			: []),
 		{ label: 'Approve leave requests', kind: 'Action', href: '/leave' }
 	]);
 
@@ -164,9 +177,6 @@
 					<span class="dot" data-sev={sev}>
 						<span class="sr-only">— needs attention</span>
 					</span>
-				{/if}
-				{#if tab.superAdminOnly}
-					<span class="sa" title="Super Admin only">SA</span>
 				{/if}
 			</a>
 		{/each}
@@ -339,15 +349,6 @@
 		background: var(--ess-warning);
 	}
 
-	.sa {
-		font-size: 9.5px;
-		font-weight: 700;
-		letter-spacing: 0.06em;
-		padding: 1px 5px;
-		border-radius: 5px;
-		background: var(--ess-primary-soft);
-		color: var(--ess-primary-text);
-	}
 
 	.sr-only {
 		position: absolute;
