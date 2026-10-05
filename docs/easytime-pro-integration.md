@@ -2,9 +2,12 @@
 
 How biometric attendance gets from EasyTime Pro into the ESS portal.
 
-**Method:** EasyTime Pro's scheduled **Custom Export** writes a tab-separated file;
-a small scheduled job on that machine POSTs the file to the portal, which matches
-each punch to an employee and updates their attendance.
+**Two ways in, one endpoint.** Either the **Chrome bridge**
+(`integrations/easytime-bridge/`, §7) reads punches from EasyTime Pro's
+transactions API through a logged-in browser on the office network and posts them
+as JSON, or EasyTime Pro's scheduled **Custom Export** writes a tab-separated file
+and a small scheduled job on that machine POSTs the file (§1). Either way the
+portal matches each punch to an employee and updates their attendance.
 
 **The join key is `{emp_code}` — and only `{emp_code}`.** It must equal the
 employee's code in the portal (e.g. `CIPL2666`). Nothing else identifies the
@@ -86,7 +89,10 @@ POST https://<portal-domain>/api/attendance/easytime-import
 Authorization: Bearer <TOKEN>
 ```
 
-Two accepted body formats — use whichever is easier.
+Send the file as the raw request body with `Content-Type: text/tab-separated-values`.
+Do **not** send it as a form (`curl -F`, multipart) or as `text/plain`: in
+production SvelteKit refuses cross-site form posts, and those requests get
+`403 Cross-site POST form submissions are forbidden` before reaching the endpoint.
 
 **Recommended: PowerShell, uploading every file not yet sent.** Uploading only
 the newest file loses punches whenever a run is missed or the machine reboots.
@@ -107,9 +113,10 @@ New-Item -ItemType Directory -Force -Path $Sent | Out-Null
 
 foreach ($File in Get-ChildItem "$Export\*.txt" | Sort-Object LastWriteTime) {
   try {
-    $Response = curl.exe -sS -X POST $Url `
+    $Response = curl.exe -sS -X POST "$($Url)?filename=$([uri]::EscapeDataString($File.Name))" `
       -H "Authorization: Bearer $Token" `
-      -F "file=@$($File.FullName)" 2>&1
+      -H "Content-Type: text/tab-separated-values" `
+      --data-binary "@$($File.FullName)" 2>&1
 
     if ($Response -match '"rowCount"') {
       Add-Content $LogFile "$(Get-Date -f s)  OK    $($File.Name)  $Response"
@@ -136,11 +143,13 @@ schtasks /Create /TN "ESS attendance upload" /SC MINUTE /MO 30 ^
 # Linux/macOS — raw body upload
 curl -X POST "https://<portal-domain>/api/attendance/easytime-import?filename=$(basename "$FILE")" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: text/plain" \
+  -H "Content-Type: text/tab-separated-values" \
   --data-binary @"$FILE"
 ```
 
-Max upload size is 10 MB (roughly 100k punch rows).
+Max upload size is 512 KB — the portal server's default request limit
+(adapter-node `BODY_SIZE_LIMIT`), roughly 5,000 punch rows. A half-hourly export is
+far smaller; anything larger gets `413`.
 
 ### Smoke test before scheduling anything
 
@@ -153,19 +162,22 @@ Confirms the URL, token and network path in one step, with no real data:
 
 curl.exe -X POST "https://<portal-domain>/api/attendance/easytime-import" `
   -H "Authorization: Bearer <TOKEN>" `
-  -F "file=@$env:TEMP\ess-test.txt"
+  -H "Content-Type: text/tab-separated-values" `
+  --data-binary "@$env:TEMP\ess-test.txt"
 ```
 
 Expected:
 
 ```json
-{"importId":"...","rowCount":1,"matchedCount":1,"unmatchedCount":0,"unmatchedEmpCodes":[]}
+{"importId":"...","rowCount":1,"matchedCount":1,"unmatchedCount":0,"duplicateCount":0,"unmatchedEmpCodes":[]}
 ```
 
 - `matchedCount: 1` → everything works end to end.
 - `unmatchedCount: 1` → reached the portal fine, but that employee code isn't in
   it. Fix the code (§2), then re-send.
 - `401` → token or header problem.
+- `403 Cross-site POST form submissions are forbidden` → the file was sent as a
+  form (`-F`) or as `text/plain`; send it as above.
 - Connection error / timeout → the office network can't reach the portal; the
   Railway domain needs allowing outbound.
 
@@ -234,8 +246,10 @@ Where the code lives and appears:
    `punch_state` 0/4 (or text containing "in") is a check-in, 1/5 (or "out") a
    check-out. If the device sends no state, the first punch of the day is the
    check-in and later ones the check-out.
-5. **Stores every raw punch** — matched or not — in `device_punches`, with all 16
-   template fields kept for audit.
+5. **Stores every raw punch once** — matched or not — in `device_punches`, with
+   all 16 template fields kept for audit. Each punch is keyed by employee code and
+   minute (`dedupe_key`); one already applied is counted in `duplicateCount`
+   instead of being stored again.
 6. **Responds** with a summary:
 
 ```json
@@ -244,6 +258,7 @@ Where the code lives and appears:
   "rowCount": 3,
   "matchedCount": 2,
   "unmatchedCount": 1,
+  "duplicateCount": 0,
   "unmatchedEmpCodes": ["CIPL9999"]
 }
 ```
@@ -252,9 +267,13 @@ Where the code lives and appears:
 device but not in the portal — set the employee's code, then re-send the same
 file and the punches will attach.
 
-**Re-sending is safe.** Applying a punch only ever moves check-in earlier and
-check-out later, so re-posting the same file (or overlapping date ranges) never
-double-counts or corrupts a day. Overlap deliberately rather than risk gaps.
+**Re-sending is safe.** A punch the portal has already applied is counted in
+`duplicateCount` and skipped; one it stored unmatched is applied once its
+employee code is set. Applying only ever moves check-in earlier and check-out
+later, and imports are serialised with a database lock, so re-posting the same
+file, overlapping date ranges, or the file job and the Chrome bridge sending the
+same punch never double-counts or corrupts a day. Overlap deliberately rather
+than risk gaps.
 
 ### Night shifts are paired into one shift
 
@@ -298,7 +317,9 @@ re-reads an implausibly long window as the following morning, so these resolve t
 | Status | Meaning |
 |---|---|
 | `401` | Missing, wrong, or revoked token |
-| `400` | Empty file, file over 10 MB, or no valid rows (usually a template mismatch) |
+| `400` | Empty file, invalid JSON, or no valid rows (usually a template mismatch) |
+| `403` | `Cross-site POST form submissions are forbidden` — sent as a form or `text/plain`; send TSV or JSON as above |
+| `413` | Body over 512 KB, or more than 1000 JSON punches in one request |
 | `200` | Accepted — check `unmatchedCount` in the body |
 
 ---
@@ -383,12 +404,16 @@ outbound and therefore does need a long-running process.
 
 ## 6. Notes for whoever maintains this
 
-- Ingestion code: `src/lib/server/easytime-import.ts` (parser + token check),
+- Ingestion code: `src/lib/server/easytime-import.ts` (TSV and JSON parsers,
+  token check, dedupe key), `src/lib/server/easytime-ingest.ts` (matching,
+  dedupe, applying, feed status),
   `src/routes/api/attendance/easytime-import/+server.ts` (endpoint).
-- Tables: `attendance_import_tokens`, `attendance_imports` (one row per file),
-  `device_punches` (one row per punch), `employee_profiles.employee_code`.
+- Tables: `attendance_import_tokens`, `attendance_imports` (one row per file or
+  batch), `device_punches` (one row per punch, unique `dedupe_key`),
+  `employee_profiles.employee_code`.
 - The earlier live ADMS push endpoint (`/iclock/cdata`) has been removed — this
-  file-export path replaced it, so there is exactly one way attendance enters.
+  endpoint replaced it, so there is exactly one way attendance enters. The file job
+  and the Chrome bridge both post here.
 - **Timezone.** Devices report local wall-clock time with no zone, so the parser
   pins it to IST (`+05:30`) explicitly rather than trusting the server's zone —
   Railway runs UTC, so without this the same file would import differently in
@@ -398,3 +423,49 @@ outbound and therefore does need a long-running process.
   from the timestamp. Deriving it would put a 03:30 night-shift punch on the
   previous day on an IST server, and the portal displays office hours in IST for
   every viewer regardless of where they open it.
+
+---
+
+## 7. The Chrome bridge (no IT job, no API license)
+
+`integrations/easytime-bridge/` is a Chrome extension for one office PC. It reads
+`GET /iclock/api/transactions/` on EasyTime Pro using the EasyTime login already
+open in that Chrome profile, and posts the punches here as JSON. Install, badges
+and troubleshooting are in its README.
+
+**JSON contract**
+
+```
+POST /api/attendance/easytime-import
+Authorization: Bearer <TOKEN>
+Content-Type: application/json
+
+{
+  "agent": "EasyTime bridge 1.0.0 · day 2026-10-06",
+  "punches": [
+    {
+      "id": 9001,
+      "emp_code": "CIPL2666",
+      "punch_time": "2026-10-06 09:05:30",
+      "punch_state": "0",
+      "verify_type": 1,
+      "terminal_sn": "CQZ7232",
+      "terminal_alias": "Main gate",
+      "area_alias": "Bangalore"
+    }
+  ]
+}
+```
+
+- Field names are EasyTime's own. `emp_code` and `punch_time`
+  (`YYYY-MM-DD HH:mm[:ss]`, device local time) are required; the rest are kept
+  for audit.
+- At most 1000 punches per request (`413` above that); `agent` is recorded as the
+  batch name.
+- The response is the same as for a file, including `duplicateCount`.
+
+**Status check.** `GET /api/attendance/easytime-import` with the same bearer token
+returns the token's label, its last batch and the latest punch it delivered. The
+extension uses it as its connection test and as a heartbeat, which keeps the
+token's *last checked in* time fresh under Admin Controls → Biometric → Device
+feed.
