@@ -155,6 +155,13 @@
       "when": 1790683273490,
       "tag": "0021_chat_and_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791233248857,
+      "tag": "0022_device_punch_dedupe",
+      "breakpoints": true
     }
   ]
 }
