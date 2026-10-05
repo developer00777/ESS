@@ -379,6 +379,71 @@
 {/if}
 
 <div class="current-state">
+	<h2>Device feed</h2>
+	{#if data.feedTokens.length === 0}
+		<p class="hint">No import token is active, so nothing can post punches here yet.</p>
+	{:else}
+		{#each data.feedTokens as token (token.id)}
+			<p class="hint">
+				<strong>{token.label}</strong> —
+				{token.lastUsedAt
+					? `last checked in ${new Date(token.lastUsedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`
+					: 'never used'}
+			</p>
+		{/each}
+	{/if}
+
+	{#if data.feedUnmatched.length > 0}
+		<div class="callout danger">
+			<AlertTriangle size={16} />
+			<div>
+				<strong>Punches from these employee codes matched nobody in the last 30 days:</strong>
+				<p class="codes">
+					{data.feedUnmatched.map((u) => `${u.empCode} (${u.punches})`).join(', ')}
+				</p>
+				<p>
+					Set the code on the employee’s profile, then re-send those dates from the EasyTime
+					bridge — punches already applied are skipped, so nothing is double-counted.
+				</p>
+			</div>
+		</div>
+	{/if}
+
+	{#if data.feedImports.length === 0}
+		<p class="hint">Nothing has arrived from the device feed yet.</p>
+	{:else}
+		<div class="table-scroll">
+			<table>
+				<thead>
+					<tr>
+						<th>When</th>
+						<th>Source</th>
+						<th>Batch</th>
+						<th>Rows</th>
+						<th>Applied</th>
+						<th>Already had</th>
+						<th>Unmatched</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each data.feedImports as imp (imp.id)}
+						<tr>
+							<td>{new Date(imp.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
+							<td>{imp.tokenLabel ?? '—'}</td>
+							<td>{imp.filename ?? '—'}</td>
+							<td>{imp.rowCount}</td>
+							<td>{imp.matchedCount}</td>
+							<td>{imp.duplicateCount}</td>
+							<td class:danger-text={imp.unmatchedCount > 0}>{imp.unmatchedCount}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+	{/if}
+</div>
+
+<div class="current-state">
 	<h2>Recent manual uploads</h2>
 	{#if data.recentUploads.length === 0}
 		<p class="hint">No biometric report has been uploaded by hand yet.</p>
