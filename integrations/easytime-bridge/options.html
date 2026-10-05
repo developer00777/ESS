@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>EasyTime → ESS settings</title>
+		<link rel="stylesheet" href="styles.css" />
+	</head>
+	<body class="options">
+		<main>
+			<h1>EasyTime → ESS bridge</h1>
+			<p class="hint">
+				Runs on one office PC. It reads punches from EasyTime Pro using the login in this Chrome
+				profile and sends them to the ESS portal.
+			</p>
+
+			<form id="settings">
+				<label>
+					EasyTime Pro address
+					<input id="easytimeUrl" type="url" placeholder="http://192.168.1.20:8088" required />
+					<span class="hint">
+						The address you open EasyTime Pro at on this PC. Stay logged in to it in this Chrome
+						profile.
+					</span>
+				</label>
+
+				<label>
+					ESS portal address
+					<input id="essUrl" type="url" required />
+				</label>
+
+				<label>
+					Import token
+					<input id="token" type="password" autocomplete="off" spellcheck="false" required />
+					<span class="hint">
+						Generated on the ESS server with <code>npm run import-token:generate</code>. Kept only
+						in this browser.
+					</span>
+				</label>
+
+				<div class="row">
+					<label>
+						Sync every (minutes)
+						<input id="intervalMinutes" type="number" min="1" max="60" required />
+					</label>
+					<label>
+						First sync reads back (days)
+						<input id="lookbackDays" type="number" min="1" max="62" required />
+					</label>
+					<label>
+						Punches per request
+						<input id="chunkSize" type="number" min="50" max="1000" required />
+					</label>
+				</div>
+
+				<div class="actions">
+					<button type="submit" class="primary">Save</button>
+					<button type="button" id="test-easytime">Test EasyTime</button>
+					<button type="button" id="test-ess">Test ESS</button>
+				</div>
+			</form>
+
+			<pre id="result" class="result" hidden></pre>
+
+			<details class="danger-zone">
+				<summary>Start over</summary>
+				<p class="hint">
+					Forgets how far the bridge has read. The next sync reads the look-back period again;
+					punches ESS already has are skipped.
+				</p>
+				<button type="button" id="reset">Forget sync position</button>
+			</details>
+		</main>
+
+		<script type="module" src="options.js"></script>
+	</body>
+</html>
