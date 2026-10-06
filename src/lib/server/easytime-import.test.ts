@@ -4,8 +4,28 @@ import {
 	parseEasyTimeExport,
 	parseEasyTimeRecords,
 	punchDedupeKey,
-	mergePunch
+	mergePunch,
+	envTokenHash,
+	hashImportToken
 } from './easytime-import';
+
+describe('envTokenHash', () => {
+	afterEach(() => {
+		delete env.EASYTIME_IMPORT_TOKEN;
+	});
+
+	test('is off when the variable is unset or too short to be a real secret', () => {
+		expect(envTokenHash()).toBeNull();
+		env.EASYTIME_IMPORT_TOKEN = 'short-token';
+		expect(envTokenHash()).toBeNull();
+	});
+
+	test('hashes a long enough token, ignoring surrounding space', () => {
+		const token = 'a'.repeat(43);
+		env.EASYTIME_IMPORT_TOKEN = ` ${token}\n`;
+		expect(envTokenHash()).toBe(hashImportToken(token));
+	});
+});
 
 const tsvLine = (empCode: string, date: string, time: string, state = '0') =>
 	[empCode, 'Asha', 'Rao', 'D1', 'Ops', date, time, '1', state, '-', '-', 'Office', 'Gate', 'SN1', '-', '0'].join(

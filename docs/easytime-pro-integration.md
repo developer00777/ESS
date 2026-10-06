@@ -211,6 +211,12 @@ Notes:
 - To revoke, set `revoked_at` on that row in `attendance_import_tokens`; requests
   with it then fail `401`. Several tokens may be active at once, so a rotation
   can be done with no downtime: add the new one, switch the job, revoke the old.
+- **Alternative without database access:** set a random value of 32+ characters
+  as `EASYTIME_IMPORT_TOKEN` on the Railway app service. The first request that
+  presents it registers its hash as a token labelled *Railway variable
+  EASYTIME_IMPORT_TOKEN*, so it appears on the Device feed and is revoked the
+  same way (`revoked_at`). Changing the variable registers the new value as
+  another token; revoke the old row.
 
 ---
 

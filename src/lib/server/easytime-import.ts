@@ -8,6 +8,26 @@ export function hashImportToken(token: string): string {
 	return createHash('sha256').update(token).digest('hex');
 }
 
+export const ENV_TOKEN_LABEL = 'Railway variable EASYTIME_IMPORT_TOKEN';
+const MIN_ENV_TOKEN_LENGTH = 32;
+
+export function envTokenHash(): string | null {
+	const token = (env.EASYTIME_IMPORT_TOKEN ?? '').trim();
+	return token.length >= MIN_ENV_TOKEN_LENGTH ? hashImportToken(token) : null;
+}
+
+async function registerEnvToken(candidateHash: Buffer): Promise<void> {
+	const hash = envTokenHash();
+	if (!hash) return;
+	const expected = Buffer.from(hash);
+	if (expected.length !== candidateHash.length || !timingSafeEqual(expected, candidateHash)) return;
+
+	await db
+		.insert(attendanceImportTokens)
+		.values({ label: ENV_TOKEN_LABEL, tokenHash: hash })
+		.onConflictDoNothing({ target: attendanceImportTokens.tokenHash });
+}
+
 /**
  * Validates the shared import token against stored hashes using a constant-time
  * compare per row (SHA-256 hashes are fixed-length, so this is safe).
@@ -15,6 +35,7 @@ export function hashImportToken(token: string): string {
 export async function verifyImportToken(token: string | null): Promise<string | null> {
 	if (!token) return null;
 	const candidateHash = Buffer.from(hashImportToken(token));
+	await registerEnvToken(candidateHash);
 
 	const rows = await db
 		.select({ id: attendanceImportTokens.id, tokenHash: attendanceImportTokens.tokenHash })

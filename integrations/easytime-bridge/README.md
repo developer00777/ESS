@@ -37,13 +37,21 @@ the EasyTime server.
 - Chrome allowed to use **Developer mode** (`chrome://extensions`).
 - A **dedicated Chrome profile** for the bridge, logged in to EasyTime Pro — ideally with a
   read-only EasyTime user.
-- An **ESS import token** for this PC, generated on the Railway *app* service:
+- An **ESS import token** for this PC. Either:
+  - generate a random value and set it as the `EASYTIME_IMPORT_TOKEN` variable on the Railway
+    *app* service (32+ characters; Railway redeploys the app):
 
-  ```sh
-  npm run import-token:generate -- "EasyTime Chrome bridge - <PC name>"
-  ```
+    ```sh
+    node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+    ```
 
-  The token is shown once. Keep it in a password manager; never send it over chat or email.
+  - or create one in the database from the Railway *app* service:
+
+    ```sh
+    npm run import-token:generate -- "EasyTime Chrome bridge - <PC name>"
+    ```
+
+  Keep the token in a password manager; never send it over chat or email.
 - Every employee's code in ESS matching their EasyTime `emp_code`.
 
 ## Install
