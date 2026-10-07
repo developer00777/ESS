@@ -1133,3 +1133,140 @@ export const champTasks = pgTable('champ_tasks', {
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	decidedAt: timestamp('decided_at', { withTimezone: true })
 });
+
+// --- Champ Hub: tasks, meetings and Zoom ---
+// One task model for everything: a task someone writes for themselves, one a
+// lead gives a report, one made from a chat message, and one published from a
+// meeting's minutes. Where a task came from is kept on the row (meetingId or
+// sourceMessageId, plus the exact line as sourceQuote) so it still reads right
+// after the minutes or the message are gone. Who may give whom a task lives in
+// src/lib/tasks/rules.ts.
+
+export const taskStatusEnum = pgEnum('task_status', ['todo', 'in_progress', 'in_review', 'done']);
+export const taskPriorityEnum = pgEnum('task_priority', ['low', 'medium', 'high']);
+export const meetingStateEnum = pgEnum('meeting_state', ['upcoming', 'waiting', 'ready', 'published', 'no_summary']);
+
+export const meetings = pgTable('meetings', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	/** Zoom's per-occurrence UUID. A recurring meeting shares its id, never this. Null for pasted notes. */
+	zoomUuid: text('zoom_uuid').unique(),
+	zoomMeetingId: text('zoom_meeting_id'),
+	hostId: uuid('host_id').references(() => users.id),
+	/** As Zoom gave it, for a host who has no login linked yet. */
+	hostEmail: text('host_email'),
+	topic: text('topic').notNull(),
+	startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+	durationMin: integer('duration_min'),
+	state: meetingStateEnum('state').default('waiting').notNull(),
+	/** { overview, details: [{ label, text }], nextSteps: string[] } */
+	summary: jsonb('summary').$type<{ overview: string; details: { label: string; text: string }[]; nextSteps: string[] }>(),
+	/** The model's raw output and name, kept so a review can be audited later. */
+	extraction: jsonb('extraction'),
+	/** 'zoom' | 'pasted' */
+	source: text('source').default('zoom').notNull(),
+	/** Attendees ESS could match to a login. */
+	attendeeIds: uuid('attendee_ids').array().default(sql`'{}'::uuid[]`).notNull(),
+	/** Attendees it could not, as Zoom named them. */
+	guestNames: text('guest_names').array().default(sql`'{}'::text[]`).notNull(),
+	publishedAt: timestamp('published_at', { withTimezone: true }),
+	publishedBy: uuid('published_by').references(() => users.id),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+export const tasks = pgTable('tasks', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	title: text('title').notNull(),
+	description: text('description').default('').notNull(),
+	/** Null = Unassigned, on the creator's team board. */
+	assigneeId: uuid('assignee_id').references(() => users.id),
+	createdBy: uuid('created_by')
+		.references(() => users.id)
+		.notNull(),
+	status: taskStatusEnum('status').default('todo').notNull(),
+	priority: taskPriorityEnum('priority').default('medium').notNull(),
+	dueDate: date('due_date'),
+	blocked: boolean('blocked').default(false).notNull(),
+	/** Set while the assignee has yet to accept a task from outside their reporting line. */
+	requestState: text('request_state'), // null | 'pending' | 'declined'
+	requestNote: text('request_note'),
+	/** Fractional index within a column (src/lib/tasks/rules.ts rankBetween). */
+	rank: text('rank').default('i').notNull(),
+	/** Bumped on every change; a write that names an older version is refused. */
+	version: integer('version').default(1).notNull(),
+	meetingId: uuid('meeting_id').references(() => meetings.id, { onDelete: 'set null' }),
+	sourceMessageId: uuid('source_message_id').references(() => chatMessages.id, { onDelete: 'set null' }),
+	sourceChannelId: uuid('source_channel_id').references(() => chatChannels.id, { onDelete: 'set null' }),
+	/** The line from the minutes or the message, kept verbatim. */
+	sourceQuote: text('source_quote'),
+	completedAt: timestamp('completed_at', { withTimezone: true }),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+export const taskSubtasks = pgTable('task_subtasks', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	taskId: uuid('task_id')
+		.references(() => tasks.id, { onDelete: 'cascade' })
+		.notNull(),
+	title: text('title').notNull(),
+	done: boolean('done').default(false).notNull(),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+/** Comments and the activity line ("moved this to In review") share one list. */
+export const taskEvents = pgTable('task_events', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	taskId: uuid('task_id')
+		.references(() => tasks.id, { onDelete: 'cascade' })
+		.notNull(),
+	actorId: uuid('actor_id').references(() => users.id),
+	/** 'comment' | 'activity' */
+	kind: text('kind').default('activity').notNull(),
+	body: text('body').notNull(),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+export const meetingItems = pgTable('meeting_items', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	meetingId: uuid('meeting_id')
+		.references(() => meetings.id, { onDelete: 'cascade' })
+		.notNull(),
+	title: text('title').notNull(),
+	ownerId: uuid('owner_id').references(() => users.id),
+	/** The name the minutes used, shown when no login matched it. */
+	ownerHeard: text('owner_heard'),
+	dueDate: date('due_date'),
+	priority: taskPriorityEnum('priority').default('medium').notNull(),
+	/** Which next step it came from; null for one the host added. */
+	stepIndex: integer('step_index'),
+	confidence: numeric('confidence', { precision: 4, scale: 3 }),
+	included: boolean('included').default(true).notNull(),
+	taskId: uuid('task_id').references(() => tasks.id, { onDelete: 'set null' }),
+	position: integer('position').default(0).notNull()
+});
+
+/** A Zoom user who is not matched by work email, linked to a login by hand. */
+export const zoomUserLinks = pgTable('zoom_user_links', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	/** Lower-cased email or Zoom display name. */
+	zoomKey: text('zoom_key').notNull().unique(),
+	userId: uuid('user_id')
+		.references(() => users.id)
+		.notNull(),
+	linkedBy: uuid('linked_by').references(() => users.id),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+/** "Later" on a Today item: hidden for this person until `until`. */
+export const hubDismissals = pgTable(
+	'hub_dismissals',
+	{
+		userId: uuid('user_id')
+			.references(() => users.id)
+			.notNull(),
+		needKey: text('need_key').notNull(),
+		until: timestamp('until', { withTimezone: true }).notNull()
+	},
+	(t) => [uniqueIndex('hub_dismissals_user_key').on(t.userId, t.needKey)]
+);

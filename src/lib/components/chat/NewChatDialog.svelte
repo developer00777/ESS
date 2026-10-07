@@ -19,7 +19,10 @@
 	} = $props();
 
 	type Person = { id: string; fullName: string; role: string };
-	let tab = $state<'message' | 'channel' | 'browse'>('message');
+	let tab = $state<'message' | 'group' | 'channel' | 'browse'>('message');
+	let groupName = $state('');
+	// What Chat rules allow this person, from Admin Controls.
+	let abilities = $state<{ groups: boolean; dmRule: string; dmAnyone: boolean }>({ groups: true, dmRule: 'their team, their manager and HR', dmAnyone: false });
 	let people = $state<Person[]>([]);
 	let q = $state('');
 	let picked = $state<string[]>([]);
@@ -34,6 +37,9 @@
 		const unlock = lockPageScroll();
 		void fetch('/api/chat/people').then(async (r) => (people = r.ok ? await r.json() : []));
 		void fetch('/api/chat/browse').then(async (r) => (browse = r.ok ? await r.json() : []));
+		void fetch('/api/chat/abilities').then(async (r) => {
+			if (r.ok) abilities = await r.json();
+		});
 		return unlock;
 	});
 
@@ -56,8 +62,20 @@
 	}
 
 	async function start() {
-		const r = picked.length === 1 ? await post('dm', { userId: picked[0] }) : await post('groups', { memberIds: picked });
+		const r = await post('dm', { userId: picked[0] });
 		if (r?.id) onopen(r.id);
+	}
+
+	async function startGroup() {
+		const r = await post('groups', { memberIds: picked, name: groupName });
+		if (r?.id) onopen(r.id);
+	}
+
+	function switchTab(t: typeof tab) {
+		tab = t;
+		err = '';
+		// A direct message is with one person; keep only the first pick.
+		if (t === 'message' && picked.length > 1) picked = picked.slice(0, 1);
 	}
 
 	async function create() {
@@ -66,7 +84,8 @@
 	}
 
 	function toggle(id: string) {
-		picked = picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id];
+		if (tab === 'message') picked = picked.includes(id) ? [] : [id];
+		else picked = picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id];
 	}
 </script>
 
@@ -76,9 +95,10 @@
 <div class="dialog" role="dialog" aria-modal="true" aria-label="New conversation">
 	<header>
 		<div class="tabs" role="tablist">
-			<button type="button" role="tab" aria-selected={tab === 'message'} onclick={() => (tab = 'message')}>Message people</button>
-			{#if scope !== 'none'}<button type="button" role="tab" aria-selected={tab === 'channel'} onclick={() => (tab = 'channel')}>New channel</button>{/if}
-			<button type="button" role="tab" aria-selected={tab === 'browse'} onclick={() => (tab = 'browse')}>Browse channels</button>
+			<button type="button" role="tab" aria-selected={tab === 'message'} onclick={() => switchTab('message')}>Direct message</button>
+			{#if abilities.groups}<button type="button" role="tab" aria-selected={tab === 'group'} onclick={() => switchTab('group')}>New group</button>{/if}
+			{#if scope !== 'none'}<button type="button" role="tab" aria-selected={tab === 'channel'} onclick={() => switchTab('channel')}>New channel</button>{/if}
+			<button type="button" role="tab" aria-selected={tab === 'browse'} onclick={() => switchTab('browse')}>Browse channels</button>
 		</div>
 		<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={onclose} aria-label="Close"><X size={16} /></button>
 	</header>
@@ -94,6 +114,15 @@
 				<p class="note">No public channels to join right now. Team and shift channels you belong to are already in your sidebar.</p>
 			{/each}
 		{:else}
+			{#if tab === 'group'}
+				<div class="fields">
+					<label class="ess-field">
+						<span class="ess-label">Group name (optional)</span>
+						<input class="ess-input" bind:value={groupName} maxlength="60" placeholder="Night shift QA" />
+					</label>
+					<p class="note">Pick at least two people, up to 20. Without a name the group is called by its members' first names.</p>
+				</div>
+			{/if}
 			{#if tab === 'channel'}
 				<div class="fields">
 					<label class="ess-field">
@@ -114,13 +143,13 @@
 				{#each shown as p (p.id)}
 					<li>
 						<label class:on={picked.includes(p.id)}>
-							<input type="checkbox" checked={picked.includes(p.id)} onchange={() => toggle(p.id)} />
+							<input type={tab === 'message' ? 'radio' : 'checkbox'} name="pick" checked={picked.includes(p.id)} onchange={() => toggle(p.id)} />
 							<Avatar userId={p.id} fullName={p.fullName} size="sm" />
 							<span>{p.fullName}</span>
 						</label>
 					</li>
 				{:else}
-					<p class="note">Nobody matches. Employees can message their team, their manager and HR.</p>
+					<p class="note">Nobody matches.{#if !abilities.dmAnyone} You can message {abilities.dmRule}.{/if}</p>
 				{/each}
 			</ul>
 		{/if}
@@ -129,9 +158,9 @@
 		<footer>
 			<span class="note">{picked.length} selected</span>
 			{#if tab === 'message'}
-				<button type="button" class="ess-btn ess-btn--primary" disabled={busy || picked.length === 0} onclick={start}>
-					{picked.length > 1 ? 'Start group' : 'Start chat'}
-				</button>
+				<button type="button" class="ess-btn ess-btn--primary" disabled={busy || picked.length !== 1} onclick={start}>Start chat</button>
+			{:else if tab === 'group'}
+				<button type="button" class="ess-btn ess-btn--primary" disabled={busy || picked.length < 2 || picked.length > 20} onclick={startGroup}>Create group</button>
 			{:else}
 				<button type="button" class="ess-btn ess-btn--primary" disabled={busy || !name.trim()} onclick={create}>Create channel</button>
 			{/if}

@@ -25,7 +25,7 @@ describe('effective privileges', () => {
 	});
 
 	it('shows an HR Admin the tabs they could before named roles existed', () => {
-		expect(visibleAdminTabs(defaultCapabilities('admin')).map((t) => t.id)).toEqual(['overview', 'people', 'biometric', 'balances', 'org', 'access']);
+		expect(visibleAdminTabs(defaultCapabilities('admin')).map((t) => t.id)).toEqual(['overview', 'people', 'biometric', 'balances', 'org', 'access', 'chat']);
 	});
 });
 

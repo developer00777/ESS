@@ -11,6 +11,8 @@
 	import ShieldCheck from '@lucide/svelte/icons/shield-check';
 	import DatabaseZap from '@lucide/svelte/icons/database-zap';
 	import Palette from '@lucide/svelte/icons/palette';
+	import MessagesSquare from '@lucide/svelte/icons/messages-square';
+	import Video from '@lucide/svelte/icons/video';
 	import Search from '@lucide/svelte/icons/search';
 	import { adminTabForPath, visibleAdminTabs, type AdminTabId } from '$lib/admin-tabs';
 	import { tabSeverities } from '$lib/admin-issues';
@@ -27,6 +29,8 @@
 		policies: BookOpen,
 		org: Network,
 		access: ShieldCheck,
+		chat: MessagesSquare,
+		zoom: Video,
 		cleanup: DatabaseZap,
 		tweaks: Palette
 	};

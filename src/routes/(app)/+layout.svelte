@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import SidebarNav from '$lib/components/SidebarNav.svelte';
 	import { chat } from '$lib/chat/client.svelte';
+	import { hub } from '$lib/hub/client.svelte';
 
 	let { data, children } = $props();
 
@@ -13,11 +14,13 @@
 	let started = $state(false);
 	$effect(() => {
 		chat.start(data.chatBadge.count);
+		// Champ Hub's counts (requests, minutes, due work) ride the same stream.
+		hub.start();
 		started = true;
 	});
 	const chatBadge = $derived({
-		count: started ? chat.badge : data.chatBadge.count,
-		urgent: started ? chat.channels.some((c) => c.kind === 'announcements' && c.mentions > 0) : data.chatBadge.urgent
+		count: (started ? chat.badge : data.chatBadge.count) + hub.counts.work,
+		urgent: (started ? chat.channels.some((c) => c.kind === 'announcements' && c.mentions > 0) : data.chatBadge.urgent) || hub.counts.urgent
 	});
 </script>
 

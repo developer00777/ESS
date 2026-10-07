@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import X from '@lucide/svelte/icons/x';
 	import Search from '@lucide/svelte/icons/search';
 	import MessageItem from './MessageItem.svelte';
@@ -11,7 +12,8 @@
 		meName,
 		nameOf,
 		onopen,
-		onclose
+		onclose,
+		initialQuery = ''
 	}: {
 		mode: 'search' | 'saved';
 		meId: string;
@@ -19,9 +21,11 @@
 		nameOf: (channelId: string) => string;
 		onopen: (m: ChatMessageView) => void;
 		onclose: () => void;
+		/** Words to search for straight away (Champ Hub's Ctrl K). */
+		initialQuery?: string;
 	} = $props();
 
-	let q = $state('');
+	let q = $state(untrack(() => initialQuery));
 	let results = $state<ChatMessageView[]>([]);
 	let busy = $state(false);
 	let searched = $state(false);
@@ -36,7 +40,8 @@
 	}
 
 	$effect(() => {
-		if (mode === 'saved') void run();
+		// Only the starting query runs on its own; after that, Search does.
+		if (mode === 'saved' || untrack(() => q.trim().length >= 2)) void run();
 		else {
 			results = [];
 			searched = false;

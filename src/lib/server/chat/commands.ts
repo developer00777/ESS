@@ -7,6 +7,8 @@ import { parseDay, parseReminder, parseSlash, SLASH_COMMANDS } from '$lib/chat/r
 import { addTodo, sendMessage, type SendResult } from './messages';
 import { membership } from './access';
 import { workStatuses } from './presence';
+import { parseTaskCommand } from '$lib/tasks/rules';
+import { matchName } from '$lib/server/name-match';
 
 /**
  * Slash commands. The ESS lookups (/balance, /whoisout, /leave) answer with a
@@ -21,7 +23,7 @@ function privateReply(viewer: SessionUser, channelId: string, body: string, card
 	return sendMessage(viewer, { channelId, body, card, kind: card ? 'card' : 'system', visibleTo: viewer.id, asSystem: true });
 }
 
-export async function runCommand(viewer: SessionUser, channelId: string, text: string, threadRootId: string | null): Promise<SendResult | null> {
+export async function runCommand(viewer: SessionUser, channelId: string, text: string, threadRootId: string | null, mentions: string[] = []): Promise<SendResult | null> {
 	const cmd = parseSlash(text);
 	if (!cmd) return null;
 	if (!(await membership(channelId, viewer.id))) return { ok: false, message: 'You are not in this conversation' };
@@ -109,6 +111,47 @@ export async function runCommand(viewer: SessionUser, channelId: string, text: s
 		case 'champ': {
 			if (!cmd.question) return privateReply(viewer, channelId, 'Ask a question after /champ, for example /champ next holiday.');
 			return sendMessage(viewer, { channelId, threadRootId, body: `@Champ ${cmd.question}`, mentions: [] });
+		}
+
+		case 'task': {
+			const parsed = parseTaskCommand(cmd.text, now);
+			if (!parsed) return privateReply(viewer, channelId, 'Say what the task is, for example /task @Sneha check the list by Fri.');
+			const { assignableFor, createTask } = await import('$lib/server/tasks/service');
+			// Someone picked from the @ list arrives as an id; a typed name is matched
+			// against the people you can give tasks to.
+			let ownerId: string | null = viewer.id;
+			if (parsed.ownerName) {
+				const groups = await assignableFor(viewer);
+				const pool = [...groups.direct, ...groups.request];
+				const picked = mentions.find((id) => pool.some((p) => p.id === id));
+				const byName = matchName(parsed.ownerName, pool.map((p) => ({ key: p.id, fullName: p.fullName })));
+				ownerId = picked ?? (byName.status === 'matched' ? byName.key : null);
+				if (!ownerId) {
+					return privateReply(
+						viewer,
+						channelId,
+						byName.status === 'ambiguous' ? `More than one person matches "${parsed.ownerName}". Pick them from the @ list.` : `You can't give tasks to "${parsed.ownerName}". Pick someone from the @ list.`
+					);
+				}
+			}
+			const r = await createTask(viewer, { title: parsed.title, assigneeId: ownerId, dueDate: parsed.due, sourceChannelId: channelId, sourceQuote: text.trim() });
+			if (!r.ok) return privateReply(viewer, channelId, r.message);
+			const t = r.task;
+			const due = t.dueDate ? ` · due ${fmt(t.dueDate)}` : '';
+			return sendMessage(viewer, {
+				channelId,
+				threadRootId,
+				body: `${viewer.fullName} gave a task to ${t.assignee?.fullName ?? 'nobody yet'}: ${t.title}`,
+				kind: 'card',
+				asSystem: true,
+				card: {
+					type: 'notice',
+					tone: 'info',
+					title: t.requestState === 'pending' ? `Task request for ${t.assignee?.fullName}` : `Task for ${t.assignee?.fullName}`,
+					text: `${t.title}${due}`,
+					href: `/hub/tasks?task=${t.id}`
+				}
+			});
 		}
 
 		default:

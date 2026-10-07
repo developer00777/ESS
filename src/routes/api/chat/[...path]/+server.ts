@@ -6,7 +6,8 @@ import { and, asc, eq } from 'drizzle-orm';
 import { hasCap } from '$lib/server/capabilities';
 import { getMongo, logActivity } from '$lib/server/db/mongo';
 import { publish, kv } from '$lib/server/chat/bus';
-import { channelMemberIds, dmCandidates, ensureDesk, membership } from '$lib/server/chat/access';
+import { channelMemberIds, dmCandidates, ensureDesk, loadChatPolicy, membership } from '$lib/server/chat/access';
+import { describeDmRule } from '$lib/chat/policy';
 import {
 	addMembers,
 	browseChannels,
@@ -96,6 +97,11 @@ export const GET: RequestHandler = async (event) => {
 	if (a === 'sidebar') return json(await sidebarFor(user));
 	if (a === 'people') return json((await dmCandidates(user)).map((p) => ({ id: p.id, fullName: p.fullName, role: p.role, teamId: p.teamId })));
 	if (a === 'browse') return json(await browseChannels(user));
+	// What the + dialog may offer this person.
+	if (a === 'abilities') {
+		const policy = await loadChatPolicy();
+		return json({ groups: policy.groups === 'everyone' || hasCap(user, 'chat.create_groups'), dmRule: describeDmRule(policy), dmAnyone: hasCap(user, 'chat.dm_anyone') || policy.dm.everyone });
+	}
 	if (a === 'saved') return json(await listSaved(user));
 	if (a === 'search') return json(await search(user, q.get('q') ?? ''));
 	if (a === 'messages') return json(await getMessages(user, (q.get('ids') ?? '').split(',').filter((x) => UUID.test(x)).slice(0, 50)));
@@ -162,7 +168,8 @@ export const POST: RequestHandler = async (event) => {
 		const text = String(data.body ?? '');
 		const threadRootId = data.threadRootId ? id(String(data.threadRootId)) : null;
 		if (text.trim().startsWith('/') && !data.file) {
-			const r = await runCommand(user, channelId, text, threadRootId);
+			const mentionIds = Array.isArray(data.mentions) ? data.mentions.map(String).filter((x) => UUID.test(x)) : [];
+			const r = await runCommand(user, channelId, text, threadRootId, mentionIds);
 			if (r) return send(r);
 		}
 		let file = null;
@@ -217,7 +224,7 @@ export const POST: RequestHandler = async (event) => {
 	}
 
 	if (a === 'dm') return send(await openDm(user, id(String(data.userId))));
-	if (a === 'groups') return send(await createGroup(user, Array.isArray(data.memberIds) ? data.memberIds.map(String) : []));
+	if (a === 'groups') return send(await createGroup(user, Array.isArray(data.memberIds) ? data.memberIds.map(String) : [], String(data.name ?? '')));
 	if (a === 'desk') {
 		const d = await ensureDesk(user.id);
 		return json({ ok: true, id: d.id });

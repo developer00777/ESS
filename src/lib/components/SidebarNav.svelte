@@ -25,7 +25,7 @@
 		pictureVersion?: number | null;
 		/** Open admin problems, shown on the Admin Controls row. */
 		adminIssueCount?: number;
-		/** Unread in Champ Chat (DMs, mentions, ESS notices, announcements); red when urgent. */
+		/** Champ Hub: unread chat (DMs, mentions, ESS notices, announcements) plus requests, minutes and due work; red when urgent. */
 		chatBadge?: { count: number; urgent: boolean };
 	}
 
@@ -75,7 +75,7 @@
 
 	const meItems: NavItem[] = [
 		{ href: '/dashboard', label: 'Home', icon: LayoutDashboard },
-		{ href: '/chat', label: 'Champ Chat', icon: MessagesSquare },
+		{ href: '/hub', label: 'Champ Hub', icon: MessagesSquare },
 		{ href: '/profile', label: 'My Profile', icon: User },
 		{ href: '/leave', label: 'Leave', icon: Calendar },
 		{ href: '/attendance', label: 'Attendance', icon: Clock },
@@ -184,7 +184,7 @@
 								aria-label="{adminIssueCount} need{adminIssueCount === 1 ? 's' : ''} attention"
 								>{adminIssueCount}</span
 							>
-						{:else if item.href === '/chat' && chatBadge.count > 0}
+						{:else if item.href === '/hub' && chatBadge.count > 0}
 							<span
 								class="issue-count"
 								class:news={!chatBadge.urgent}

@@ -18,7 +18,16 @@
 	 * portal's own endpoint.
 	 */
 
-	let { firstName, onwaiting }: { firstName: string; onwaiting?: (n: number) => void } = $props();
+	let { firstName, onwaiting, initialQuestion = '' }: { firstName: string; onwaiting?: (n: number) => void; /** Asked once on open (Champ Hub's "Ask Champ"). */ initialQuestion?: string } = $props();
+
+	let asked = '';
+	$effect(() => {
+		const q = initialQuestion.trim();
+		if (!q || q === asked) return;
+		asked = q;
+		tab = 'chat';
+		void ask(q);
+	});
 
 	type Turn =
 		| { role: 'user'; text: string }
@@ -128,7 +137,7 @@
 
 	async function press(card: ChampCard, action: string, note?: string) {
 		if (card.kind === 'announcement_draft') {
-			await goto(`/chat?c=announcements&compose=1&draft=${encodeURIComponent(JSON.stringify(card.payload))}`);
+			await goto(`/hub/c/announcements?compose=1&draft=${encodeURIComponent(JSON.stringify(card.payload))}`);
 			return;
 		}
 		if (action === 'reject' && note === undefined) {
@@ -577,6 +586,12 @@
 		align-items: flex-end;
 		padding: 10px;
 		border-top: 1px solid var(--ess-border);
+	}
+	.foot textarea:focus,
+	.foot textarea:focus-visible {
+		outline: none;
+		box-shadow: none;
+		border-color: color-mix(in oklab, var(--ess-primary) 70%, var(--ess-border-strong));
 	}
 	.foot textarea {
 		flex: 1;

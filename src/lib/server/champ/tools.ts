@@ -2,7 +2,7 @@ import { db } from '$lib/server/db/postgres';
 import {
 	attendance,
 	attendanceDeviations,
-	champTasks,
+	tasks,
 	compOffCredits,
 	customRoles,
 	employeeProfiles,
@@ -373,22 +373,23 @@ const myRequests: Tool = {
 	allowed: (c) => c.mode === 'panel',
 	run: async (_a, c) => {
 		const rows = await db
-			.select({ t: champTasks, from: users.fullName })
-			.from(champTasks)
-			.innerJoin(users, eq(users.id, champTasks.fromUser))
-			.where(or(eq(champTasks.toUser, c.user.id), eq(champTasks.fromUser, c.user.id)))
-			.orderBy(desc(champTasks.createdAt))
+			.select({ t: tasks, from: users.fullName })
+			.from(tasks)
+			.innerJoin(users, eq(users.id, tasks.createdBy))
+			.where(or(eq(tasks.assigneeId, c.user.id), eq(tasks.createdBy, c.user.id)))
+			.orderBy(desc(tasks.createdAt))
 			.limit(30);
 		return {
 			data: rows.map(({ t, from }) => ({
-				direction: t.toUser === c.user.id ? 'given to you' : 'raised by you',
+				direction: t.assigneeId === c.user.id ? 'given to you' : 'raised by you',
 				from,
 				title: t.title,
-				due: t.dueAt?.toISOString() ?? null,
-				status: t.status,
-				note: t.note
+				due: t.dueDate,
+				status: t.requestState === 'pending' ? 'waiting for them to accept' : t.requestState === 'declined' ? 'declined' : t.status.replace('_', ' '),
+				blocked: t.blocked,
+				note: t.requestNote
 			})),
-			note: 'The Requests tab shows these with buttons.'
+			note: 'Champ Hub shows these on the task board, with buttons.'
 		} as ToolResult;
 	}
 };
@@ -506,7 +507,7 @@ const draftTask: Tool = {
 			kind: 'task',
 			label: 'Task · not assigned yet',
 			title: `For ${person.fullName}: ${str(a.title)}`,
-			lines: [due ? `Due ${fmt(due)}` : 'No due date', 'Shows in their Requests tab and ESS feed.'],
+			lines: [due ? `Due ${fmt(due)}` : 'No due date', 'Goes on their Champ Hub board and ESS feed. Someone outside your reporting line gets it as a request.'],
 			payload: { toUserId: person.id, title: str(a.title).slice(0, 300), due },
 			buttons: [{ action: 'assign', label: 'Assign task', primary: true }],
 			doneText: `Assigned to ${person.fullName}`

@@ -22,6 +22,8 @@ export type AdminTabId =
 	| 'policies'
 	| 'org'
 	| 'access'
+	| 'chat'
+	| 'zoom'
 	| 'cleanup'
 	| 'tweaks';
 
@@ -92,6 +94,22 @@ export const ADMIN_TABS: AdminTab[] = [
 		blurb: 'Named roles such as IT Support, what each one may do, and who holds them.',
 		group: 2,
 		caps: ['access.view', 'system.roles']
+	},
+	{
+		id: 'chat',
+		href: '/admin/chat-rules',
+		label: 'Chat rules',
+		blurb: 'Who employees can message directly, and who can start group chats.',
+		group: 2,
+		caps: ['chat.manage_rules']
+	},
+	{
+		id: 'zoom',
+		href: '/admin/zoom',
+		label: 'Zoom',
+		blurb: 'Connect Zoom so meeting minutes arrive in Champ Hub, and link Zoom names to logins.',
+		group: 2,
+		caps: ['system.zoom']
 	},
 	{
 		id: 'cleanup',

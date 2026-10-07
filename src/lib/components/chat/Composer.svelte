@@ -291,9 +291,15 @@
 		border-radius: 12px;
 		background: var(--ess-field-bg);
 	}
+	/* One quiet cue for the whole box. The portal-wide :focus-visible ring
+	   would otherwise draw a second box around the textarea inside it. */
 	.box:focus-within {
-		border-color: var(--ess-primary);
-		box-shadow: var(--ess-focus-ring);
+		border-color: color-mix(in oklab, var(--ess-primary) 70%, var(--ess-border-strong));
+	}
+	textarea:focus,
+	textarea:focus-visible {
+		outline: none;
+		box-shadow: none;
 	}
 	textarea {
 		flex: 1;
