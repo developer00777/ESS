@@ -1,6 +1,7 @@
 import { loadConfig } from './config.js';
 import {
 	CATCH_UP_ALARM,
+	clearUnmatched,
 	queueResend,
 	resetCursor,
 	runSync,
@@ -12,7 +13,7 @@ const SYNC_ALARM = 'sync';
 
 async function scheduleSync(force = false) {
 	const { intervalMinutes } = await loadConfig();
-	const period = Math.min(60, Math.max(1, Math.round(Number(intervalMinutes)) || 5));
+	const period = Math.min(1440, Math.max(1, Math.round(Number(intervalMinutes)) || 5));
 	const existing = await chrome.alarms.get(SYNC_ALARM);
 	if (!force && existing?.periodInMinutes === period) return;
 	await chrome.alarms.create(SYNC_ALARM, { periodInMinutes: period, delayInMinutes: 0.1 });
@@ -49,6 +50,9 @@ async function handle(message) {
 			return null;
 		case 'resend':
 			queueResend(message.from, message.to);
+			return null;
+		case 'clear-unmatched':
+			await clearUnmatched();
 			return null;
 		case 'reset':
 			await resetCursor();

@@ -23,11 +23,16 @@
 		</dl>
 
 		<section id="unmatched" class="callout" hidden>
-			<strong>Employee codes ESS does not know</strong>
-			<p id="unmatched-codes" class="codes"></p>
+			<strong>Employee codes ESS does not know (<span id="unmatched-count">0</span>)</strong>
+			<ul id="unmatched-codes" class="codes"></ul>
 			<p class="hint">
-				Set these codes on the employees’ ESS profiles, then re-send the dates they punched.
+				Set these codes on the employees’ ESS profiles, then re-send the dates shown. A code leaves
+				this list once ESS accepts a punch for it.
 			</p>
+			<div class="actions">
+				<button type="button" id="resend-unmatched">Re-send <span id="unmatched-range"></span></button>
+				<button type="button" id="clear-unmatched">Clear list</button>
+			</div>
 		</section>
 
 		<div class="actions">

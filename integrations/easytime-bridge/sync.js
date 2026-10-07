@@ -115,8 +115,7 @@ async function doSync(trigger) {
 			message: more ? 'Catching up. The next batch starts in a moment.' : 'Up to date.',
 			lastSuccessAt: Date.now(),
 			lastRun: summarize(run),
-			position: describe(state.cursor),
-			...(run.posted > 0 ? { unmatchedCodes: [...run.codes] } : {})
+			position: describe(state.cursor)
 		});
 	} catch (err) {
 		if (err instanceof EasyTimeError && err.kind === 'bad-response') {
@@ -126,8 +125,7 @@ async function doSync(trigger) {
 			state: 'error',
 			kind: err?.kind ?? 'unknown',
 			message: err?.message ?? String(err),
-			lastRun: summarize(run),
-			...(run.posted > 0 ? { unmatchedCodes: [...run.codes] } : {})
+			lastRun: summarize(run)
 		});
 	} finally {
 		clearInterval(keepAlive);
@@ -366,10 +364,59 @@ async function postAll(ctx, records, label) {
 		ctx.run.unmatched += result.unmatchedCount ?? 0;
 		ctx.run.duplicate += result.duplicateCount ?? 0;
 		for (const code of result.unmatchedEmpCodes ?? []) ctx.run.codes.add(code);
+		await rememberUnmatched(chunk, result.unmatchedEmpCodes ?? []);
 		i += chunk.length;
 	}
 
 	if (punches.length > 0) await chrome.storage.local.set({ heartbeatAt: Date.now() });
+}
+
+// Unknown codes are kept across runs, with the punch dates to re-send, until ESS accepts a punch for them.
+async function rememberUnmatched(chunk, unmatchedCodes) {
+	const { unmatched: previous } = await chrome.storage.local.get('unmatched');
+	const unmatched = { ...(previous ?? {}) };
+	const unknown = new Map(unmatchedCodes.map((code) => [codeKey(code), String(code)]));
+	const days = new Map();
+
+	for (const record of chunk) {
+		const key = codeKey(record.emp_code);
+		const day = punchTimeOf(record).slice(0, 10);
+		if (!unknown.has(key)) {
+			delete unmatched[key];
+			continue;
+		}
+		const seen = days.get(key);
+		days.set(key, seen ? { from: min(seen.from, day), to: max(seen.to, day) } : { from: day, to: day });
+	}
+
+	const chunkFrom = punchTimeOf(chunk[0]).slice(0, 10);
+	const chunkTo = punchTimeOf(chunk[chunk.length - 1]).slice(0, 10);
+	for (const [key, code] of unknown) {
+		const range = days.get(key) ?? { from: chunkFrom, to: chunkTo };
+		const seen = unmatched[key];
+		unmatched[key] = seen
+			? { code, from: min(seen.from, range.from), to: max(seen.to, range.to) }
+			: { code, ...range };
+	}
+
+	await chrome.storage.local.set({ unmatched });
+}
+
+export async function clearUnmatched() {
+	if (inFlight) await inFlight;
+	await chrome.storage.local.remove('unmatched');
+}
+
+function codeKey(code) {
+	return String(code ?? '').trim().toUpperCase();
+}
+
+function min(a, b) {
+	return a < b ? a : b;
+}
+
+function max(a, b) {
+	return a > b ? a : b;
 }
 
 async function heartbeat(ctx) {

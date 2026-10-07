@@ -118,6 +118,18 @@ header {
 	margin: 6px 0;
 }
 
+ul.codes {
+	list-style: none;
+	padding: 0;
+	max-height: 180px;
+	overflow-y: auto;
+	user-select: text;
+}
+
+ul.codes .hint {
+	font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
 .hint {
 	color: var(--muted);
 	font-size: 12px;

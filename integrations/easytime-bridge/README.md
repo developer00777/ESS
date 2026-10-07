@@ -56,7 +56,8 @@ the EasyTime server.
 
 ## Install
 
-1. Copy this `easytime-bridge` folder to the PC, e.g. `C:\ESS\easytime-bridge`.
+1. Copy this `easytime-bridge` folder to the PC, e.g. `C:\ESS\easytime-bridge`, a path that does not
+   depend on the Windows username. Never move or delete it: Chrome loads it from there on every start.
 2. In the bridge profile open `chrome://extensions`, switch on **Developer mode**, click
    **Load unpacked** and pick the folder.
 3. Pin the extension (puzzle-piece icon → pin) so its badge is visible.
@@ -72,7 +73,7 @@ Open the extension's **Settings**:
 | EasyTime Pro address | The address you open EasyTime Pro at, e.g. `http://192.168.1.20:8088` |
 | ESS portal address | `https://champ-hr.com` |
 | Import token | The token generated above |
-| Sync every | 5 minutes (default) |
+| Sync every | 5 minutes (default); up to 1440. `360` = every 6 hours |
 | First sync reads back | 7 days (default) |
 | Punches per request | 500 (default) |
 

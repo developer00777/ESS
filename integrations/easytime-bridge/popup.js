@@ -27,10 +27,38 @@ function render(status = {}) {
 	$('last-run').textContent = run
 		? `${run.posted} sent · ${run.matched} applied · ${run.duplicate} already in ESS · ${run.unmatched} unmatched`
 		: '—';
+}
 
-	const codes = status.unmatchedCodes ?? [];
-	$('unmatched').hidden = codes.length === 0;
-	$('unmatched-codes').textContent = codes.join(', ');
+let unmatchedRange = null;
+
+function renderUnmatched(unmatched = {}) {
+	const entries = Object.values(unmatched).sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0));
+	$('unmatched').hidden = entries.length === 0;
+	$('unmatched-count').textContent = String(entries.length);
+
+	const list = $('unmatched-codes');
+	list.replaceChildren(
+		...entries.map(({ code, from, to }) => {
+			const item = document.createElement('li');
+			const dates = document.createElement('span');
+			dates.className = 'hint';
+			dates.textContent = from === to ? ` ${from}` : ` ${from} → ${to}`;
+			item.append(code, dates);
+			return item;
+		})
+	);
+
+	unmatchedRange = entries.length
+		? {
+				from: entries.reduce((m, e) => (e.from < m ? e.from : m), entries[0].from),
+				to: entries.reduce((m, e) => (e.to > m ? e.to : m), entries[0].to)
+			}
+		: null;
+	$('unmatched-range').textContent = unmatchedRange
+		? unmatchedRange.from === unmatchedRange.to
+			? unmatchedRange.from
+			: `${unmatchedRange.from} → ${unmatchedRange.to}`
+		: '';
 }
 
 async function send(message) {
@@ -70,8 +98,29 @@ $('resend').addEventListener('submit', async (event) => {
 	}
 });
 
+$('resend-unmatched').addEventListener('click', async () => {
+	if (!unmatchedRange) return;
+	try {
+		await send({ type: 'resend', ...unmatchedRange });
+		feedback(`Re-send of ${unmatchedRange.from} → ${unmatchedRange.to} queued. Progress shows above.`);
+	} catch (err) {
+		feedback(err.message);
+	}
+});
+
+$('clear-unmatched').addEventListener('click', async () => {
+	try {
+		await send({ type: 'clear-unmatched' });
+		feedback('List cleared. Codes still unknown come back on their next punch or re-send.');
+	} catch (err) {
+		feedback(err.message);
+	}
+});
+
 chrome.storage.onChanged.addListener((changes, area) => {
-	if (area === 'local' && changes.status) render(changes.status.newValue);
+	if (area !== 'local') return;
+	if (changes.status) render(changes.status.newValue);
+	if (changes.unmatched) renderUnmatched(changes.unmatched.newValue);
 });
 
 const today = istDate();
@@ -79,4 +128,7 @@ $('resend-from').max = today;
 $('resend-to').max = today;
 $('resend-to').value = today;
 
-chrome.storage.local.get('status').then(({ status }) => render(status));
+chrome.storage.local.get(['status', 'unmatched']).then(({ status, unmatched }) => {
+	render(status);
+	renderUnmatched(unmatched);
+});
