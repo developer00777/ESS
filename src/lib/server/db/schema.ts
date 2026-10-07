@@ -505,37 +505,43 @@ export const attendanceImports = pgTable('attendance_imports', {
 	rowCount: integer('row_count').notNull(),
 	matchedCount: integer('matched_count').notNull(),
 	unmatchedCount: integer('unmatched_count').notNull(),
+	duplicateCount: integer('duplicate_count').default(0).notNull(),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 });
 
 // Every raw punch line from the export, kept for audit/replay whether or not its
 // emp_code resolved to an employee. Unmatched rows stay here so HR can fix the
 // employee code and re-apply rather than losing the punch.
-export const devicePunches = pgTable('device_punches', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	importId: uuid('import_id').references(() => attendanceImports.id),
-	// {emp_code} — the join key back to employee_profiles.employee_code
-	empCode: text('emp_code').notNull(),
-	firstName: text('first_name'),
-	lastName: text('last_name'),
-	deptCode: text('dept_code'),
-	deptName: text('dept_name'),
-	punchedAt: timestamp('punched_at', { withTimezone: true }).notNull(),
-	verifyType: text('verify_type'),
-	punchState: text('punch_state'), // raw {punch_state} from the device
-	direction: text('direction'), // 'in' | 'out' | null once interpreted
-	workCode: text('work_code'),
-	cardNumber: text('card_number'),
-	areaName: text('area_name'),
-	terminalAlias: text('terminal_alias'),
-	terminalSn: text('terminal_sn'),
-	temperature: text('temperature'),
-	maskFlag: text('mask_flag'),
-	rawLine: text('raw_line').notNull(),
-	matchedUserId: uuid('matched_user_id').references(() => users.id),
-	attendanceId: uuid('attendance_id').references(() => attendance.id),
-	receivedAt: timestamp('received_at', { withTimezone: true }).defaultNow().notNull()
-});
+export const devicePunches = pgTable(
+	'device_punches',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		importId: uuid('import_id').references(() => attendanceImports.id),
+		// {emp_code} — the join key back to employee_profiles.employee_code
+		empCode: text('emp_code').notNull(),
+		firstName: text('first_name'),
+		lastName: text('last_name'),
+		deptCode: text('dept_code'),
+		deptName: text('dept_name'),
+		punchedAt: timestamp('punched_at', { withTimezone: true }).notNull(),
+		verifyType: text('verify_type'),
+		punchState: text('punch_state'), // raw {punch_state} from the device
+		direction: text('direction'), // 'in' | 'out' | null once interpreted
+		workCode: text('work_code'),
+		cardNumber: text('card_number'),
+		areaName: text('area_name'),
+		terminalAlias: text('terminal_alias'),
+		terminalSn: text('terminal_sn'),
+		temperature: text('temperature'),
+		maskFlag: text('mask_flag'),
+		rawLine: text('raw_line').notNull(),
+		matchedUserId: uuid('matched_user_id').references(() => users.id),
+		attendanceId: uuid('attendance_id').references(() => attendance.id),
+		dedupeKey: text('dedupe_key'),
+		receivedAt: timestamp('received_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(t) => [uniqueIndex('device_punches_dedupe_key').on(t.dedupeKey)]
+);
 
 // --- ProHance activity ingestion (polled from the ProHance Web Services API) ---
 // The portal POSTS to <PROHANCE_BASE_URL>/report/comprehensive/getdata

@@ -7,6 +7,7 @@ import {
 	users
 } from '$lib/server/db/schema';
 import { normalizeEmpCode } from '$lib/server/easytime-import';
+import { lockAttendanceImports } from '$lib/server/easytime-ingest';
 import { addDays, instantFor, type ParsedBiometricDay } from '$lib/server/biometric-sheet';
 import { and, eq, inArray } from 'drizzle-orm';
 
@@ -233,6 +234,8 @@ export async function applyBiometricDays(
 	let unchangedCount = 0;
 
 	const importId = await db.transaction(async (tx) => {
+		await lockAttendanceImports(tx);
+
 		const [importRow] = await tx
 			.insert(attendanceImports)
 			.values({

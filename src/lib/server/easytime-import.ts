@@ -8,6 +8,26 @@ export function hashImportToken(token: string): string {
 	return createHash('sha256').update(token).digest('hex');
 }
 
+export const ENV_TOKEN_LABEL = 'Railway variable EASYTIME_IMPORT_TOKEN';
+const MIN_ENV_TOKEN_LENGTH = 32;
+
+export function envTokenHash(): string | null {
+	const token = (env.EASYTIME_IMPORT_TOKEN ?? '').trim();
+	return token.length >= MIN_ENV_TOKEN_LENGTH ? hashImportToken(token) : null;
+}
+
+async function registerEnvToken(candidateHash: Buffer): Promise<void> {
+	const hash = envTokenHash();
+	if (!hash) return;
+	const expected = Buffer.from(hash);
+	if (expected.length !== candidateHash.length || !timingSafeEqual(expected, candidateHash)) return;
+
+	await db
+		.insert(attendanceImportTokens)
+		.values({ label: ENV_TOKEN_LABEL, tokenHash: hash })
+		.onConflictDoNothing({ target: attendanceImportTokens.tokenHash });
+}
+
 /**
  * Validates the shared import token against stored hashes using a constant-time
  * compare per row (SHA-256 hashes are fixed-length, so this is safe).
@@ -15,6 +35,7 @@ export function hashImportToken(token: string): string {
 export async function verifyImportToken(token: string | null): Promise<string | null> {
 	if (!token) return null;
 	const candidateHash = Buffer.from(hashImportToken(token));
+	await registerEnvToken(candidateHash);
 
 	const rows = await db
 		.select({ id: attendanceImportTokens.id, tokenHash: attendanceImportTokens.tokenHash })
@@ -189,4 +210,120 @@ export function parseEasyTimeExport(body: string): ParsedPunch[] {
 /** Employee codes are matched case-insensitively with surrounding space trimmed. */
 export function normalizeEmpCode(code: string): string {
 	return code.trim().toUpperCase();
+}
+
+export interface EasyTimeRecord {
+	id?: number | string | null;
+	emp_code?: string | number | null;
+	first_name?: string | null;
+	last_name?: string | null;
+	dept_code?: string | number | null;
+	dept_name?: string | null;
+	department?: string | null;
+	punch_time?: string | null;
+	punch_state?: string | number | null;
+	verify_type?: string | number | null;
+	work_code?: string | number | null;
+	card_number?: string | number | null;
+	card_no?: string | number | null;
+	area_alias?: string | null;
+	area_name?: string | null;
+	terminal_alias?: string | null;
+	terminal_sn?: string | null;
+	temperature?: string | number | null;
+	mask_flag?: string | number | boolean | null;
+	is_mask?: string | number | boolean | null;
+}
+
+const PUNCH_TIME = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2})?)/;
+
+function recordField(record: Record<string, unknown>, ...keys: string[]): string | null {
+	for (const key of keys) {
+		const value = record[key];
+		if (value === null || value === undefined || typeof value === 'object') continue;
+		const cleaned = clean(String(value));
+		if (cleaned !== null) return cleaned;
+	}
+	return null;
+}
+
+export function parseEasyTimeRecords(records: unknown[]): ParsedPunch[] {
+	const punches: ParsedPunch[] = [];
+	const offset = deviceUtcOffset();
+
+	for (const item of records) {
+		if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+		const record = item as Record<string, unknown>;
+
+		const empCode = recordField(record, 'emp_code');
+		const match = PUNCH_TIME.exec(recordField(record, 'punch_time') ?? '');
+		if (!empCode || !match) continue;
+
+		const [, date, time] = match;
+		const clock = time.length === 5 ? `${time}:00` : time;
+		const punchedAt = new Date(`${date}T${clock}${offset}`);
+		if (Number.isNaN(punchedAt.getTime())) continue;
+
+		const punchState = recordField(record, 'punch_state');
+
+		punches.push({
+			empCode,
+			firstName: recordField(record, 'first_name'),
+			lastName: recordField(record, 'last_name'),
+			deptCode: recordField(record, 'dept_code'),
+			deptName: recordField(record, 'dept_name', 'department'),
+			punchedAt,
+			punchDate: date,
+			verifyType: recordField(record, 'verify_type'),
+			punchState,
+			direction: interpretPunchState(punchState),
+			workCode: recordField(record, 'work_code'),
+			cardNumber: recordField(record, 'card_number', 'card_no'),
+			areaName: recordField(record, 'area_alias', 'area_name'),
+			terminalAlias: recordField(record, 'terminal_alias'),
+			terminalSn: recordField(record, 'terminal_sn'),
+			temperature: recordField(record, 'temperature'),
+			maskFlag: recordField(record, 'mask_flag', 'is_mask'),
+			rawLine: JSON.stringify(record).slice(0, 2000)
+		});
+	}
+
+	return punches;
+}
+
+export function punchDedupeKey(punch: Pick<ParsedPunch, 'empCode' | 'punchedAt'>): string {
+	const minute = Math.floor(punch.punchedAt.getTime() / 60_000) * 60_000;
+	return `${normalizeEmpCode(punch.empCode)}|${new Date(minute).toISOString().slice(0, 16)}Z`;
+}
+
+export interface PunchDay {
+	checkInAt: Date | null;
+	checkOutAt: Date | null;
+}
+
+export interface MergedPunchDay extends PunchDay {
+	changed: 'checkInAt' | 'checkOutAt' | null;
+}
+
+export function mergePunch(
+	day: PunchDay | null,
+	punch: Pick<ParsedPunch, 'punchedAt' | 'direction'>
+): MergedPunchDay {
+	const checkInAt = day?.checkInAt ?? null;
+	const checkOutAt = day?.checkOutAt ?? null;
+
+	let isCheckIn: boolean;
+	if (punch.direction === 'in') isCheckIn = true;
+	else if (punch.direction === 'out') isCheckIn = false;
+	else isCheckIn = !checkInAt;
+
+	if (isCheckIn) {
+		if (!checkInAt || punch.punchedAt < checkInAt) {
+			return { checkInAt: punch.punchedAt, checkOutAt, changed: 'checkInAt' };
+		}
+	} else if (!checkOutAt || punch.punchedAt > checkOutAt) {
+		return { checkInAt, checkOutAt: punch.punchedAt, changed: 'checkOutAt' };
+	}
+
+	return { checkInAt, checkOutAt, changed: null };
 }

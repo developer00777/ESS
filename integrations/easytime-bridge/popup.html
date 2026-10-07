@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>EasyTime → ESS</title>
+		<link rel="stylesheet" href="styles.css" />
+	</head>
+	<body class="popup">
+		<header>
+			<h1>EasyTime → ESS</h1>
+			<span id="state" class="pill" data-state="idle">Idle</span>
+		</header>
+
+		<p id="message" class="message">Not run yet.</p>
+
+		<dl class="facts">
+			<dt>Last good sync</dt>
+			<dd id="last-success">—</dd>
+			<dt>Position</dt>
+			<dd id="position">—</dd>
+			<dt>Last run</dt>
+			<dd id="last-run">—</dd>
+		</dl>
+
+		<section id="unmatched" class="callout" hidden>
+			<strong>Employee codes ESS does not know (<span id="unmatched-count">0</span>)</strong>
+			<ul id="unmatched-codes" class="codes"></ul>
+			<p class="hint">
+				Set these codes on the employees’ ESS profiles, then re-send the dates shown. A code leaves
+				this list once ESS accepts a punch for it.
+			</p>
+			<div class="actions">
+				<button type="button" id="resend-unmatched">Re-send <span id="unmatched-range"></span></button>
+				<button type="button" id="clear-unmatched">Clear list</button>
+			</div>
+		</section>
+
+		<div class="actions">
+			<button type="button" id="sync-now" class="primary">Sync now</button>
+			<button type="button" id="open-easytime">Open EasyTime</button>
+			<button type="button" id="open-options">Settings</button>
+		</div>
+
+		<details>
+			<summary>Re-send dates</summary>
+			<form id="resend">
+				<label>From <input type="date" id="resend-from" required /></label>
+				<label>To <input type="date" id="resend-to" required /></label>
+				<button type="submit">Re-send</button>
+			</form>
+			<p class="hint">Reads those days from EasyTime again. Punches ESS already has are skipped.</p>
+		</details>
+
+		<p id="feedback" class="hint" role="status"></p>
+
+		<script type="module" src="popup.js"></script>
+	</body>
+</html>
