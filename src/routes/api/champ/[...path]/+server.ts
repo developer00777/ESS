@@ -48,7 +48,7 @@ export const POST: RequestHandler = async (event) => {
 	if (a === 'tasks' && b) {
 		const action = data.action === 'done' || data.action === 'decline' || data.action === 'withdraw' ? data.action : null;
 		if (!action) throw error(400, 'Mark done, decline or withdraw');
-		const r = await decideTask(user.id, user.fullName, b, action, String(data.note ?? ''));
+		const r = await decideTask(user, b, action, String(data.note ?? ''));
 		return r.ok ? json(r) : json(r, { status: 400 });
 	}
 

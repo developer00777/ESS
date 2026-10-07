@@ -11,6 +11,7 @@ import { istMinutes } from '$lib/chat/rules';
  *   email digest   every 10 min   unread DMs after 2 h, mentions after 4 h
  *   celebrations   every 30 min   posts once a day, from 9 am IST
  *   retention      every 6 h      deletes messages older than six months
+ *   zoom           every 30 min   summaries whose webhook never arrived (Champ Hub)
  */
 export function startChatScheduler() {
 	const g = globalThis as { __chatScheduler?: boolean };
@@ -32,6 +33,12 @@ export function startChatScheduler() {
 		}),
 		30 * 60_000
 	);
+	const zoom = safe('zoom reconcile', async () => {
+		const { reconcileZoom } = await import('$lib/server/meetings/service');
+		await reconcileZoom();
+	});
+	setTimeout(zoom, 90_000);
+	setInterval(zoom, 30 * 60_000);
 	const retention = safe('retention', () => applyRetention());
 	setTimeout(retention, 60_000);
 	setInterval(retention, 6 * 3_600_000);

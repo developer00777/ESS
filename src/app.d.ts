@@ -9,7 +9,10 @@ declare global {
 			user: SessionUser | null;
 		}
 		// interface PageData {}
-		// interface PageState {}
+		interface PageState {
+			/** Champ Hub: the task open in the side sheet (shallow routing). */
+			task?: string;
+		}
 		// interface Platform {}
 	}
 }

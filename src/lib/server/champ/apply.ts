@@ -1,15 +1,12 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { db } from '$lib/server/db/postgres';
-import { champTasks, users } from '$lib/server/db/schema';
-import { and, eq, sql } from 'drizzle-orm';
-import { hasCap } from '$lib/server/capabilities';
+import { sql } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { createLogin } from '$lib/server/logins';
 import { saveNamedRole } from '$lib/server/roles';
 import { syncMembershipFor } from '$lib/server/chat/sync';
-import { postToFeed, decisionEndpoint, type RequestKind } from '$lib/server/chat/cards';
-import { publish } from '$lib/server/chat/bus';
-import type { Role } from '$lib/server/auth';
+import { decisionEndpoint, type RequestKind } from '$lib/server/chat/cards';
+import type { Role, SessionUser } from '$lib/server/auth';
 import type { ChampCardKind } from '$lib/champ';
 
 /**
@@ -70,21 +67,11 @@ export async function applyCard(event: RequestEvent, kind: ChampCardKind, action
 		case 'task': {
 			const toUserId = String(payload.toUserId);
 			if (!/^[0-9a-f-]{36}$/i.test(toUserId)) return { ok: false, message: 'That person no longer exists' };
-			const [to] = await db.select({ id: users.id, teamId: users.teamId, fullName: users.fullName }).from(users).where(and(eq(users.id, toUserId), eq(users.isActive, true))).limit(1);
-			if (!to) return { ok: false, message: 'That person no longer exists' };
-			const may = hasCap(user, 'champ.reports') || (user.role === 'team_lead' && !!user.teamId && to.teamId === user.teamId);
-			if (!may) return { ok: false, message: 'Team Leads can give tasks to their own team; HR to anyone' };
-			const due = typeof payload.due === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(payload.due) ? new Date(`${payload.due}T18:00:00+05:30`) : null;
-			const [task] = await db.insert(champTasks).values({ fromUser: user.id, toUser: to.id, title: String(payload.title).slice(0, 300), dueAt: due }).returning();
-			await postToFeed(to.id, `New task from ${user.fullName}: ${task.title}`, {
-				type: 'notice',
-				tone: 'info',
-				title: `Task from ${user.fullName}`,
-				text: task.title + (due ? ` · due ${due.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })}` : ''),
-				href: '/chat?c=champ&tab=requests'
-			});
-			await publish([to.id, user.id], { type: 'tasks.changed' });
-			result = { ok: true, message: `Assigned to ${to.fullName}` };
+			const { createTask } = await import('$lib/server/tasks/service');
+			const due = typeof payload.due === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(payload.due) ? payload.due : null;
+			const r = await createTask(user, { title: String(payload.title ?? ''), assigneeId: toUserId, dueDate: due });
+			if (!r.ok) return { ok: false, message: r.message };
+			result = { ok: true, message: r.task.requestState === 'pending' ? `Sent to ${r.task.assignee?.fullName} as a request` : `Assigned to ${r.task.assignee?.fullName}` };
 			break;
 		}
 		default:
@@ -100,18 +87,23 @@ export async function applyCard(event: RequestEvent, kind: ChampCardKind, action
 	return result;
 }
 
-/** Tasks in the Requests tab: yours to do, and ones you handed out. */
+/**
+ * Tasks in Champ's Requests tab: yours to do, and ones you handed out. They
+ * are Champ Hub tasks (src/lib/server/tasks/service.ts); this is the short
+ * list view of them the panel has always shown.
+ */
 export async function listTasks(userId: string) {
 	const rows = await db.execute(
-		// A small union reads more plainly than two builder queries here.
 		sql`
-			select t.id, t.title, t.status, t.note, t.due_at as "dueAt", t.created_at as "createdAt", t.decided_at as "decidedAt",
-				t.to_user = ${userId} as "mine", f.full_name as "fromName", tu.full_name as "toName"
-			from champ_tasks t
-			join users f on f.id = t.from_user
-			join users tu on tu.id = t.to_user
-			where (t.to_user = ${userId} or t.from_user = ${userId})
-				and (t.status = 'open' or t.decided_at > now() - interval '14 days')
+			select t.id, t.title,
+				case when t.status = 'done' then 'done' when t.request_state = 'declined' then 'declined' else 'open' end as status,
+				t.request_note as note, t.due_date as "dueAt", t.created_at as "createdAt", t.completed_at as "decidedAt",
+				t.assignee_id = ${userId} as "mine", f.full_name as "fromName", coalesce(tu.full_name, 'Unassigned') as "toName"
+			from tasks t
+			join users f on f.id = t.created_by
+			left join users tu on tu.id = t.assignee_id
+			where (t.assignee_id = ${userId} or t.created_by = ${userId})
+				and (t.status <> 'done' or t.completed_at > now() - interval '14 days')
 			order by t.created_at desc
 			limit 60
 		`
@@ -119,22 +111,14 @@ export async function listTasks(userId: string) {
 	return rows.rows;
 }
 
-export async function decideTask(userId: string, userName: string, taskId: string, action: 'done' | 'decline' | 'withdraw', note: string): Promise<ApplyResult> {
-	const [t] = await db.select().from(champTasks).where(eq(champTasks.id, taskId)).limit(1);
-	if (!t || t.status !== 'open') return { ok: false, message: 'That task is no longer open' };
-	if (action === 'withdraw' ? t.fromUser !== userId : t.toUser !== userId) return { ok: false, message: 'That is not your task to change' };
-	if (action === 'decline' && !note.trim()) return { ok: false, message: "Say briefly what's stopping it" };
-	const status = action === 'done' ? 'done' : action === 'decline' ? 'declined' : 'withdrawn';
-	await db.update(champTasks).set({ status, note: note.trim().slice(0, 300) || null, decidedAt: new Date() }).where(eq(champTasks.id, taskId));
-	const other = action === 'withdraw' ? t.toUser : t.fromUser;
-	await postToFeed(other, action === 'done' ? `${userName} finished: ${t.title}` : action === 'decline' ? `${userName} can't do "${t.title}": ${note.trim()}` : `${userName} withdrew the task "${t.title}"`, {
-		type: 'notice',
-		tone: action === 'done' ? 'ok' : action === 'decline' ? 'warn' : 'info',
-		title: action === 'done' ? 'Task done' : action === 'decline' ? 'Task declined' : 'Task withdrawn',
-		text: t.title,
-		href: '/chat?c=champ&tab=requests'
-	});
-	await publish([t.toUser, t.fromUser], { type: 'tasks.changed' });
-	await logActivity({ actorUserId: userId, action: `task.${status}`, targetType: 'champ_task', targetId: taskId, details: { note } }).catch(() => {});
-	return { ok: true, message: status === 'done' ? 'Marked done' : status === 'declined' ? 'Declined' : 'Withdrawn' };
+export async function decideTask(user: SessionUser, taskId: string, action: 'done' | 'decline' | 'withdraw', note: string): Promise<ApplyResult> {
+	const svc = await import('$lib/server/tasks/service');
+	const r =
+		action === 'done'
+			? await svc.moveTask(user, taskId, { status: 'done' })
+			: action === 'decline'
+				? await svc.respondToTask(user, taskId, 'decline', note)
+				: await svc.deleteTask(user, taskId);
+	if (!r.ok) return { ok: false, message: r.message };
+	return { ok: true, message: action === 'done' ? 'Marked done' : action === 'decline' ? 'Declined' : 'Withdrawn' };
 }

@@ -138,6 +138,7 @@ export type SlashCommand =
 	| { cmd: 'poll'; question: string; options: string[] }
 	| { cmd: 'todo'; text: string }
 	| { cmd: 'champ'; question: string }
+	| { cmd: 'task'; text: string }
 	| { cmd: 'unknown'; name: string };
 
 export const SLASH_COMMANDS = [
@@ -146,6 +147,7 @@ export const SLASH_COMMANDS = [
 	{ c: '/leave', d: 'Apply for leave, e.g. /leave Fri or /leave 12 Oct' },
 	{ c: '/remind', d: 'e.g. /remind in 30m check the queue' },
 	{ c: '/poll', d: 'e.g. /poll Lunch on Friday? | Yes | No' },
+	{ c: '/task', d: 'Give a task, e.g. /task @Sneha check the list by Fri' },
 	{ c: '/todo', d: 'Add a to-do for this channel' },
 	{ c: '/champ', d: 'Ask Champ, e.g. /champ next holiday' }
 ];
@@ -167,6 +169,8 @@ export function parseSlash(text: string): SlashCommand | null {
 			return { cmd: 'todo', text: rest.trim() };
 		case 'champ':
 			return { cmd: 'champ', question: rest.trim() };
+		case 'task':
+			return { cmd: 'task', text: text.trim() };
 		case 'poll': {
 			const parts = rest.split('|').map((s) => s.trim()).filter(Boolean);
 			return { cmd: 'poll', question: parts[0] ?? '', options: parts.slice(1, 11) };

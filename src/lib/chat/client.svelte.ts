@@ -51,7 +51,7 @@ class ChatClient {
 	channels = $state<SidebarChannel[]>([]);
 	badge = $state(0);
 	connected = $state(false);
-	/** The conversation open on /chat, so its messages do not count as unread. */
+	/** The conversation open in Champ Hub, so its messages do not count as unread. */
 	openChannelId = $state<string | null>(null);
 
 	private source: EventSource | null = null;
@@ -184,7 +184,7 @@ class ChatClient {
 	private notify(e: ChatEvent) {
 		if (e.quiet) return;
 		const url = String(e.url ?? '/chat');
-		const here = typeof location !== 'undefined' && location.pathname === '/chat' && this.openChannelId && url.includes(this.openChannelId);
+		const here = typeof location !== 'undefined' && (location.pathname === '/chat' || location.pathname.startsWith('/hub/c/')) && this.openChannelId && url.includes(this.openChannelId);
 		if (here && document.visibilityState === 'visible') return;
 		if (e.sound !== false) this.chime();
 		if (document.visibilityState === 'visible' || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;

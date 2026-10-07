@@ -4,6 +4,8 @@ import { and, eq, inArray } from 'drizzle-orm';
 import type { SessionUser } from '$lib/server/auth';
 import { hasCap } from '$lib/server/capabilities';
 import { dmKey } from '$lib/chat/rules';
+import { DEFAULT_CHAT_POLICY, normalisePolicy, type ChatPolicy } from '$lib/chat/policy';
+import { appSettings } from '$lib/server/db/schema';
 import { publish } from './bus';
 
 /**
@@ -47,19 +49,42 @@ export async function loadPeople(ids?: string[]): Promise<Person[]> {
 	return ids ? q.where(inArray(users.id, ids)) : q;
 }
 
-/** Pure form of the DM rule, for the people picker and the send check alike. */
-export function dmAllowed(actor: Person, target: Person, anyone: boolean): boolean {
+/**
+ * Pure form of the DM rule, for the people picker and the send check alike.
+ * `policy` is what HR set in Admin Controls › Chat rules.
+ */
+export function dmAllowed(actor: Person, target: Person, anyone: boolean, policy: ChatPolicy = DEFAULT_CHAT_POLICY): boolean {
 	if (actor.id === target.id || !target.isActive) return false;
-	if (anyone) return true;
+	if (anyone || policy.dm.everyone) return true;
+	const d = policy.dm;
 	return (
-		(!!actor.teamId && actor.teamId === target.teamId) ||
-		actor.reportsTo === target.id ||
-		target.reportsTo === actor.id ||
-		actor.hrUserId === target.id ||
-		target.hrUserId === actor.id ||
-		target.role === 'admin' ||
-		target.role === 'super_admin'
+		(d.team && !!actor.teamId && actor.teamId === target.teamId) ||
+		(d.managerAndReports && (actor.reportsTo === target.id || target.reportsTo === actor.id)) ||
+		(d.concernedHr && (actor.hrUserId === target.id || target.hrUserId === actor.id)) ||
+		(d.allHr && (target.role === 'admin' || target.role === 'super_admin'))
 	);
+}
+
+/* ---------- the chat rules HR sets ---------- */
+
+let policyCache: { at: number; value: ChatPolicy } | null = null;
+
+export async function loadChatPolicy(): Promise<ChatPolicy> {
+	if (policyCache && Date.now() - policyCache.at < 30_000) return policyCache.value;
+	const [row] = await db.select().from(appSettings).where(eq(appSettings.key, 'chat_policy')).limit(1);
+	const value = normalisePolicy(row?.value);
+	policyCache = { at: Date.now(), value };
+	return value;
+}
+
+export async function saveChatPolicy(policy: ChatPolicy) {
+	const value = normalisePolicy(policy);
+	await db
+		.insert(appSettings)
+		.values({ key: 'chat_policy', value })
+		.onConflictDoUpdate({ target: appSettings.key, set: { value, updatedAt: new Date() } });
+	policyCache = { at: Date.now(), value };
+	return value;
 }
 
 /** Everyone `actor` may start a DM with. */
@@ -68,13 +93,14 @@ export async function dmCandidates(actor: SessionUser): Promise<Person[]> {
 	const me = everyone.find((p) => p.id === actor.id);
 	if (!me) return [];
 	const anyone = hasCap(actor, 'chat.dm_anyone');
-	return everyone.filter((p) => dmAllowed(me, p, anyone)).sort((a, b) => a.fullName.localeCompare(b.fullName));
+	const policy = await loadChatPolicy();
+	return everyone.filter((p) => dmAllowed(me, p, anyone, policy)).sort((a, b) => a.fullName.localeCompare(b.fullName));
 }
 
 export async function canDm(actor: SessionUser, targetId: string): Promise<boolean> {
 	const [me, target] = await Promise.all([loadPeople([actor.id]), loadPeople([targetId])]);
 	if (!me[0] || !target[0]) return false;
-	return dmAllowed(me[0], target[0], hasCap(actor, 'chat.dm_anyone'));
+	return dmAllowed(me[0], target[0], hasCap(actor, 'chat.dm_anyone'), await loadChatPolicy());
 }
 
 async function upsertChannel(values: typeof chatChannels.$inferInsert, memberIds: string[]) {

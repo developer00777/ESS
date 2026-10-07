@@ -19,6 +19,7 @@
 		statusOf,
 		onreply,
 		onrootchanged,
+		onmaketask,
 		emptyText = 'No messages yet. Say hello.'
 	}: {
 		channelId: string;
@@ -28,6 +29,8 @@
 		statusOf: (id: string) => { label: string; state: string; online: boolean } | null;
 		onreply?: (m: ChatMessageView) => void;
 		onrootchanged?: () => void;
+		/** Champ Hub: turn a message into a task. */
+		onmaketask?: (m: ChatMessageView) => void;
 		emptyText?: string;
 	} = $props();
 
@@ -192,6 +195,7 @@
 				inThread={!!threadRootId}
 				status={m.author ? statusOf(m.author.id) : null}
 				{onreply}
+				{onmaketask}
 				onchanged={refresh}
 			/>
 		{/each}

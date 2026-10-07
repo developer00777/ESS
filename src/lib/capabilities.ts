@@ -16,7 +16,7 @@
 
 import type { Role } from './server/auth';
 
-export type CapabilityGroup = 'People' | 'Attendance & leave' | 'Policies' | 'Communication' | 'Champ' | 'System';
+export type CapabilityGroup = 'People' | 'Attendance & leave' | 'Policies' | 'Communication' | 'Tasks & meetings' | 'Champ' | 'System';
 
 export type Capability = {
 	key: string;
@@ -50,11 +50,17 @@ export const CAPABILITIES = [
 	// --- Communication
 	{ key: 'announcements.post', label: 'Post announcements', group: 'Communication', description: 'Post in #announcements and see who has read each post.', grantable: true },
 	{ key: 'chat.dm_anyone', label: 'Message anyone', group: 'Communication', description: 'Start a direct message with anyone. Without it, employees message their team, manager and HR.', grantable: true },
+	{ key: 'chat.create_groups', label: 'Start group chats', group: 'Communication', description: 'Start a group chat. Needed only when Chat rules limit groups to people who hold this.', grantable: true },
+	{ key: 'chat.manage_rules', label: 'Set the chat rules', group: 'Communication', description: 'Decide who employees can message and who can start group chats.', grantable: true },
 	{ key: 'chat.create_channels', label: 'Create channels anywhere', group: 'Communication', description: 'Create channels for any group of people. Team Leads can always create them for their own team.', grantable: true },
 	{ key: 'chat.mention_all', label: 'Use @channel and @here', group: 'Communication', description: 'Notify a whole channel at once, in any channel.', grantable: true },
 	{ key: 'chat.hr_desk', label: 'Answer #ask-hr', group: 'Communication', description: 'See and answer questions people raise with HR.', grantable: true },
 	{ key: 'chat.moderate', label: 'Moderate chat', group: 'Communication', description: 'Review reported messages and hide them for everyone.', grantable: true },
 	{ key: 'chat.export', label: 'Export a conversation', group: 'Communication', description: 'Export one conversation for a formal complaint. Recorded. Super Admin only.', grantable: false },
+	// --- Tasks & meetings
+	{ key: 'tasks.view_all', label: "See every team's tasks", group: 'Tasks & meetings', description: 'Open any team board in Champ Hub, not just their own reports.', grantable: true },
+	{ key: 'tasks.assign_anyone', label: 'Assign tasks to anyone', group: 'Tasks & meetings', description: 'Give a task straight to anyone. Without it, people outside your reporting line get it as a request.', grantable: true },
+	{ key: 'system.zoom', label: 'Connect Zoom', group: 'Tasks & meetings', description: 'Set up the Zoom connection and link Zoom users to logins. Super Admin only.', grantable: false },
 	// --- Champ
 	{ key: 'champ.reports', label: 'Roster reports in Champ', group: 'Champ', description: 'Counts, lists and reports across the whole roster.', grantable: true },
 	{ key: 'champ.audit', label: 'Audit trail in Champ', group: 'Champ', description: 'Search who changed what, and when.', grantable: true },
@@ -73,7 +79,7 @@ export const GRANTABLE_KEYS = CAPABILITIES.filter((c) => c.grantable).map((c) =>
 /** What each base role has before any named role is added. */
 const DEFAULTS: Record<Role, CapabilityKey[]> = {
 	employee: [],
-	team_lead: ['chat.dm_anyone'],
+	team_lead: ['chat.dm_anyone', 'chat.create_groups'],
 	admin: [
 		'people.directory',
 		'people.create_login',
@@ -86,12 +92,15 @@ const DEFAULTS: Record<Role, CapabilityKey[]> = {
 		'access.view',
 		'announcements.post',
 		'chat.dm_anyone',
+		'chat.create_groups',
+		'chat.manage_rules',
 		'chat.create_channels',
 		'chat.mention_all',
 		'chat.hr_desk',
 		'chat.moderate',
 		'champ.reports',
-		'champ.audit'
+		'champ.audit',
+		'tasks.view_all'
 	],
 	super_admin: CAPABILITY_KEYS
 };
@@ -125,6 +134,8 @@ export const ADMIN_AREA_KEYS: CapabilityKey[] = [
 	'policies.publish',
 	'org.view',
 	'access.view',
+	'chat.manage_rules',
+	'system.zoom',
 	'system.cleanup',
 	'system.design_tweaks',
 	'system.roles'

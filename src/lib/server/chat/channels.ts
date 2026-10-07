@@ -13,9 +13,11 @@ import {
 	ensureDesk,
 	ensureDm,
 	ensureSystemFeed,
+	loadChatPolicy,
 	loadPeople,
 	membership
 } from './access';
+import { describeDmRule } from '$lib/chat/policy';
 
 export type SidebarChannel = {
 	id: string;
@@ -162,24 +164,29 @@ type Fail = { ok: false; message: string };
 export async function openDm(user: SessionUser, targetId: string): Promise<{ ok: true; id: string } | Fail> {
 	const [me, target] = [(await loadPeople([user.id]))[0], (await loadPeople([targetId]))[0]];
 	if (!me || !target) return { ok: false, message: 'That person no longer exists' };
-	if (!dmAllowed(me, target, hasCap(user, 'chat.dm_anyone'))) {
-		return { ok: false, message: 'You can message your team, your manager and HR. Ask your team lead to pass this on.' };
+	const policy = await loadChatPolicy();
+	if (!dmAllowed(me, target, hasCap(user, 'chat.dm_anyone'), policy)) {
+		return { ok: false, message: `You can message ${describeDmRule(policy)}. Ask your team lead to pass this on.` };
 	}
 	const row = await ensureDm(user.id, targetId);
 	await announceChannelChange(row.id);
 	return { ok: true, id: row.id };
 }
 
-export async function createGroup(user: SessionUser, memberIds: string[]): Promise<{ ok: true; id: string } | Fail> {
+export async function createGroup(user: SessionUser, memberIds: string[], groupName = ''): Promise<{ ok: true; id: string } | Fail> {
+	const policy = await loadChatPolicy();
+	if (policy.groups === 'privileged' && !hasCap(user, 'chat.create_groups')) {
+		return { ok: false, message: 'Group chats are started by Team Leads and HR here. Ask one of them to start it.' };
+	}
 	const ids = [...new Set(memberIds.filter((id) => id !== user.id && /^[0-9a-f-]{36}$/i.test(id)))];
 	if (ids.length < 2) return { ok: false, message: 'A group needs at least two other people. For one person, start a DM.' };
 	if (ids.length > 20) return { ok: false, message: 'Keep a group to 20 people. For more, create a channel.' };
 	const everyone = await loadPeople([user.id, ...ids]);
 	const me = everyone.find((p) => p.id === user.id)!;
 	const anyone = hasCap(user, 'chat.dm_anyone');
-	const blocked = everyone.filter((p) => p.id !== user.id && !dmAllowed(me, p, anyone));
+	const blocked = everyone.filter((p) => p.id !== user.id && !dmAllowed(me, p, anyone, policy));
 	if (blocked.length) return { ok: false, message: `You cannot message ${blocked.map((b) => b.fullName).join(', ')} directly.` };
-	const name = everyone.filter((p) => p.id !== user.id).map((p) => p.fullName.split(' ')[0]).join(', ');
+	const name = groupName.trim().slice(0, 60) || everyone.filter((p) => p.id !== user.id).map((p) => p.fullName.split(' ')[0]).join(', ');
 	const [row] = await db.insert(chatChannels).values({ kind: 'group', name, isPrivate: true, createdBy: user.id }).returning();
 	await db.insert(chatMembers).values([user.id, ...ids].map((userId) => ({ channelId: row.id, userId, role: userId === user.id ? 'admin' : 'member' })));
 	await announceChannelChange(row.id);

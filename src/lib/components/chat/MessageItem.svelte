@@ -8,6 +8,7 @@
 	import Flag from '@lucide/svelte/icons/flag';
 	import Paperclip from '@lucide/svelte/icons/paperclip';
 	import EyeOff from '@lucide/svelte/icons/eye-off';
+	import ListPlus from '@lucide/svelte/icons/list-plus';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import EssCard from './EssCard.svelte';
 	import { fileSize, renderBody, timeOf } from '$lib/chat/format';
@@ -21,6 +22,7 @@
 		inThread = false,
 		status = null,
 		onreply,
+		onmaketask,
 		onchanged
 	}: {
 		message: ChatMessageView;
@@ -31,6 +33,8 @@
 		inThread?: boolean;
 		status?: { label: string; state: string; online: boolean } | null;
 		onreply?: (m: ChatMessageView) => void;
+		/** Champ Hub: turn this message into a task. */
+		onmaketask?: (m: ChatMessageView) => void;
 		onchanged: (id: string) => void;
 	} = $props();
 
@@ -181,6 +185,9 @@
 			<button type="button" title="React" aria-label="React" onclick={() => (picking = !picking)}><SmilePlus size={15} /></button>
 			{#if !inThread && !message.privateToYou}
 				<button type="button" title="Reply in thread" aria-label="Reply in thread" onclick={() => onreply?.(message)}><MessageSquare size={15} /></button>
+			{/if}
+			{#if onmaketask && message.author && message.kind === 'text' && !message.privateToYou}
+				<button type="button" title="Make task" aria-label="Make a task from this message" onclick={() => onmaketask?.(message)}><ListPlus size={15} /></button>
 			{/if}
 			<button type="button" title={message.pinned ? 'Unpin' : 'Pin'} aria-label={message.pinned ? 'Unpin' : 'Pin'} onclick={() => post('/pin')}><Pin size={15} /></button>
 			<button type="button" title={message.saved ? 'Remove from saved' : 'Save'} aria-label="Save" class:on={message.saved} onclick={() => post('/save')}><Bookmark size={15} /></button>

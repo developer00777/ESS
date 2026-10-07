@@ -14,11 +14,23 @@ import { champConfigured } from '$lib/server/champ/chat';
  * #announcements is part of chat: everyone reads the announcement feed here,
  * and people who may post announcements get the composer and read counts.
  */
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	// Page loads run alongside the (app) layout's, so this cannot rely on the
 	// layout's redirect having happened first.
 	const user = locals.user;
 	if (!user) throw redirect(303, '/login');
+
+	// Champ Chat now lives in Champ Hub (/hub). Old links — ESS notices, push
+	// notifications, bookmarks — land on the same conversation there. The
+	// previous layout stays reachable with ?classic=1 while people get used to
+	// the Hub; drop it, ChatSidebar.svelte and this page together later.
+	if (!url.searchParams.has('classic')) {
+		const params = new URLSearchParams(url.searchParams);
+		const c = params.get('c');
+		params.delete('c');
+		const rest = params.toString();
+		throw redirect(307, c ? `/hub/c/${encodeURIComponent(c)}${rest ? `?${rest}` : ''}` : '/hub/chats');
+	}
 	const canPost = hasCap(user, 'announcements.post');
 	const [sidebar, feed, admin] = await Promise.all([
 		sidebarFor(user),
