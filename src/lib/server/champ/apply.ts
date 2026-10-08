@@ -71,7 +71,7 @@ export async function applyCard(event: RequestEvent, kind: ChampCardKind, action
 			const due = typeof payload.due === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(payload.due) ? payload.due : null;
 			const r = await createTask(user, { title: String(payload.title ?? ''), assigneeId: toUserId, dueDate: due });
 			if (!r.ok) return { ok: false, message: r.message };
-			result = { ok: true, message: r.task.requestState === 'pending' ? `Sent to ${r.task.assignee?.fullName} as a request` : `Assigned to ${r.task.assignee?.fullName}` };
+			result = { ok: true, message: r.task.requestState === 'pending' ? `Made for ${r.task.assignee?.fullName}. It starts once ${r.task.approver?.fullName ?? 'their lead'} approves.` : `Assigned to ${r.task.assignee?.fullName}` };
 			break;
 		}
 		default:

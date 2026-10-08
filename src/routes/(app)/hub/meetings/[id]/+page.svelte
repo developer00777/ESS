@@ -32,7 +32,7 @@
 	const editable = (i: MeetingItemView) => m.isHost && !i.taskId;
 	const pending = $derived(items.filter((i) => i.included && !i.taskId));
 	const missing = $derived(pending.filter((i) => !i.ownerId).length);
-	const requests = $derived(pending.filter((i) => i.ownerId && [...m.assignable.request].some((p) => p.id === i.ownerId)).length);
+	const approvals = $derived(pending.filter((i) => i.ownerId && m.assignable.approval.some((p) => p.id === i.ownerId)).length);
 
 	async function update(i: MeetingItemView, patch: Partial<Pick<MeetingItemView, 'title' | 'ownerId' | 'dueDate' | 'priority' | 'included'>>) {
 		const before = items;
@@ -93,8 +93,8 @@
 		<div class="review">
 			<section class="pane summary" aria-labelledby="sum-h">
 				<div class="pane-head">
-					<h2 id="sum-h">{m.source === 'pasted' ? 'Your notes' : 'Zoom AI Companion summary'}</h2>
-					<span class="chip info"><Video size={12} /> {m.source === 'pasted' ? 'Pasted' : 'From Zoom'}</span>
+					<h2 id="sum-h">{m.source === 'pasted' ? 'Your notes' : 'Meeting summary'}</h2>
+					<span class="chip info"><Video size={12} /> {m.source === 'pasted' ? 'Pasted' : 'Written automatically'}</span>
 				</div>
 				{#if m.summary}
 					{#if m.summary.overview}<div class="sum"><h3>Overview</h3><p>{m.summary.overview}</p></div>{/if}
@@ -174,8 +174,8 @@
 									{/if}
 									{#if !i.ownerId}
 										<p class="note warn"><CircleAlert size={13} /> {i.ownerHeard ? `Couldn't match "${i.ownerHeard}" to a login. Pick an owner or drop it.` : 'The minutes name nobody. Pick an owner or drop it.'}</p>
-									{:else if m.assignable.request.some((p) => p.id === i.ownerId)}
-										<p class="note info"><Send size={13} /> {i.ownerName} is outside your reporting line, so this goes as a request they accept.</p>
+									{:else if m.assignable.approval.some((p) => p.id === i.ownerId)}
+										<p class="note info"><Send size={13} /> {m.assignable.approval.find((p) => p.id === i.ownerId)?.approverName ?? 'Their lead'} approves this before {i.ownerName?.split(' ')[0]} can start it.</p>
 									{/if}
 								{/if}
 							{/if}
@@ -193,7 +193,7 @@
 				{#if pending.length}
 					<div class="publish">
 						<p>
-							<strong>{pending.length - missing} of {pending.length}</strong> ready{#if missing}<span class="miss"> · {missing} {missing === 1 ? 'needs' : 'need'} an owner</span>{/if}{#if requests} · {requests} as {requests === 1 ? 'a request' : 'requests'}{/if}
+							<strong>{pending.length - missing} of {pending.length}</strong> ready{#if missing}<span class="miss"> · {missing} {missing === 1 ? 'needs' : 'need'} an owner</span>{/if}{#if approvals} · {approvals} {approvals === 1 ? 'needs' : 'need'} a lead's approval{/if}
 						</p>
 						<button type="button" class="ess-btn ess-btn--primary" disabled={busy || missing > 0} title={missing ? 'Give every kept item an owner, or drop it' : undefined} onclick={publish}>
 							<Send size={15} /> Publish {pending.length} {pending.length === 1 ? 'task' : 'tasks'}

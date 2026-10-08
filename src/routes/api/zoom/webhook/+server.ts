@@ -42,7 +42,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (body.event === 'meeting.summary_completed' || body.event === 'meeting.summary_updated') {
 		const uuid = String(obj.meeting_uuid ?? obj.uuid ?? '');
 		if (uuid) {
-			void ingestSummary(uuid).catch((err) => {
+			const meetingId = obj.meeting_id ?? obj.id;
+			void ingestSummary(uuid, meetingId != null ? String(meetingId) : null).catch((err) => {
 				console.error('[zoom] summary ingest failed:', err);
 				void recordStatus({ lastError: err instanceof Error ? err.message : String(err) }).catch(() => {});
 			});

@@ -122,7 +122,7 @@ export async function runCommand(viewer: SessionUser, channelId: string, text: s
 			let ownerId: string | null = viewer.id;
 			if (parsed.ownerName) {
 				const groups = await assignableFor(viewer);
-				const pool = [...groups.direct, ...groups.request];
+				const pool = [...groups.direct, ...groups.approval];
 				const picked = mentions.find((id) => pool.some((p) => p.id === id));
 				const byName = matchName(parsed.ownerName, pool.map((p) => ({ key: p.id, fullName: p.fullName })));
 				ownerId = picked ?? (byName.status === 'matched' ? byName.key : null);
@@ -130,7 +130,7 @@ export async function runCommand(viewer: SessionUser, channelId: string, text: s
 					return privateReply(
 						viewer,
 						channelId,
-						byName.status === 'ambiguous' ? `More than one person matches "${parsed.ownerName}". Pick them from the @ list.` : `You can't give tasks to "${parsed.ownerName}". Pick someone from the @ list.`
+						byName.status === 'ambiguous' ? `More than one person matches "${parsed.ownerName}". Pick them from the @ list.` : `Nobody called "${parsed.ownerName}" was found. Pick them from the @ list.`
 					);
 				}
 			}
@@ -147,8 +147,8 @@ export async function runCommand(viewer: SessionUser, channelId: string, text: s
 				card: {
 					type: 'notice',
 					tone: 'info',
-					title: t.requestState === 'pending' ? `Task request for ${t.assignee?.fullName}` : `Task for ${t.assignee?.fullName}`,
-					text: `${t.title}${due}`,
+					title: `Task for ${t.assignee?.fullName}`,
+					text: `${t.title}${due}${t.requestState === 'pending' ? ` · waiting for ${t.approver?.fullName ?? 'their lead'} to approve` : ''}`,
 					href: `/hub/tasks?task=${t.id}`
 				}
 			});

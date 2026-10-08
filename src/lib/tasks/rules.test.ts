@@ -4,33 +4,37 @@ import { actionLines, assignMode, dueBucket, dueFromMeeting, parseTaskCommand, r
 // Wed 7 Oct 2026, 11:20 IST.
 const NOW = new Date('2026-10-07T05:50:00Z');
 
-describe('who may give whom a task', () => {
-	const lead: Reach = { selfId: 'priya', treeIds: ['arjun', 'sneha', 'intern'], teammateIds: ['vikram'], anyone: false, canRequestAnyone: true };
-	const employee: Reach = { selfId: 'arjun', treeIds: [], teammateIds: ['sneha', 'rahul'], anyone: false, canRequestAnyone: false };
+describe('who approves a task', () => {
+	// Priya leads Arjun and Sneha; Arjun leads an intern. Vikram leads Neha.
+	const priya: Reach = { selfId: 'priya', treeIds: ['arjun', 'sneha', 'intern'], isLead: true, anyone: false };
+	const sneha: Reach = { selfId: 'sneha', treeIds: [], isLead: false, anyone: false };
 
-	it('lets anyone give themselves a task', () => {
-		expect(assignMode(employee, 'arjun')).toBe('direct');
-		expect(assignMode(employee, null)).toBe('direct');
+	it('lets a lead give work straight to anyone below them, at any depth', () => {
+		expect(assignMode(priya, 'arjun', 'priya')).toBe('direct');
+		expect(assignMode(priya, 'intern', 'arjun')).toBe('direct');
 	});
 
-	it('lets a lead assign straight to anyone below them, at any depth', () => {
-		expect(assignMode(lead, 'arjun')).toBe('direct');
-		expect(assignMode(lead, 'intern')).toBe('direct');
+	it('lets a lead give themselves work without asking', () => {
+		expect(assignMode(priya, 'priya', 'chief-of-ops')).toBe('direct');
 	});
 
-	it('turns a lead\'s task for someone outside their tree into a request', () => {
-		expect(assignMode(lead, 'neha')).toBe('request');
-		expect(assignMode(lead, 'vikram')).toBe('request');
+	it("sends an employee's task, even one for themselves, to the assignee's lead", () => {
+		expect(assignMode(sneha, 'sneha', 'priya')).toBe('approval');
+		expect(assignMode(sneha, 'arjun', 'priya')).toBe('approval');
+		expect(assignMode(sneha, 'neha', 'vikram')).toBe('approval');
 	});
 
-	it('lets an employee ask a teammate, and nobody else', () => {
-		expect(assignMode(employee, 'sneha')).toBe('request');
-		expect(assignMode(employee, 'neha')).toBe('forbidden');
-		expect(assignMode(employee, 'priya')).toBe('forbidden');
+	it("sends a lead's task for someone outside their team to that person's lead", () => {
+		expect(assignMode(priya, 'neha', 'vikram')).toBe('approval');
 	});
 
-	it('skips the request for Super Admin and "Assign tasks to anyone"', () => {
-		expect(assignMode({ ...employee, anyone: true }, 'neha')).toBe('direct');
+	it('has nobody to wait for when the assignee has no lead, or the task has no assignee', () => {
+		expect(assignMode(sneha, 'ceo', null)).toBe('direct');
+		expect(assignMode(sneha, null, null)).toBe('direct');
+	});
+
+	it('skips approval for Super Admin and "Give tasks without approval"', () => {
+		expect(assignMode({ ...sneha, anyone: true }, 'neha', 'vikram')).toBe('direct');
 	});
 });
 

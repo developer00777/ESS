@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import SidebarNav from '$lib/components/SidebarNav.svelte';
+	import ApprovalPopup from '$lib/components/hub/ApprovalPopup.svelte';
 	import { chat } from '$lib/chat/client.svelte';
 	import { hub } from '$lib/hub/client.svelte';
 
@@ -39,4 +40,7 @@
 		{@render children()}
 	</main>
 </div>
+
+<!-- Leads: tasks waiting for approval pop up on whatever page they are on. -->
+<ApprovalPopup />
 

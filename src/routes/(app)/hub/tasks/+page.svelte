@@ -36,9 +36,9 @@
 		}
 	}
 
-	let filter = $state<'all' | 'meetings' | 'high' | 'requests'>('all');
+	let filter = $state<'all' | 'meetings' | 'high' | 'approval'>('all');
 	const shown = $derived(
-		local.filter((t) => (filter === 'meetings' ? t.source?.kind === 'meeting' : filter === 'high' ? t.priority === 'high' : filter === 'requests' ? t.requestState === 'pending' : true))
+		local.filter((t) => (filter === 'meetings' ? t.source?.kind === 'meeting' : filter === 'high' ? t.priority === 'high' : filter === 'approval' ? t.requestState === 'pending' : true))
 	);
 
 	const today = todayKey();
@@ -135,7 +135,7 @@
 	</div>
 
 	<div class="filters" role="group" aria-label="Show">
-		{#each [['all', 'All'], ['requests', 'Requests'], ['meetings', 'From meetings'], ['high', 'High priority']] as [k, label] (k)}
+		{#each [['all', 'All'], ['approval', 'Waiting for approval'], ['meetings', 'From meetings'], ['high', 'High priority']] as [k, label] (k)}
 			<button type="button" class="f" aria-pressed={filter === k} onclick={() => (filter = k as typeof filter)}>{label}</button>
 		{/each}
 	</div>

@@ -27,38 +27,38 @@ export const PRIORITY_WEIGHT: Record<TaskPriority, number> = { high: 3, medium: 
 /** Open tasks a person can carry before the team board calls them overloaded. */
 export const TEAM_CAPACITY = 6;
 
-/* ---------- who may give whom a task ---------- */
+/* ---------- who approves a task ---------- */
 
 /**
- * What a person's position lets them do with tasks. Built on the server from
- * the reporting line (users.reportsTo), the same link leave approval follows.
+ * What a person's position means for tasks they create. Built on the server
+ * from the reporting line (users.reportsTo), the same link leave approval
+ * follows.
  */
 export type Reach = {
 	selfId: string;
 	/** Everyone below them in the reporting line, at any depth. */
 	treeIds: string[];
-	/** People who share their manager. */
-	teammateIds: string[];
-	/** Super Admin, or the "Assign tasks to anyone" privilege. */
+	/** They have people reporting to them. */
+	isLead: boolean;
+	/** Super Admin, or the "Give tasks without approval" privilege. */
 	anyone: boolean;
-	/** Team Leads and HR can ask anyone; employees only their teammates. */
-	canRequestAnyone: boolean;
 };
 
-export type AssignMode = 'direct' | 'request' | 'forbidden';
+export type AssignMode = 'direct' | 'approval';
 
 /**
- * - Anyone may give themselves a task.
- * - A lead gives one straight to anyone in their reporting tree.
- * - Anyone else receives it as a request they accept or decline. Employees may
- *   only ask their teammates; leads and HR may ask anyone.
- * - Super Admin and "Assign tasks to anyone" skip the request.
+ * Anyone can create a task for anyone. It goes straight onto the board when
+ * the person creating it is the assignee's lead (or higher), or is a lead
+ * giving themselves work. Otherwise it waits for the assignee's lead
+ * (`targetManagerId`) to approve it. Someone with no lead in ESS has nobody
+ * to wait for.
  */
-export function assignMode(reach: Reach, targetId: string | null): AssignMode {
-	if (!targetId || targetId === reach.selfId) return 'direct';
-	if (reach.anyone || reach.treeIds.includes(targetId)) return 'direct';
-	if (reach.canRequestAnyone || reach.teammateIds.includes(targetId)) return 'request';
-	return 'forbidden';
+export function assignMode(reach: Reach, targetId: string | null, targetManagerId: string | null): AssignMode {
+	if (!targetId || reach.anyone) return 'direct';
+	if (reach.treeIds.includes(targetId)) return 'direct';
+	if (targetId === reach.selfId && reach.isLead) return 'direct';
+	if (!targetManagerId || targetManagerId === reach.selfId) return 'direct';
+	return 'approval';
 }
 
 /* ---------- order within a column ---------- */

@@ -22,7 +22,7 @@
 		onclose: () => void;
 	} = $props();
 
-	let groups = $state<AssignableGroups>({ direct: [], request: [] });
+	let groups = $state<AssignableGroups>({ direct: [], approval: [] });
 	// Seeded once from the message; after that the fields are the person's.
 	let title = $state(untrack(() => (from ? from.text.replace(/^(@\S+\s*)+/, '').replace(/[?.!]+$/, '').slice(0, 120) : '')));
 	let assigneeId = $state<string | null>(untrack(() => meId));
@@ -38,14 +38,14 @@
 			if (!r.ok) return;
 			groups = await r.json();
 			// Make task on "@Sneha can you…": Sneha first, if she can be given one.
-			const mentioned = from?.mentionIds.find((id) => id !== meId && [...groups.direct, ...groups.request].some((p) => p.id === id));
+			const mentioned = from?.mentionIds.find((id) => id !== meId && [...groups.direct, ...groups.approval].some((p) => p.id === id));
 			if (mentioned) assigneeId = mentioned;
 		});
 		queueMicrotask(() => titleEl?.focus());
 		return unlock;
 	});
 
-	const isRequest = $derived(!!assigneeId && groups.request.some((p) => p.id === assigneeId));
+	const approver = $derived(assigneeId ? (groups.approval.find((p) => p.id === assigneeId)?.approverName ?? null) : null);
 
 	async function save(e: SubmitEvent) {
 		e.preventDefault();
@@ -60,7 +60,7 @@
 			return;
 		}
 		const t = r.task;
-		hub.say(t.requestState === 'pending' ? `Sent to ${t.assignee?.fullName} as a request.` : t.assignee?.id === meId ? 'Added to your To do.' : `Given to ${t.assignee?.fullName ?? 'nobody yet'}.`);
+		hub.say(t.requestState === 'pending' ? `Sent to ${t.approver?.fullName ?? 'their lead'} for approval.` : t.assignee?.id === meId ? 'Added to your To do.' : `Given to ${t.assignee?.fullName ?? 'nobody yet'}.`);
 		hub.changed(0);
 		onclose();
 	}
@@ -96,7 +96,7 @@
 				</select>
 			</div>
 		</div>
-		{#if isRequest}<p class="ess-help">They're outside your reporting line, so they'll get this as a request to accept.</p>{/if}
+		{#if approver}<p class="ess-help">{approver} approves this before it starts. They'll get a pop-up to approve it.</p>{/if}
 		{#if err}<p class="ess-error">{err}</p>{/if}
 		<div class="actions">
 			<button type="button" class="ess-btn ess-btn--ghost" onclick={onclose}>Cancel</button>

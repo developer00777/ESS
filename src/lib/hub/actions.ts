@@ -23,7 +23,7 @@ export async function moveTask(task: TaskView, to: Move, opts: { quiet?: boolean
 		if (to.assigneeId !== undefined && to.assigneeId !== (task.assignee?.id ?? null)) back.assigneeId = task.assignee?.id ?? null;
 		const text =
 			back.assigneeId !== undefined
-				? `Moved "${short(task.title)}" to ${r.task.assignee?.fullName ?? 'Unassigned'}${r.task.requestState === 'pending' ? ' as a request' : ''}.`
+				? `Moved "${short(task.title)}" to ${r.task.assignee?.fullName ?? 'Unassigned'}${r.task.requestState === 'pending' ? `, waiting for ${r.task.approver?.fullName ?? 'their lead'} to approve` : ''}.`
 				: to.status
 					? `Moved to ${STATUS_LABEL[to.status]}.`
 					: 'Moved.';
@@ -33,13 +33,26 @@ export async function moveTask(task: TaskView, to: Move, opts: { quiet?: boolean
 	return r.task;
 }
 
-export async function respond(task: TaskView, decision: 'accept' | 'decline', note = ''): Promise<boolean> {
-	const r = await api(`/api/tasks/${task.id}/respond`, 'POST', { decision, note });
+/** A lead's yes or no on a task waiting for them. */
+export async function approve(task: TaskView, decision: 'approve' | 'reject', note = ''): Promise<boolean> {
+	const r = await api(`/api/tasks/${task.id}/approve`, 'POST', { decision, note });
 	if (!r.ok) {
 		hub.say(r.message, { tone: 'bad' });
 		return false;
 	}
-	hub.say(decision === 'accept' ? `Accepted. ${task.createdBy.fullName.split(' ')[0]} was told.` : `Handed back to ${task.createdBy.fullName.split(' ')[0]}.`);
+	hub.say(decision === 'approve' ? `Approved. ${task.assignee?.fullName.split(' ')[0] ?? 'They'} can start on it.` : `Not approved. ${task.createdBy.fullName.split(' ')[0]} was told why.`);
+	hub.changed(0);
+	return true;
+}
+
+/** The assignee hands a task back to whoever gave it, with a reason. */
+export async function respond(task: TaskView, _decision: 'decline', note: string): Promise<boolean> {
+	const r = await api(`/api/tasks/${task.id}/respond`, 'POST', { decision: 'decline', note });
+	if (!r.ok) {
+		hub.say(r.message, { tone: 'bad' });
+		return false;
+	}
+	hub.say(`Handed back to ${task.createdBy.fullName.split(' ')[0]}.`);
 	hub.changed(0);
 	return true;
 }
@@ -51,7 +64,7 @@ export async function createTask(input: { title: string; assigneeId?: string | n
 		return null;
 	}
 	const t = r.task;
-	hub.say(t.assignee && t.requestState === 'pending' ? `Sent to ${t.assignee.fullName} as a request.` : t.assignee ? `Added for ${t.assignee.fullName}.` : 'Added, unassigned.');
+	hub.say(t.requestState === 'pending' ? `Sent to ${t.approver?.fullName ?? 'your lead'} for approval.` : t.assignee ? `Added for ${t.assignee.fullName}.` : 'Added, unassigned.');
 	hub.changed(0);
 	return t;
 }

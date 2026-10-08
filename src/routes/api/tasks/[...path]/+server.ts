@@ -3,6 +3,8 @@ import type { RequestHandler } from './$types';
 import {
 	addComment,
 	addSubtask,
+	approvalsFor,
+	approveTask,
 	assignableFor,
 	createTask,
 	deleteSubtask,
@@ -65,6 +67,7 @@ export const GET: RequestHandler = async (event) => {
 	}
 	if (a === 'search') return json(await searchTasks(user, q.get('q') ?? ''));
 	if (a === 'assignable') return json(await assignableFor(user));
+	if (a === 'approvals') return json(await approvalsFor(user));
 	if (UUID.test(a) && !b) return send(await getTask(user, a));
 	throw error(404, 'Not found');
 };
@@ -101,6 +104,7 @@ export const POST: RequestHandler = async (event) => {
 	if (b === 'move') {
 		return send(await moveTask(user, tid, { status: str(data.status), assigneeId: optId(data.assigneeId), beforeId: optId(data.beforeId), afterId: optId(data.afterId), version: num(data.version) }));
 	}
+	if (b === 'approve') return send(await approveTask(user, tid, data.decision === 'reject' ? 'reject' : 'approve', String(data.note ?? '')));
 	if (b === 'respond') return send(await respondToTask(user, tid, data.decision === 'decline' ? 'decline' : 'accept', String(data.note ?? '')));
 	if (b === 'comments') return send(await addComment(user, tid, String(data.body ?? '')));
 	if (b === 'subtasks' && !c) return send(await addSubtask(user, tid, String(data.title ?? '')));

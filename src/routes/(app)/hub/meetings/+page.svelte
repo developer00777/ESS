@@ -3,17 +3,31 @@
 	import Video from '@lucide/svelte/icons/video';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
+	import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import PasteNotesDialog from '$lib/components/hub/PasteNotesDialog.svelte';
+	import ScheduleMeetingDialog from '$lib/components/hub/ScheduleMeetingDialog.svelte';
+	import { api, hub } from '$lib/hub/client.svelte';
 	import { longDay, timeIst } from '$lib/hub/format';
 	import type { MeetingRowView } from '$lib/tasks/types';
 
 	let { data } = $props();
 
 	let pasteFor = $state<{ id: string | null; topic: string } | null>(null);
+	let scheduling = $state(false);
+	let cancelling = $state<string | null>(null);
 
-	const upcoming = $derived(data.upcoming);
+	// Soonest first for what is coming, newest first for what is done.
+	const upcoming = $derived(data.meetings.filter((m) => m.state === 'upcoming').sort((a, b) => a.startedAt.localeCompare(b.startedAt)));
 	const past = $derived(data.meetings.filter((m) => m.state !== 'upcoming'));
+
+	async function cancel(id: string) {
+		const r = await api(`/api/meetings/${id}/cancel`, 'POST', {});
+		cancelling = null;
+		if (!r.ok) return hub.say(r.message, { tone: 'bad' });
+		hub.say('Cancelled. Everyone invited was told.');
+		hub.changed(0);
+	}
 	const date = (iso: string) => new Date(iso);
 	const dayNum = (iso: string) => date(iso).toLocaleDateString('en-IN', { day: 'numeric', timeZone: 'Asia/Kolkata' });
 	const mon = (iso: string) => date(iso).toLocaleDateString('en-IN', { month: 'short', timeZone: 'Asia/Kolkata' });
@@ -36,9 +50,9 @@
 			</div>
 			<div>
 				{#if m.state === 'upcoming'}
-					<span class="chip accent">Starts {timeIst(m.startedAt)}</span>
+					<span class="chip accent">{m.isHost ? 'You scheduled this' : `From ${m.host?.fullName ?? 'a colleague'}`}</span>
 				{:else if m.state === 'waiting'}
-					<span class="chip warn"><span class="pulse"></span>Waiting for Zoom’s summary</span>
+					<span class="chip warn"><span class="pulse"></span>Waiting for the summary</span>
 				{:else if m.state === 'ready' && m.isHost}
 					<span class="chip info"><Sparkles size={12} />{m.itemCount} action {m.itemCount === 1 ? 'item' : 'items'} to review{m.itemsNeedingOwner ? `, ${m.itemsNeedingOwner} without an owner` : ''}</span>
 				{:else if m.state === 'ready'}
@@ -46,13 +60,22 @@
 				{:else if m.state === 'published'}
 					<span class="chip ok"><CircleCheck size={12} />{m.isHost ? `${m.publishedCount} tasks published` : `${m.mine.length} ${m.mine.length === 1 ? 'task' : 'tasks'} for you`}</span>
 				{:else}
-					<span class="chip">No AI summary for this meeting</span>
+					<span class="chip">No summary for this meeting</span>
 				{/if}
 			</div>
+			{#if m.state === 'upcoming' && m.agenda}<p class="agenda">{m.agenda}</p>{/if}
 		</div>
 		<div class="acts">
-			{#if m.state === 'upcoming' && m.joinUrl}
-				<a class="ess-btn ess-btn--secondary ess-btn--sm" href={m.joinUrl} target="_blank" rel="noopener"><Video size={14} /> Join</a>
+			{#if m.state === 'upcoming'}
+				{#if m.canJoin}<a class="ess-btn ess-btn--primary ess-btn--sm" href="/hub/meetings/{m.id}/join" target="_blank" rel="noopener" data-sveltekit-reload><Video size={14} /> {m.isHost ? 'Start' : 'Join'}</a>{/if}
+				{#if m.isHost}
+					{#if cancelling === m.id}
+						<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" onclick={() => cancel(m.id)}>Cancel meeting</button>
+						<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (cancelling = null)}>Keep</button>
+					{:else}
+						<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (cancelling = m.id)}>Cancel</button>
+					{/if}
+				{/if}
 			{:else if m.isHost && m.state === 'ready'}
 				<a class="ess-btn ess-btn--primary ess-btn--sm" href="/hub/meetings/{m.id}">Review</a>
 			{:else if m.isHost && m.state === 'published'}
@@ -72,16 +95,19 @@
 			<h1 class="ess-page-title">Meetings</h1>
 			<p class="ess-page-sub">
 				{data.hub.zoom
-					? 'Zoom meetings you hosted or joined. Minutes arrive a few minutes after a meeting ends; nothing reaches anyone until the host publishes.'
-					: 'Zoom is not connected yet, so minutes come from pasted notes. HR can connect Zoom in Admin Controls.'}
+					? 'Schedule a meeting, join from here, and the summary comes back to the person who scheduled it a few minutes after it ends. Nothing reaches anyone until they publish.'
+					: 'Video calls are not switched on yet, so meetings are listed without a call to join and minutes come from pasted notes. HR can switch them on in Admin Controls.'}
 			</p>
 		</div>
-		<button type="button" class="ess-btn ess-btn--secondary" onclick={() => (pasteFor = { id: null, topic: '' })}><ClipboardPaste size={15} /> Minutes from notes</button>
+		<div class="tools">
+			<button type="button" class="ess-btn ess-btn--secondary" onclick={() => (pasteFor = { id: null, topic: '' })}><ClipboardPaste size={15} /> Minutes from notes</button>
+			<button type="button" class="ess-btn ess-btn--primary" onclick={() => (scheduling = true)}><CalendarPlus size={15} /> Schedule meeting</button>
+		</div>
 	</header>
 
 	{#if upcoming.length}
 		<section class="sec">
-			<h2 class="label">Coming up today</h2>
+			<h2 class="label">Coming up</h2>
 			{#each upcoming as m (m.id)}{@render row(m)}{/each}
 		</section>
 	{/if}
@@ -91,11 +117,14 @@
 		{#each past as m (m.id)}
 			{@render row(m)}
 		{:else}
-			<p class="empty">No meetings yet. {data.hub.zoom ? 'Zoom meetings you host show up here when they end.' : 'Use Minutes from notes to turn a meeting into tasks.'}</p>
+			<p class="empty">No meetings yet. Schedule one, or use Minutes from notes to turn a meeting into tasks.</p>
 		{/each}
 	</section>
 </div>
 
+{#if scheduling}
+	<ScheduleMeetingDialog meId={data.hubMe.id} onclose={() => (scheduling = false)} />
+{/if}
 {#if pasteFor}
 	<PasteNotesDialog meetingId={pasteFor.id} topic={pasteFor.topic} onclose={() => (pasteFor = null)} />
 {/if}
@@ -215,6 +244,19 @@
 	.acts {
 		display: flex;
 		gap: 8px;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+	.tools {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+	.agenda {
+		margin: 2px 0 0;
+		font-size: 12.5px;
+		color: var(--ess-text-secondary);
+		white-space: pre-line;
 	}
 	.empty {
 		padding: 22px;

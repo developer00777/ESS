@@ -26,8 +26,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			ZOOM_ACCOUNT_ID: !!env.ZOOM_ACCOUNT_ID,
 			ZOOM_CLIENT_ID: !!env.ZOOM_CLIENT_ID,
 			ZOOM_CLIENT_SECRET: !!env.ZOOM_CLIENT_SECRET,
-			ZOOM_WEBHOOK_SECRET: !!env.ZOOM_WEBHOOK_SECRET
+			ZOOM_WEBHOOK_SECRET: !!env.ZOOM_WEBHOOK_SECRET,
+			ZOOM_DEFAULT_HOST: !!env.ZOOM_DEFAULT_HOST
 		},
+		defaultHost: env.ZOOM_DEFAULT_HOST?.trim() || null,
 		webhookUrl: `${(env.PORTAL_URL || url.origin).replace(/\/+$/, '')}/api/zoom/webhook`,
 		status,
 		links: links.links.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() })),
@@ -42,7 +44,7 @@ export const actions: Actions = {
 		const f = await request.formData();
 		const r = await linkZoomUser(actor, String(f.get('zoomKey') ?? ''), String(f.get('userId') ?? '') || null);
 		if (!r.ok) return fail(400, { error: r.message });
-		return { message: f.get('userId') ? 'Linked. Future meetings will match this name.' : 'Link removed.' };
+		return { message: f.get('userId') ? 'Saved. Meetings they host, and meetings they join, use this Zoom account.' : 'Removed.' };
 	},
 	check: async ({ locals }) => {
 		gateAdminPage(locals, ['system.zoom']);

@@ -1144,7 +1144,7 @@ export const champTasks = pgTable('champ_tasks', {
 
 export const taskStatusEnum = pgEnum('task_status', ['todo', 'in_progress', 'in_review', 'done']);
 export const taskPriorityEnum = pgEnum('task_priority', ['low', 'medium', 'high']);
-export const meetingStateEnum = pgEnum('meeting_state', ['upcoming', 'waiting', 'ready', 'published', 'no_summary']);
+export const meetingStateEnum = pgEnum('meeting_state', ['upcoming', 'waiting', 'ready', 'published', 'no_summary', 'cancelled']);
 
 export const meetings = pgTable('meetings', {
 	id: uuid('id').primaryKey().defaultRandom(),
@@ -1157,6 +1157,9 @@ export const meetings = pgTable('meetings', {
 	topic: text('topic').notNull(),
 	startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
 	durationMin: integer('duration_min'),
+	/** Set for meetings scheduled from ESS: where people join. */
+	joinUrl: text('join_url'),
+	agenda: text('agenda'),
 	state: meetingStateEnum('state').default('waiting').notNull(),
 	/** { overview, details: [{ label, text }], nextSteps: string[] } */
 	summary: jsonb('summary').$type<{ overview: string; details: { label: string; text: string }[]; nextSteps: string[] }>(),
@@ -1187,9 +1190,15 @@ export const tasks = pgTable('tasks', {
 	priority: taskPriorityEnum('priority').default('medium').notNull(),
 	dueDate: date('due_date'),
 	blocked: boolean('blocked').default(false).notNull(),
-	/** Set while the assignee has yet to accept a task from outside their reporting line. */
+	/**
+	 * Lead approval. 'pending' while the assignee's lead has yet to approve a
+	 * task someone else gave them; 'declined' once the lead said no (the task
+	 * goes back to whoever made it, with requestNote as the reason).
+	 */
 	requestState: text('request_state'), // null | 'pending' | 'declined'
 	requestNote: text('request_note'),
+	/** The lead who must approve it: the assignee's manager when it was given. */
+	approverId: uuid('approver_id').references((): any => users.id),
 	/** Fractional index within a column (src/lib/tasks/rules.ts rankBetween). */
 	rank: text('rank').default('i').notNull(),
 	/** Bumped on every change; a write that names an older version is refused. */

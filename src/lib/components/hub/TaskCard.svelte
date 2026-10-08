@@ -7,7 +7,7 @@
 	import Send from '@lucide/svelte/icons/send';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import { hub } from '$lib/hub/client.svelte';
-	import { respond } from '$lib/hub/actions';
+	import ApprovalButtons from './ApprovalButtons.svelte';
 	import { dueLabel, dueTone } from '$lib/hub/format';
 	import { PRIORITY_LABEL } from '$lib/tasks/rules';
 	import type { TaskView } from '$lib/tasks/types';
@@ -42,7 +42,7 @@
 
 <!--
 	A card is focusable so Alt + arrow can move it and Enter can open it, as on
-	Linear's and Trello's boards. It holds its own buttons (Accept), so it can't
+	Linear's and Trello's boards. It holds its own buttons (Approve), so it can't
 	itself be a button.
 -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
@@ -57,9 +57,9 @@
 	onkeydown={key}
 >
 	{#if task.requestState === 'pending'}
-		<span class="req"><Send size={12} /> Request from {task.createdBy.fullName}</span>
+		<span class="req"><Send size={12} /> {task.can.approve ? `${task.createdBy.fullName} needs your approval` : `Waiting for ${task.approver?.fullName ?? 'the lead'} to approve`}</span>
 	{:else if task.requestState === 'declined'}
-		<span class="req declined">Handed back{task.requestNote ? `: "${task.requestNote}"` : ''}</span>
+		<span class="req declined">Not approved or handed back{task.requestNote ? `: "${task.requestNote}"` : ''}</span>
 	{/if}
 	<strong class="title">{task.title}</strong>
 	<div class="chips">
@@ -78,12 +78,7 @@
 			{#if showAssignee && task.assignee}<Avatar userId={task.assignee.id} fullName={task.assignee.fullName} size="sm" />{/if}
 		</div>
 	{/if}
-	{#if task.requestState === 'pending' && task.assignee?.id === meId}
-		<div class="btns" data-no-drag>
-			<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={(e) => { e.stopPropagation(); void respond(task, 'accept'); }}>Accept</button>
-			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={(e) => { e.stopPropagation(); hub.openTask(task.id); }}>Decline…</button>
-		</div>
-	{/if}
+	{#if task.can.approve}<ApprovalButtons {task} />{/if}
 </article>
 
 <style>
@@ -185,9 +180,5 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-	}
-	.btns {
-		display: flex;
-		gap: 6px;
 	}
 </style>

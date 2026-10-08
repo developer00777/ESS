@@ -9,6 +9,7 @@
 	import { chat } from '$lib/chat/client.svelte';
 	import { api, hub } from '$lib/hub/client.svelte';
 	import { moveTask, respond } from '$lib/hub/actions';
+	import ApprovalButtons from './ApprovalButtons.svelte';
 	import { ago, longDay } from '$lib/hub/format';
 	import { lockPageScroll } from '$lib/scroll-lock';
 	import { PRIORITY_LABEL, STATUS_LABEL, TASK_PRIORITIES, TASK_STATUSES, type TaskStatus } from '$lib/tasks/rules';
@@ -163,30 +164,35 @@
 				onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
 			/>
 
-			{#if task.requestState === 'pending' && task.assignee?.id === meId}
+			{#if task.can.approve}
 				<div class="ess-alert ess-alert--info banner">
 					<Send size={15} />
 					<div class="grow">
-						<p>{task.createdBy.fullName} asked you to take this.</p>
-						{#if declining}
-							<label class="ess-label" for="ts-decline">Why can't you take it?</label>
-							<input id="ts-decline" class="ess-input" bind:value={declineNote} placeholder="For example: on leave until the 14th" />
-							<div class="row">
-								<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={!declineNote.trim()} onclick={decline}>Hand it back</button>
-								<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (declining = false)}>Cancel</button>
-							</div>
-						{:else}
-							<div class="row">
-								<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={async () => { if (task && (await respond(task, 'accept'))) await load(); }}>Accept</button>
-								<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (declining = true)}>Decline</button>
-							</div>
-						{/if}
+						<p>
+							{task.assignee?.id === task.createdBy.id ? `${task.createdBy.fullName} made this task for themselves.` : `${task.createdBy.fullName} made this task for ${task.assignee?.fullName ?? 'nobody yet'}.`}
+							It starts once you approve.
+						</p>
+						<ApprovalButtons {task} ondone={() => void load()} />
 					</div>
 				</div>
 			{:else if task.requestState === 'pending'}
-				<p class="ess-alert ess-alert--info">Waiting for {task.assignee?.fullName} to accept.</p>
+				<p class="ess-alert ess-alert--info">Waiting for {task.approver?.fullName ?? 'the lead'} to approve. It can be started once they do.</p>
 			{:else if task.requestState === 'declined'}
-				<p class="ess-alert ess-alert--warning">Handed back{task.requestNote ? `: "${task.requestNote}"` : ''}. Give it to someone else, or keep it.</p>
+				<p class="ess-alert ess-alert--warning">Not approved or handed back{task.requestNote ? `: "${task.requestNote}"` : ''}. Change it and give it to someone, or delete it.</p>
+			{/if}
+			{#if task.assignee?.id === meId && task.createdBy.id !== meId && !task.requestState}
+				{#if declining}
+					<div class="ess-field">
+						<label class="ess-label" for="ts-decline">Why can't you take it?</label>
+						<input id="ts-decline" class="ess-input" bind:value={declineNote} placeholder="For example: on leave until the 14th" />
+						<div class="row">
+							<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={!declineNote.trim()} onclick={decline}>Hand it back</button>
+							<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (declining = false)}>Cancel</button>
+						</div>
+					</div>
+				{:else}
+					<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm handback" onclick={() => (declining = true)}>Can't take this? Hand it back</button>
+				{/if}
 			{/if}
 			{#if !can}<p class="ess-help">You can see this because it is on your team. Only its owner, the person who made it and their leads can change it.</p>{/if}
 
@@ -364,6 +370,9 @@
 		display: flex;
 		gap: 6px;
 		flex-wrap: wrap;
+	}
+	.handback {
+		justify-self: start;
 	}
 	.grid {
 		display: grid;

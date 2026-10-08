@@ -12,20 +12,21 @@
 
 	const STATE: Record<MeetingRowView['state'], string> = {
 		upcoming: 'Coming up',
-		waiting: 'Waiting for Zoom’s summary',
+		waiting: 'Waiting for the summary',
 		ready: 'Minutes ready',
 		published: 'Tasks published',
-		no_summary: 'No AI summary'
+		no_summary: 'No summary',
+		cancelled: 'Cancelled'
 	};
 </script>
 
 <div class="strip" aria-label="Today">
 	{#each meetings as m (m.id)}
-		{@const href = m.state === 'upcoming' ? (m.joinUrl ?? null) : m.isHost ? `/hub/meetings/${m.id}` : '/hub/meetings'}
+		{@const href = m.state === 'upcoming' ? (m.canJoin ? `/hub/meetings/${m.id}/join` : '/hub/meetings') : m.isHost ? `/hub/meetings/${m.id}` : '/hub/meetings'}
 		{#if href}
-			<a class="chip" data-state={m.state} {href} target={m.state === 'upcoming' ? '_blank' : undefined} rel={m.state === 'upcoming' ? 'noopener' : undefined}>
+			<a class="chip" data-state={m.state} {href} target={m.state === 'upcoming' && m.canJoin ? '_blank' : undefined} rel={m.state === 'upcoming' && m.canJoin ? 'noopener' : undefined} data-sveltekit-reload={m.state === 'upcoming' && m.canJoin ? true : undefined}>
 				<span class="t">{timeIst(m.startedAt)}</span>
-				<span class="b"><strong>{m.topic}</strong><small>{m.state === 'upcoming' && m.joinUrl ? 'Join in Zoom' : STATE[m.state]}</small></span>
+				<span class="b"><strong>{m.topic}</strong><small>{m.state === 'upcoming' && m.canJoin ? (m.isHost ? 'Start meeting' : 'Join meeting') : STATE[m.state]}</small></span>
 			</a>
 		{:else}
 			<span class="chip" data-state={m.state}>
@@ -34,7 +35,7 @@
 			</span>
 		{/if}
 	{:else}
-		<span class="chip quiet"><Video size={15} /><span class="b"><strong>No meetings today</strong><small>Zoom meetings you host or join show here</small></span></span>
+		<a class="chip quiet" href="/hub/meetings"><Video size={15} /><span class="b"><strong>No meetings today</strong><small>Schedule one in Meetings</small></span></a>
 	{/each}
 	<a class="chip" href="/hub/tasks">
 		<span class="t"><SquareKanban size={15} /></span>

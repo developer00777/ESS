@@ -12,6 +12,9 @@ import { encodeMeetingUuid } from './webhook';
  *
  *   ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET   the app's credentials
  *   ZOOM_WEBHOOK_SECRET                                    the app's secret token
+ *   ZOOM_DEFAULT_HOST                                      a licensed Zoom user's email that hosts
+ *                                                          meetings scheduled by people without
+ *                                                          their own Zoom account
  *
  * The app needs the meeting summary, past participants and user read scopes
  * (admin-level), and event subscriptions for meeting.summary_completed and
@@ -67,24 +70,45 @@ async function token(): Promise<string> {
 export class ZoomError extends Error {
 	constructor(
 		message: string,
-		public status: number
+		public status: number,
+		/** Zoom's own error code, e.g. 1001 "user does not exist". */
+		public code?: number
 	) {
 		super(message);
 	}
 }
 
-async function get<T>(path: string): Promise<T> {
+async function call<T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T> {
 	if (!zoomConfigured()) throw new ZoomError('Zoom is not connected', 503);
-	let res = await fetch(API + path, { headers: { Authorization: `Bearer ${await token()}` } });
+	const send = async () =>
+		fetch(API + path, {
+			method,
+			headers: { Authorization: `Bearer ${await token()}`, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
+			body: body === undefined ? undefined : JSON.stringify(body)
+		});
+	let res = await send();
 	if (res.status === 401) {
 		// Token revoked or rotated early: one retry with a fresh one.
 		memToken = null;
 		await kv().del('zoom:token').catch(() => {});
-		res = await fetch(API + path, { headers: { Authorization: `Bearer ${await token()}` } });
+		res = await send();
 	}
-	if (!res.ok) throw new ZoomError(`Zoom ${path.split('?')[0]} answered ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`, res.status);
-	return (await res.json()) as T;
+	if (!res.ok) {
+		const text = (await res.text().catch(() => '')).slice(0, 300);
+		let code: number | undefined;
+		try {
+			code = JSON.parse(text).code;
+		} catch {
+			/* not JSON */
+		}
+		throw new ZoomError(`Zoom ${method} ${path.split('?')[0]} answered ${res.status}: ${text}`, res.status, code);
+	}
+	if (res.status === 204) return undefined as T;
+	const raw = await res.text();
+	return (raw ? JSON.parse(raw) : undefined) as T;
 }
+
+const get = <T>(path: string) => call<T>('GET', path);
 
 /* ---------- what ESS reads ---------- */
 
@@ -178,4 +202,71 @@ export async function recordStatus(patch: ZoomStatus) {
 		.insert(appSettings)
 		.values({ key: 'zoom_status', value: next })
 		.onConflictDoUpdate({ target: appSettings.key, set: { value: next, updatedAt: new Date() } });
+}
+
+/* ---------- scheduling from ESS ---------- */
+
+export type CreatedMeeting = { id: number | string; uuid?: string; join_url: string; start_url?: string; start_time?: string; duration?: number };
+
+/**
+ * A meeting scheduled in ESS. It is created under the scheduler's own Zoom
+ * user when they have one in the company account, otherwise under
+ * ZOOM_DEFAULT_HOST; either way ESS records the scheduler as the host. The
+ * AI summary starts by itself so the minutes come back to ESS.
+ */
+/** The company account that hosts when nobody else's Zoom account is set. */
+export function defaultZoomHost(): string | null {
+	return env.ZOOM_DEFAULT_HOST?.trim() || null;
+}
+
+/**
+ * Creates the call under the first of `hosts` (Zoom emails or Zoom user ids)
+ * that Zoom accepts, falling back to ZOOM_DEFAULT_HOST last.
+ */
+export async function createZoomMeeting(input: { hosts: string[]; topic: string; startLocal: string; durationMin: number; agenda?: string | null }): Promise<CreatedMeeting & { hostedBy: string }> {
+	const body = {
+		topic: input.topic.slice(0, 200),
+		type: 2,
+		start_time: input.startLocal,
+		timezone: 'Asia/Kolkata',
+		duration: input.durationMin,
+		agenda: input.agenda?.slice(0, 2000) ?? undefined,
+		settings: {
+			join_before_host: true,
+			waiting_room: false,
+			mute_upon_entry: true,
+			auto_start_meeting_summary: true
+		}
+	};
+	const hosts = [...input.hosts, defaultZoomHost()].filter((h, i, a): h is string => !!h && a.indexOf(h) === i);
+	let last: unknown = null;
+	for (const host of hosts) {
+		try {
+			const m = await call<CreatedMeeting>('POST', `/users/${encodeURIComponent(host)}/meetings`, body);
+			return { ...m, hostedBy: host };
+		} catch (err) {
+			last = err;
+			// Not a Zoom user in this account: try the next host, ending with the company one.
+			if (err instanceof ZoomError && (err.status === 404 || err.code === 1001 || err.code === 1120)) continue;
+			throw err;
+		}
+	}
+	throw hosts.length === 0 || (last instanceof ZoomError && (last.status === 404 || last.code === 1001 || last.code === 1120))
+		? new ZoomError('Video meetings need a host account. Ask HR to set this person\'s Zoom account in Admin Controls › Zoom, or set ZOOM_DEFAULT_HOST.', 400)
+		: (last as Error);
+}
+
+export async function deleteZoomMeeting(meetingId: string) {
+	try {
+		await call('DELETE', `/meetings/${encodeURIComponent(meetingId)}?schedule_for_reminder=false`);
+	} catch (err) {
+		// Already gone in Zoom is fine.
+		if (!(err instanceof ZoomError && (err.status === 404 || err.code === 3001))) throw err;
+	}
+}
+
+/** A fresh start link for the host; Zoom's start links expire after two hours. */
+export async function zoomStartUrl(meetingId: string): Promise<string | null> {
+	const m = await get<{ start_url?: string }>(`/meetings/${encodeURIComponent(meetingId)}`);
+	return m.start_url ?? null;
 }

@@ -14,9 +14,11 @@ export type TaskView = {
 	blocked: boolean;
 	assignee: PersonRef | null;
 	createdBy: PersonRef;
-	/** Waiting for the assignee to accept, or sent back. */
+	/** Waiting for the assignee's lead to approve it, or turned down by them. */
 	requestState: 'pending' | 'declined' | null;
 	requestNote: string | null;
+	/** The lead who approves (or approved) it. */
+	approver: PersonRef | null;
 	rank: string;
 	version: number;
 	source:
@@ -27,7 +29,7 @@ export type TaskView = {
 	completedAt: string | null;
 	updatedAt: string;
 	/** What the viewer may do with it. */
-	can: { edit: boolean; respond: boolean };
+	can: { edit: boolean; approve: boolean };
 };
 
 export type TaskDetail = TaskView & {
@@ -37,7 +39,8 @@ export type TaskDetail = TaskView & {
 	assignable: AssignableGroups;
 };
 
-export type AssignableGroups = { direct: PersonRef[]; request: PersonRef[] };
+/** Everyone can be given a task; `approval` lists the people whose lead must approve it first. */
+export type AssignableGroups = { direct: PersonRef[]; approval: (PersonRef & { approverName: string })[] };
 
 export type MeetingSummary = { overview: string; details: { label: string; text: string }[]; nextSteps: string[] };
 
@@ -53,8 +56,8 @@ export type MeetingItemView = {
 	confidence: number | null;
 	included: boolean;
 	taskId: string | null;
-	/** For the host: 'request' when the owner sits outside their reporting line. */
-	mode: 'direct' | 'request' | 'forbidden';
+	/** For the host: 'approval' when the owner's lead must approve the task first. */
+	mode: 'direct' | 'approval';
 };
 
 export type MeetingRowView = {
@@ -62,7 +65,7 @@ export type MeetingRowView = {
 	topic: string;
 	startedAt: string;
 	durationMin: number | null;
-	state: 'upcoming' | 'waiting' | 'ready' | 'published' | 'no_summary';
+	state: 'upcoming' | 'waiting' | 'ready' | 'published' | 'no_summary' | 'cancelled';
 	source: 'zoom' | 'pasted';
 	host: PersonRef | null;
 	attendees: PersonRef[];
@@ -74,7 +77,9 @@ export type MeetingRowView = {
 	isHost: boolean;
 	/** Tasks from this meeting that belong to the viewer. */
 	mine: { taskId: string; title: string }[];
-	joinUrl?: string | null;
+	/** Scheduled from ESS: people join through /hub/meetings/<id>/join. */
+	canJoin: boolean;
+	agenda: string | null;
 };
 
 export type MeetingView = MeetingRowView & {
@@ -84,7 +89,7 @@ export type MeetingView = MeetingRowView & {
 	publishedAt: string | null;
 };
 
-export type NeedKind = 'approval' | 'request' | 'minutes' | 'mention' | 'due' | 'blocked';
+export type NeedKind = 'approval' | 'minutes' | 'mention' | 'due' | 'blocked';
 
 export type NeedItem = {
 	key: string;
@@ -92,9 +97,9 @@ export type NeedItem = {
 	title: string;
 	detail: string;
 	quote?: string | null;
-	/** approval */
-	approval?: { type: 'leave' | 'deviation' | 'comp_off'; id: string; stage: 'manager' | 'hr' };
-	/** request, due, blocked */
+	/** approval: a leave or attendance request, or a task waiting for this lead */
+	approval?: { type: 'leave' | 'deviation' | 'comp_off' | 'task'; id: string; stage: 'manager' | 'hr' };
+	/** a task approval, due, blocked */
 	task?: TaskView;
 	/** minutes */
 	meetingId?: string;

@@ -385,7 +385,7 @@ const myRequests: Tool = {
 				from,
 				title: t.title,
 				due: t.dueDate,
-				status: t.requestState === 'pending' ? 'waiting for them to accept' : t.requestState === 'declined' ? 'declined' : t.status.replace('_', ' '),
+				status: t.requestState === 'pending' ? "waiting for their lead's approval" : t.requestState === 'declined' ? 'declined' : t.status.replace('_', ' '),
 				blocked: t.blocked,
 				note: t.requestNote
 			})),
@@ -494,12 +494,11 @@ const pendingApprovals: Tool = {
 
 const draftTask: Tool = {
 	name: 'draft_task',
-	description: 'Draft a task for a teammate. Team Leads can give tasks to their team; HR and Super Admins to anyone. Returns a card with Assign.',
+	description: "Draft a task for anyone, including the asker. Unless the asker leads that person, the person's lead approves it before it starts. Returns a card with Assign.",
 	parameters: obj({ to: S('Name or email of the teammate'), title: S('What needs doing'), due: S('Due day, e.g. "tomorrow", "Fri", YYYY-MM-DD. Optional.') }, ['to', 'title']),
-	allowed: (c) => c.mode === 'panel' && (c.user.role === 'team_lead' || isHrLike(c)),
-	run: async (a, c) => {
-		const scope = isHrLike(c) ? undefined : (await teamScope(c))?.ids ?? [];
-		const { person, matches } = await findPerson(str(a.to), scope);
+	allowed: (c) => c.mode === 'panel',
+	run: async (a) => {
+		const { person, matches } = await findPerson(str(a.to), undefined);
 		if (!person) return ambiguous('teammate', matches);
 		const due = str(a.due) ? parseDay(str(a.due), new Date()) : null;
 		const card: ChampCard = {
@@ -507,7 +506,7 @@ const draftTask: Tool = {
 			kind: 'task',
 			label: 'Task · not assigned yet',
 			title: `For ${person.fullName}: ${str(a.title)}`,
-			lines: [due ? `Due ${fmt(due)}` : 'No due date', 'Goes on their Champ Hub board and ESS feed. Someone outside your reporting line gets it as a request.'],
+			lines: [due ? `Due ${fmt(due)}` : 'No due date', 'Goes on their Champ Hub board. Unless you lead them, their lead approves it first.'],
 			payload: { toUserId: person.id, title: str(a.title).slice(0, 300), due },
 			buttons: [{ action: 'assign', label: 'Assign task', primary: true }],
 			doneText: `Assigned to ${person.fullName}`

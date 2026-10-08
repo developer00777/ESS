@@ -169,6 +169,13 @@
       "when": 1791390863681,
       "tag": "0023_device_punch_dedupe",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791462016603,
+      "tag": "0024_task_approval_and_scheduling",
+      "breakpoints": true
     }
   ]
 }

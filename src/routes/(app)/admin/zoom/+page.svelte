@@ -75,6 +75,30 @@
 </div>
 
 <section class="ess-card block">
+	<h2 class="ess-h3">Who hosts scheduled meetings</h2>
+	<p class="ess-caption">
+		When someone schedules a meeting, they pick which account hosts it: their own, their team lead's or anyone above them, or the company account
+		{#if data.defaultHost}(<code>{data.defaultHost}</code>){:else}(not set: add <code>ZOOM_DEFAULT_HOST</code>){/if}.
+		A person's account is their work email unless you set a different Zoom email or Zoom user ID here.
+	</p>
+	<form method="POST" action="?/link" use:enhance class="host-form">
+		<div class="ess-field">
+			<label class="ess-label" for="zh-person">Person</label>
+			<select id="zh-person" class="ess-select" name="userId" required>
+				<option value="">Pick a person</option>
+				{#each data.people as p (p.id)}<option value={p.id}>{p.fullName}</option>{/each}
+			</select>
+		</div>
+		<div class="ess-field">
+			<label class="ess-label" for="zh-key">Their Zoom email or user ID</label>
+			<input id="zh-key" class="ess-input" name="zoomKey" placeholder="priya.n@company.com or KdYKjnimT4KPd8FFgQt9FQ" required />
+		</div>
+		<button class="ess-btn ess-btn--primary ess-btn--sm">Save</button>
+	</form>
+	<p class="ess-help">The Zoom user ID is on the user's page in the Zoom admin portal (User Management › Users). It has to be a licensed user in the company Zoom account.</p>
+</section>
+
+<section class="ess-card block">
 	<h2 class="ess-h3">Zoom names and logins</h2>
 	<p class="ess-caption">Attendees match by work email. Personal accounts, phones and dial-ins show a name only; link those here once and future meetings match them.</p>
 
@@ -107,10 +131,10 @@
 	{/if}
 
 	{#if data.links.length}
-		<h3 class="ess-h3 sub">Linked by hand</h3>
+		<h3 class="ess-h3 sub">Set by hand (host accounts and matched names)</h3>
 		<div class="ess-table-shell">
 			<table class="ess-table">
-				<thead><tr><th>Zoom name or email</th><th>Login</th><th></th></tr></thead>
+				<thead><tr><th>Zoom email, user ID or name</th><th>Login</th><th></th></tr></thead>
 				<tbody>
 					{#each data.links as l (l.id)}
 						<tr>
@@ -209,5 +233,16 @@
 	}
 	.sub {
 		margin-top: 8px;
+	}
+	.host-form {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
+		gap: 10px;
+		align-items: end;
+	}
+	@media (max-width: 720px) {
+		.host-form {
+			grid-template-columns: minmax(0, 1fr);
+		}
 	}
 </style>

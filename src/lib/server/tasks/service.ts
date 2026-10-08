@@ -72,32 +72,41 @@ export function treeOf(org: Org, id: string): string[] {
 
 export async function reachFor(user: SessionUser): Promise<Reach> {
 	const org = await loadOrg();
-	const me = org.byId.get(user.id);
-	const teammateIds = me?.reportsTo ? (org.children.get(me.reportsTo) ?? []).filter((id) => id !== user.id) : [];
+	const treeIds = treeOf(org, user.id);
 	return {
 		selfId: user.id,
-		treeIds: treeOf(org, user.id),
-		teammateIds,
-		anyone: user.role === 'super_admin' || hasCap(user, 'tasks.assign_anyone'),
-		canRequestAnyone: user.role !== 'employee'
+		treeIds,
+		isLead: treeIds.length > 0,
+		anyone: user.role === 'super_admin' || hasCap(user, 'tasks.assign_anyone')
 	};
 }
 
-/** The people the picker offers, grouped as it shows them. */
+/** The lead whose approval a task for `targetId` needs, or null when it goes straight on. */
+export async function approverFor(reach: Reach, targetId: string | null): Promise<string | null> {
+	if (!targetId) return null;
+	const org = await loadOrg();
+	const manager = org.byId.get(targetId)?.reportsTo ?? null;
+	const activeManager = manager && org.byId.get(manager)?.isActive ? manager : null;
+	return assignMode(reach, targetId, activeManager) === 'approval' ? activeManager : null;
+}
+
+/** Everyone, split by whether their lead must approve a task from this person first. */
 export async function assignableFor(user: SessionUser, reach?: Reach): Promise<AssignableGroups> {
 	const org = await loadOrg();
 	const r = reach ?? (await reachFor(user));
-	const direct: PersonRef[] = [];
-	const request: PersonRef[] = [];
+	const direct: AssignableGroups['direct'] = [];
+	const approval: AssignableGroups['approval'] = [];
 	const people = [...org.byId.values()].filter((p) => p.isActive).sort((a, b) => a.fullName.localeCompare(b.fullName));
 	for (const p of people) {
-		const mode = assignMode(r, p.id);
-		if (mode === 'direct') direct.push({ id: p.id, fullName: p.fullName });
-		else if (mode === 'request') request.push({ id: p.id, fullName: p.fullName });
+		const lead = p.reportsTo && org.byId.get(p.reportsTo)?.isActive ? p.reportsTo : null;
+		if (assignMode(r, p.id, lead) === 'direct') direct.push({ id: p.id, fullName: p.fullName });
+		else approval.push({ id: p.id, fullName: p.fullName, approverName: org.byId.get(lead!)?.fullName ?? 'their lead' });
 	}
-	// You first, then your team, then everyone else alphabetically.
-	direct.sort((a, b) => (a.id === user.id ? -1 : b.id === user.id ? 1 : a.fullName.localeCompare(b.fullName)));
-	return { direct, request };
+	// You first, then everyone alphabetically.
+	const youFirst = <T extends PersonRef>(a: T, b: T) => (a.id === user.id ? -1 : b.id === user.id ? 1 : a.fullName.localeCompare(b.fullName));
+	direct.sort(youFirst);
+	approval.sort(youFirst);
+	return { direct, approval };
 }
 
 /* ---------- reading ---------- */
@@ -105,13 +114,19 @@ export async function assignableFor(user: SessionUser, reach?: Reach): Promise<A
 type Row = typeof tasks.$inferSelect;
 
 function canSee(user: SessionUser, t: Row, reach: Reach): boolean {
-	if (t.assigneeId === user.id || t.createdBy === user.id) return true;
+	if (t.assigneeId === user.id || t.createdBy === user.id || t.approverId === user.id) return true;
 	if (t.assigneeId && reach.treeIds.includes(t.assigneeId)) return true;
 	if (!t.assigneeId && reach.treeIds.includes(t.createdBy)) return true;
 	return user.role === 'super_admin' || hasCap(user, 'tasks.view_all');
 }
 
+function canApprove(user: SessionUser, t: Row): boolean {
+	return t.requestState === 'pending' && (t.approverId === user.id || user.role === 'super_admin');
+}
+
 function canEdit(user: SessionUser, t: Row, reach: Reach): boolean {
+	// Until the lead approves it, the task is the creator's and the lead's to change.
+	if (t.requestState === 'pending') return t.createdBy === user.id || canApprove(user, t);
 	if (t.assigneeId === user.id || t.createdBy === user.id) return true;
 	if (t.assigneeId && reach.treeIds.includes(t.assigneeId)) return true;
 	if (!t.assigneeId && reach.treeIds.includes(t.createdBy)) return true;
@@ -159,6 +174,7 @@ export async function serialize(viewer: SessionUser, rows: Row[], reach?: Reach)
 			createdBy: person(t.createdBy)!,
 			requestState: (t.requestState as TaskView['requestState']) ?? null,
 			requestNote: t.requestNote,
+			approver: person(t.approverId),
 			rank: t.rank,
 			version: t.version,
 			source: m
@@ -169,7 +185,7 @@ export async function serialize(viewer: SessionUser, rows: Row[], reach?: Reach)
 			subtasks: { done: s?.done ?? 0, total: s?.total ?? 0 },
 			completedAt: t.completedAt?.toISOString() ?? null,
 			updatedAt: t.updatedAt.toISOString(),
-			can: { edit, respond: t.assigneeId === viewer.id && t.requestState === 'pending' }
+			can: { edit, approve: canApprove(viewer, t) }
 		};
 	});
 }
@@ -242,9 +258,10 @@ export async function getTask(viewer: SessionUser, id: string): Promise<Result<{
 
 /* ---------- telling people ---------- */
 
-async function audience(t: Pick<Row, 'assigneeId' | 'createdBy'>): Promise<string[]> {
+async function audience(t: Pick<Row, 'assigneeId' | 'createdBy' | 'approverId'>): Promise<string[]> {
 	const org = await loadOrg();
 	const ids = new Set<string>([t.createdBy]);
+	if (t.approverId) ids.add(t.approverId);
 	if (t.assigneeId) {
 		ids.add(t.assigneeId);
 		// The assignee's lead has them on the team board.
@@ -254,7 +271,7 @@ async function audience(t: Pick<Row, 'assigneeId' | 'createdBy'>): Promise<strin
 	return [...ids];
 }
 
-async function changed(t: Pick<Row, 'id' | 'assigneeId' | 'createdBy'>, extra: string[] = []) {
+async function changed(t: Pick<Row, 'id' | 'assigneeId' | 'createdBy' | 'approverId'>, extra: string[] = []) {
 	await publish([...(await audience(t)), ...extra], { type: 'tasks.changed', taskId: t.id });
 }
 
@@ -265,17 +282,31 @@ async function event(taskId: string, actorId: string | null, body: string, kind:
 const taskHref = (id: string) => `/hub/tasks?task=${id}`;
 const fmtDue = (d: string | null) => (d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }) : null);
 
-async function tellAssignee(t: Row, actor: SessionUser, how: 'assigned' | 'request' | 'moved') {
+async function tellAssignee(t: Row, actor: Pick<SessionUser, 'id' | 'fullName'>) {
 	if (!t.assigneeId || t.assigneeId === actor.id) return;
 	const due = fmtDue(t.dueDate);
-	const title = how === 'request' ? `${actor.fullName} asked you to take a task` : `New task from ${actor.fullName}`;
-	await postToFeed(t.assigneeId, `${title}: ${t.title}`, {
+	const title = `New task from ${actor.fullName}`;
+	await postToFeed(t.assigneeId, `${title}: ${t.title}`, { type: 'notice', tone: 'info', title, text: t.title + (due ? ` · due ${due}` : ''), href: taskHref(t.id) });
+}
+
+/**
+ * A task waiting for a lead: a card in their ESS feed, a push, and a
+ * 'tasks.approval' event that opens the approval pop-up in any ESS tab they
+ * have open.
+ */
+async function askApprover(t: Row, actor: Pick<SessionUser, 'id' | 'fullName'>) {
+	if (!t.approverId) return;
+	const org = await loadOrg();
+	const forWhom = t.assigneeId === actor.id ? actor.fullName : (org.byId.get(t.assigneeId ?? '')?.fullName ?? 'someone');
+	const due = fmtDue(t.dueDate);
+	await postToFeed(t.approverId, `${actor.fullName} made a task for ${forWhom}: ${t.title}. It needs your approval.`, {
 		type: 'notice',
-		tone: 'info',
-		title,
-		text: t.title + (due ? ` · due ${due}` : '') + (how === 'request' ? ' · Accept or decline it in Champ Hub' : ''),
+		tone: 'warn',
+		title: `Approve a task for ${forWhom}?`,
+		text: `${t.title}${due ? ` · due ${due}` : ''} · from ${actor.fullName}`,
 		href: taskHref(t.id)
 	});
+	await publish([t.approverId], { type: 'tasks.approval', taskId: t.id });
 }
 
 /* ---------- writing ---------- */
@@ -313,15 +344,12 @@ export async function createTask(viewer: SessionUser, input: CreateInput, opts: 
 	const status = (TASK_STATUSES as readonly string[]).includes(input.status ?? '') ? (input.status as TaskStatus) : 'todo';
 	const assigneeId = input.assigneeId === undefined ? viewer.id : input.assigneeId;
 
-	let mode: 'direct' | 'request' = 'direct';
+	let approverId: string | null = null;
 	if (assigneeId) {
 		if (!UUID.test(assigneeId)) return { ok: false, message: 'That person no longer exists' };
-		const org = await loadOrg();
-		const target = org.byId.get(assigneeId);
+		const target = (await loadOrg()).byId.get(assigneeId);
 		if (!target?.isActive) return { ok: false, message: 'That person no longer exists' };
-		const m = assignMode(await reachFor(viewer), assigneeId);
-		if (m === 'forbidden') return { ok: false, message: `You can give tasks to yourself and your teammates. Ask your lead to give this one to ${target.fullName}.`, status: 403 };
-		mode = m;
+		approverId = await approverFor(await reachFor(viewer), assigneeId);
 	}
 
 	const [row] = await db
@@ -331,26 +359,41 @@ export async function createTask(viewer: SessionUser, input: CreateInput, opts: 
 			description,
 			assigneeId,
 			createdBy: opts.asCreator ?? viewer.id,
-			status: mode === 'request' ? 'todo' : status,
+			status: approverId ? 'todo' : status,
 			priority,
 			dueDate,
-			requestState: mode === 'request' ? 'pending' : null,
-			rank: await topRank(assigneeId, mode === 'request' ? 'todo' : status),
+			requestState: approverId ? 'pending' : null,
+			approverId,
+			rank: await topRank(assigneeId, approverId ? 'todo' : status),
 			meetingId: input.meetingId ?? null,
 			sourceQuote: input.sourceQuote?.slice(0, 1000) ?? null,
 			sourceMessageId: input.sourceMessageId ?? null,
 			sourceChannelId: input.sourceChannelId ?? null,
-			completedAt: status === 'done' ? new Date() : null
+			completedAt: status === 'done' && !approverId ? new Date() : null
 		})
 		.returning();
 
 	const org = await loadOrg();
 	const whoName = assigneeId ? (org.byId.get(assigneeId)?.fullName ?? 'someone') : null;
-	await event(row.id, viewer.id, !assigneeId ? 'created this, unassigned' : assigneeId === viewer.id ? 'created this' : mode === 'request' ? `asked ${whoName} to take this` : `gave this to ${whoName}`);
-	if (!opts.quiet) await tellAssignee(row, viewer, mode === 'request' ? 'request' : 'assigned');
+	const approverName = approverId ? (org.byId.get(approverId)?.fullName ?? 'their lead') : null;
+	await event(
+		row.id,
+		viewer.id,
+		(!assigneeId ? 'created this, unassigned' : assigneeId === viewer.id ? 'created this' : `gave this to ${whoName}`) + (approverName ? `, waiting for ${approverName} to approve` : '')
+	);
+	if (approverId) await askApprover(row, viewer);
+	else if (!opts.quiet) await tellAssignee(row, viewer);
 	await changed(row);
 	const [view] = await serialize(viewer, [row]);
 	return { ok: true, task: view };
+}
+
+async function refuse(t: Row, what: 'change' | 'move'): Promise<{ ok: false; message: string; status: number }> {
+	if (t.requestState === 'pending') {
+		const lead = (await loadOrg()).byId.get(t.approverId ?? '')?.fullName ?? 'the lead';
+		return { ok: false, message: `This task is waiting for ${lead} to approve it. It can be started once they do.`, status: 409 };
+	}
+	return { ok: false, message: `Only the owner, the person who made it and their leads can ${what} it`, status: 403 };
 }
 
 export type PatchInput = { title?: string; description?: string; dueDate?: string | null; priority?: string; blocked?: boolean; version?: number };
@@ -365,7 +408,7 @@ export async function updateTask(viewer: SessionUser, id: string, patch: PatchIn
 	const t = await load(id);
 	const reach = await reachFor(viewer);
 	if (!t || !canSee(viewer, t, reach)) return { ok: false, message: 'That task is not available to you', status: 404 };
-	if (!canEdit(viewer, t, reach)) return { ok: false, message: 'Only the owner, the person who made it and their leads can change it', status: 403 };
+	if (!canEdit(viewer, t, reach)) return refuse(t, 'change');
 	const s = await stale(viewer, t, patch.version);
 	if (s) return s as Result<{ task: TaskView }>;
 
@@ -433,39 +476,36 @@ export async function moveTask(viewer: SessionUser, id: string, input: MoveInput
 	const t = await load(id);
 	const reach = await reachFor(viewer);
 	if (!t || !canSee(viewer, t, reach)) return { ok: false, message: 'That task is not available to you', status: 404 };
-	if (!canEdit(viewer, t, reach)) return { ok: false, message: 'Only the owner, the person who made it and their leads can move it', status: 403 };
+	if (!canEdit(viewer, t, reach)) return refuse(t, 'move');
 	const s = await stale(viewer, t, input.version);
 	if (s) return s as Result<{ task: TaskView }>;
 
-	const status = input.status && (TASK_STATUSES as readonly string[]).includes(input.status) ? (input.status as TaskStatus) : t.status;
+	let status = input.status && (TASK_STATUSES as readonly string[]).includes(input.status) ? (input.status as TaskStatus) : t.status;
 	let assigneeId = t.assigneeId;
 	let requestState = t.requestState;
-	let mode: 'direct' | 'request' = 'direct';
+	let approverId = t.approverId;
 	const notes: string[] = [];
 	const org = await loadOrg();
 
 	if (input.assigneeId !== undefined && input.assigneeId !== t.assigneeId) {
 		const target = input.assigneeId;
-		if (target) {
-			if (!UUID.test(target) || !org.byId.get(target)?.isActive) return { ok: false, message: 'That person no longer exists' };
-			const m = assignMode(reach, target);
-			if (m === 'forbidden') return { ok: false, message: `You can give tasks to yourself and your teammates only`, status: 403 };
-			mode = m;
-		}
+		if (target && (!UUID.test(target) || !org.byId.get(target)?.isActive)) return { ok: false, message: 'That person no longer exists' };
 		assigneeId = target;
-		requestState = mode === 'request' ? 'pending' : null;
+		// A new owner may have a different lead to approve it.
+		approverId = await approverFor(reach, target);
+		requestState = approverId ? 'pending' : null;
 		const from = t.assigneeId ? org.byId.get(t.assigneeId)?.fullName : 'Unassigned';
 		const to = target ? org.byId.get(target)?.fullName : 'Unassigned';
-		notes.push(target ? `moved this from ${from} to ${to}${mode === 'request' ? ' as a request' : ''}` : `took this off ${from}`);
+		notes.push((target ? `moved this from ${from} to ${to}` : `took this off ${from}`) + (approverId ? `, waiting for ${org.byId.get(approverId)?.fullName ?? 'their lead'} to approve` : ''));
+	}
+	// Work doesn't start before the lead says yes.
+	if (requestState === 'pending' && status !== 'todo') {
+		if (assigneeId === t.assigneeId) return { ok: false, message: `This task is waiting for ${org.byId.get(approverId ?? '')?.fullName ?? 'the lead'} to approve it`, status: 409 };
+		status = 'todo';
 	}
 	// A finished task given to someone new starts again.
 	const finalStatus: TaskStatus = assigneeId !== t.assigneeId && status === 'done' ? 'todo' : status;
 	if (finalStatus !== t.status) notes.push(`moved this to ${STATUS_LABEL[finalStatus]}`);
-	// Starting work on a request accepts it.
-	if (requestState === 'pending' && assigneeId === viewer.id && finalStatus !== 'todo') {
-		requestState = null;
-		notes.push('accepted this');
-	}
 
 	let rank = t.rank;
 	const neighbours = [input.beforeId, input.afterId].filter((x): x is string => !!x && UUID.test(x));
@@ -487,6 +527,8 @@ export async function moveTask(viewer: SessionUser, id: string, input: MoveInput
 			status: finalStatus,
 			assigneeId,
 			requestState,
+			requestNote: requestState === t.requestState ? t.requestNote : null,
+			approverId,
 			rank,
 			completedAt: finalStatus === 'done' ? (t.completedAt ?? new Date()) : null,
 			version: t.version + 1,
@@ -498,7 +540,8 @@ export async function moveTask(viewer: SessionUser, id: string, input: MoveInput
 	for (const n of notes) await event(id, viewer.id, n);
 
 	if (assigneeId !== t.assigneeId) {
-		await tellAssignee(row, viewer, mode === 'request' ? 'request' : 'moved');
+		if (approverId) await askApprover(row, viewer);
+		else await tellAssignee(row, viewer);
 	} else if (finalStatus === 'in_review' && t.status !== 'in_review' && row.createdBy !== viewer.id) {
 		await postToFeed(row.createdBy, `${viewer.fullName} moved "${row.title}" to In review`, { type: 'notice', tone: 'info', title: 'Ready for your review', text: row.title, href: taskHref(row.id) });
 	} else if (finalStatus === 'done' && t.status !== 'done' && row.createdBy !== viewer.id) {
@@ -509,40 +552,75 @@ export async function moveTask(viewer: SessionUser, id: string, input: MoveInput
 	return { ok: true, task: view };
 }
 
-/** Accept or decline a task someone asked you to take. */
-export async function respondToTask(viewer: SessionUser, id: string, decision: 'accept' | 'decline', note = ''): Promise<Result<{ task: TaskView | null }>> {
+/**
+ * The lead's answer to a task waiting for them. Approved, it goes onto the
+ * assignee's board and they hear about it. Turned down, it goes back to
+ * whoever made it, with the reason.
+ */
+export async function approveTask(viewer: SessionUser, id: string, decision: 'approve' | 'reject', note = ''): Promise<Result<{ task: TaskView }>> {
 	const t = await load(id);
-	// A request can be accepted or declined; a task given directly can still be
-	// handed back with a reason.
-	if (!t || t.assigneeId !== viewer.id || (decision === 'accept' && t.requestState !== 'pending')) return { ok: false, message: 'That task is no longer waiting for you', status: 409 };
+	if (!t || !canApprove(viewer, t)) return { ok: false, message: 'That task is no longer waiting for your approval', status: 409 };
 	const why = note.trim().slice(0, 300);
-	if (decision === 'decline' && !why) return { ok: false, message: "Say briefly why you can't take it" };
+	if (decision === 'reject' && !why) return { ok: false, message: 'Say briefly why, so they know what to change' };
 	const org = await loadOrg();
-	// Declined: it goes back to whoever asked, unless they lead the team, in
-	// which case it waits Unassigned on their board for someone else.
-	const backTo = decision === 'decline' ? ((org.children.get(t.createdBy)?.length ?? 0) > 0 ? null : t.createdBy) : viewer.id;
 	const [row] = await db
 		.update(tasks)
 		.set({
-			requestState: decision === 'accept' ? null : 'declined',
-			requestNote: decision === 'decline' ? why : null,
-			assigneeId: backTo,
+			requestState: decision === 'approve' ? null : 'declined',
+			requestNote: decision === 'approve' ? null : why,
+			assigneeId: decision === 'approve' ? t.assigneeId : t.createdBy,
+			status: 'todo',
 			version: t.version + 1,
 			updatedAt: new Date()
 		})
+		.where(and(eq(tasks.id, id), eq(tasks.version, t.version)))
+		.returning();
+	if (!row) return { ok: false, message: 'Someone changed this task a moment ago. Open it again.', status: 409 };
+	await event(id, viewer.id, decision === 'approve' ? 'approved this' : `didn't approve this: "${why}"`);
+	if (decision === 'approve') {
+		const creator = org.byId.get(t.createdBy);
+		await tellAssignee(row, { id: t.createdBy, fullName: creator?.fullName ?? viewer.fullName });
+		if (t.createdBy !== viewer.id && t.createdBy !== t.assigneeId) {
+			await postToFeed(t.createdBy, `${viewer.fullName} approved: ${t.title}`, { type: 'notice', tone: 'ok', title: 'Task approved', text: t.title, href: taskHref(t.id) }, { notify: false });
+		}
+	} else if (t.createdBy !== viewer.id) {
+		await postToFeed(t.createdBy, `${viewer.fullName} didn't approve "${t.title}": ${why}`, { type: 'notice', tone: 'warn', title: 'Task not approved', text: `${t.title}: ${why}`, href: taskHref(t.id) });
+	}
+	await changed(row, t.assigneeId ? [t.assigneeId] : []);
+	const [view] = await serialize(viewer, [row]);
+	return { ok: true, task: view };
+}
+
+/** Tasks waiting for this lead's approval, oldest first. */
+export async function approvalsFor(viewer: SessionUser): Promise<TaskView[]> {
+	const rows = await db
+		.select()
+		.from(tasks)
+		.where(and(eq(tasks.requestState, 'pending'), viewer.role === 'super_admin' ? undefined : eq(tasks.approverId, viewer.id)))
+		.orderBy(asc(tasks.createdAt))
+		.limit(50);
+	return serialize(viewer, rows);
+}
+
+/** Hand a task back to whoever gave it, with a reason (the assignee's way to say no). */
+export async function respondToTask(viewer: SessionUser, id: string, decision: 'accept' | 'decline', note = ''): Promise<Result<{ task: TaskView | null }>> {
+	const t = await load(id);
+	if (!t || t.assigneeId !== viewer.id || decision !== 'decline' || t.createdBy === viewer.id) return { ok: false, message: 'That task is not yours to hand back', status: 409 };
+	const why = note.trim().slice(0, 300);
+	if (!why) return { ok: false, message: "Say briefly why you can't take it" };
+	const org = await loadOrg();
+	// Back to whoever gave it, unless they lead a team, in which case it waits
+	// Unassigned on their board for someone else.
+	const backTo = (org.children.get(t.createdBy)?.length ?? 0) > 0 ? null : t.createdBy;
+	const [row] = await db
+		.update(tasks)
+		.set({ requestState: 'declined', requestNote: why, assigneeId: backTo, version: t.version + 1, updatedAt: new Date() })
 		.where(eq(tasks.id, id))
 		.returning();
-	await event(id, viewer.id, decision === 'accept' ? 'accepted this' : `declined this: "${why}"`);
-	if (t.createdBy !== viewer.id) {
-		await postToFeed(
-			t.createdBy,
-			decision === 'accept' ? `${viewer.fullName} accepted: ${t.title}` : `${viewer.fullName} can't take "${t.title}": ${why}`,
-			{ type: 'notice', tone: decision === 'accept' ? 'ok' : 'warn', title: decision === 'accept' ? 'Request accepted' : 'Request declined', text: t.title, href: taskHref(t.id) }
-		);
-	}
+	await event(id, viewer.id, `handed this back: "${why}"`);
+	await postToFeed(t.createdBy, `${viewer.fullName} can't take "${t.title}": ${why}`, { type: 'notice', tone: 'warn', title: 'Task handed back', text: t.title, href: taskHref(t.id) });
 	await changed(row, [viewer.id]);
-	const [view] = backTo === viewer.id || t.createdBy === viewer.id ? await serialize(viewer, [row]) : [null];
-	return { ok: true, task: view };
+	return { ok: true, task: null };
 }
 
 export async function deleteTask(viewer: SessionUser, id: string): Promise<Result> {
@@ -647,7 +725,7 @@ export async function taskFromMessage(
 			type: 'notice',
 			tone: 'info',
 			title: 'Task created',
-			text: `${r.task.title} · ${owner}${r.task.requestState === 'pending' ? ' (as a request)' : ''}${r.task.dueDate ? ` · due ${fmtDue(r.task.dueDate)}` : ''}`,
+			text: `${r.task.title} · ${owner}${r.task.requestState === 'pending' ? ` (waiting for ${r.task.approver?.fullName ?? 'their lead'} to approve)` : ''}${r.task.dueDate ? ` · due ${fmtDue(r.task.dueDate)}` : ''}`,
 			href: taskHref(r.task.id)
 		});
 	}

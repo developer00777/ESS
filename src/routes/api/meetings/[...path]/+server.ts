@@ -1,7 +1,7 @@
 import { error, json, type RequestEvent } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { hasCap } from '$lib/server/capabilities';
-import { addItem, getMeeting, linkZoomUser, listMeetings, pasteNotes, publishMeeting, reconcileZoom, updateItem } from '$lib/server/meetings/service';
+import { addItem, cancelMeeting, getMeeting, hostOptions, linkZoomUser, listMeetings, pasteNotes, publishMeeting, reconcileZoom, scheduleMeeting, updateItem } from '$lib/server/meetings/service';
 import { readStatus, zoomConfigured } from '$lib/server/zoom/client';
 import type { Result } from '$lib/server/tasks/service';
 
@@ -35,6 +35,7 @@ export const GET: RequestHandler = async (event) => {
 	const user = me(event);
 	const [a] = event.params.path.split('/');
 	if (!a) return json({ ok: true, meetings: await listMeetings(user), zoom: zoomConfigured() });
+	if (a === 'hosts') return json(zoomConfigured() ? await hostOptions(user) : []);
 	if (a === 'zoom-status') {
 		if (!hasCap(user, 'system.zoom')) throw error(403, 'Only a Super Admin can see this');
 		return json({ configured: zoomConfigured(), ...(await readStatus()) });
@@ -49,6 +50,19 @@ export const POST: RequestHandler = async (event) => {
 	if (a === 'notes') {
 		return send(await pasteNotes(user, { meetingId: str(data.meetingId) && UUID.test(String(data.meetingId)) ? String(data.meetingId) : null, topic: str(data.topic), date: str(data.date), notes: String(data.notes ?? '') }));
 	}
+	if (a === 'schedule') {
+		return send(
+			await scheduleMeeting(user, {
+				topic: String(data.topic ?? ''),
+				date: String(data.date ?? ''),
+				time: String(data.time ?? ''),
+				durationMin: Number(data.durationMin ?? 30),
+				attendeeIds: Array.isArray(data.attendeeIds) ? data.attendeeIds.map(String) : [],
+				agenda: str(data.agenda),
+				host: str(data.host)
+			})
+		);
+	}
 	if (a === 'zoom-links') return send(await linkZoomUser(user, String(data.zoomKey ?? ''), str(data.userId) ?? null));
 	if (a === 'zoom-reconcile') {
 		if (!hasCap(user, 'system.zoom')) throw error(403, 'Only a Super Admin can do this');
@@ -58,6 +72,7 @@ export const POST: RequestHandler = async (event) => {
 	const mid = id(a);
 	if (b === 'items') return send(await addItem(user, mid, String(data.title ?? '')));
 	if (b === 'publish') return send(await publishMeeting(user, mid));
+	if (b === 'cancel') return send(await cancelMeeting(user, mid));
 	throw error(404, 'Not found');
 };
 

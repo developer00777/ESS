@@ -12,7 +12,7 @@ import { actionLines, assignMode, TASK_PRIORITIES, type Reach, type TaskPriority
 import type { MeetingItemView, MeetingRowView, MeetingSummary, MeetingView, PersonRef } from '$lib/tasks/types';
 import { assignableFor, createTask, loadOrg, reachFor, treeOf, type Result } from '$lib/server/tasks/service';
 import { extractItems, type Attendee } from './extract';
-import { listSummaries, meetingSummary, pastParticipants, recordStatus, upcomingFor, zoomConfigured, ZoomError, type ZoomSummary } from '$lib/server/zoom/client';
+import { createZoomMeeting, defaultZoomHost, deleteZoomMeeting, listSummaries, meetingSummary, pastParticipants, recordStatus, zoomConfigured, zoomStartUrl, ZoomError, type ZoomSummary } from '$lib/server/zoom/client';
 
 /**
  * Meetings and their minutes.
@@ -74,7 +74,9 @@ async function rowsToViews(viewer: SessionUser, rows: Row[], reach?: Reach): Pro
 			itemsNeedingOwner: kept.filter((i) => !i.ownerId && !i.taskId).length,
 			publishedCount: its.filter((i) => i.taskId).length,
 			isHost: await canReview(viewer, m, r),
-			mine: mineRows.filter((t) => t.meetingId === m.id).map((t) => ({ taskId: t.id, title: t.title }))
+			mine: mineRows.filter((t) => t.meetingId === m.id).map((t) => ({ taskId: t.id, title: t.title })),
+			canJoin: m.state === 'upcoming' && !!m.joinUrl && m.startedAt.getTime() + ((m.durationMin ?? 60) + 60) * 60_000 > Date.now(),
+			agenda: m.agenda
 		});
 	}
 	return out;
@@ -86,13 +88,13 @@ export async function listMeetings(viewer: SessionUser): Promise<MeetingRowView[
 	const rows = await db
 		.select()
 		.from(meetings)
-		.where(and(gte(meetings.startedAt, since), or(eq(meetings.hostId, viewer.id), sql`${viewer.id}::uuid = any(${meetings.attendeeIds})`)))
+		.where(and(gte(meetings.startedAt, since), sql`${meetings.state} <> 'cancelled'`, or(eq(meetings.hostId, viewer.id), sql`${viewer.id}::uuid = any(${meetings.attendeeIds})`)))
 		.orderBy(desc(meetings.startedAt))
 		.limit(100);
 	return rowsToViews(viewer, rows);
 }
 
-/** Today's meetings for the day strip: what ESS holds, plus Zoom's upcoming list. */
+/** Today's meetings for the day strip: those scheduled in ESS and those that already ran. */
 export async function meetingsToday(viewer: SessionUser): Promise<MeetingRowView[]> {
 	const today = istDateKey(new Date());
 	const start = new Date(Date.parse(today + 'T00:00:00+05:30'));
@@ -100,37 +102,12 @@ export async function meetingsToday(viewer: SessionUser): Promise<MeetingRowView
 	const rows = await db
 		.select()
 		.from(meetings)
-		.where(and(gte(meetings.startedAt, start), lt(meetings.startedAt, end), or(eq(meetings.hostId, viewer.id), sql`${viewer.id}::uuid = any(${meetings.attendeeIds})`)))
+		.where(and(gte(meetings.startedAt, start), lt(meetings.startedAt, end), sql`${meetings.state} <> 'cancelled'`, or(eq(meetings.hostId, viewer.id), sql`${viewer.id}::uuid = any(${meetings.attendeeIds})`)))
 		.orderBy(asc(meetings.startedAt));
-	const views = await rowsToViews(viewer, rows);
-	const upcoming = (await upcomingFor(viewer.email)).filter((u) => {
-		const t = Date.parse(u.start_time);
-		return t >= Date.now() - 30 * 60_000 && t < end.getTime();
-	});
-	for (const u of upcoming) {
-		if (views.some((v) => Math.abs(Date.parse(v.startedAt) - Date.parse(u.start_time)) < 60_000 && v.topic === u.topic)) continue;
-		views.push({
-			id: `zoom-${u.id}`,
-			topic: u.topic,
-			startedAt: new Date(u.start_time).toISOString(),
-			durationMin: u.duration ?? null,
-			state: 'upcoming',
-			source: 'zoom',
-			host: { id: viewer.id, fullName: viewer.fullName },
-			attendees: [],
-			guestCount: 0,
-			itemCount: 0,
-			itemsNeedingOwner: 0,
-			publishedCount: 0,
-			isHost: true,
-			mine: [],
-			joinUrl: u.join_url ?? null
-		});
-	}
-	return views.sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+	return rowsToViews(viewer, rows);
 }
 
-function itemView(i: ItemRow, reach: Reach, names: Map<string, string>): MeetingItemView {
+function itemView(i: ItemRow, reach: Reach, names: Map<string, string>, leadOf: (id: string) => string | null): MeetingItemView {
 	return {
 		id: i.id,
 		title: i.title,
@@ -143,7 +120,7 @@ function itemView(i: ItemRow, reach: Reach, names: Map<string, string>): Meeting
 		confidence: i.confidence === null ? null : Number(i.confidence),
 		included: i.included,
 		taskId: i.taskId,
-		mode: i.ownerId ? assignMode(reach, i.ownerId) : 'direct'
+		mode: i.ownerId ? assignMode(reach, i.ownerId, leadOf(i.ownerId)) : 'direct'
 	};
 }
 
@@ -171,8 +148,13 @@ export async function getMeeting(viewer: SessionUser, id: string): Promise<Resul
 		meeting: {
 			...row,
 			summary: reviewer ? ((m.summary as MeetingSummary | null) ?? null) : null,
-			items: visible.map((i) => itemView(i, hostReach, names)),
-			assignable: reviewer ? await assignableFor(hostUser, hostReach) : { direct: [], request: [] },
+			items: visible.map((i) =>
+				itemView(i, hostReach, names, (id) => {
+					const lead = org.byId.get(id)?.reportsTo ?? null;
+					return lead && org.byId.get(lead)?.isActive ? lead : null;
+				})
+			),
+			assignable: reviewer ? await assignableFor(hostUser, hostReach) : { direct: [], approval: [] },
 			publishedAt: m.publishedAt?.toISOString() ?? null
 		}
 	};
@@ -387,6 +369,12 @@ function summaryFrom(z: ZoomSummary): MeetingSummary {
 /** meeting.ended: show the meeting as waiting for its summary. */
 export async function meetingEnded(obj: { uuid?: string; id?: number | string; topic?: string; start_time?: string; duration?: number; host_email?: string; host_id?: string }) {
 	if (!obj.uuid) return;
+	const scheduled = obj.id != null ? await scheduledFor(String(obj.id)) : null;
+	if (scheduled) {
+		await db.update(meetings).set({ zoomUuid: obj.uuid, state: 'waiting', durationMin: obj.duration ?? scheduled.durationMin, updatedAt: new Date() }).where(eq(meetings.id, scheduled.id));
+		if (scheduled.hostId) await publish([scheduled.hostId], { type: 'meetings.changed' });
+		return;
+	}
 	const hostId = await userByZoom(obj.host_email);
 	await db
 		.insert(meetings)
@@ -395,7 +383,7 @@ export async function meetingEnded(obj: { uuid?: string; id?: number | string; t
 			zoomMeetingId: obj.id != null ? String(obj.id) : null,
 			hostId,
 			hostEmail: obj.host_email ?? null,
-			topic: obj.topic?.trim() || 'Zoom meeting',
+			topic: obj.topic?.trim() || 'Meeting',
 			startedAt: obj.start_time ? new Date(obj.start_time) : new Date(),
 			durationMin: obj.duration ?? null,
 			state: 'waiting'
@@ -409,8 +397,10 @@ export async function meetingEnded(obj: { uuid?: string; id?: number | string; t
  * attendees, extract items, mark it ready and tell the host. Safe to call
  * twice for one meeting: published minutes are never rewritten.
  */
-export async function ingestSummary(uuid: string): Promise<{ ok: boolean; message: string; meetingId?: string }> {
-	const [existing] = await db.select().from(meetings).where(eq(meetings.zoomUuid, uuid)).limit(1);
+export async function ingestSummary(uuid: string, zoomMeetingId?: string | null): Promise<{ ok: boolean; message: string; meetingId?: string }> {
+	let [existing] = await db.select().from(meetings).where(eq(meetings.zoomUuid, uuid)).limit(1);
+	// A meeting scheduled in ESS is known by its meeting id until it has run.
+	if (!existing && zoomMeetingId) existing = (await scheduledFor(zoomMeetingId)) ?? (undefined as never);
 	if (existing && existing.state === 'published') return { ok: true, message: 'Already published', meetingId: existing.id };
 	let z: ZoomSummary;
 	try {
@@ -438,14 +428,15 @@ export async function ingestSummary(uuid: string): Promise<{ ok: boolean; messag
 		const userId = await userByZoom(p.user_email, p.name);
 		attendees.push({ userId, name: userId ? (org.byId.get(userId)?.fullName ?? p.name ?? '') : (p.name ?? p.user_email ?? 'Guest'), email: p.user_email ?? null });
 	}
-	const attendeeIds = [...new Set([...(hostId ? [hostId] : []), ...attendees.filter((a) => a.userId).map((a) => a.userId!)])];
+	// Who was invited counts as well as who joined: the minutes can name either.
+	const attendeeIds = [...new Set([...(hostId ? [hostId] : []), ...(existing?.attendeeIds ?? []), ...attendees.filter((a) => a.userId).map((a) => a.userId!)])];
 	const guestNames = attendees.filter((a) => !a.userId).map((a) => a.name).slice(0, 50);
 	const values = {
 		zoomUuid: uuid,
 		zoomMeetingId: z.meeting_id != null ? String(z.meeting_id) : (existing?.zoomMeetingId ?? null),
 		hostId,
 		hostEmail: z.meeting_host_email ?? existing?.hostEmail ?? null,
-		topic: z.meeting_topic?.trim() || existing?.topic || 'Zoom meeting',
+		topic: z.meeting_topic?.trim() || existing?.topic || 'Meeting',
 		startedAt: z.meeting_start_time ? new Date(z.meeting_start_time) : (existing?.startedAt ?? new Date()),
 		durationMin: z.meeting_start_time && z.meeting_end_time ? Math.round((Date.parse(z.meeting_end_time) - Date.parse(z.meeting_start_time)) / 60_000) : (existing?.durationMin ?? null),
 		attendeeIds,
@@ -476,9 +467,10 @@ export async function reconcileZoom(now = new Date()) {
 		const have = new Set(done.map((d) => d.uuid));
 		for (const s of list) {
 			if (have.has(s.meeting_uuid)) continue;
-			// Only meetings hosted by someone with a login.
-			if (!(await userByZoom(s.meeting_host_email))) continue;
-			await ingestSummary(s.meeting_uuid).catch((err) => console.error('[zoom] reconcile ingest failed:', err));
+			// Only meetings scheduled in ESS, or hosted by someone with a login.
+			const mid = s.meeting_id != null ? String(s.meeting_id) : null;
+			if (!(mid && (await scheduledFor(mid))) && !(await userByZoom(s.meeting_host_email))) continue;
+			await ingestSummary(s.meeting_uuid, mid).catch((err) => console.error('[zoom] reconcile ingest failed:', err));
 		}
 	}
 	await db
@@ -512,8 +504,10 @@ export async function zoomLinks() {
 
 export async function linkZoomUser(viewer: SessionUser, zoomKey: string, userId: string | null): Promise<Result> {
 	if (!hasCap(viewer, 'system.zoom')) return { ok: false, message: 'Only a Super Admin can link Zoom users', status: 403 };
-	const key = zoomKey.trim().toLowerCase();
-	if (!key) return { ok: false, message: 'Pick the Zoom name or email to link' };
+	// Zoom user ids are case-sensitive; emails and display names are not.
+	const raw = zoomKey.trim();
+	const key = /^[A-Za-z0-9_-]{16,}$/.test(raw) ? raw : raw.toLowerCase();
+	if (!key) return { ok: false, message: 'Enter the Zoom email or user ID' };
 	if (!userId) {
 		await db.delete(zoomUserLinks).where(eq(zoomUserLinks.zoomKey, key));
 		return { ok: true };
@@ -544,4 +538,170 @@ export async function minutesWaiting(viewer: SessionUser): Promise<{ id: string;
 		.groupBy(meetingItems.meetingId);
 	const by = new Map(counts.map((c) => [c.meetingId, c]));
 	return rows.map((r) => ({ ...r, items: by.get(r.id)?.items ?? 0, needOwner: by.get(r.id)?.needOwner ?? 0 }));
+}
+
+/* ---------- scheduling from ESS ---------- */
+
+/** The ESS row for a meeting scheduled here and not yet tied to a finished occurrence. */
+async function scheduledFor(zoomMeetingId: string): Promise<Row | null> {
+	const [m] = await db
+		.select()
+		.from(meetings)
+		.where(and(eq(meetings.zoomMeetingId, zoomMeetingId), isNull(meetings.zoomUuid), inArray(meetings.state, ['upcoming', 'waiting'])))
+		.orderBy(desc(meetings.startedAt))
+		.limit(1);
+	return m ?? null;
+}
+
+export type ScheduleInput = {
+	topic: string;
+	date: string;
+	time: string;
+	durationMin: number;
+	attendeeIds: string[];
+	agenda?: string;
+	/** Whose Zoom account hosts the call: 'self', a user id from hostOptions, or 'default'. */
+	host?: string;
+};
+
+/** Looks like a Zoom email or a Zoom user id, rather than a display name. */
+const isZoomAccountKey = (k: string) => k.includes('@') || /^[A-Za-z0-9_-]{16,}$/.test(k);
+
+/**
+ * The Zoom account a person hosts from: the one set for them in Admin
+ * Controls › Zoom, otherwise their work email (which is their Zoom login when
+ * the company account has them). `linked` says whether HR set it.
+ */
+export async function zoomAccountFor(userId: string): Promise<{ key: string; linked: boolean } | null> {
+	const links = await db.select({ key: zoomUserLinks.zoomKey }).from(zoomUserLinks).where(eq(zoomUserLinks.userId, userId)).orderBy(desc(zoomUserLinks.createdAt));
+	const set = links.find((l) => isZoomAccountKey(l.key));
+	if (set) return { key: set.key, linked: true };
+	const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+	return u ? { key: u.email.toLowerCase(), linked: false } : null;
+}
+
+export type HostOption = { value: string; label: string; detail: string };
+
+/**
+ * Whose account can host a meeting this person schedules: their own, any
+ * lead above them in the reporting line, or the company account.
+ */
+export async function hostOptions(viewer: SessionUser): Promise<HostOption[]> {
+	const org = await loadOrg();
+	const out: HostOption[] = [];
+	const mine = await zoomAccountFor(viewer.id);
+	if (mine) out.push({ value: 'self', label: 'My Zoom account', detail: mine.linked ? mine.key : `${mine.key} (if you have a Zoom licence)` });
+	const seen = new Set([viewer.id]);
+	let up = org.byId.get(viewer.id)?.reportsTo ?? null;
+	while (up && !seen.has(up)) {
+		seen.add(up);
+		const lead = org.byId.get(up);
+		if (lead?.isActive) {
+			const acc = await zoomAccountFor(up);
+			if (acc) out.push({ value: up, label: `${lead.fullName}'s account`, detail: acc.linked ? acc.key : acc.key + ' (if they have a Zoom licence)' });
+		}
+		up = lead?.reportsTo ?? null;
+	}
+	const def = defaultZoomHost();
+	if (def) out.push({ value: 'default', label: 'Company account', detail: def });
+	return out;
+}
+
+/**
+ * Anyone can schedule a meeting. The video call is made behind the scenes;
+ * the people invited get a card in their ESS feed and join from Champ Hub.
+ * When it ends, the summary comes back here for the host to review.
+ */
+export async function scheduleMeeting(viewer: SessionUser, input: ScheduleInput): Promise<Result<{ id: string }>> {
+	const topic = input.topic.trim().replace(/\s+/g, ' ').slice(0, 200);
+	if (!topic) return { ok: false, message: 'Name the meeting' };
+	if (!DATE.test(input.date) || !/^\d{2}:\d{2}$/.test(input.time)) return { ok: false, message: 'Pick a date and a start time' };
+	const startsAt = new Date(`${input.date}T${input.time}:00+05:30`);
+	if (Number.isNaN(startsAt.getTime())) return { ok: false, message: 'Pick a date and a start time' };
+	if (startsAt.getTime() < Date.now() - 5 * 60_000) return { ok: false, message: 'That time has already passed' };
+	const duration = Math.min(Math.max(Math.round(input.durationMin || 30), 10), 480);
+	const org = await loadOrg();
+	const invited = [...new Set(input.attendeeIds.filter((id) => UUID.test(id) && id !== viewer.id && org.byId.get(id)?.isActive))].slice(0, 200);
+	const agenda = input.agenda?.trim().slice(0, 2000) || null;
+
+	let zoomMeetingId: string | null = null;
+	let joinUrl: string | null = null;
+	let hostEmail: string | null = viewer.email;
+	if (zoomConfigured()) {
+		// Only hosts this person may use: themselves, a lead above them, or the company account.
+		const options = await hostOptions(viewer);
+		const choice = input.host && input.host !== 'self' ? input.host : 'self';
+		if (!options.some((o) => o.value === choice)) return { ok: false, message: 'Pick one of the host accounts offered' };
+		const chosen = choice === 'default' ? null : await zoomAccountFor(choice === 'self' ? viewer.id : choice);
+		try {
+			const z = await createZoomMeeting({ hosts: chosen ? [chosen.key] : [], topic, startLocal: `${input.date}T${input.time}:00`, durationMin: duration, agenda });
+			zoomMeetingId = String(z.id);
+			joinUrl = z.join_url;
+			hostEmail = z.hostedBy;
+		} catch (err) {
+			console.error('[meetings] could not create the video call:', err);
+			await recordStatus({ lastError: err instanceof Error ? err.message : String(err) }).catch(() => {});
+			return { ok: false, message: err instanceof ZoomError && err.status === 400 && err.message.startsWith('Video') ? err.message : 'The video call could not be set up. Try again, or tell HR if it keeps happening.' };
+		}
+	}
+	const [m] = await db
+		.insert(meetings)
+		.values({ topic, hostId: viewer.id, hostEmail, startedAt: startsAt, durationMin: duration, state: 'upcoming', source: 'zoom', zoomMeetingId, joinUrl, agenda, attendeeIds: [viewer.id, ...invited] })
+		.returning();
+
+	const when = startsAt.toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
+	for (const id of invited) {
+		await postToFeed(id, `${viewer.fullName} invited you to ${topic} on ${when}`, {
+			type: 'notice',
+			tone: 'info',
+			title: `Meeting: ${topic}`,
+			text: `${when} · ${duration} min · from ${viewer.fullName}${joinUrl ? '. Join from Champ Hub › Meetings.' : ''}`,
+			href: '/hub/meetings'
+		});
+	}
+	await publish([viewer.id, ...invited], { type: 'meetings.changed', meetingId: m.id });
+	await logActivity({ actorUserId: viewer.id, action: 'meeting.schedule', targetType: 'meeting', targetId: m.id, details: { topic, invited: invited.length, video: !!joinUrl } }).catch(() => {});
+	return { ok: true, id: m.id };
+}
+
+export async function cancelMeeting(viewer: SessionUser, meetingId: string): Promise<Result> {
+	if (!UUID.test(meetingId)) return { ok: false, message: 'That meeting no longer exists', status: 404 };
+	const [m] = await db.select().from(meetings).where(eq(meetings.id, meetingId)).limit(1);
+	if (!m || m.state !== 'upcoming') return { ok: false, message: 'Only a meeting that has not happened yet can be cancelled' };
+	if (m.hostId !== viewer.id && viewer.role !== 'super_admin') return { ok: false, message: 'Only the person who scheduled it can cancel it', status: 403 };
+	if (m.zoomMeetingId) {
+		try {
+			await deleteZoomMeeting(m.zoomMeetingId);
+		} catch (err) {
+			console.error('[meetings] could not remove the video call:', err);
+		}
+	}
+	await db.update(meetings).set({ state: 'cancelled', updatedAt: new Date() }).where(eq(meetings.id, m.id));
+	const others = m.attendeeIds.filter((id) => id !== viewer.id);
+	const when = m.startedAt.toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
+	for (const id of others) {
+		await postToFeed(id, `${viewer.fullName} cancelled ${m.topic} (${when})`, { type: 'notice', tone: 'warn', title: 'Meeting cancelled', text: `${m.topic} · ${when}`, href: '/hub/meetings' });
+	}
+	await publish([viewer.id, ...others], { type: 'meetings.changed', meetingId: m.id });
+	return { ok: true };
+}
+
+/**
+ * Where "Join" sends someone: the host gets a fresh start link so they open
+ * the call as host, everyone invited gets the join link. The links never
+ * appear on the page itself.
+ */
+export async function joinTarget(viewer: SessionUser, meetingId: string): Promise<string | null> {
+	if (!UUID.test(meetingId)) return null;
+	const [m] = await db.select().from(meetings).where(eq(meetings.id, meetingId)).limit(1);
+	if (!m || !m.joinUrl || !(m.hostId === viewer.id || m.attendeeIds.includes(viewer.id))) return null;
+	// Whoever scheduled it starts it as host, whichever account it runs under.
+	if (m.hostId === viewer.id && m.zoomMeetingId) {
+		try {
+			return (await zoomStartUrl(m.zoomMeetingId)) ?? m.joinUrl;
+		} catch {
+			/* fall back to joining */
+		}
+	}
+	return m.joinUrl;
 }

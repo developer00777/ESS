@@ -59,7 +59,7 @@ export const CAPABILITIES = [
 	{ key: 'chat.export', label: 'Export a conversation', group: 'Communication', description: 'Export one conversation for a formal complaint. Recorded. Super Admin only.', grantable: false },
 	// --- Tasks & meetings
 	{ key: 'tasks.view_all', label: "See every team's tasks", group: 'Tasks & meetings', description: 'Open any team board in Champ Hub, not just their own reports.', grantable: true },
-	{ key: 'tasks.assign_anyone', label: 'Assign tasks to anyone', group: 'Tasks & meetings', description: 'Give a task straight to anyone. Without it, people outside your reporting line get it as a request.', grantable: true },
+	{ key: 'tasks.assign_anyone', label: 'Give tasks without approval', group: 'Tasks & meetings', description: "Tasks they create start straight away. Without it, a task waits for the assignee's lead to approve it unless they are that lead.", grantable: true },
 	{ key: 'system.zoom', label: 'Connect Zoom', group: 'Tasks & meetings', description: 'Set up the Zoom connection and link Zoom users to logins. Super Admin only.', grantable: false },
 	// --- Champ
 	{ key: 'champ.reports', label: 'Roster reports in Champ', group: 'Champ', description: 'Counts, lists and reports across the whole roster.', grantable: true },

@@ -29,7 +29,7 @@
 			<span class="chip p-{task.priority}">{PRIORITY_LABEL[task.priority]}</span>
 			{#if task.dueDate}<span class="due {tone}">{tone === 'overdue' ? 'Overdue · ' : ''}{dueLabel(task.dueDate)}</span>{/if}
 			{#if task.blocked}<span class="due overdue">Blocked</span>{/if}
-			{#if task.requestState === 'pending'}<span class="req">Request from {task.createdBy.fullName}</span>{/if}
+			{#if task.requestState === 'pending'}<span class="req">{task.can.approve ? 'Needs your approval' : `Waiting for ${task.approver?.fullName ?? 'the lead'} to approve`}</span>{/if}
 			{#if showAssignee}<span>{task.assignee?.fullName ?? 'Unassigned'}</span>{/if}
 			{#if task.source?.kind === 'meeting'}<span class="src"><Video size={12} /> {task.source.topic}</span>
 			{:else if task.source?.kind === 'message'}<span class="src"><Hash size={12} /> {task.source.channelName ?? 'Chat'}</span>{/if}

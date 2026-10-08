@@ -8,9 +8,9 @@
  * Aliasing it lets a script run the SAME parsing code the app runs, rather than
  * a reimplementation that could drift from it.
  */
-import { pathToFileURL } from 'node:url';
-
-const SHIM = pathToFileURL(new URL('./env-shim-module.mjs', import.meta.url).pathname).href;
+// The URL's own href: going through `.pathname` doubled the drive letter on
+// Windows (C:\C:\...).
+const SHIM = new URL('./env-shim-module.mjs', import.meta.url).href;
 
 export function resolve(specifier, context, next) {
 	if (specifier === '$env/dynamic/private' || specifier === '$env/dynamic/public') {

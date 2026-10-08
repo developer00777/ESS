@@ -1,13 +1,13 @@
 <script lang="ts">
 	import CalendarCheck from '@lucide/svelte/icons/calendar-check';
-	import Send from '@lucide/svelte/icons/send';
 	import Video from '@lucide/svelte/icons/video';
 	import AtSign from '@lucide/svelte/icons/at-sign';
 	import Clock from '@lucide/svelte/icons/clock';
 	import Ban from '@lucide/svelte/icons/ban';
 	import Check from '@lucide/svelte/icons/check';
 	import { api, hub } from '$lib/hub/client.svelte';
-	import { moveTask, respond } from '$lib/hub/actions';
+	import { moveTask } from '$lib/hub/actions';
+	import ApprovalButtons from './ApprovalButtons.svelte';
 	import { dueLabel } from '$lib/hub/format';
 	import { PRIORITY_LABEL } from '$lib/tasks/rules';
 	import type { NeedItem } from '$lib/tasks/types';
@@ -25,10 +25,15 @@
 	let reply = $state('');
 	let gone = $state(false);
 
-	const ENDPOINT = { leave: (id: string) => `/api/leave/${id}/approve`, deviation: (id: string) => `/api/attendance/deviations/${id}/review`, comp_off: (id: string) => `/api/attendance/comp-off/${id}/review` };
+	const ENDPOINT: Record<'leave' | 'deviation' | 'comp_off', (id: string) => string> = {
+		leave: (id) => `/api/leave/${id}/approve`,
+		deviation: (id) => `/api/attendance/deviations/${id}/review`,
+		comp_off: (id) => `/api/attendance/comp-off/${id}/review`
+	};
+	const isTaskApproval = $derived(item.approval?.type === 'task');
 
 	async function decide(decision: 'approve' | 'reject') {
-		if (!item.approval) return;
+		if (!item.approval || item.approval.type === 'task') return;
 		if (decision === 'reject' && !rejecting) {
 			rejecting = true;
 			return;
@@ -82,7 +87,6 @@
 	<article class="need" data-kind={item.kind}>
 		<span class="ic" aria-hidden="true">
 			{#if item.kind === 'approval'}<CalendarCheck size={16} />
-			{:else if item.kind === 'request'}<Send size={16} />
 			{:else if item.kind === 'minutes'}<Video size={16} />
 			{:else if item.kind === 'mention'}<AtSign size={16} />
 			{:else if item.kind === 'due'}<Clock size={16} />
@@ -98,7 +102,7 @@
 				{#if item.task && item.kind !== 'blocked'}
 					<span class="chip p-{item.task.priority}">{PRIORITY_LABEL[item.task.priority]}</span>
 					{#if item.task.dueDate}<span class:over={item.kind === 'due' && item.detail === 'Overdue'}>{item.kind === 'due' ? item.detail : `Due ${dueLabel(item.task.dueDate)}`}{item.kind === 'due' && item.detail === 'Overdue' ? ` · was ${dueLabel(item.task.dueDate)}` : ''}</span>{/if}
-					{#if item.kind === 'request'}<span>{item.detail}</span>{/if}
+					{#if isTaskApproval}<span>{item.detail}</span>{/if}
 					{#if item.task.source?.kind === 'meeting'}<span class="src">From {item.task.source.topic}</span>{/if}
 				{:else}{item.detail}{/if}
 			</span>
@@ -118,12 +122,11 @@
 			{/if}
 		</div>
 		<div class="acts">
-			{#if item.kind === 'approval' && !rejecting}
+			{#if isTaskApproval && item.task}
+				<ApprovalButtons task={item.task} ondone={() => (gone = true)} />
+			{:else if item.kind === 'approval' && !rejecting}
 				<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy} onclick={() => decide('approve')}>Approve</button>
 				<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" disabled={busy} onclick={() => decide('reject')}>Reject</button>
-			{:else if item.kind === 'request' && item.task}
-				<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy} onclick={async () => { if (item.task && (await respond(item.task, 'accept'))) gone = true; }}>Accept</button>
-				<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => hub.openTask(item.task!.id)}>Decline…</button>
 			{:else if item.kind === 'minutes'}
 				<a class="ess-btn ess-btn--primary ess-btn--sm" href="/hub/meetings/{item.meetingId}">Review</a>
 			{:else if item.kind === 'mention' && item.mention}

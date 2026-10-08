@@ -14,8 +14,8 @@ import type { ChatPreview, NeedItem, TaskView, TodayData } from '$lib/tasks/type
  * Today in Champ Hub: one list of everything waiting on a person, in the
  * order it should be dealt with.
  *
- *   1 approvals   leave, attendance corrections and comp-off they can decide
- *   2 requests    tasks someone outside their line asked them to take
+ *   1 approvals   leave, attendance corrections and comp-off they can decide,
+ *                 and tasks waiting for them as the assignee's lead
  *   3 minutes     meetings they hosted whose summary is ready to review
  *   4 mentions    unread messages that name them
  *   5 due         their own open tasks due today or overdue
@@ -119,7 +119,7 @@ export async function needsFor(user: SessionUser): Promise<NeedItem[]> {
 		}),
 		mentions(user),
 		minutesWaiting(user),
-		db.select().from(tasks).where(and(eq(tasks.assigneeId, user.id), eq(tasks.requestState, 'pending'))).orderBy(asc(tasks.createdAt)),
+		db.select().from(tasks).where(and(eq(tasks.approverId, user.id), eq(tasks.requestState, 'pending'))).orderBy(asc(tasks.createdAt)).limit(30),
 		db
 			.select()
 			.from(tasks)
@@ -140,15 +140,20 @@ export async function needsFor(user: SessionUser): Promise<NeedItem[]> {
 	const hidden = new Set(dismissed.map((d) => d.key));
 
 	const items: NeedItem[] = [
+		...requestRows.map((t) => {
+			const v = view.get(t.id)!;
+			const forWhom = v.assignee?.id === v.createdBy.id ? `${v.createdBy.fullName} made this for themselves` : `${v.createdBy.fullName} made this for ${v.assignee?.fullName ?? 'someone'}`;
+			return {
+				key: `approval:task:${t.id}`,
+				kind: 'approval' as const,
+				title: t.title,
+				detail: `${forWhom}. It starts once you approve.`,
+				approval: { type: 'task' as const, id: t.id, stage: 'manager' as const },
+				task: v,
+				at: t.createdAt.toISOString()
+			};
+		}),
 		...appr,
-		...requestRows.map((t) => ({
-			key: `request:${t.id}`,
-			kind: 'request' as const,
-			title: t.title,
-			detail: `${view.get(t.id)!.createdBy.fullName} asked you to take this`,
-			task: view.get(t.id),
-			at: t.createdAt.toISOString()
-		})),
 		...waiting.map((m) => ({
 			key: `minutes:${m.id}`,
 			kind: 'minutes' as const,
