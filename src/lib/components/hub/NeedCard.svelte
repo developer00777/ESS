@@ -13,9 +13,9 @@
 	import type { NeedItem } from '$lib/tasks/types';
 
 	/**
-	 * One thing that needs the person, with the action right on it: approve,
-	 * accept, reply, review, start or finish. Handling it anywhere else in ESS
-	 * removes it from here on the next refresh.
+	 * One thing that needs the person, as a queue row with the action right on
+	 * it: approve, accept, reply, review, start or finish. Handling it anywhere
+	 * else in ESS removes it from here on the next refresh.
 	 */
 	let { item }: { item: NeedItem } = $props();
 
@@ -31,6 +31,15 @@
 		comp_off: (id) => `/api/attendance/comp-off/${id}/review`
 	};
 	const isTaskApproval = $derived(item.approval?.type === 'task');
+
+	/** The status word on the row, as the mockups show it. */
+	const badge = $derived.by((): { label: string; tone: 'warn' | 'accent' | 'bad' | 'new' } => {
+		if (item.kind === 'minutes') return { label: 'Action required', tone: 'warn' };
+		if (item.kind === 'approval') return { label: 'Pending', tone: 'accent' };
+		if (item.kind === 'mention') return { label: 'New', tone: 'new' };
+		if (item.kind === 'blocked') return { label: 'Blocked', tone: 'warn' };
+		return item.detail === 'Overdue' ? { label: 'Overdue', tone: 'bad' } : { label: item.detail, tone: 'accent' };
+	});
 
 	async function decide(decision: 'approve' | 'reject') {
 		if (!item.approval || item.approval.type === 'task') return;
@@ -84,13 +93,13 @@
 </script>
 
 {#if !gone}
-	<article class="need" data-kind={item.kind}>
-		<span class="ic" aria-hidden="true">
-			{#if item.kind === 'approval'}<CalendarCheck size={16} />
-			{:else if item.kind === 'minutes'}<Video size={16} />
-			{:else if item.kind === 'mention'}<AtSign size={16} />
-			{:else if item.kind === 'due'}<Clock size={16} />
-			{:else}<Ban size={16} />{/if}
+	<article class="need ess-row" data-kind={item.kind}>
+		<span class="ess-tile ic" aria-hidden="true">
+			{#if item.kind === 'approval'}<CalendarCheck size={19} strokeWidth={1.75} />
+			{:else if item.kind === 'minutes'}<Video size={19} strokeWidth={1.75} />
+			{:else if item.kind === 'mention'}<AtSign size={19} strokeWidth={1.75} />
+			{:else if item.kind === 'due'}<Clock size={19} strokeWidth={1.75} />
+			{:else}<Ban size={19} strokeWidth={1.75} />{/if}
 		</span>
 		<div class="main">
 			{#if item.task}
@@ -122,21 +131,22 @@
 			{/if}
 		</div>
 		<div class="acts">
+			<span class="ess-badge ess-badge--{badge.tone}">{badge.label}</span>
 			{#if isTaskApproval && item.task}
 				<ApprovalButtons task={item.task} ondone={() => (gone = true)} />
 			{:else if item.kind === 'approval' && !rejecting}
-				<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy} onclick={() => decide('approve')}>Approve</button>
+				<button type="button" class="ess-btn ess-btn--outline ess-btn--sm" disabled={busy} onclick={() => decide('approve')}>Approve</button>
 				<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" disabled={busy} onclick={() => decide('reject')}>Reject</button>
 			{:else if item.kind === 'minutes'}
-				<a class="ess-btn ess-btn--primary ess-btn--sm" href="/hub/meetings/{item.meetingId}">Review</a>
+				<a class="ess-btn ess-btn--outline ess-btn--sm" href="/hub/meetings/{item.meetingId}">Review</a>
 			{:else if item.kind === 'mention' && item.mention}
-				<a class="ess-btn ess-btn--ghost ess-btn--sm" href="/hub/c/{item.mention.channelId}">Open</a>
+				<a class="ess-btn ess-btn--outline ess-btn--sm" href="/hub/c/{item.mention.channelId}">Open</a>
 				<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={markRead}>Mark read</button>
 			{:else if item.kind === 'due' && item.task}
-				{#if item.task.status === 'todo'}<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={busy} onclick={() => move('in_progress')}>Start</button>{/if}
+				{#if item.task.status === 'todo'}<button type="button" class="ess-btn ess-btn--outline ess-btn--sm" disabled={busy} onclick={() => move('in_progress')}>Start</button>{/if}
 				<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={busy} onclick={() => move('done')}><Check size={14} /> Done</button>
 			{:else if item.kind === 'blocked' && item.task}
-				<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" onclick={() => hub.openTask(item.task!.id)}>Open</button>
+				<button type="button" class="ess-btn ess-btn--outline ess-btn--sm" onclick={() => hub.openTask(item.task!.id)}>Open</button>
 			{/if}
 			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm later" title="Hide until tomorrow morning" onclick={later}>Later</button>
 		</div>
@@ -145,33 +155,11 @@
 
 <style>
 	.need {
-		display: grid;
-		grid-template-columns: 34px minmax(0, 1fr) auto;
-		gap: 12px;
-		align-items: start;
-		padding: 12px 14px;
-		border-radius: var(--ess-radius-md);
-		background: var(--ess-glass-bg);
-		border: 1px solid var(--ess-glass-border);
-		box-shadow: var(--ess-glass-shadow);
-	}
-	.ic {
-		width: 34px;
-		height: 34px;
-		border-radius: 10px;
-		display: grid;
-		place-items: center;
-		background: var(--ess-sunken);
-		color: var(--ess-text-secondary);
+		align-items: flex-start;
 	}
 	[data-kind='approval'] .ic {
 		background: var(--ess-success-bg);
 		color: var(--ess-success);
-	}
-	[data-kind='request'] .ic,
-	[data-kind='mention'] .ic {
-		background: var(--ess-primary-soft);
-		color: var(--ess-primary-text);
 	}
 	[data-kind='minutes'] .ic {
 		background: var(--ess-info-bg);
@@ -186,23 +174,25 @@
 		color: var(--ess-warning);
 	}
 	.main {
+		flex: 1;
 		display: grid;
-		gap: 5px;
+		gap: 4px;
 		min-width: 0;
+		padding-top: 2px;
 	}
 	.title {
-		font-weight: 600;
-		font-size: 14px;
+		font-weight: 500;
+		font-size: 15px;
 		overflow-wrap: anywhere;
+		color: var(--ess-text);
 	}
 	.link {
 		border: 0;
 		background: none;
 		padding: 0;
 		text-align: left;
-		color: var(--ess-text);
 		font: inherit;
-		font-weight: 600;
+		font-weight: 500;
 		cursor: pointer;
 	}
 	.link:hover {
@@ -213,21 +203,21 @@
 		flex-wrap: wrap;
 		gap: 4px 10px;
 		align-items: center;
-		font-size: 12.5px;
-		color: var(--ess-text-muted);
+		font-size: 13px;
+		color: var(--ess-text-secondary);
 	}
 	.over {
 		color: var(--ess-danger);
-		font-weight: 600;
+		font-weight: 500;
 	}
 	.src {
 		color: var(--ess-info);
 	}
 	.chip {
 		padding: 1px 8px;
-		border-radius: 99px;
+		border-radius: var(--ess-radius-xs);
 		font-size: 11.5px;
-		font-weight: 600;
+		font-weight: 500;
 		background: var(--ess-neutral-bg);
 		color: var(--ess-neutral);
 	}
@@ -257,20 +247,24 @@
 	}
 	.acts {
 		display: flex;
-		gap: 6px;
+		gap: 8px;
+		align-items: center;
 		flex-wrap: wrap;
 		justify-content: flex-end;
+		margin-left: auto;
+		padding-top: 4px;
 	}
 	.later {
 		color: var(--ess-text-muted);
 	}
 	@media (max-width: 720px) {
 		.need {
-			grid-template-columns: 30px minmax(0, 1fr);
+			flex-wrap: wrap;
 		}
 		.acts {
-			grid-column: 2;
+			width: 100%;
 			justify-content: flex-start;
+			padding-left: 58px;
 		}
 	}
 </style>

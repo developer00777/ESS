@@ -86,12 +86,12 @@
 	.col {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 10px;
 		min-height: 220px;
-		padding: 10px;
+		padding: 12px;
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-sunken);
-		border: 1px solid var(--ess-border-subtle);
+		border: 1px solid var(--ess-border);
 		scroll-snap-align: start;
 		transition:
 			border-color var(--ess-t-fast),
@@ -106,22 +106,35 @@
 		align-items: center;
 		gap: 8px;
 		padding: 2px 4px;
-		font-size: 13px;
+		font-size: 13.5px;
 		min-width: 0;
 	}
+	header strong {
+		font-weight: 500;
+	}
 	.n {
-		color: var(--ess-text-muted);
+		min-width: 20px;
+		height: 20px;
+		padding: 0 6px;
+		border-radius: var(--ess-radius-xs);
+		display: inline-grid;
+		place-items: center;
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
+		color: var(--ess-text-secondary);
+		font-size: 12px;
+		font-weight: 500;
 		font-variant-numeric: tabular-nums;
 	}
 	.dot {
 		width: 8px;
 		height: 8px;
 		border-radius: 50%;
-		background: var(--ess-text-muted);
+		background: var(--ess-border-strong);
 		flex: none;
 	}
 	.dot[data-tone='info'] {
-		background: var(--ess-info);
+		background: var(--ess-primary);
 	}
 	.dot[data-tone='warning'] {
 		background: var(--ess-warning);
@@ -141,8 +154,8 @@
 		text-align: center;
 		font-size: 12.5px;
 		color: var(--ess-text-muted);
-		border: 1.5px dashed var(--ess-border);
-		border-radius: 10px;
+		border: 1.5px dashed var(--ess-border-strong);
+		border-radius: var(--ess-radius-md);
 	}
 	@media (max-width: 720px) {
 		.board {

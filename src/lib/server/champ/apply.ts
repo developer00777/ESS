@@ -50,12 +50,12 @@ export async function applyCard(event: RequestEvent, kind: ChampCardKind, action
 			result = await viaEndpoint(event, `/api/admin/users/${String(payload.userId)}/settings`, 'PUT', payload.body);
 			break;
 		case 'create_login': {
-			const r = await createLogin(user, payload as never);
+			const r = await createLogin(user, payload as never, { source: 'champ' });
 			if (!r.success) return { ok: false, message: r.message };
 			void syncMembershipFor(r.userId).catch(() => {});
 			result = {
 				ok: true,
-				message: r.emailSent ? `Created. Welcome email sent to ${r.email}.` : `Created. Email did not send, so pass on the temporary password: ${r.tempPassword}`
+				message: `Created. The welcome email to ${r.email} waits for an admin to approve it in Admin Controls › People. Temporary password: ${r.tempPassword}`
 			};
 			break;
 		}

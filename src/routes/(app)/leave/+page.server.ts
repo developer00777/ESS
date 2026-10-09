@@ -13,7 +13,8 @@ import { eq, and, or, desc, inArray, ne, gte, lte, sql, isNotNull } from 'drizzl
 import { checkPinkLeaveEligibility, monthBounds } from '$lib/server/leave-eligibility';
 import { ensureLeaveAllocations } from '$lib/server/leave-accrual';
 import { loadWeekOffFor, currentRosterByUser } from '$lib/server/week-off';
-import { reviewableUserIds } from '$lib/server/approval-chain';
+import { managerFor, reviewableUserIds } from '$lib/server/approval-chain';
+import { getUsersWithProfilePicture } from '$lib/server/db/mongo';
 
 /**
  * Every role reads the same published holiday calendar rows and the same
@@ -250,6 +251,28 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const { calendarHolidays, leaveEvents } = await loadCalendarEvents(user);
 
+	// Who signs off this person's own requests, for the request-progress panel.
+	const manager = await managerFor(user.id);
+
+	// For each request awaiting review: the applicant's current balance in that
+	// leave type, so the reviewer sees what the decision does to it. Monthly-quota
+	// types hold no balance and are left out rather than shown as 0.
+	const queueIds = [...new Set(approvalQueue.map((r) => r.applicant.id))];
+	const queueAllocations = queueIds.length
+		? await db
+				.select({ userId: leaveAllocations.userId, leaveTypeId: leaveAllocations.leaveTypeId, allocatedDays: leaveAllocations.allocatedDays, usedDays: leaveAllocations.usedDays })
+				.from(leaveAllocations)
+				.where(and(inArray(leaveAllocations.userId, queueIds), eq(leaveAllocations.year, year)))
+		: [];
+	const remainingFor = new Map(queueAllocations.map((a) => [`${a.userId}:${a.leaveTypeId}`, Number(a.allocatedDays) - Number(a.usedDays)]));
+	const queuePictures = await getUsersWithProfilePicture([...queueIds, ...decidedQueue.map((r) => r.applicant.id)]);
+	const approvalQueueView = approvalQueue.map((r) => ({
+		...r,
+		applicantHasPicture: queuePictures.has(r.applicant.id),
+		balanceBefore: r.type.monthlyQuotaDays == null ? (remainingFor.get(`${r.applicant.id}:${r.type.id}`) ?? null) : null
+	}));
+	const decidedQueueView = decidedQueue.map((r) => ({ ...r, applicantHasPicture: queuePictures.has(r.applicant.id) }));
+
 	// The calendar shades the viewer's own week offs, which are whatever roster
 	// their manager assigned — not a hardcoded Saturday/Sunday. Rosters and
 	// assignments are sent through so the resolver can run client-side as the
@@ -262,11 +285,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 		allocations,
 		monthlyBalances,
 		myApplications,
-		approvalQueue,
+		manager,
+		approvalQueue: approvalQueueView,
 		// The tab appears for anyone who actually has something to decide, which
 		// includes a named HR holding no admin role.
 		canApprove: approvalQueue.length > 0 || user.role === 'team_lead' || user.role === 'super_admin',
-		decidedQueue,
+		decidedQueue: decidedQueueView,
 		canReverseDecisions: user.role === 'super_admin',
 		calendarHolidays,
 		leaveEvents,

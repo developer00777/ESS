@@ -1,11 +1,12 @@
 /* ============================================================
-   ESS Design System — Components · COSMIC
+   ESS Design System — Components · TIMELINE
    Drop-in component layer. Requires ess-tokens.css.
    ============================================================
    Every rule here is expressed in ESS tokens. Changing a token
    changes every screen; do not hard-code colors in .svelte files.
-   Surface language: glass cards on a deep-space canvas with an
-   ambient nebula glow (.cosmos) and starfield (.stars).
+   Surface language: white cards with hairline borders on a warm
+   off-white canvas, serif headings, violet actions, lavender
+   selection. No ambient effects.
    ============================================================ */
 
 * {
@@ -20,12 +21,8 @@ body {
 }
 
 html {
-	/* Reserve the scrollbar's column whether or not a scrollbar is showing.
-	   Without this the viewport is ~15px wider on short pages (HR Contacts, the
-	   Apply form) than on long ones (Team, Leave Balances), so every navigation
-	   between them slid the whole shell sideways — and so did opening the
-	   settings panel, which locks the page. Reserving the gutter once means
-	   nothing moves in either case. */
+	/* Reserve the scrollbar's column whether or not a scrollbar is showing, so
+	   navigating between a short and a long page never slides the shell. */
 	scrollbar-gutter: stable;
 }
 
@@ -36,7 +33,9 @@ body {
 	color: var(--ess-text);
 	background: var(--ess-canvas);
 	-webkit-font-smoothing: antialiased;
-	transition: background var(--ess-t), color var(--ess-t);
+	transition:
+		background var(--ess-t),
+		color var(--ess-t);
 }
 
 h1,
@@ -48,17 +47,17 @@ p {
 }
 
 a {
-	color: var(--ess-primary);
+	color: var(--ess-primary-text);
 	text-decoration: none;
 	transition: color var(--ess-t-fast);
 }
 a:hover {
-	color: var(--acc2);
+	color: var(--ess-primary);
 }
 
 ::selection {
-	background: var(--acc);
-	color: var(--ess-text-on-primary);
+	background: var(--ess-primary-soft);
+	color: var(--ess-text);
 }
 
 button,
@@ -75,79 +74,11 @@ textarea {
 	border-radius: var(--ess-radius-sm);
 }
 
-/* ------------------------------------------------------------
-   AMBIENT BACKGROUND — nebula glow + drifting starfield.
-   Fixed, z-index -1: above the body base color, below all content.
------------------------------------------------------------- */
-
-.cosmos {
-	position: fixed;
-	inset: 0;
-	z-index: -1;
-	pointer-events: none;
-	opacity: 1;
-	background:
-		radial-gradient(
-			1200px 680px at 12% -14%,
-			color-mix(in oklab, var(--acc) 22%, transparent),
-			transparent 60%
-		),
-		radial-gradient(
-			1000px 620px at 92% 6%,
-			color-mix(in oklab, var(--acc2) 18%, transparent),
-			transparent 62%
-		),
-		radial-gradient(
-			1100px 820px at 60% 118%,
-			color-mix(in oklab, var(--acc) 10%, transparent),
-			transparent 62%
-		),
-		var(--ess-canvas);
-}
-
-[data-ess-theme='dark'] .cosmos {
-	opacity: 1;
-	background:
-		radial-gradient(1200px 680px at 12% -14%, rgba(30, 46, 74, 0.9), transparent 60%),
-		radial-gradient(900px 560px at 92% 2%, rgba(91, 143, 214, 0.12), transparent 62%),
-		radial-gradient(1100px 820px at 60% 118%, rgba(14, 20, 32, 0.92), transparent 62%),
-		var(--ess-canvas);
-}
-
+/* The earlier skin painted a nebula and starfield behind every page. The
+   elements may still be rendered by older markup; they are inert now. */
+.cosmos,
 .stars {
-	position: fixed;
-	inset: -40%;
-	z-index: -1;
-	pointer-events: none;
-	/* Light mode: faint dark specks — white stars would be invisible on the
-	   soft canvas. The dark theme re-lights them to white below. */
-	opacity: 0.22;
-	background-image:
-		radial-gradient(1.4px 1.4px at 24px 34px, rgba(20, 18, 35, 0.45), transparent),
-		radial-gradient(1.1px 1.1px at 128px 96px, rgba(20, 18, 35, 0.32), transparent),
-		radial-gradient(1.7px 1.7px at 232px 168px, rgba(20, 18, 35, 0.22), transparent);
-	background-size:
-		270px 230px,
-		350px 310px,
-		430px 390px;
-	animation: ess-drift 140s linear infinite;
-}
-
-[data-ess-theme='dark'] .stars {
-	background-image:
-		radial-gradient(1.4px 1.4px at 24px 34px, #fff, transparent),
-		radial-gradient(1.1px 1.1px at 128px 96px, rgba(255, 255, 255, 0.72), transparent),
-		radial-gradient(1.7px 1.7px at 232px 168px, rgba(255, 255, 255, 0.5), transparent);
-}
-
-[data-ess-theme='dark'] .stars {
-	opacity: 0.34;
-}
-
-@keyframes ess-drift {
-	to {
-		transform: translate3d(-270px, -230px, 0);
-	}
+	display: none;
 }
 
 /* ------------------------------------------------------------
@@ -157,17 +88,18 @@ textarea {
 .ess-page-title {
 	font-family: var(--ess-font-display);
 	font-size: var(--ess-fs-title);
-	font-weight: 700;
-	letter-spacing: -0.02em;
-	line-height: 1.2;
+	font-weight: 600;
+	letter-spacing: -0.015em;
+	line-height: 1.08;
 	color: var(--ess-text);
-	text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
+	text-wrap: balance;
 }
 
 .ess-page-sub {
-	font-size: var(--ess-fs-body-lg);
+	font-size: 17px;
+	line-height: 1.45;
 	color: var(--ess-text-secondary);
-	margin-top: 6px;
+	margin-top: 8px;
 	max-width: 68ch;
 	text-wrap: pretty;
 }
@@ -175,23 +107,47 @@ textarea {
 .ess-h2 {
 	font-family: var(--ess-font-display);
 	font-size: var(--ess-fs-h2);
-	font-weight: 700;
-	letter-spacing: -0.01em;
+	font-weight: 600;
+	letter-spacing: -0.005em;
+	line-height: 1.2;
 	color: var(--ess-text);
 }
 
 .ess-h3 {
 	font-size: var(--ess-fs-h3);
-	font-weight: 700;
+	font-weight: 600;
 	color: var(--ess-text);
 }
 
 .ess-eyebrow {
 	font-size: var(--ess-fs-eyebrow);
-	font-weight: 700;
+	font-weight: 600;
 	letter-spacing: 0.14em;
 	text-transform: uppercase;
-	color: rgba(255, 255, 255, 0.82);
+	color: var(--ess-text-muted);
+}
+
+/* "LEAVE / MY LEAVE" — the breadcrumb-style eyebrow above a page title. */
+.ess-crumb {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: var(--ess-fs-eyebrow);
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--ess-text-muted);
+}
+.ess-crumb a {
+	color: inherit;
+}
+.ess-crumb a:hover {
+	color: var(--ess-text);
+}
+.ess-crumb > * + *::before {
+	content: '/';
+	margin-right: 8px;
+	color: var(--ess-border-strong);
 }
 
 .ess-caption {
@@ -204,49 +160,37 @@ textarea {
 }
 
 /* ------------------------------------------------------------
-   SURFACES — glass language, four roles
+   SURFACES
 ------------------------------------------------------------ */
 
 .ess-card {
-	background: var(--ess-glass-bg);
-	border: 1px solid var(--ess-glass-border);
+	background: var(--ess-surface);
+	border: 1px solid var(--ess-border);
 	border-radius: var(--ess-radius-md);
 	padding: var(--ess-space-5);
-	box-shadow: var(--ess-glass-shadow);
+	box-shadow: var(--ess-elev-1);
 }
 
 .ess-card--raised {
-	background: var(--ess-glass-raised-bg);
-	border-color: rgba(255, 255, 255, 0.14);
-	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.22),
-		0 34px 62px -34px #000,
-		0 0 34px -22px var(--glow);
+	box-shadow: var(--ess-elev-2);
 }
 
 .ess-card--interactive {
 	transition:
-		transform var(--ess-t),
-		box-shadow var(--ess-t),
-		border-color var(--ess-t);
-	will-change: transform;
+		border-color var(--ess-t-fast),
+		box-shadow var(--ess-t-fast);
 }
 .ess-card--interactive:hover {
-	transform: translate3d(0, -4px, 0);
-	border-color: rgba(255, 255, 255, 0.22);
-	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.26),
-		0 34px 64px -30px #000,
-		0 0 0 1px var(--ring),
-		0 0 40px -14px var(--glow);
+	border-color: var(--ess-border-strong);
+	box-shadow: var(--ess-elev-2);
 }
 
 .ess-panel {
-	background: var(--ess-glass-bg);
-	border: 1px solid var(--ess-glass-border);
+	background: var(--ess-surface);
+	border: 1px solid var(--ess-border);
 	border-radius: var(--ess-radius-lg);
 	padding: var(--ess-space-6);
-	box-shadow: var(--ess-glass-shadow);
+	box-shadow: var(--ess-elev-1);
 }
 
 .ess-sunken {
@@ -262,6 +206,40 @@ textarea {
 	border-radius: var(--ess-radius-lg);
 }
 
+/* A card's title row: serif heading on the left, a quiet link or control on
+   the right. */
+.ess-card-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 14px;
+}
+.ess-card-head .ess-h2 {
+	font-size: 19px;
+}
+.ess-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--ess-primary-text);
+	white-space: nowrap;
+}
+.ess-link:hover {
+	color: var(--ess-primary);
+}
+button.ess-link {
+	background: none;
+	border: 0;
+	padding: 0;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+}
+
 /* ------------------------------------------------------------
    BUTTONS
 ------------------------------------------------------------ */
@@ -271,20 +249,19 @@ textarea {
 	align-items: center;
 	justify-content: center;
 	gap: 8px;
-	height: 38px;
-	padding: 0 17px;
+	height: 40px;
+	padding: 0 18px;
 	border: 1px solid transparent;
 	border-radius: var(--ess-radius-sm);
 	font-size: var(--ess-fs-body);
-	font-weight: 600;
+	font-weight: 500;
 	cursor: pointer;
 	white-space: nowrap;
 	transition:
 		background var(--ess-t-fast),
 		border-color var(--ess-t-fast),
 		color var(--ess-t-fast),
-		box-shadow var(--ess-t-fast),
-		transform var(--ess-t-fast);
+		box-shadow var(--ess-t-fast);
 }
 
 .ess-btn:disabled {
@@ -293,42 +270,48 @@ textarea {
 }
 
 .ess-btn--sm {
-	height: 31px;
+	height: 32px;
 	padding: 0 12px;
-	font-size: var(--ess-fs-caption);
-	border-radius: 9px;
+	font-size: 13px;
+	border-radius: 7px;
 }
 .ess-btn--lg {
-	height: 46px;
-	padding: 0 22px;
+	height: 48px;
+	padding: 0 24px;
 	font-size: var(--ess-fs-body-lg);
 }
 
 .ess-btn--primary {
-	background: linear-gradient(180deg, color-mix(in oklab, var(--acc) 82%, #fff), var(--acc));
+	background: var(--ess-primary);
 	color: var(--ess-text-on-primary);
-	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.6),
-		0 10px 26px -12px var(--glow);
+	box-shadow: 0 1px 2px rgba(27, 31, 59, 0.12);
 }
 .ess-btn--primary:hover:not(:disabled) {
-	transform: translateY(-1px);
-	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.7),
-		0 16px 34px -12px var(--glow);
+	background: var(--ess-primary-hover);
 }
 .ess-btn--primary:active:not(:disabled) {
-	transform: translateY(0);
+	background: var(--ess-primary-press);
 }
 
 .ess-btn--secondary {
-	background: rgba(255, 255, 255, 0.06);
-	border-color: rgba(255, 255, 255, 0.14);
+	background: var(--ess-surface);
+	border-color: var(--ess-border-strong);
 	color: var(--ess-text);
 }
 .ess-btn--secondary:hover:not(:disabled) {
-	background: rgba(255, 255, 255, 0.12);
-	border-color: rgba(255, 255, 255, 0.24);
+	background: var(--ess-surface-hover);
+	border-color: var(--ess-primary);
+	color: var(--ess-primary-text);
+}
+
+/* The mockups' outlined violet button ("Reject", "View profile"). */
+.ess-btn--outline {
+	background: var(--ess-surface);
+	border-color: var(--ess-primary);
+	color: var(--ess-primary-text);
+}
+.ess-btn--outline:hover:not(:disabled) {
+	background: var(--ess-primary-softer);
 }
 
 .ess-btn--ghost {
@@ -336,16 +319,49 @@ textarea {
 	color: var(--ess-text-secondary);
 }
 .ess-btn--ghost:hover:not(:disabled) {
-	background: rgba(255, 255, 255, 0.08);
+	background: var(--ess-surface-hover);
 	color: var(--ess-text);
 }
 
+.ess-btn--soft {
+	background: var(--ess-primary-soft);
+	color: var(--ess-primary-text);
+}
+.ess-btn--soft:hover:not(:disabled) {
+	background: var(--ess-primary-softer);
+}
+
 .ess-btn--danger {
-	background: linear-gradient(180deg, color-mix(in oklab, #fb7185 82%, #fff), #fb7185);
-	color: #1c0308;
-	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.55),
-		0 10px 26px -12px rgba(251, 113, 133, 0.45);
+	background: var(--ess-danger);
+	color: #fff;
+}
+.ess-btn--danger:hover:not(:disabled) {
+	filter: brightness(0.94);
+}
+
+/* Square icon-only button, for "..." menus, close, and the top bar. */
+.ess-icon-btn {
+	display: inline-grid;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	border-radius: var(--ess-radius-sm);
+	border: 1px solid transparent;
+	background: transparent;
+	color: var(--ess-text-secondary);
+	cursor: pointer;
+	transition:
+		background var(--ess-t-fast),
+		color var(--ess-t-fast),
+		border-color var(--ess-t-fast);
+}
+.ess-icon-btn:hover {
+	background: var(--ess-surface-hover);
+	color: var(--ess-text);
+}
+.ess-icon-btn--bordered {
+	border-color: var(--ess-border);
+	background: var(--ess-surface);
 }
 
 /* ------------------------------------------------------------
@@ -359,8 +375,8 @@ textarea {
 }
 
 .ess-label {
-	font-size: var(--ess-fs-caption);
-	font-weight: 600;
+	font-size: 13px;
+	font-weight: 500;
 	color: var(--ess-text);
 }
 
@@ -369,19 +385,36 @@ textarea {
 .ess-textarea {
 	width: 100%;
 	background: var(--ess-field-bg);
-	border: 1px solid rgba(255, 255, 255, 0.14);
-	border-radius: 10px;
-	padding: 9px 12px;
+	border: 1px solid var(--ess-border);
+	border-radius: var(--ess-radius-sm);
+	padding: 10px 12px;
 	font-size: var(--ess-fs-body);
 	color: var(--ess-text);
 	transition:
 		border-color var(--ess-t-fast),
 		box-shadow var(--ess-t-fast);
 }
+.ess-select {
+	appearance: none;
+	-webkit-appearance: none;
+	padding-right: 34px;
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237a7e98' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+	background-repeat: no-repeat;
+	background-position: right 10px center;
+}
+[data-ess-theme='dark'] .ess-select {
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b3b6c9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+}
 
 .ess-input::placeholder,
 .ess-textarea::placeholder {
 	color: var(--ess-text-muted);
+}
+
+.ess-input:hover,
+.ess-select:hover,
+.ess-textarea:hover {
+	border-color: var(--ess-border-strong);
 }
 
 .ess-input:focus,
@@ -398,7 +431,7 @@ textarea {
 
 .ess-help {
 	font-size: var(--ess-fs-caption);
-	color: var(--ess-text-secondary);
+	color: var(--ess-text-muted);
 }
 
 .ess-error {
@@ -407,8 +440,24 @@ textarea {
 	font-weight: 500;
 }
 
+/* A search field with the glass icon inside, as every list page opens with. */
+.ess-search {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+.ess-search > svg {
+	position: absolute;
+	left: 13px;
+	color: var(--ess-text-muted);
+	pointer-events: none;
+}
+.ess-search > .ess-input {
+	padding-left: 40px;
+}
+
 /* ------------------------------------------------------------
-   BADGES / STATUS PILLS — cosmic chips (tinted, hairline border)
+   BADGES / STATUS PILLS — soft tint, no border, sentence case
 ------------------------------------------------------------ */
 
 .ess-badge {
@@ -416,38 +465,33 @@ textarea {
 	align-items: center;
 	gap: 6px;
 	height: 24px;
-	padding: 0 11px;
-	border-radius: var(--ess-radius-pill);
-	border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
-	font-size: var(--ess-fs-eyebrow);
-	font-weight: 700;
-	letter-spacing: 0.02em;
-	text-transform: capitalize;
+	padding: 0 10px;
+	border-radius: var(--ess-radius-xs);
+	font-size: 12px;
+	font-weight: 500;
 	white-space: nowrap;
-}
-
-.ess-badge::before {
-	content: '';
-	width: 5px;
-	height: 5px;
-	border-radius: 50%;
-	background: currentColor;
+	text-transform: capitalize;
+	background: var(--ess-neutral-bg);
+	color: var(--ess-neutral);
 }
 
 .ess-badge--approved,
 .ess-badge--present,
-.ess-badge--public {
+.ess-badge--public,
+.ess-badge--ok {
 	background: var(--ess-success-bg);
 	color: var(--ess-success);
 }
 .ess-badge--pending,
 .ess-badge--restricted,
-.ess-badge--late {
+.ess-badge--late,
+.ess-badge--warn {
 	background: var(--ess-warning-bg);
 	color: var(--ess-warning);
 }
 .ess-badge--rejected,
-.ess-badge--absent {
+.ess-badge--absent,
+.ess-badge--bad {
 	background: var(--ess-danger-bg);
 	color: var(--ess-danger);
 }
@@ -458,30 +502,31 @@ textarea {
 }
 .ess-badge--cancelled,
 .ess-badge--left,
-.ess-badge--optional {
+.ess-badge--optional,
+.ess-badge--neutral {
 	background: var(--ess-neutral-bg);
 	color: var(--ess-neutral);
 }
+.ess-badge--accent,
+.ess-badge--new {
+	background: var(--ess-primary-soft);
+	color: var(--ess-primary-text);
+}
 
 /* ------------------------------------------------------------
-   DATA TABLE — glass shell, luminous header band
+   DATA TABLE — white shell, quiet header, hairline rows
 ------------------------------------------------------------ */
 
 .ess-table-shell {
-	background: var(--ess-glass-bg);
-	border: 1px solid var(--ess-glass-border);
+	background: var(--ess-surface);
+	border: 1px solid var(--ess-border);
 	border-radius: var(--ess-radius-md);
-	box-shadow: var(--ess-glass-shadow);
+	box-shadow: var(--ess-elev-1);
 	/* Tables scroll inside their own shell rather than pushing the page wide.
-	   Spelt out per axis: `overflow: hidden` followed by `overflow-x: auto` does
-	   not leave the vertical axis clipped — the cascade coerces a `visible`
-	   partner into `auto`, so the shell became a vertical scroll container too
-	   and could raise a stray second scrollbar on sub-pixel rounding. `clip`
-	   keeps the rounded corners without ever scrolling. */
+	   `clip` on the vertical axis keeps the rounded corners without making the
+	   shell a second vertical scroll container. */
 	overflow-x: auto;
 	overflow-y: clip;
-	/* Reaching the end of a sideways table hands the gesture to the page, which
-	   on a trackpad means a horizontal flick navigates back a route. */
 	overscroll-behavior-x: contain;
 }
 
@@ -493,14 +538,12 @@ textarea {
 
 .ess-table th {
 	text-align: left;
-	padding: 11px 18px;
-	background: rgba(255, 255, 255, 0.045);
-	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-	font-size: 10.5px;
-	font-weight: 700;
-	letter-spacing: 0.16em;
-	text-transform: uppercase;
-	color: rgba(255, 255, 255, 0.82);
+	padding: 12px 18px;
+	background: var(--ess-surface);
+	border-bottom: 1px solid var(--ess-border);
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--ess-text-muted);
 	white-space: nowrap;
 }
 
@@ -513,9 +556,9 @@ textarea {
 }
 
 .ess-table td {
-	padding: 13px 18px;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.09);
-	color: rgba(255, 255, 255, 0.94);
+	padding: 14px 18px;
+	border-bottom: 1px solid var(--ess-border-subtle);
+	color: var(--ess-text);
 	vertical-align: middle;
 	transition: background var(--ess-t-fast);
 }
@@ -524,7 +567,11 @@ textarea {
 	border-bottom: none;
 }
 .ess-table tbody tr:hover td {
-	background: rgba(255, 255, 255, 0.04);
+	background: var(--ess-sunken);
+}
+.ess-table tbody tr[aria-selected='true'] td,
+.ess-table tbody tr.is-selected td {
+	background: var(--ess-primary-softer);
 }
 
 .ess-table td.ess-num,
@@ -538,9 +585,9 @@ textarea {
 	align-items: center;
 	justify-content: space-between;
 	gap: 12px;
-	padding: 10px 18px;
-	border-top: 1px solid rgba(255, 255, 255, 0.1);
-	background: rgba(255, 255, 255, 0.045);
+	padding: 12px 18px;
+	border-top: 1px solid var(--ess-border);
+	background: var(--ess-surface);
 	font-size: var(--ess-fs-caption);
 	color: var(--ess-text-secondary);
 }
@@ -562,70 +609,139 @@ textarea {
 .ess-empty__icon {
 	display: grid;
 	place-items: center;
-	width: 44px;
-	height: 44px;
+	width: 48px;
+	height: 48px;
 	border-radius: var(--ess-radius-md);
-	background: rgba(255, 255, 255, 0.06);
-	border: 1px solid rgba(255, 255, 255, 0.1);
-	color: var(--ess-text-muted);
+	background: var(--ess-primary-soft);
+	color: var(--ess-primary-text);
 	margin-bottom: 4px;
 }
 
 .ess-empty__title {
-	font-size: var(--ess-fs-h3);
-	font-weight: 700;
+	font-family: var(--ess-font-display);
+	font-size: 20px;
+	font-weight: 600;
 	color: var(--ess-text);
 }
 
 /* ------------------------------------------------------------
    TABS / SEGMENTED CONTROL
+   .ess-tabs is the mockups' local tab group: a bordered box, each
+   tab a cell, the active one filled pale lavender with a violet
+   underline. Works as <a> or <button> children.
 ------------------------------------------------------------ */
 
 .ess-tabs {
-	display: flex;
-	gap: 4px;
-	border-bottom: 1px solid var(--ess-border);
+	display: inline-flex;
+	max-width: 100%;
+	overflow-x: auto;
+	scrollbar-width: none;
+	background: var(--ess-surface);
+	border: 1px solid var(--ess-border);
+	border-radius: var(--ess-radius-md);
+	padding: 0;
+}
+.ess-tabs::-webkit-scrollbar {
+	display: none;
 }
 
 .ess-tab {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	min-width: 112px;
+	padding: 11px 20px;
 	background: none;
 	border: none;
-	border-bottom: 2px solid transparent;
-	padding: 10px 14px;
+	border-right: 1px solid var(--ess-border);
 	font-size: var(--ess-fs-body);
-	font-weight: 600;
+	font-weight: 500;
 	color: var(--ess-text-secondary);
 	cursor: pointer;
+	white-space: nowrap;
 	transition:
 		color var(--ess-t-fast),
-		border-color var(--ess-t-fast);
+		background var(--ess-t-fast);
+}
+.ess-tab:first-child {
+	border-top-left-radius: calc(var(--ess-radius-md) - 1px);
+	border-bottom-left-radius: calc(var(--ess-radius-md) - 1px);
+}
+.ess-tab:last-child {
+	border-right: none;
+	border-top-right-radius: calc(var(--ess-radius-md) - 1px);
+	border-bottom-right-radius: calc(var(--ess-radius-md) - 1px);
 }
 .ess-tab:hover {
 	color: var(--ess-text);
+	background: var(--ess-surface-hover);
 }
-.ess-tab[aria-selected='true'] {
-	color: var(--ess-primary);
-	border-bottom-color: var(--ess-primary);
+.ess-tab[aria-selected='true'],
+.ess-tab[aria-current='page'] {
+	color: var(--ess-primary-text);
+	background: var(--ess-primary-soft);
+}
+.ess-tab[aria-selected='true']::after,
+.ess-tab[aria-current='page']::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 2px;
+	background: var(--ess-primary);
+}
+.ess-tab .ess-count {
+	min-width: 18px;
+	height: 18px;
+	padding: 0 5px;
+	border-radius: 99px;
+	display: inline-grid;
+	place-items: center;
+	font-size: 11px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	background: var(--ess-primary);
+	color: var(--ess-text-on-primary);
+}
+
+/* Underline-only variant (Team: People / Availability / Week-off). */
+.ess-tabs--line {
+	border: none;
+	border-bottom: 1px solid var(--ess-border);
+	border-radius: 0;
+	background: transparent;
+	display: flex;
+}
+.ess-tabs--line .ess-tab {
+	border-right: none;
+	border-radius: var(--ess-radius-sm) var(--ess-radius-sm) 0 0;
+	min-width: 0;
+	padding: 11px 18px;
 }
 
 .ess-segmented {
 	display: inline-flex;
-	gap: 3px;
+	gap: 2px;
 	padding: 3px;
-	background: rgba(255, 255, 255, 0.06);
-	border: 1px solid rgba(255, 255, 255, 0.1);
+	background: var(--ess-sunken);
+	border: 1px solid var(--ess-border);
 	border-radius: var(--ess-radius-sm);
 }
 
 .ess-segmented button {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
 	background: none;
 	border: none;
-	border-radius: 8px;
-	padding: 5px 13px;
-	font-size: var(--ess-fs-caption);
-	font-weight: 700;
-	letter-spacing: 0.04em;
-	color: var(--ess-text-inverse-secondary);
+	border-radius: 6px;
+	padding: 5px 12px;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--ess-text-secondary);
 	cursor: pointer;
 	transition:
 		background var(--ess-t-fast),
@@ -635,13 +751,13 @@ textarea {
 	color: var(--ess-text);
 }
 .ess-segmented button[aria-pressed='true'] {
-	background: linear-gradient(180deg, color-mix(in oklab, var(--acc) 82%, #fff), var(--acc));
-	color: var(--ess-text-on-primary);
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+	background: var(--ess-surface);
+	color: var(--ess-primary-text);
+	box-shadow: var(--ess-elev-1);
 }
 
 /* ------------------------------------------------------------
-   ALERTS & TOASTS
+   ALERTS, NOTICES & TOASTS
 ------------------------------------------------------------ */
 
 .ess-alert {
@@ -649,14 +765,15 @@ textarea {
 	align-items: flex-start;
 	gap: 10px;
 	padding: 12px 14px;
-	border-radius: var(--ess-radius-sm);
-	border: 1px solid color-mix(in srgb, currentColor 26%, transparent);
+	border-radius: var(--ess-radius-md);
+	border: 1px solid transparent;
 	font-size: var(--ess-fs-body);
 }
 
 .ess-alert--info {
-	background: var(--ess-info-bg);
-	color: var(--ess-info);
+	background: var(--ess-primary-softer);
+	color: var(--ess-text);
+	border-color: var(--ess-primary-soft);
 }
 .ess-alert--success {
 	background: var(--ess-success-bg);
@@ -671,48 +788,100 @@ textarea {
 	color: var(--ess-danger);
 }
 
+/* The mockups' pale callout ("Your check-out is missing.") — a heading line
+   in ink, body in secondary, optional action to the right. */
+.ess-notice {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 14px 16px;
+	border-radius: var(--ess-radius-md);
+	background: var(--ess-warning-bg);
+	border: 1px solid color-mix(in srgb, var(--ess-warning) 18%, transparent);
+	color: var(--ess-text);
+}
+.ess-notice--info {
+	background: var(--ess-primary-softer);
+	border-color: var(--ess-primary-soft);
+}
+.ess-notice--danger {
+	background: var(--ess-danger-bg);
+	border-color: color-mix(in srgb, var(--ess-danger) 18%, transparent);
+}
+.ess-notice--success {
+	background: var(--ess-success-bg);
+	border-color: color-mix(in srgb, var(--ess-success) 18%, transparent);
+}
+.ess-notice__icon {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: var(--ess-surface);
+	color: var(--ess-warning);
+}
+.ess-notice--info .ess-notice__icon {
+	color: var(--ess-primary-text);
+	background: var(--ess-primary-soft);
+}
+.ess-notice--danger .ess-notice__icon {
+	color: var(--ess-danger);
+}
+.ess-notice--success .ess-notice__icon {
+	color: var(--ess-success);
+}
+.ess-notice__body {
+	flex: 1;
+	min-width: 0;
+	font-size: 13.5px;
+	color: var(--ess-text-secondary);
+}
+.ess-notice__body strong {
+	display: block;
+	color: var(--ess-text);
+	font-weight: 600;
+}
+
 .ess-toast {
 	display: flex;
 	align-items: center;
 	gap: 10px;
 	padding: 12px 14px;
-	background: var(--ess-pane-bg);
-	color: var(--ess-text-inverse);
-	border: 1px solid var(--ess-border-inverse);
-	border-radius: var(--ess-radius-sm);
+	background: var(--ess-text);
+	color: var(--ess-canvas);
+	border-radius: var(--ess-radius-md);
 	box-shadow: var(--ess-elev-4);
 	font-size: var(--ess-fs-body);
 }
 
 /* ------------------------------------------------------------
-   AVATAR / USER CHIP — accent gradient orb
+   AVATAR / USER CHIP — lavender initials disc
 ------------------------------------------------------------ */
 
 .ess-avatar {
 	display: grid;
 	place-items: center;
-	width: 34px;
-	height: 34px;
+	width: 36px;
+	height: 36px;
 	border-radius: 50%;
-	background: linear-gradient(150deg, var(--acc2), var(--acc));
-	color: var(--ess-text-on-primary);
-	font-size: var(--ess-fs-caption);
-	font-weight: 700;
+	background: var(--ess-primary-soft);
+	color: var(--ess-primary-text);
+	font-size: 13px;
+	font-weight: 600;
 	flex-shrink: 0;
-	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.5),
-		0 6px 16px -8px var(--glow);
 }
 
 .ess-avatar--sm {
-	width: 26px;
-	height: 26px;
-	font-size: 10px;
+	width: 28px;
+	height: 28px;
+	font-size: 11px;
 }
 .ess-avatar--lg {
 	width: 56px;
 	height: 56px;
-	font-size: var(--ess-fs-h2);
+	font-size: 20px;
 }
 
 .ess-user-chip {
@@ -724,7 +893,7 @@ textarea {
 
 .ess-user-chip__name {
 	font-size: var(--ess-fs-body);
-	font-weight: 600;
+	font-weight: 500;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -733,11 +902,217 @@ textarea {
 .ess-user-chip__meta {
 	font-size: var(--ess-fs-caption);
 	color: var(--ess-text-secondary);
-	text-transform: capitalize;
 }
 
 /* ------------------------------------------------------------
-   APPROVAL TIMELINE
+   ICON TILE — the pale lavender square beside a row or metric
+------------------------------------------------------------ */
+
+.ess-tile {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	border-radius: var(--ess-radius-md);
+	background: var(--ess-primary-soft);
+	color: var(--ess-primary-text);
+}
+.ess-tile--sm {
+	width: 36px;
+	height: 36px;
+	border-radius: var(--ess-radius-sm);
+}
+.ess-tile--lg {
+	width: 56px;
+	height: 56px;
+	border-radius: var(--ess-radius-lg);
+}
+.ess-tile--round {
+	border-radius: 50%;
+}
+.ess-tile--ok {
+	background: var(--ess-success-bg);
+	color: var(--ess-success);
+}
+.ess-tile--warn {
+	background: var(--ess-warning-bg);
+	color: var(--ess-warning);
+}
+.ess-tile--bad {
+	background: var(--ess-danger-bg);
+	color: var(--ess-danger);
+}
+.ess-tile--info {
+	background: var(--ess-info-bg);
+	color: var(--ess-info);
+}
+.ess-tile--pink {
+	background: var(--ess-pink-bg);
+	color: var(--ess-pink);
+}
+.ess-tile--neutral {
+	background: var(--ess-sunken);
+	color: var(--ess-text-secondary);
+}
+
+/* ------------------------------------------------------------
+   ROW LIST — queue rows with hairline dividers, as in "Needs you",
+   "Recent deviations", "Upcoming holidays".
+------------------------------------------------------------ */
+
+.ess-rows {
+	display: flex;
+	flex-direction: column;
+}
+.ess-row {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 14px 0;
+	border-bottom: 1px solid var(--ess-border-subtle);
+	color: var(--ess-text);
+	text-align: left;
+	background: none;
+	border-left: 0;
+	border-right: 0;
+	border-top: 0;
+	width: 100%;
+	font: inherit;
+}
+.ess-row:last-child {
+	border-bottom: none;
+}
+a.ess-row,
+button.ess-row {
+	cursor: pointer;
+	transition: background var(--ess-t-fast);
+}
+a.ess-row:hover,
+button.ess-row:hover {
+	background: var(--ess-sunken);
+}
+.ess-row--selected {
+	background: var(--ess-primary-softer);
+	border-radius: var(--ess-radius-md);
+}
+.ess-row__body {
+	flex: 1;
+	min-width: 0;
+	display: grid;
+	gap: 2px;
+}
+.ess-row__title {
+	font-size: 14.5px;
+	font-weight: 500;
+	color: var(--ess-text);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.ess-row__meta {
+	font-size: 13px;
+	color: var(--ess-text-secondary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.ess-row__meta .sep::before,
+.ess-dot-sep::before {
+	content: '·';
+	margin: 0 6px;
+	color: var(--ess-text-muted);
+}
+.ess-row__end {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: none;
+	margin-left: auto;
+}
+/* Rows inside a card run edge to edge of the card's padding. */
+.ess-card > .ess-rows > .ess-row,
+.ess-card > .ess-row {
+	padding-left: 0;
+	padding-right: 0;
+}
+
+/* Key / value list (Total days — 3 days). */
+.ess-kv {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	column-gap: 24px;
+	row-gap: 10px;
+	font-size: 14px;
+}
+.ess-kv dt {
+	color: var(--ess-text-secondary);
+	margin: 0;
+}
+.ess-kv dd {
+	margin: 0;
+	color: var(--ess-text);
+	font-weight: 500;
+}
+
+/* A date tile ("1 / Oct") beside holiday or announcement rows. */
+.ess-date-tile {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 56px;
+	padding: 6px 0;
+	border-radius: var(--ess-radius-sm);
+	background: var(--ess-primary-soft);
+	color: var(--ess-primary-text);
+	line-height: 1.1;
+}
+.ess-date-tile strong {
+	font-family: var(--ess-font-display);
+	font-size: 20px;
+	font-weight: 600;
+}
+.ess-date-tile small {
+	font-size: 11.5px;
+	font-weight: 500;
+}
+
+/* ------------------------------------------------------------
+   METER — thin progress bar with a violet fill
+------------------------------------------------------------ */
+
+.ess-meter {
+	position: relative;
+	height: 8px;
+	border-radius: 99px;
+	background: var(--ess-sunken);
+	overflow: hidden;
+}
+.ess-meter > span {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--ess-primary);
+	transition: width var(--ess-t);
+}
+.ess-meter--thin {
+	height: 5px;
+}
+.ess-meter--ok > span {
+	background: var(--ess-success);
+}
+.ess-meter--warn > span {
+	background: var(--ess-warning);
+}
+.ess-meter--bad > span {
+	background: var(--ess-danger);
+}
+.ess-meter--pink > span {
+	background: var(--ess-pink);
+}
+
+/* ------------------------------------------------------------
+   APPROVAL TIMELINE (vertical)
 ------------------------------------------------------------ */
 
 .ess-timeline {
@@ -747,7 +1122,7 @@ textarea {
 
 .ess-tl-step {
 	display: grid;
-	grid-template-columns: 26px 1fr;
+	grid-template-columns: 24px 1fr;
 	gap: 12px;
 	position: relative;
 	padding-bottom: 18px;
@@ -756,8 +1131,8 @@ textarea {
 .ess-tl-step:not(:last-child)::before {
 	content: '';
 	position: absolute;
-	left: 12px;
-	top: 26px;
+	left: 11px;
+	top: 24px;
 	bottom: 0;
 	width: 2px;
 	background: var(--ess-border);
@@ -770,20 +1145,20 @@ textarea {
 .ess-tl-dot {
 	display: grid;
 	place-items: center;
-	width: 26px;
-	height: 26px;
+	width: 24px;
+	height: 24px;
 	border-radius: 50%;
-	border: 2px solid var(--ess-border);
-	background: var(--ess-sunken);
+	border: 2px solid var(--ess-border-strong);
+	background: var(--ess-surface);
 	color: var(--ess-text-muted);
-	font-size: var(--ess-fs-eyebrow);
-	font-weight: 700;
+	font-size: 11px;
+	font-weight: 600;
 	z-index: 1;
 }
 
 .ess-tl-step[data-state='done'] .ess-tl-dot {
-	background: linear-gradient(180deg, color-mix(in oklab, var(--acc) 82%, #fff), var(--acc));
-	border-color: transparent;
+	background: var(--ess-primary);
+	border-color: var(--ess-primary);
 	color: var(--ess-text-on-primary);
 }
 
@@ -795,7 +1170,7 @@ textarea {
 
 .ess-tl-label {
 	font-size: var(--ess-fs-body);
-	font-weight: 600;
+	font-weight: 500;
 	color: var(--ess-text);
 }
 
@@ -805,18 +1180,176 @@ textarea {
 }
 
 /* ------------------------------------------------------------
+   STEPPER (horizontal) — Submitted ● ─── ◉ Manager review ─── ○ Decision
+------------------------------------------------------------ */
+
+.ess-stepper {
+	display: grid;
+	grid-auto-flow: column;
+	grid-auto-columns: 1fr;
+	gap: 0;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.ess-step {
+	position: relative;
+	display: grid;
+	gap: 8px;
+	justify-items: start;
+	padding-right: 12px;
+}
+.ess-step:last-child {
+	padding-right: 0;
+}
+.ess-step__dot {
+	position: relative;
+	z-index: 1;
+	display: grid;
+	place-items: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	border: 2px solid var(--ess-border-strong);
+	background: var(--ess-surface);
+	color: var(--ess-text-muted);
+	font-size: 11px;
+	font-weight: 600;
+}
+.ess-step:not(:last-child)::before {
+	content: '';
+	position: absolute;
+	top: 11px;
+	left: 24px;
+	right: 0;
+	height: 2px;
+	background: var(--ess-border);
+}
+.ess-step[data-state='done']:not(:last-child)::before {
+	background: var(--ess-primary);
+}
+.ess-step[data-state='done'] .ess-step__dot {
+	background: var(--ess-primary);
+	border-color: var(--ess-primary);
+	color: var(--ess-text-on-primary);
+}
+.ess-step[data-state='current'] .ess-step__dot {
+	border-color: var(--ess-primary);
+	color: var(--ess-primary);
+	box-shadow: 0 0 0 3px var(--ring);
+}
+.ess-step[data-state='current'] .ess-step__dot::after {
+	content: '';
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--ess-primary);
+}
+.ess-step__label {
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--ess-text);
+}
+.ess-step[data-state='todo'] .ess-step__label {
+	color: var(--ess-text-secondary);
+}
+.ess-step__meta {
+	font-size: 12.5px;
+	color: var(--ess-text-muted);
+	margin-top: -4px;
+}
+/* Centred variant for the compact three-step signposts (Upload > Review > Apply). */
+.ess-stepper--center .ess-step {
+	justify-items: center;
+	text-align: center;
+	padding: 0;
+}
+.ess-stepper--center .ess-step:not(:last-child)::before {
+	left: calc(50% + 12px);
+	right: calc(-50% + 12px);
+}
+
+/* ------------------------------------------------------------
+   DAY STRIP — ‹ Mon 5 · Tue 6 · [Thu 8] · Fri 9 ›
+------------------------------------------------------------ */
+
+.ess-daystrip {
+	display: flex;
+	align-items: stretch;
+	gap: 10px;
+}
+.ess-daystrip__nav {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 40px;
+	border: 1px solid var(--ess-border);
+	border-radius: var(--ess-radius-md);
+	background: var(--ess-surface);
+	color: var(--ess-text-secondary);
+	cursor: pointer;
+}
+.ess-daystrip__nav:hover {
+	border-color: var(--ess-border-strong);
+	color: var(--ess-text);
+}
+.ess-daystrip__days {
+	flex: 1;
+	display: grid;
+	grid-auto-flow: column;
+	grid-auto-columns: 1fr;
+	gap: 10px;
+	min-width: 0;
+}
+.ess-day {
+	display: grid;
+	justify-items: center;
+	gap: 2px;
+	padding: 10px 6px;
+	border: 1px solid var(--ess-border);
+	border-radius: var(--ess-radius-md);
+	background: var(--ess-surface);
+	color: var(--ess-text-secondary);
+	font-size: 12.5px;
+	cursor: pointer;
+	transition:
+		background var(--ess-t-fast),
+		border-color var(--ess-t-fast);
+}
+.ess-day strong {
+	font-family: var(--ess-font-display);
+	font-size: 20px;
+	font-weight: 600;
+	color: var(--ess-text);
+	line-height: 1.1;
+}
+.ess-day:hover {
+	border-color: var(--ess-border-strong);
+}
+.ess-day[aria-pressed='true'],
+.ess-day[aria-current='date'] {
+	background: var(--ess-primary-soft);
+	border-color: var(--ess-primary-soft);
+	color: var(--ess-primary-text);
+}
+.ess-day[aria-pressed='true'] strong,
+.ess-day[aria-current='date'] strong {
+	color: var(--ess-primary-text);
+}
+
+/* ------------------------------------------------------------
    MODAL / DRAWER
 ------------------------------------------------------------ */
 
 .ess-scrim {
 	position: fixed;
 	inset: 0;
-	background: rgba(4, 2, 12, 0.65);
+	background: rgba(27, 31, 59, 0.42);
 }
 
 .ess-modal {
 	background: var(--ess-modal-bg);
-	border: 1px solid rgba(255, 255, 255, 0.12);
+	border: 1px solid var(--ess-border);
 	border-radius: var(--ess-radius-lg);
 	box-shadow: var(--ess-elev-4);
 	width: min(520px, calc(100vw - 32px));
@@ -834,9 +1367,15 @@ textarea {
 	border-bottom: 1px solid var(--ess-border);
 	justify-content: space-between;
 }
+.ess-modal__head .ess-h2,
+.ess-modal__head h2 {
+	font-family: var(--ess-font-display);
+	font-size: 22px;
+	font-weight: 600;
+}
 .ess-modal__foot {
 	border-top: 1px solid var(--ess-border);
-	background: rgba(255, 255, 255, 0.03);
+	background: var(--ess-sunken);
 	justify-content: flex-end;
 }
 .ess-modal__body {
@@ -848,9 +1387,9 @@ textarea {
 	top: 0;
 	right: 0;
 	bottom: 0;
-	width: min(440px, 100vw);
+	width: min(500px, 100vw);
 	background: var(--ess-modal-bg);
-	border-left: 1px solid rgba(255, 255, 255, 0.12);
+	border-left: 1px solid var(--ess-border);
 	box-shadow: var(--ess-elev-4);
 	display: flex;
 	flex-direction: column;
@@ -872,36 +1411,27 @@ textarea {
 .ess-skeleton {
 	height: 12px;
 	border-radius: 6px;
-	background: linear-gradient(
-		90deg,
-		rgba(255, 255, 255, 0.05) 0%,
-		rgba(255, 255, 255, 0.12) 50%,
-		rgba(255, 255, 255, 0.05) 100%
-	);
+	background: linear-gradient(90deg, var(--ess-sunken) 0%, var(--ess-border) 50%, var(--ess-sunken) 100%);
 	background-size: 360px 100%;
 	animation: ess-shimmer 1.2s infinite linear;
 }
 
 /* ------------------------------------------------------------
-   NAV RAIL — dense glass pane
+   NAV RAIL — shared utility for nav-style links
 ------------------------------------------------------------ */
 
 .ess-rail {
 	width: var(--ess-rail-width);
 	flex-shrink: 0;
-	/* 100dvh, not 100vh: with a mobile browser's toolbar showing, 100vh is
-	   taller than what you can see, so the rail's foot — the profile link and
-	   Log out — sat below the fold. The rail is `position: sticky`, so it never
-	   scrolled into reach either; those two controls were simply unusable. */
 	height: 100vh;
 	height: 100dvh;
 	position: sticky;
 	top: 0;
-	background: var(--ess-pane-bg);
+	background: var(--ess-inverse);
 	color: var(--ess-text-inverse);
 	display: flex;
 	flex-direction: column;
-	padding: 20px 14px;
+	padding: 20px 12px;
 	border-right: 1px solid var(--ess-border-inverse);
 }
 
@@ -909,94 +1439,156 @@ textarea {
 	display: flex;
 	align-items: center;
 	gap: 12px;
-	height: 40px;
-	padding: 0 12px;
+	height: 42px;
+	padding: 0 14px;
 	border: 1px solid transparent;
-	border-radius: var(--ess-radius-sm);
+	border-radius: var(--ess-radius-md);
 	color: var(--ess-text-inverse-secondary);
-	font-size: var(--ess-fs-body);
+	font-size: 14.5px;
 	font-weight: 500;
 	transition:
 		background var(--ess-t-fast),
-		color var(--ess-t-fast),
-		border-color var(--ess-t-fast);
+		color var(--ess-t-fast);
 }
 .ess-nav-item:hover {
-	background: rgba(255, 255, 255, 0.06);
+	background: var(--ess-surface-hover);
 	color: var(--ess-text-inverse);
 }
 .ess-nav-item[aria-current='page'] {
-	color: #fff;
-	font-weight: 600;
-	border-color: color-mix(in oklab, var(--acc) 45%, transparent);
-	background: linear-gradient(
-		100deg,
-		color-mix(in oklab, var(--acc) 34%, transparent),
-		rgba(255, 255, 255, 0.05)
-	);
-	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.24),
-		0 10px 24px -14px var(--glow);
+	color: var(--ess-primary-text);
+	background: var(--ess-primary-soft);
 }
 
 /* ------------------------------------------------------------
-   STAT CARD — glass KPI with hover lift
+   STAT CARD — icon tile, label, serif value, caption
 ------------------------------------------------------------ */
 
 .ess-stat {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
-	background: var(--ess-glass-bg);
-	border: 1px solid var(--ess-glass-border);
+	gap: 4px;
+	background: var(--ess-surface);
+	border: 1px solid var(--ess-border);
 	border-radius: var(--ess-radius-md);
 	padding: 18px 20px;
-	box-shadow: var(--ess-glass-shadow);
-	transition:
-		transform var(--ess-t),
-		box-shadow var(--ess-t),
-		border-color var(--ess-t);
+	box-shadow: var(--ess-elev-1);
+	transition: border-color var(--ess-t);
 }
 
 .ess-stat:hover {
-	transform: translate3d(0, -4px, 0);
-	border-color: rgba(255, 255, 255, 0.22);
-	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.26),
-		0 34px 64px -30px #000,
-		0 0 0 1px var(--ring),
-		0 0 40px -14px var(--glow);
+	border-color: var(--ess-border-strong);
 }
 
 .ess-stat__label {
-	font-size: var(--ess-fs-eyebrow);
-	font-weight: 700;
-	letter-spacing: 0.14em;
-	text-transform: uppercase;
-	color: rgba(255, 255, 255, 0.82);
+	font-size: 13.5px;
+	font-weight: 500;
+	color: var(--ess-text-secondary);
 }
 
 .ess-stat__value {
 	font-family: var(--ess-font-display);
 	font-size: var(--ess-fs-stat);
-	font-weight: 700;
-	line-height: 1.05;
-	letter-spacing: -0.03em;
+	font-weight: 600;
+	line-height: 1.1;
+	letter-spacing: -0.01em;
 	color: var(--ess-text);
 	font-variant-numeric: tabular-nums;
-	text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
 }
 
 .ess-stat__meta {
 	font-size: var(--ess-fs-caption);
+	color: var(--ess-text-muted);
+}
+
+/* Horizontal metric: tile on the left, figure and caption on the right
+   ("Today's check-in · 09:02 · Biometric check-in recorded"). */
+.ess-metric {
+	display: flex;
+	align-items: flex-start;
+	gap: 14px;
+	background: var(--ess-surface);
+	border: 1px solid var(--ess-border);
+	border-radius: var(--ess-radius-md);
+	padding: 18px 20px;
+	box-shadow: var(--ess-elev-1);
+}
+.ess-metric__body {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+.ess-metric__label {
+	font-size: 13.5px;
 	color: var(--ess-text-secondary);
+}
+.ess-metric__value {
+	font-family: var(--ess-font-display);
+	font-size: var(--ess-fs-stat);
+	font-weight: 600;
+	line-height: 1.1;
+	color: var(--ess-text);
+	font-variant-numeric: tabular-nums;
+}
+.ess-metric__meta {
+	font-size: var(--ess-fs-caption);
+	color: var(--ess-text-muted);
+}
+
+/* A strip of figures separated by dividers (48 Total people | 42 Available). */
+.ess-figures {
+	display: grid;
+	grid-auto-flow: column;
+	grid-auto-columns: 1fr;
+	background: var(--ess-surface);
+	border: 1px solid var(--ess-border);
+	border-radius: var(--ess-radius-md);
+	box-shadow: var(--ess-elev-1);
+}
+.ess-figure {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 18px 22px;
+	border-right: 1px solid var(--ess-border);
+	min-width: 0;
+}
+.ess-figure:last-child {
+	border-right: none;
+}
+.ess-figure__value {
+	font-family: var(--ess-font-display);
+	font-size: 26px;
+	font-weight: 600;
+	line-height: 1.1;
+	color: var(--ess-text);
+	font-variant-numeric: tabular-nums;
+}
+.ess-figure__label {
+	font-size: 13.5px;
+	color: var(--ess-text-secondary);
+}
+.ess-figure__dot {
+	flex: none;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: var(--ess-primary);
+}
+.ess-figure__dot--ok {
+	background: var(--ess-success);
+}
+.ess-figure__dot--warn {
+	background: var(--ess-warning);
+}
+.ess-figure__dot--bad {
+	background: var(--ess-danger);
+}
+.ess-figure__dot--neutral {
+	background: var(--ess-border-strong);
 }
 
 /* ------------------------------------------------------------
    KPI ROW — `.ess-kpis` container + `.ess-stat` cards.
-   Layout variants via data-lay (grid / bento / split / rail / list)
-   per the Cosmic `dashboardLayout` spec. Default `grid` is
-   responsive by auto-fit so rows never leave dead columns.
 ------------------------------------------------------------ */
 
 .ess-kpis {
@@ -1005,7 +1597,6 @@ textarea {
 	gap: 14px;
 }
 
-/* Explicit column counts for rows that must not re-wrap arbitrarily. */
 .ess-kpis[data-n='2'] {
 	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
@@ -1013,7 +1604,6 @@ textarea {
 	grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
 }
 
-/* --- bento: first card 2×2, fourth spans 2 --- */
 .ess-kpis[data-lay='bento'] {
 	grid-template-columns: repeat(4, 1fr);
 }
@@ -1023,13 +1613,12 @@ textarea {
 	justify-content: center;
 }
 .ess-kpis[data-lay='bento'] > .ess-stat:nth-child(1) .ess-stat__value {
-	font-size: 74px;
+	font-size: 64px;
 }
 .ess-kpis[data-lay='bento'] > .ess-stat:nth-child(4) {
 	grid-column: span 2;
 }
 
-/* --- split: tall hero + compact horizontal rows --- */
 .ess-kpis[data-lay='split'] {
 	grid-template-columns: 1.5fr 1fr;
 }
@@ -1038,7 +1627,7 @@ textarea {
 	justify-content: center;
 }
 .ess-kpis[data-lay='split'] > .ess-stat:nth-child(1) .ess-stat__value {
-	font-size: 64px;
+	font-size: 56px;
 }
 .ess-kpis[data-lay='split'] > .ess-stat:not(:first-child) {
 	flex-direction: row;
@@ -1047,14 +1636,13 @@ textarea {
 	padding: 12px 18px;
 }
 .ess-kpis[data-lay='split'] > .ess-stat:not(:first-child) .ess-stat__value {
-	font-size: 26px;
+	font-size: 24px;
 	margin-left: auto;
 }
 .ess-kpis[data-lay='split'] > .ess-stat:not(:first-child) .ess-stat__meta {
 	display: none;
 }
 
-/* --- rail: horizontal scroll-snap row --- */
 .ess-kpis[data-lay='rail'] {
 	display: flex;
 	overflow-x: auto;
@@ -1066,19 +1654,18 @@ textarea {
 	scroll-snap-align: start;
 }
 
-/* --- list: one bordered container, slim rows --- */
 .ess-kpis[data-lay='list'] {
 	display: block;
-	background: var(--ess-glass-bg);
-	border: 1px solid var(--ess-glass-border);
+	background: var(--ess-surface);
+	border: 1px solid var(--ess-border);
 	border-radius: var(--ess-radius-md);
-	box-shadow: var(--ess-glass-shadow);
+	box-shadow: var(--ess-elev-1);
 	overflow: hidden;
 }
 .ess-kpis[data-lay='list'] > .ess-stat {
 	background: none;
 	border: 0;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+	border-bottom: 1px solid var(--ess-border-subtle);
 	border-radius: 0;
 	box-shadow: none;
 	flex-direction: row;
@@ -1090,15 +1677,13 @@ textarea {
 	border-bottom: 0;
 }
 .ess-kpis[data-lay='list'] > .ess-stat:hover {
-	transform: none;
-	background: rgba(255, 255, 255, 0.04);
-	box-shadow: none;
+	background: var(--ess-sunken);
 }
 .ess-kpis[data-lay='list'] > .ess-stat > .ess-stat__label {
 	min-width: 150px;
 }
 .ess-kpis[data-lay='list'] > .ess-stat > .ess-stat__value {
-	font-size: 28px;
+	font-size: 24px;
 	margin-left: auto;
 }
 .ess-kpis[data-lay='list'] > .ess-stat > .ess-stat__meta {
@@ -1106,8 +1691,6 @@ textarea {
 	text-align: right;
 }
 
-/* Asymmetric layouts collapse to the responsive grid on narrow viewports —
-   a 2×2 hero or a 1.5fr split is unreadable below tablet width. */
 @media (max-width: 900px) {
 	.ess-kpis[data-lay='bento'],
 	.ess-kpis[data-lay='split'] {
@@ -1135,42 +1718,144 @@ textarea {
 		font-size: var(--ess-fs-stat);
 		margin-left: 0;
 	}
+	.ess-figures {
+		grid-auto-flow: row;
+		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	}
+	.ess-figure {
+		border-right: none;
+		border-bottom: 1px solid var(--ess-border);
+	}
+	.ess-figure:last-child {
+		border-bottom: none;
+	}
 }
 
 /* ------------------------------------------------------------
-   PAGE SHELL — transparent: the cosmos paints the canvas
+   PAGE SHELL — sidebar + top bar + content
 ------------------------------------------------------------ */
 
 .ess-shell {
 	display: flex;
-	/* Matches the rail's 100dvh. Left at 100vh, the shell stayed taller than a
-	   mobile viewport by exactly the height of the browser toolbar, so even a
-	   page with nothing on it had a short scroll in it. */
-	min-height: 100vh;
-	min-height: 100dvh;
-	background: transparent;
+	height: 100vh;
+	height: 100dvh;
+	min-height: 0;
+	overflow: hidden;
+	background: var(--ess-canvas);
 }
 
 .ess-main {
-	flex: 1;
+	flex: 1 1 0%;
 	min-width: 0;
-	padding: var(--ess-page-pad-y) var(--ess-page-pad-x);
+	min-height: 0;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
 }
 
-/* Tighter page gutters on small screens — 32px each side eats real estate
-   that dense tables and KPI rows need back. */
+/* The page body under the top bar. */
+.ess-content {
+	flex: 1 1 0%;
+	min-width: 0;
+	min-height: 0;
+	overflow: auto;
+	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
+	width: 100%;
+	padding: var(--ess-page-pad-y) var(--ess-page-pad-x) var(--ess-space-10);
+}
+
+/* Signed-in pages own their scrolling; the document and navigation stay still. */
+html:has(.ess-shell), body:has(.ess-shell) {
+	overflow: hidden;
+	overscroll-behavior: none;
+}
+html:has(.ess-shell) { scrollbar-gutter: auto; }
+.ess-main > :first-child { flex-shrink: 0; }
+
 @media (max-width: 720px) {
-	.ess-main {
-		padding: 20px 16px;
+	.ess-content {
+		padding: 20px 16px 32px;
 	}
 }
 
+/* Page header: crumb/eyebrow, serif title, subtitle; actions on the right. */
 .ess-page-head {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: flex-end;
 	justify-content: space-between;
 	gap: 20px;
 	margin-bottom: var(--ess-space-6);
+}
+.ess-page-head__text {
+	flex: 1 1 260px;
+	overflow-wrap: anywhere;
+	display: grid;
+	gap: 8px;
+	min-width: 0;
+}
+.ess-page-head__text .ess-page-sub {
+	margin-top: 0;
+}
+.ess-page-head__actions {
+	display: flex;
+	max-width: 100%;
+	align-items: center;
+	gap: 10px;
+	flex: none;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
+/* Two-column page: content on the left, a 360px aside on the right. */
+.ess-split {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) var(--ess-aside-width);
+	gap: 20px;
+	align-items: start;
+}
+.ess-split--wide {
+	--ess-aside-width: 420px;
+}
+.ess-split--narrow {
+	--ess-aside-width: 320px;
+}
+.ess-split > * {
+	min-width: 0;
+}
+.ess-stack {
+	display: grid;
+	gap: 20px;
+	align-content: start;
+}
+.ess-stack--tight {
+	gap: 14px;
+}
+@media (max-width: 1100px) {
+	.ess-split {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+.ess-kbd {
+	font-family: var(--ess-font-mono);
+	font-size: 10.5px;
+	padding: 1px 6px;
+	border: 1px solid var(--ess-border);
+	border-bottom-width: 2px;
+	border-radius: 5px;
+	color: var(--ess-text-muted);
+	background: var(--ess-surface);
+}
+
+.ess-sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
 }
 
 /* ------------------------------------------------------------
@@ -1178,116 +1863,87 @@ textarea {
 ------------------------------------------------------------ */
 
 @media (prefers-reduced-motion: reduce) {
-	.stars {
-		animation: none;
-	}
 	.ess-skeleton {
 		animation: none;
 	}
-	.ess-card--interactive:hover,
-	.ess-stat:hover,
-	.ess-btn--primary:hover:not(:disabled) {
-		transform: none;
+	*,
+	*::before,
+	*::after {
+		transition-duration: 0.01ms !important;
+		animation-duration: 0.01ms !important;
 	}
 }
 
 /* ------------------------------------------------------------
-   DESIGN TWEAKS — the prototype's Tweaks panel, as real hooks.
-   Set on <html> by the admin-only preview panel (/admin/tweaks)
-   so defaults can be chosen against real screens, then baked in.
-   Every one of these is a no-op unless the attribute is present,
-   so the shipped default is exactly the Cosmic design default.
+   DESIGN TWEAKS — the Appearance panel (/admin/tweaks) sets these
+   on <html>. Every one is a no-op unless the attribute is present,
+   so the shipped default is exactly the Timeline design default.
 ------------------------------------------------------------ */
 
-/* Card surface treatment (default: glass) */
-[data-ess-card='outline'] .ess-card,
-[data-ess-card='outline'] .ess-panel,
-[data-ess-card='outline'] .ess-stat,
-[data-ess-card='outline'] .ess-table-shell {
-	background: rgba(255, 255, 255, 0.015);
-	border-color: rgba(255, 255, 255, 0.17);
-	box-shadow: none;
-}
-
+/* Card surface treatment (default: outline) */
 [data-ess-card='solid'] .ess-card,
 [data-ess-card='solid'] .ess-panel,
 [data-ess-card='solid'] .ess-stat,
+[data-ess-card='solid'] .ess-metric,
 [data-ess-card='solid'] .ess-table-shell {
-	background: var(--ess-modal-bg);
-	border-color: rgba(255, 255, 255, 0.07);
-	box-shadow: 0 18px 40px -32px #000;
+	border-color: transparent;
+	background: var(--ess-sunken);
+	box-shadow: none;
 }
 
 [data-ess-card='elevated'] .ess-card,
 [data-ess-card='elevated'] .ess-panel,
 [data-ess-card='elevated'] .ess-stat,
+[data-ess-card='elevated'] .ess-metric,
 [data-ess-card='elevated'] .ess-table-shell {
-	background: var(--ess-glass-raised-bg);
-	border-color: rgba(255, 255, 255, 0.14);
-	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.22),
-		0 34px 62px -34px #000,
-		0 0 34px -22px var(--glow);
+	border-color: transparent;
+	box-shadow: var(--ess-elev-3);
 }
 
 /* Corner radius scale (default: soft) */
 [data-ess-corner='sharp'] {
-	--ess-radius-xs: 4px;
-	--ess-radius-sm: 6px;
-	--ess-radius-md: 6px;
-	--ess-radius-lg: 8px;
+	--ess-radius-xs: 3px;
+	--ess-radius-sm: 4px;
+	--ess-radius-md: 5px;
+	--ess-radius-lg: 6px;
 }
 
 [data-ess-corner='round'] {
-	--ess-radius-xs: 12px;
-	--ess-radius-sm: 16px;
-	--ess-radius-md: 28px;
-	--ess-radius-lg: 32px;
+	--ess-radius-xs: 10px;
+	--ess-radius-sm: 12px;
+	--ess-radius-md: 18px;
+	--ess-radius-lg: 24px;
 }
 
 /* Density (default: comfortable) */
-[data-ess-density='compact'] .ess-stat {
-	padding: 14px;
+[data-ess-density='compact'] .ess-stat,
+[data-ess-density='compact'] .ess-metric {
+	padding: 12px 16px;
 }
-[data-ess-density='compact'] .ess-stat__value {
-	font-size: 30px;
+[data-ess-density='compact'] .ess-stat__value,
+[data-ess-density='compact'] .ess-metric__value {
+	font-size: 24px;
 }
 [data-ess-density='compact'] .ess-table td {
-	padding: 8px 16px;
+	padding: 9px 16px;
 }
 [data-ess-density='compact'] .ess-table th {
-	padding: 8px 16px;
+	padding: 9px 16px;
 }
 [data-ess-density='compact'] .ess-card {
 	padding: var(--ess-space-4);
 }
-
-/* Ambient glow intensity (default: medium) */
-[data-ess-glow='subtle'] .cosmos {
-	opacity: 0.5;
-}
-[data-ess-glow='subtle'] .ess-page-title,
-[data-ess-glow='subtle'] .ess-stat__value {
-	text-shadow: none;
-}
-[data-ess-glow='intense'] .cosmos {
-	filter: saturate(1.3) brightness(1.15);
-}
-[data-ess-glow='intense'] .ess-page-title,
-[data-ess-glow='intense'] .ess-stat__value {
-	text-shadow:
-		0 2px 24px rgba(0, 0, 0, 0.55),
-		0 0 44px var(--glow);
+[data-ess-density='compact'] .ess-row {
+	padding-top: 10px;
+	padding-bottom: 10px;
 }
 
-/* Starfield + hover-depth toggles (default: on) */
-[data-ess-stars='off'] .stars {
-	display: none;
-}
-
-[data-ess-depth='off'] .ess-card--interactive:hover,
-[data-ess-depth='off'] .ess-stat:hover {
-	transform: none;
+/* Motion (default: full) */
+[data-ess-motion='reduced'] *,
+[data-ess-motion='reduced'] *::before,
+[data-ess-motion='reduced'] *::after {
+	transition-duration: 0.01ms !important;
+	animation-duration: 0.01ms !important;
 }
 
 /* Sparkline visibility (default: on) */
@@ -1295,123 +1951,16 @@ textarea {
 	display: none;
 }
 
-/* ============================================================
-   LIGHT-MODE (OPAL) OVERRIDES
-   Scoped to the default palette only — the dark (Onyx) theme keeps
-   every rule above verbatim. These retune the handful of surfaces that
-   were authored with hard-coded white foregrounds/fills for a dark
-   canvas, so they read correctly on the light surface. Anything already
-   expressed in tokens needs no override — it flips with the palette.
-   ============================================================ */
-
-:root:not([data-ess-theme='dark']) {
-	/* Eyebrows / stat labels / table headers were white-on-dark. */
-	--ess-eyebrow-ink: rgba(20, 18, 35, 0.62);
+/* Retired tweaks from the earlier skin: harmless if still stored. */
+[data-ess-glow],
+[data-ess-stars],
+[data-ess-depth] {
+	--ess-retired-tweak: 1;
 }
 
-/* Type roles that pinned white directly */
-:root:not([data-ess-theme='dark']) .ess-eyebrow,
-:root:not([data-ess-theme='dark']) .ess-stat__label {
-	color: var(--ess-eyebrow-ink);
-}
-
-/* Page title / stat value glow was a heavy black shadow tuned for dark. */
-:root:not([data-ess-theme='dark']) .ess-page-title,
-:root:not([data-ess-theme='dark']) .ess-stat__value {
-	text-shadow: 0 2px 18px rgba(30, 24, 55, 0.12);
-}
-
-/* Buttons — secondary/ghost used white-alpha fills that vanish on white. */
-:root:not([data-ess-theme='dark']) .ess-btn--secondary {
-	background: rgba(20, 18, 35, 0.05);
-	border-color: rgba(20, 18, 35, 0.13);
-}
-:root:not([data-ess-theme='dark']) .ess-btn--secondary:hover:not(:disabled) {
-	background: rgba(20, 18, 35, 0.09);
-	border-color: rgba(20, 18, 35, 0.2);
-}
-:root:not([data-ess-theme='dark']) .ess-btn--ghost:hover:not(:disabled) {
-	background: rgba(20, 18, 35, 0.06);
-}
-
-/* Form fields */
-:root:not([data-ess-theme='dark']) .ess-input,
-:root:not([data-ess-theme='dark']) .ess-select,
-:root:not([data-ess-theme='dark']) .ess-textarea {
-	border-color: rgba(20, 18, 35, 0.15);
-}
-
-/* Data table — header band, row borders, hover, cell ink. */
-:root:not([data-ess-theme='dark']) .ess-table th {
-	background: rgba(20, 18, 35, 0.035);
-	border-bottom-color: rgba(20, 18, 35, 0.09);
-	color: rgba(20, 18, 35, 0.62);
-}
-:root:not([data-ess-theme='dark']) .ess-table td {
-	border-bottom-color: rgba(20, 18, 35, 0.08);
-	color: rgba(20, 18, 35, 0.88);
-}
-:root:not([data-ess-theme='dark']) .ess-table tbody tr:hover td {
-	background: rgba(20, 18, 35, 0.035);
-}
-:root:not([data-ess-theme='dark']) .ess-table-foot {
-	background: rgba(20, 18, 35, 0.035);
-	border-top-color: rgba(20, 18, 35, 0.09);
-}
-
-/* Empty-state icon tile */
-:root:not([data-ess-theme='dark']) .ess-empty__icon {
-	background: rgba(20, 18, 35, 0.05);
-	border-color: rgba(20, 18, 35, 0.1);
-}
-
-/* Segmented control — track + inactive label ink. */
-:root:not([data-ess-theme='dark']) .ess-segmented {
-	background: rgba(20, 18, 35, 0.045);
-	border-color: rgba(20, 18, 35, 0.1);
-}
-:root:not([data-ess-theme='dark']) .ess-segmented button {
-	color: rgba(20, 18, 35, 0.55);
-}
-:root:not([data-ess-theme='dark']) .ess-segmented button:hover {
-	color: var(--ess-text);
-}
-
-/* Modal foot tint + skeleton shimmer (both used white-alpha on dark). */
-:root:not([data-ess-theme='dark']) .ess-modal__foot {
-	background: rgba(20, 18, 35, 0.03);
-}
-:root:not([data-ess-theme='dark']) .ess-skeleton {
-	background: linear-gradient(
-		90deg,
-		rgba(20, 18, 35, 0.05) 0%,
-		rgba(20, 18, 35, 0.11) 50%,
-		rgba(20, 18, 35, 0.05) 100%
-	);
-	background-size: 360px 100%;
-}
-
-/* Card / stat hover borders were white-alpha. */
-:root:not([data-ess-theme='dark']) .ess-card--interactive:hover,
-:root:not([data-ess-theme='dark']) .ess-stat:hover {
-	border-color: rgba(20, 18, 35, 0.16);
-}
-
-/* Nav rail — now a light pane (user chose a fully-light sidebar). The
-   markup lives in SidebarNav.svelte; its white-alpha hover/active fills
-   are overridden there. Here we only ensure the shared .ess-nav-item
-   utility (used elsewhere) tracks the light palette. */
-:root:not([data-ess-theme='dark']) .ess-nav-item:hover {
-	background: rgba(20, 18, 35, 0.05);
-}
-:root:not([data-ess-theme='dark']) .ess-nav-item[aria-current='page'] {
-	color: var(--ess-text);
-}
-
-/* List-layout KPI dividers + hover. */
-:root:not([data-ess-theme='dark']) .ess-kpis[data-lay='list'] > .ess-stat {
-	border-bottom-color: rgba(20, 18, 35, 0.07);
-}
-:root:not([data-ess-theme='dark']) .ess-kpis[data-lay='list'] > .ess-stat:hover {
-	background: rgba(20, 18, 35, 0.035);
-}
+/* Keep wide data inside its own table, without widening the page. */
+.ess-content > *, .ess-card, .ess-table-wrap { min-width: 0; max-width: 100%; }
+.ess-row { flex-wrap: wrap; }
+.ess-row__end { flex-wrap: wrap; max-width: 100%; }
+.ess-card-head { flex-wrap: wrap; }
+@media (max-width: 720px) { .ess-page-head__actions { justify-content: flex-start; } }

@@ -33,6 +33,7 @@ export const CAPABILITIES = [
 	{ key: 'people.create_login', label: 'Create logins', group: 'People', description: 'Create a login for one person, with a temporary password.', grantable: true },
 	{ key: 'people.bulk_import', label: 'Bulk import logins', group: 'People', description: 'Upload the HR spreadsheet and create logins in bulk.', grantable: true },
 	{ key: 'people.edit_settings', label: 'Change reporting lines and shifts', group: 'People', description: 'Set reports to, concerned HR, shift group, office timings and week off.', grantable: true },
+	{ key: 'people.send_logins', label: 'Approve login emails', group: 'People', description: 'Approve, hold or cancel the emails that send new logins their username and temporary password, and set how often they go out.', grantable: true },
 	{ key: 'people.reset_password', label: 'Reset passwords', group: 'People', description: 'Issue a new temporary password for anyone.', grantable: true },
 	{ key: 'people.password_activity', label: 'See password activity', group: 'People', description: 'Who changed or reset whose password, and when.', grantable: true },
 	{ key: 'people.employee_code', label: 'Set employee codes', group: 'People', description: 'Change the employee code that links biometric punches.', grantable: true },
@@ -83,6 +84,7 @@ const DEFAULTS: Record<Role, CapabilityKey[]> = {
 	admin: [
 		'people.directory',
 		'people.create_login',
+		'people.send_logins',
 		'people.edit_settings',
 		'people.reset_password',
 		'people.employee_code',
@@ -125,6 +127,7 @@ export function effectiveCapabilities(role: Role, extra: readonly string[] = [])
 export const ADMIN_AREA_KEYS: CapabilityKey[] = [
 	'people.directory',
 	'people.create_login',
+	'people.send_logins',
 	'people.bulk_import',
 	'people.reset_password',
 	'people.password_activity',

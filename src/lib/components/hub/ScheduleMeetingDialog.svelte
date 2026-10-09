@@ -20,9 +20,10 @@
 	let duration = $state(30);
 	let agenda = $state('');
 	let picked = $state<string[]>([]);
-	type HostOption = { value: string; label: string; detail: string };
+	type HostOption = { value: string; label: string; detail: string; isDefault: boolean };
 	let hosts = $state<HostOption[]>([]);
-	let host = $state('self');
+	// Empty = let ESS use the company account.
+	let host = $state('');
 	let q = $state('');
 	let busy = $state(false);
 	let err = $state('');
@@ -41,7 +42,7 @@
 		void fetch('/api/meetings/hosts').then(async (r) => {
 			if (!r.ok) return;
 			hosts = await r.json();
-			if (hosts.length && !hosts.some((h) => h.value === host)) host = hosts[0].value;
+			host = (hosts.find((h) => h.isDefault) ?? hosts[0])?.value ?? '';
 		});
 		void fetch('/api/tasks/assignable').then(async (r) => {
 			if (!r.ok) return;
@@ -81,8 +82,8 @@
 <div class="ess-scrim scrim" role="presentation" onclick={onclose}></div>
 <div class="ess-modal modal" role="dialog" aria-modal="true" aria-labelledby="sched-title">
 	<div class="ess-modal__head">
-		<strong id="sched-title">Schedule a meeting</strong>
-		<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={onclose} aria-label="Close"><X size={16} /></button>
+		<h2 id="sched-title" class="ess-h2">Schedule a meeting</h2>
+		<button type="button" class="ess-icon-btn" onclick={onclose} aria-label="Close"><X size={16} /></button>
 	</div>
 	<form class="ess-modal__body body" onsubmit={save}>
 		<div class="ess-field">
@@ -105,7 +106,7 @@
 				</select>
 			</div>
 		</div>
-		{#if hosts.length}
+		{#if hosts.length > 1}
 			<div class="ess-field">
 				<label class="ess-label" for="sm-host">Host account</label>
 				<select id="sm-host" class="ess-select" bind:value={host}>
@@ -151,7 +152,7 @@
 		<p class="ess-help">Everyone invited gets it in their ESS feed and joins from Champ Hub. After the meeting, its summary comes back to you to turn into tasks.</p>
 		{#if err}<p class="ess-error">{err}</p>{/if}
 		<div class="actions">
-			<button type="button" class="ess-btn ess-btn--ghost" onclick={onclose}>Cancel</button>
+			<button type="button" class="ess-btn ess-btn--secondary" onclick={onclose}>Cancel</button>
 			<button type="submit" class="ess-btn ess-btn--primary" disabled={busy || !topic.trim()}>{busy ? 'Scheduling…' : 'Schedule'}</button>
 		</div>
 	</form>

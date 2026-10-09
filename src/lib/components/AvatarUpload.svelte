@@ -10,9 +10,11 @@
 		hasPicture: boolean;
 		/** Server-provided updatedAt, so a reload never shows a cached old image. */
 		pictureVersion?: number | null;
+		/** Just the picture and its camera button, no name or buttons beside it. */
+		compact?: boolean;
 	}
 
-	let { userId, fullName, hasPicture, pictureVersion }: Props = $props();
+	let { userId, fullName, hasPicture, pictureVersion, compact = false }: Props = $props();
 
 	let busy = $state(false);
 	let errorMsg = $state('');
@@ -47,11 +49,7 @@
 		bitmap.close();
 
 		return new Promise((resolve, reject) => {
-			canvas.toBlob(
-				(blob) => (blob ? resolve(blob) : reject(new Error('Could not process the image'))),
-				'image/jpeg',
-				0.85
-			);
+			canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Could not process the image'))), 'image/jpeg', 0.85);
 		});
 	}
 
@@ -110,7 +108,7 @@
 	}
 </script>
 
-<div class="avatar-upload">
+<div class="avatar-upload" class:compact>
 	<div class="avatar-frame" class:busy>
 		<Avatar {userId} {fullName} hasPicture={shows} size="xl" {version} />
 		<button
@@ -123,43 +121,51 @@
 		>
 			<Camera size={15} />
 		</button>
-	</div>
-
-	<div class="avatar-meta">
-		<strong>{fullName}</strong>
-		<div class="avatar-actions">
-			<button type="button" class="ess-btn ess-btn--sm ess-btn--secondary" onclick={() => fileInput?.click()} disabled={busy}>
-				{busy ? 'Saving…' : shows ? 'Change photo' : 'Add photo'}
+		{#if shows && compact}
+			<button type="button" class="remove-btn" onclick={removePicture} disabled={busy} aria-label="Remove profile picture" title="Remove profile picture">
+				<Trash2 size={13} />
 			</button>
-			{#if shows}
-				<button type="button" class="ess-btn ess-btn--sm ess-btn--ghost" onclick={removePicture} disabled={busy}>
-					<Trash2 size={14} />
-					Remove
-				</button>
-			{/if}
-		</div>
-		{#if errorMsg}
-			<p class="ess-error">{errorMsg}</p>
-		{:else}
-			<p class="hint">JPEG, PNG or WebP. Cropped to a square automatically.</p>
 		{/if}
 	</div>
 
-	<input
-		bind:this={fileInput}
-		type="file"
-		accept="image/jpeg,image/png,image/webp"
-		onchange={onFileChange}
-		hidden
-	/>
+	{#if !compact}
+		<div class="avatar-meta">
+			<strong>{fullName}</strong>
+			<div class="avatar-actions">
+				<button type="button" class="ess-btn ess-btn--sm ess-btn--secondary" onclick={() => fileInput?.click()} disabled={busy}>
+					{busy ? 'Saving…' : shows ? 'Change photo' : 'Add photo'}
+				</button>
+				{#if shows}
+					<button type="button" class="ess-btn ess-btn--sm ess-btn--ghost" onclick={removePicture} disabled={busy}>
+						<Trash2 size={14} />
+						Remove
+					</button>
+				{/if}
+			</div>
+			{#if errorMsg}
+				<p class="ess-error">{errorMsg}</p>
+			{:else}
+				<p class="hint">JPEG, PNG or WebP. Cropped to a square automatically.</p>
+			{/if}
+		</div>
+	{:else if errorMsg}
+		<p class="ess-error">{errorMsg}</p>
+	{/if}
+
+	<input bind:this={fileInput} type="file" accept="image/jpeg,image/png,image/webp" onchange={onFileChange} hidden />
 </div>
 
 <style>
 	.avatar-upload {
 		display: flex;
 		align-items: center;
-		gap: 1.25rem;
+		gap: 20px;
 		flex-wrap: wrap;
+	}
+	.avatar-upload.compact {
+		flex-direction: column;
+		gap: 6px;
+		align-items: flex-start;
 	}
 
 	.avatar-frame {
@@ -172,27 +178,43 @@
 		opacity: 0.6;
 	}
 
-	.change-btn {
+	.change-btn,
+	.remove-btn {
 		position: absolute;
-		right: -2px;
-		bottom: -2px;
-		width: 30px;
-		height: 30px;
+		width: 32px;
+		height: 32px;
 		display: grid;
 		place-items: center;
 		border-radius: 50%;
-		border: 2px solid var(--ess-canvas);
-		background: linear-gradient(180deg, color-mix(in oklab, var(--acc) 82%, #fff), var(--acc));
-		color: var(--ess-text-on-primary);
+		border: 2px solid var(--ess-surface);
 		cursor: pointer;
-		transition: transform var(--ess-t-fast);
+		transition: background var(--ess-t-fast);
 	}
-
+	.change-btn {
+		right: 0;
+		bottom: 0;
+		background: var(--ess-primary);
+		color: var(--ess-text-on-primary);
+	}
 	.change-btn:hover:not(:disabled) {
-		transform: translateY(-1px);
+		background: var(--ess-primary-hover);
+	}
+	.remove-btn {
+		left: 0;
+		bottom: 0;
+		width: 28px;
+		height: 28px;
+		background: var(--ess-surface);
+		color: var(--ess-text-muted);
+		border-color: var(--ess-border);
+	}
+	.remove-btn:hover:not(:disabled) {
+		color: var(--ess-danger);
+		border-color: var(--ess-danger);
 	}
 
-	.change-btn:disabled {
+	.change-btn:disabled,
+	.remove-btn:disabled {
 		cursor: not-allowed;
 		opacity: 0.6;
 	}
@@ -200,23 +222,24 @@
 	.avatar-meta {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 8px;
 		min-width: 0;
 	}
 
 	.avatar-meta strong {
 		font-family: var(--ess-font-display);
-		font-size: var(--ess-fs-h2);
+		font-size: 24px;
+		font-weight: 600;
 	}
 
 	.avatar-actions {
 		display: flex;
-		gap: 0.5rem;
+		gap: 8px;
 		flex-wrap: wrap;
 	}
 
 	.hint {
 		font-size: var(--ess-fs-caption);
-		color: var(--ess-text-secondary);
+		color: var(--ess-text-muted);
 	}
 </style>

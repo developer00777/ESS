@@ -15,7 +15,7 @@
 <svelte:window onkeydown={(e) => e.key === 'Escape' && onclose()} />
 
 <div class="ess-scrim scrim" role="presentation" onclick={onclose}></div>
-<div class="sheet" role="dialog" aria-modal="true" aria-label={label}>
+<div class="ess-drawer sheet" role="dialog" aria-modal="true" aria-label={label}>
 	{@render children()}
 </div>
 
@@ -24,21 +24,25 @@
 		z-index: 70;
 	}
 	.sheet {
-		position: fixed;
 		z-index: 71;
-		top: 0;
-		right: 0;
-		bottom: 0;
-		width: min(420px, 100vw);
-		display: flex;
-		flex-direction: column;
-		background: var(--ess-modal-bg);
-		box-shadow: var(--ess-elev-4);
+		width: min(500px, 100vw);
 		padding-top: env(safe-area-inset-top, 0px);
 		padding-bottom: env(safe-area-inset-bottom, 0px);
+		animation: slide var(--ess-t) both;
 	}
 	.sheet > :global(*) {
 		flex: 1;
 		min-height: 0;
+	}
+	@keyframes slide {
+		from {
+			transform: translateX(16px);
+			opacity: 0;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.sheet {
+			animation: none;
+		}
 	}
 </style>

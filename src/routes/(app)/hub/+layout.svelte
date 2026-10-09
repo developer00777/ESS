@@ -3,6 +3,11 @@
 	import { goto, replaceState } from '$app/navigation';
 	import Search from '@lucide/svelte/icons/search';
 	import Plus from '@lucide/svelte/icons/plus';
+	import House from '@lucide/svelte/icons/house';
+	import MessageCircle from '@lucide/svelte/icons/message-circle';
+	import SquareCheck from '@lucide/svelte/icons/square-check';
+	import Calendar from '@lucide/svelte/icons/calendar';
+	import Users from '@lucide/svelte/icons/users';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import { chat } from '$lib/chat/client.svelte';
@@ -10,6 +15,8 @@
 	import CommandPalette from '$lib/components/hub/CommandPalette.svelte';
 	import TaskSheet from '$lib/components/hub/TaskSheet.svelte';
 	import NewTaskDialog from '$lib/components/hub/NewTaskDialog.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import { longDay } from '$lib/hub/format';
 
 	let { data, children } = $props();
 
@@ -21,12 +28,24 @@
 
 	const path = $derived(page.url.pathname);
 	const tabs = $derived([
-		{ href: '/hub', label: 'Today', count: hub.counts.needs, on: path === '/hub' },
-		{ href: '/hub/chats', label: 'Chats', count: chat.badge, on: path.startsWith('/hub/chats') || path.startsWith('/hub/c/') },
-		{ href: '/hub/tasks', label: 'Tasks', count: 0, on: path.startsWith('/hub/tasks') },
-		{ href: '/hub/meetings', label: 'Meetings', count: hub.counts.minutes, on: path.startsWith('/hub/meetings') },
-		...(data.hub.isLead ? [{ href: '/hub/team', label: 'Team', count: 0, on: path.startsWith('/hub/team') }] : [])
+		{ href: '/hub', label: 'Today', icon: House, count: hub.counts.needs, on: path === '/hub' },
+		{ href: '/hub/chats', label: 'Chats', icon: MessageCircle, count: chat.badge, on: path.startsWith('/hub/chats') || path.startsWith('/hub/c/') },
+		{ href: '/hub/tasks', label: 'Tasks', icon: SquareCheck, count: 0, on: path.startsWith('/hub/tasks') },
+		{ href: '/hub/meetings', label: 'Meetings', icon: Calendar, count: hub.counts.minutes, on: path.startsWith('/hub/meetings') },
+		...(data.hub.isLead ? [{ href: '/hub/team', label: 'Team', icon: Users, count: 0, on: path.startsWith('/hub/team') }] : [])
 	]);
+
+	/* The serif line each tab opens with. A conversation and a meeting's
+	   minutes carry their own title, so the layout draws nothing there. */
+	const head = $derived.by(() => {
+		if (path === '/hub') return { title: 'A little focus. A clearer day.', sub: longDay(new Date().toISOString()) };
+		if (path.startsWith('/hub/chats')) return { title: 'Keep the conversation moving.', sub: 'Every conversation in one place: channels, people and HR.' };
+		if (path.startsWith('/hub/tasks')) return { title: 'Move the important work forward.', sub: 'Your tasks, grouped by when they are due.' };
+		if (path === '/hub/meetings') return { title: 'Meet with a clear purpose.', sub: 'Upcoming calls, minutes to review, and what came out of each one.' };
+		if (path.startsWith('/hub/team')) return { title: 'See where your team needs you.', sub: 'Task counts for the people who report to you, never a productivity score.' };
+		return null;
+	});
+	const ownHeader = $derived(path.startsWith('/hub/c/') || /^\/hub\/meetings\/[^/]+/.test(path));
 
 	const openTask = $derived(hub.openTaskId);
 
@@ -70,26 +89,31 @@
 
 <svelte:window onkeydown={keys} />
 
-<div class="hub">
-	<header class="bar">
-		<a class="brand" href="/hub"><span class="mark">CH</span><span class="name">Champ Hub</span></a>
-		<nav class="tabs" aria-label="Champ Hub">
-			{#each tabs as t (t.href)}
-				<a href={t.href} class="tab" aria-current={t.on ? 'page' : undefined}>
-					{t.label}
-					{#if t.count > 0}<span class="count" aria-label="{t.count} waiting">{t.count > 99 ? '99+' : t.count}</span>{/if}
-				</a>
-			{/each}
-		</nav>
-		<button type="button" class="search" onclick={() => (hub.paletteOpen = true)}>
-			<Search size={15} />
-			<span>Search or ask Champ</span>
-			<kbd>Ctrl K</kbd>
-		</button>
-		<button type="button" class="ess-btn ess-btn--primary ess-btn--sm new" onclick={() => (hub.newTaskOpen = true)} title="New task (N)">
-			<Plus size={15} /> <span>New task</span>
-		</button>
-	</header>
+<div class="hub" class:own-header={ownHeader}>
+	{#if head && !ownHeader}
+		<PageHeader crumb={['Champ Hub']} title={head.title} sub={head.sub} compact>
+			{#snippet actions()}
+				<button type="button" class="search" onclick={() => (hub.paletteOpen = true)}>
+					<Search size={16} />
+					<span>Search or ask Champ…</span>
+					<kbd class="ess-kbd">Ctrl K</kbd>
+				</button>
+				<button type="button" class="ess-btn ess-btn--primary new" onclick={() => (hub.newTaskOpen = true)} title="New task (N)">
+					<Plus size={17} /> <span>New task</span>
+				</button>
+			{/snippet}
+		</PageHeader>
+	{/if}
+
+	<nav class="ess-tabs tabs" aria-label="Champ Hub">
+		{#each tabs as t (t.href)}
+			<a href={t.href} class="ess-tab" aria-current={t.on ? 'page' : undefined}>
+				<t.icon size={17} strokeWidth={1.75} />
+				{t.label}
+				{#if t.count > 0}<span class="ess-count" aria-label="{t.count} waiting">{t.count > 99 ? '99+' : t.count}</span>{/if}
+			</a>
+		{/each}
+	</nav>
 
 	<div class="page">
 		{@render children()}
@@ -122,107 +146,39 @@
 	.hub {
 		display: flex;
 		flex-direction: column;
-		gap: 16px;
+		gap: 20px;
 		min-width: 0;
 	}
-	.bar {
-		position: sticky;
-		top: 0;
-		z-index: 20;
-		display: flex;
-		align-items: center;
-		gap: 14px;
-		flex-wrap: wrap;
-		margin: calc(-1 * var(--ess-page-pad-y)) calc(-1 * var(--ess-page-pad-x)) 0;
-		padding: 10px var(--ess-page-pad-x);
-		background: color-mix(in oklab, var(--ess-canvas) 82%, transparent);
-		backdrop-filter: blur(14px);
-		-webkit-backdrop-filter: blur(14px);
-		border-bottom: 1px solid var(--ess-border);
-	}
-	.brand {
-		display: flex;
-		align-items: center;
-		gap: 9px;
-		color: var(--ess-text);
-		font-family: var(--ess-font-display);
-		font-weight: 700;
-		font-size: 16px;
-	}
-	.mark {
-		width: 28px;
-		height: 28px;
-		border-radius: 8px;
-		display: grid;
-		place-items: center;
-		background: linear-gradient(150deg, var(--acc2), var(--acc));
-		color: var(--ess-text-on-primary);
-		font-size: 11px;
-		font-weight: 800;
+	.hub.own-header {
+		gap: 16px;
 	}
 	.tabs {
-		display: flex;
-		gap: 2px;
-		overflow-x: auto;
-		min-width: 0;
+		align-self: flex-start;
 	}
-	.tab {
-		display: inline-flex;
-		align-items: center;
-		gap: 7px;
-		padding: 7px 12px;
-		border-radius: 9px;
-		color: var(--ess-text-secondary);
-		font-weight: 600;
-		font-size: 13.5px;
-		white-space: nowrap;
-	}
-	.tab:hover {
-		background: var(--ess-surface-hover);
-		color: var(--ess-text);
-	}
-	.tab[aria-current='page'] {
-		background: var(--ess-primary-soft);
-		color: var(--ess-primary-text);
-	}
-	.count {
-		min-width: 18px;
-		height: 18px;
-		padding: 0 5px;
-		border-radius: 99px;
-		background: var(--ess-primary);
-		color: var(--ess-text-on-primary);
-		font-size: 10.5px;
-		font-weight: 700;
-		display: grid;
-		place-items: center;
-		font-variant-numeric: tabular-nums;
+	.tabs .ess-tab {
+		min-width: 128px;
 	}
 	.search {
-		margin-left: auto;
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		min-width: 230px;
-		padding: 7px 10px;
-		border-radius: 10px;
+		gap: 10px;
+		min-width: 300px;
+		height: 40px;
+		padding: 0 12px 0 14px;
+		border-radius: var(--ess-radius-md);
 		border: 1px solid var(--ess-border);
-		background: var(--ess-field-bg);
+		background: var(--ess-surface);
 		color: var(--ess-text-muted);
 		font: inherit;
-		font-size: 13px;
+		font-size: 14px;
 		cursor: pointer;
+		text-align: left;
+	}
+	.search span {
+		flex: 1;
 	}
 	.search:hover {
 		border-color: var(--ess-border-strong);
-	}
-	.search kbd {
-		margin-left: auto;
-		font-family: var(--ess-font-mono);
-		font-size: 11px;
-		border: 1px solid var(--ess-border);
-		border-radius: 5px;
-		padding: 0 5px;
 	}
 	.page {
 		min-width: 0;
@@ -238,7 +194,7 @@
 		gap: 10px;
 		max-width: min(560px, calc(100vw - 32px));
 		padding: 10px 12px 10px 14px;
-		border-radius: 12px;
+		border-radius: var(--ess-radius-md);
 		background: var(--ess-text);
 		color: var(--ess-canvas);
 		box-shadow: var(--ess-elev-4);
@@ -255,7 +211,7 @@
 		border-radius: 8px;
 		padding: 3px 10px;
 		font: inherit;
-		font-weight: 700;
+		font-weight: 600;
 		cursor: pointer;
 	}
 	/* Card drag (src/lib/hub/drag.ts) */
@@ -273,26 +229,22 @@
 		background: var(--ess-primary);
 		margin: -2px 0;
 	}
-	@media (max-width: 860px) {
+	@media (max-width: 900px) {
 		.search {
 			min-width: 0;
-			flex: 1;
-			order: 3;
-			margin-left: 0;
 		}
 		.search span {
 			display: none;
 		}
 		.tabs {
-			order: 4;
-			width: 100%;
+			align-self: stretch;
+		}
+		.tabs .ess-tab {
+			min-width: 0;
+			flex: 1;
 		}
 	}
 	@media (max-width: 720px) {
-		.bar {
-			margin: -20px -16px 0;
-			padding: 10px 16px;
-		}
 		.new span {
 			display: none;
 		}

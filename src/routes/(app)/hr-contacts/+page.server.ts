@@ -2,6 +2,7 @@ import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { users, employeeProfiles } from '$lib/server/db/schema';
 import { eq, inArray } from 'drizzle-orm';
+import { getUsersWithProfilePicture } from '$lib/server/db/mongo';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = locals.user!;
@@ -33,11 +34,22 @@ export const load: PageServerLoad = async ({ locals }) => {
 			email: users.email,
 			role: users.role,
 			designation: employeeProfiles.designation,
-			officeTimings: employeeProfiles.officeTimings
+			officeTimings: employeeProfiles.officeTimings,
+			// Where to find them: the floor, then the team-and-floor line from the HR sheet.
+			floorDetails: employeeProfiles.floorDetails,
+			teamAndFloor: employeeProfiles.teamAndFloor
 		})
 		.from(users)
 		.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
 		.where(inArray(users.id, [...idsToShow]));
 
-	return { contacts: rows };
+	const withPicture = await getUsersWithProfilePicture(rows.map((r) => r.id));
+
+	return {
+		contacts: rows.map((r) => ({
+			...r,
+			hasPicture: withPicture.has(r.id),
+			isManager: r.id === dbUser?.reportsTo
+		}))
+	};
 };

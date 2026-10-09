@@ -1279,3 +1279,33 @@ export const hubDismissals = pgTable(
 	},
 	(t) => [uniqueIndex('hub_dismissals_user_key').on(t.userId, t.needKey)]
 );
+
+// --- Login emails waiting for an admin ---
+// A new login's welcome email (username + temporary password) is never sent
+// the moment the login is made. It waits here until someone with "Approve
+// login emails" approves it, then goes out one at a time at the cadence set
+// in Admin Controls › People (app_settings 'login_email_settings'). The
+// password itself is not stored here: it is read from users.temporary_password
+// at send time, so a person who has already set their own is simply skipped.
+
+export const loginEmailStatusEnum = pgEnum('login_email_status', ['pending', 'approved', 'sending', 'sent', 'failed', 'cancelled', 'skipped']);
+
+export const loginEmails = pgTable('login_emails', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	userId: uuid('user_id')
+		.references(() => users.id, { onDelete: 'cascade' })
+		.notNull(),
+	/** 'single' | 'bulk' | 'reissue' | 'champ' */
+	source: text('source').notNull(),
+	importId: uuid('import_id').references(() => bulkImports.id, { onDelete: 'set null' }),
+	/** Deliver to this address instead of the login email (a test inbox). */
+	sendTo: text('send_to'),
+	status: loginEmailStatusEnum('status').default('pending').notNull(),
+	requestedBy: uuid('requested_by').references(() => users.id, { onDelete: 'set null' }),
+	approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'set null' }),
+	approvedAt: timestamp('approved_at', { withTimezone: true }),
+	attemptedAt: timestamp('attempted_at', { withTimezone: true }),
+	sentAt: timestamp('sent_at', { withTimezone: true }),
+	error: text('error'),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});

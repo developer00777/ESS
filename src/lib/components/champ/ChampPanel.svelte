@@ -376,18 +376,23 @@
 		border-bottom: 1px solid var(--ess-border);
 	}
 	.mark {
-		width: 30px;
-		height: 30px;
-		border-radius: 50%;
+		width: 34px;
+		height: 34px;
+		border-radius: var(--ess-radius-sm);
 		display: grid;
 		place-items: center;
-		color: #fff;
-		background: linear-gradient(150deg, #f0b35a, #e879a6);
+		color: var(--ess-primary-text);
+		background: var(--ess-primary-soft);
 	}
 	.title {
 		flex: 1;
 		display: grid;
 		line-height: 1.2;
+	}
+	.title strong {
+		font-family: var(--ess-font-display);
+		font-size: 18px;
+		font-weight: 600;
 	}
 	.title span {
 		font-size: var(--ess-fs-caption);
@@ -405,13 +410,13 @@
 		background: none;
 		padding: 10px;
 		font: inherit;
-		font-weight: 600;
-		font-size: 13px;
+		font-weight: 500;
+		font-size: 13.5px;
 		color: var(--ess-text-secondary);
 		cursor: pointer;
 	}
 	.tabs button[aria-selected='true'] {
-		color: var(--ess-text);
+		color: var(--ess-primary-text);
 	}
 	.tabs button[aria-selected='true']::after {
 		content: '';
@@ -420,13 +425,12 @@
 		right: 8px;
 		bottom: -1px;
 		height: 2px;
-		border-radius: 2px;
-		background: linear-gradient(90deg, var(--acc), var(--acc2));
+		background: var(--ess-primary);
 	}
 	.count {
 		margin-left: 4px;
 		font-size: 11px;
-		font-weight: 700;
+		font-weight: 600;
 		padding: 0 6px;
 		border-radius: 99px;
 		background: var(--ess-warning-bg);
@@ -442,8 +446,8 @@
 	}
 	.bub {
 		max-width: 88%;
-		padding: 9px 12px;
-		border-radius: 14px;
+		padding: 10px 14px;
+		border-radius: var(--ess-radius-lg);
 		white-space: pre-wrap;
 		font-size: 13.5px;
 		line-height: 1.5;
@@ -458,6 +462,7 @@
 	.bub.a {
 		justify-self: start;
 		background: var(--ess-sunken);
+		border: 1px solid var(--ess-border-subtle);
 		border-bottom-left-radius: 4px;
 	}
 	.sugs {
@@ -466,8 +471,8 @@
 		gap: 6px;
 	}
 	.sug {
-		border: 1px solid var(--ess-border-strong);
-		background: transparent;
+		border: 1px solid var(--ess-border);
+		background: var(--ess-surface);
 		border-radius: 99px;
 		padding: 5px 11px;
 		font: inherit;
@@ -476,7 +481,8 @@
 		cursor: pointer;
 	}
 	.sug:hover {
-		background: var(--ess-surface-hover);
+		border-color: var(--ess-primary);
+		color: var(--ess-primary-text);
 	}
 	.card {
 		justify-self: start;
@@ -485,8 +491,8 @@
 		gap: 5px;
 		padding: 11px 13px;
 		border: 1px solid var(--ess-border);
-		border-left: 4px solid var(--ess-warning);
-		border-radius: 12px;
+		border-left: 3px solid var(--ess-warning);
+		border-radius: var(--ess-radius-md);
 		background: var(--ess-surface);
 	}
 	.card.done {
@@ -501,8 +507,8 @@
 	}
 	.k {
 		font-size: 10.5px;
-		font-weight: 700;
-		letter-spacing: 0.08em;
+		font-weight: 600;
+		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		color: var(--ess-warning);
 	}
@@ -526,7 +532,7 @@
 	}
 	.report {
 		border: 1px solid var(--ess-border);
-		border-radius: 10px;
+		border-radius: var(--ess-radius-md);
 		overflow: hidden;
 		background: var(--ess-surface);
 	}
@@ -559,9 +565,8 @@
 		white-space: nowrap;
 	}
 	th {
-		font-size: 10.5px;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
+		font-size: 12px;
+		font-weight: 500;
 		color: var(--ess-text-muted);
 		background: var(--ess-sunken);
 	}
@@ -574,7 +579,7 @@
 	}
 	.section {
 		font-size: 10.5px;
-		font-weight: 700;
+		font-weight: 600;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
 		color: var(--ess-text-muted);
@@ -590,16 +595,16 @@
 	.foot textarea:focus,
 	.foot textarea:focus-visible {
 		outline: none;
-		box-shadow: none;
-		border-color: color-mix(in oklab, var(--ess-primary) 70%, var(--ess-border-strong));
+		border-color: var(--ess-primary);
+		box-shadow: 0 0 0 3px var(--ring);
 	}
 	.foot textarea {
 		flex: 1;
 		resize: none;
 		max-height: 120px;
-		min-height: 36px;
-		border: 1px solid var(--ess-border-strong);
-		border-radius: 10px;
+		min-height: 40px;
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
 		background: var(--ess-field-bg);
 		padding: 8px 10px;
 		font: inherit;

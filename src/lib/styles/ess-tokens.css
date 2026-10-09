@@ -1,114 +1,102 @@
 /* ============================================================
-   ESS Design System — Tokens · COSMIC
+   ESS Design System — Tokens · TIMELINE
    Champ HR Employee Self-Service Portal
    ============================================================
-   Cosmic glassmorphism skin, ported from
-   "ESS portal design system (4)/export/ESS Portal Cosmic.dc.html".
+   The "Timeline workspace" look (ess-timeline-mockups): a warm
+   off-white canvas, dark navy ink, an editorial serif for the
+   main headings, a clean sans for everything else, thin neutral
+   dividers, restrained vivid violet for actions, pale lavender for
+   the active navigation, 10px soft corners and small outline icons.
 
    Two palettes, one mechanism:
-     <html>                        → Opal  (light — blue / violet on soft white)
-     <html data-ess-theme="dark">  → Onyx  (dark — steel blue, near-mono)
+     <html>                        → Light (the design default)
+     <html data-ess-theme="dark">  → Dark (same navy, inverted)
 
-   Every semantic token name is preserved so page-scoped styles keep
-   working untouched. The legacy teal/green/neutral RAMPS are also kept
-   as names but remapped to cosmic equivalents — treat them as aliases:
-     --ess-teal-900  → deep-space ink (text on accent surfaces)
-     --ess-green-400 → secondary accent (cyan in Nebula)
-     --ess-n-900     → near-white ink, --ess-n-0 → glass surface
+   Every semantic token name from the earlier skins is preserved
+   so page-scoped styles keep working. The legacy ramps and glass
+   recipes are kept as names and remapped to flat equivalents:
+     --ess-glass-bg      → the plain card surface
+     --ess-glass-border  → the hairline border
+     --ess-glass-shadow  → the resting card shadow
    ============================================================ */
 
 .brand-ess,
 :root {
 	color-scheme: light;
 
-	/* ---------- Cosmic accent system (Opal — light mode) ---------- */
-	--acc: #6c8ef5;
-	--acc2: #a78bfa;
-	--glow: rgba(108, 142, 245, 0.28);
-	--ring: rgba(108, 142, 245, 0.2);
+	/* ---------- Accent ---------- */
+	--acc: #4f30f0; /* violet: buttons, active marks, links */
+	--acc2: #7c5cff; /* lighter violet: gradients, secondary marks */
+	--glow: rgba(79, 48, 240, 0.18);
+	--ring: rgba(79, 48, 240, 0.22);
 
-	/* ---------- Glass recipes (compose surfaces from these) ----------
-	   Light mode: frosted white cards over a soft tinted canvas. */
-	--ess-glass-bg: linear-gradient(
-		158deg,
-		rgba(255, 255, 255, 0.92),
-		color-mix(in oklab, var(--acc) 5%, #fff) 62%
-	);
-	--ess-glass-border: rgba(20, 18, 35, 0.1);
-	--ess-glass-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.9),
-		0 22px 44px -32px rgba(30, 24, 55, 0.16);
-	--ess-glass-raised-bg: linear-gradient(
-		158deg,
-		#ffffff,
-		color-mix(in oklab, var(--acc) 4%, #fff) 62%
-	);
-	--ess-pane-bg: linear-gradient(
-		158deg,
-		rgba(255, 255, 255, 0.96),
-		color-mix(in oklab, var(--acc) 6%, #fff) 62%
-	);
-	--ess-pane-raised-bg: linear-gradient(158deg, #ffffff, color-mix(in oklab, var(--acc) 5%, #fff) 62%);
-	--ess-modal-bg: linear-gradient(158deg, #ffffff, color-mix(in oklab, var(--acc) 5%, #fff));
-	--ess-field-bg: rgba(255, 255, 255, 0.7);
+	/* ---------- Surface recipes (flat; names kept for old styles) ---------- */
+	--ess-glass-bg: #ffffff;
+	--ess-glass-border: #e7e5ef;
+	--ess-glass-shadow: 0 1px 2px rgba(27, 31, 59, 0.04);
+	--ess-glass-raised-bg: #ffffff;
+	--ess-pane-bg: #f7f6f3;
+	--ess-pane-raised-bg: #ffffff;
+	--ess-modal-bg: #ffffff;
+	--ess-field-bg: #ffffff;
 
-	/* ---------- Legacy "teal" ramp → violet-blue aliases (light) ---------- */
-	--ess-teal-950: #f4f0ff;
-	--ess-teal-900: #ffffff; /* ink → white; text on accent surfaces stays white */
-	--ess-teal-800: #ece5ff;
-	--ess-teal-700: #ddd1fe;
-	--ess-teal-600: #8b74f2;
-	--ess-teal-500: #6c8ef5;
-	--ess-teal-400: #6c8ef5;
-	--ess-teal-300: #4a6fd0;
-	--ess-teal-200: #37508f;
-	--ess-teal-100: #29396b;
-	--ess-teal-50: #1c2036;
+	/* ---------- Legacy "teal" ramp → navy/lavender aliases ---------- */
+	--ess-teal-950: #f3f1fd;
+	--ess-teal-900: #ffffff; /* text on accent surfaces */
+	--ess-teal-800: #ece8fd;
+	--ess-teal-700: #ddd6fb;
+	--ess-teal-600: #6a4ff3;
+	--ess-teal-500: #4f30f0;
+	--ess-teal-400: #4f30f0;
+	--ess-teal-300: #3e24c9;
+	--ess-teal-200: #2f2a73;
+	--ess-teal-100: #23224f;
+	--ess-teal-50: #1b1f3b;
 
 	/* ---------- Legacy "green" ramp → violet accent aliases ---------- */
-	--ess-green-700: #6d28d9;
-	--ess-green-600: #7c3aed;
-	--ess-green-500: #8b5cf6;
-	--ess-green-400: #a78bfa;
-	--ess-green-200: #7c5cf0;
-	--ess-green-50: #5b3fd0;
+	--ess-green-700: #3e24c9;
+	--ess-green-600: #4f30f0;
+	--ess-green-500: #6a4ff3;
+	--ess-green-400: #7c5cff;
+	--ess-green-200: #a894ff;
+	--ess-green-50: #ece8fd;
 
-	/* ---------- Neutrals → ink-alpha ramp on light canvas ---------- */
-	--ess-n-0: #ffffff; /* white surface */
-	--ess-n-25: rgba(20, 18, 35, 0.02);
-	--ess-n-50: rgba(20, 18, 35, 0.035);
-	--ess-n-100: rgba(20, 18, 35, 0.06);
-	--ess-n-200: rgba(20, 18, 35, 0.1);
-	--ess-n-300: rgba(20, 18, 35, 0.16);
-	--ess-n-400: rgba(20, 18, 35, 0.42);
-	--ess-n-500: rgba(20, 18, 35, 0.6);
-	--ess-n-700: rgba(20, 18, 35, 0.8);
-	--ess-n-900: #1c2036; /* primary ink */
+	/* ---------- Neutrals ---------- */
+	--ess-n-0: #ffffff;
+	--ess-n-25: #fcfbf9;
+	--ess-n-50: #f7f6f3;
+	--ess-n-100: #f1f0f5;
+	--ess-n-200: #e7e5ef;
+	--ess-n-300: #d4d1e0;
+	--ess-n-400: #8e90a8;
+	--ess-n-500: #686b86;
+	--ess-n-700: #3c405c;
+	--ess-n-900: #1b1f3b; /* primary ink */
 
 	/* ---------- Semantic surfaces ----------
-	   canvas   → soft tinted light base (cosmos gradients layer on top)
-	   surface  → flat white-ish glass (full glass recipe lives on components)
+	   canvas   → warm off-white page
+	   surface  → white cards and panels
 	   sunken   → faint inset areas inside a surface
-	   inverse  → the nav rail / hero bands — light too, per the light theme */
-	--ess-canvas: #f7f6fb;
-	--ess-surface: rgba(255, 255, 255, 0.7);
-	--ess-surface-hover: rgba(20, 18, 35, 0.05);
-	--ess-sunken: rgba(20, 18, 35, 0.04);
-	--ess-inverse: var(--ess-pane-bg);
-	--ess-inverse-raised: var(--ess-pane-raised-bg);
+	   inverse  → the sidebar pane (light too, slightly warmer) */
+	--ess-canvas: #f7f8ff;
+	--ess-surface: #ffffff;
+	--ess-surface-hover: #f5f3fb;
+	--ess-sunken: #f6f5f9;
+	--ess-inverse: #f3f4ff;
+	--ess-inverse-raised: #ffffff;
 
-	--ess-border: rgba(20, 18, 35, 0.1);
-	--ess-border-subtle: rgba(20, 18, 35, 0.07);
-	--ess-border-strong: rgba(20, 18, 35, 0.18);
-	--ess-border-inverse: rgba(20, 18, 35, 0.1);
+	--ess-border: #e3e7fa;
+	--ess-border-subtle: #efedf4;
+	--ess-border-strong: #cfcbdd;
+	--ess-border-inverse: #e9e7ef;
 
 	/* ---------- Semantic text ---------- */
-	--ess-text: #1c2036;
-	--ess-text-secondary: rgba(20, 18, 35, 0.7);
-	--ess-text-muted: rgba(20, 18, 35, 0.5);
+	--ess-text: #1b1f3b;
+	--ess-text-secondary: #4b4f6b;
+	--ess-text-muted: #686b86;
 	--ess-text-on-primary: #ffffff;
-	--ess-text-inverse: #1c2036; /* nav is light now → dark ink */
-	--ess-text-inverse-secondary: rgba(20, 18, 35, 0.6);
+	--ess-text-inverse: #1b1f3b;
+	--ess-text-inverse-secondary: #4b4f6b;
 
 	/* Alias the inherited skeleton's foreground tokens. */
 	--fg-1: var(--ess-text);
@@ -118,48 +106,41 @@
 
 	/* ---------- Interactive ---------- */
 	--ess-primary: var(--acc);
-	--ess-primary-hover: #5478e0;
-	--ess-primary-press: #4361c8;
-	--ess-primary-soft: rgba(108, 142, 245, 0.14);
-	--ess-primary-ring: rgba(108, 142, 245, 0.4);
+	--ess-primary-hover: #4426d6;
+	--ess-primary-press: #381fb8;
+	--ess-primary-soft: #ece8fd; /* pale lavender: active nav, selected rows */
+	--ess-primary-softer: #f4f1fe;
+	--ess-primary-ring: rgba(79, 48, 240, 0.35);
 	--ess-focus-ring: 0 0 0 3px var(--ess-primary-ring);
-	/* --ess-primary is tuned as a FILL; at small text sizes it only reaches
-	   2.9:1 on white. Use this for accent-coloured text/links (5.9:1). */
-	--ess-primary-text: #4054c8;
+	--ess-primary-text: #4a2fd9; /* 7.1:1 on white */
 
-	/* ---------- Status (chip fg / translucent bg, AA on light) ---------- */
-	--ess-success: #0f8a63;
-	--ess-success-bg: rgba(15, 138, 99, 0.12);
-	--ess-warning: #a15b0a;
-	--ess-warning-bg: rgba(217, 144, 20, 0.14);
-	--ess-danger: #c0293f;
-	--ess-danger-bg: rgba(224, 60, 84, 0.13);
-	--ess-info: #2563a8;
-	--ess-info-bg: rgba(37, 99, 168, 0.12);
-	--ess-neutral: #3a4356;
-	--ess-neutral-bg: rgba(58, 67, 86, 0.1);
-	/* Pink (menstrual) leave. Darkened from the obvious magenta so it still
-	   clears AA as small marker text on its own tint — 5.1:1 here. */
-	--ess-pink: #a81260;
-	--ess-pink-bg: rgba(168, 18, 96, 0.12);
+	/* ---------- Status (chip fg / tint bg, AA on white) ---------- */
+	--ess-success: #157f52;
+	--ess-success-bg: #e6f6ee;
+	--ess-warning: #a35f00;
+	--ess-warning-bg: #fdf1dc;
+	--ess-danger: #c62f45;
+	--ess-danger-bg: #fde8ec;
+	--ess-info: #2a5db5;
+	--ess-info-bg: #e7eefb;
+	--ess-neutral: #5a5e7c;
+	--ess-neutral-bg: #eeedf3;
+	--ess-pink: #b8205f;
+	--ess-pink-bg: #fce7f0;
 
-	/* ---------- Radius (cosmic "soft" scale) ---------- */
-	--ess-radius-xs: 8px;
-	--ess-radius-sm: 11px; /* inputs, buttons, chips */
-	--ess-radius-md: 18px; /* cards, table shells */
-	--ess-radius-lg: 24px; /* page panels, hero bands */
+	/* ---------- Radius ("soft" scale, 10px cards) ---------- */
+	--ess-radius-xs: 6px;
+	--ess-radius-sm: 8px; /* inputs, buttons, chips */
+	--ess-radius-md: 10px; /* cards, table shells */
+	--ess-radius-lg: 14px; /* page panels, dialogs */
 	--ess-radius-pill: 999px;
 
-	/* ---------- Elevation — soft ink shadows + ambient glow (light) ---------- */
+	/* ---------- Elevation — quiet ink shadows ---------- */
 	--ess-elev-0: none;
-	--ess-elev-1: 0 1px 2px rgba(30, 24, 55, 0.12);
-	--ess-elev-2: 0 14px 34px -24px rgba(30, 24, 55, 0.3);
-	--ess-elev-3:
-		0 30px 56px -34px rgba(30, 24, 55, 0.28),
-		0 0 40px -18px var(--glow);
-	--ess-elev-4:
-		0 40px 90px -32px rgba(30, 24, 55, 0.32),
-		0 0 0 1px var(--ring);
+	--ess-elev-1: 0 1px 2px rgba(27, 31, 59, 0.04);
+	--ess-elev-2: 0 4px 14px -6px rgba(27, 31, 59, 0.1);
+	--ess-elev-3: 0 12px 32px -12px rgba(27, 31, 59, 0.16);
+	--ess-elev-4: 0 24px 60px -20px rgba(27, 31, 59, 0.24);
 
 	/* ---------- Spacing (4px base) ---------- */
 	--ess-space-1: 4px;
@@ -173,26 +154,27 @@
 	--ess-space-14: 56px;
 
 	/* ---------- Type ---------- */
-	--ess-font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-	--ess-font-display: 'Space Grotesk', 'Inter', sans-serif;
+	--ess-font-sans: 'IBM Plex Sans', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--ess-font-display: var(--ess-font-sans);
 	--ess-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-	--ess-fs-display: 40px; /* login marquee */
-	--ess-fs-title: 28px; /* page title */
-	--ess-fs-h2: 20px; /* section heading */
-	--ess-fs-h3: 16px; /* card heading */
+	--ess-fs-display: 56px; /* sign-in marquee */
+	--ess-fs-title: 40px; /* page title (serif) */
+	--ess-fs-h2: 21px; /* section heading (serif) */
+	--ess-fs-h3: 15px; /* card heading */
 	--ess-fs-body-lg: 16px;
 	--ess-fs-body: 14px; /* dense UI default */
-	--ess-fs-caption: 12px;
+	--ess-fs-caption: 12.5px;
 	--ess-fs-eyebrow: 11px;
-	--ess-fs-stat: 32px; /* stat card value */
+	--ess-fs-stat: 28px; /* stat card value (serif) */
 
 	/* ---------- Layout ---------- */
-	--ess-rail-width: 264px;
-	--ess-rail-width-collapsed: 74px;
-	--ess-content-max: 1240px;
-	--ess-page-pad-x: 32px;
-	--ess-page-pad-y: 28px;
+	--ess-rail-width: 210px;
+	--ess-rail-width-collapsed: 68px;
+	--ess-content-max: 1440px;
+	--ess-page-pad-x: 36px;
+	--ess-page-pad-y: 24px;
+	--ess-aside-width: 360px;
 
 	/* ---------- Motion ---------- */
 	--ess-t-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -201,102 +183,105 @@
 }
 
 /* ============================================================
-   ONYX PALETTE — steel blue, near-monochrome. Same tokens,
-   remapped; selected via the pre-existing theme attribute.
+   DARK PALETTE — the same navy, inverted. Selected via the
+   pre-existing theme attribute (sidebar toggle, essTheme key).
    ============================================================ */
 
 [data-ess-theme='dark'] {
-	--acc: #5b8fd6;
-	--acc2: #a8c8f0;
-	--glow: rgba(91, 143, 214, 0.34);
-	--ring: rgba(91, 143, 214, 0.22);
+	color-scheme: dark;
 
-	--ess-glass-bg: linear-gradient(158deg, rgba(255, 255, 255, 0.055), rgba(7, 10, 16, 0.8) 62%);
-	--ess-glass-border: rgba(255, 255, 255, 0.1);
-	--ess-glass-raised-bg: linear-gradient(
-		158deg,
-		rgba(255, 255, 255, 0.075),
-		rgba(9, 13, 21, 0.86) 62%
-	);
-	--ess-pane-bg: linear-gradient(158deg, rgba(19, 27, 42, 0.96), rgba(5, 8, 13, 0.95) 62%);
-	--ess-pane-raised-bg: linear-gradient(158deg, rgba(31, 43, 64, 0.96), rgba(9, 14, 22, 0.95) 62%);
-	--ess-modal-bg: linear-gradient(158deg, #0f1520, #070a10);
-	--ess-field-bg: rgba(4, 8, 14, 0.55);
+	--acc: #8b7bff;
+	--acc2: #b3a7ff;
+	--glow: rgba(139, 123, 255, 0.28);
+	--ring: rgba(139, 123, 255, 0.3);
 
-	--ess-teal-950: #020408;
-	--ess-teal-900: #050a12; /* ink on accent */
-	--ess-teal-800: #0b1220;
-	--ess-teal-700: #16233a;
-	--ess-teal-600: #3c6dae;
-	--ess-teal-500: #4a7cc0;
-	--ess-teal-400: #5b8fd6;
-	--ess-teal-300: #9dc0ea;
-	--ess-teal-200: #c3d9f2;
-	--ess-teal-100: #dceafa;
-	--ess-teal-50: #eef5fd;
+	--ess-glass-bg: #171a2e;
+	--ess-glass-border: rgba(255, 255, 255, 0.09);
+	--ess-glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+	--ess-glass-raised-bg: #1c2036;
+	--ess-pane-bg: #12152a;
+	--ess-pane-raised-bg: #1c2036;
+	--ess-modal-bg: #1a1d33;
+	--ess-field-bg: #11142a;
 
-	--ess-green-700: #33567f;
-	--ess-green-600: #4a719f;
-	--ess-green-500: #7fa8dc;
-	--ess-green-400: #a8c8f0;
-	--ess-green-200: #d4e4f8;
-	--ess-green-50: #f0f6fd;
+	--ess-teal-950: #0b0d1c;
+	--ess-teal-900: #0f1222;
+	--ess-teal-800: #171a2e;
+	--ess-teal-700: #232746;
+	--ess-teal-600: #6f5cf2;
+	--ess-teal-500: #8b7bff;
+	--ess-teal-400: #8b7bff;
+	--ess-teal-300: #b3a7ff;
+	--ess-teal-200: #cfc8ff;
+	--ess-teal-100: #e6e2ff;
+	--ess-teal-50: #f3f1ff;
 
-	--ess-canvas: #040609;
-	--ess-surface: rgba(255, 255, 255, 0.05);
-	--ess-surface-hover: rgba(255, 255, 255, 0.09);
-	--ess-sunken: rgba(2, 4, 8, 0.5);
+	--ess-green-700: #5a47d6;
+	--ess-green-600: #6f5cf2;
+	--ess-green-500: #8b7bff;
+	--ess-green-400: #b3a7ff;
+	--ess-green-200: #d6d0ff;
+	--ess-green-50: #2a2550;
 
-	--ess-border: rgba(255, 255, 255, 0.1);
+	--ess-n-0: #171a2e;
+	--ess-n-25: #13162a;
+	--ess-n-50: #1a1d33;
+	--ess-n-100: #20243c;
+	--ess-n-200: rgba(255, 255, 255, 0.09);
+	--ess-n-300: rgba(255, 255, 255, 0.16);
+	--ess-n-400: rgba(255, 255, 255, 0.45);
+	--ess-n-500: rgba(255, 255, 255, 0.62);
+	--ess-n-700: rgba(255, 255, 255, 0.82);
+	--ess-n-900: #f2f1f8;
+
+	--ess-canvas: #0f1222;
+	--ess-surface: #171a2e;
+	--ess-surface-hover: #1f2340;
+	--ess-sunken: #13162a;
+	--ess-inverse: #12152a;
+	--ess-inverse-raised: #1c2036;
+
+	--ess-border: rgba(255, 255, 255, 0.09);
 	--ess-border-subtle: rgba(255, 255, 255, 0.06);
 	--ess-border-strong: rgba(255, 255, 255, 0.18);
-	--ess-border-inverse: rgba(255, 255, 255, 0.1);
+	--ess-border-inverse: rgba(255, 255, 255, 0.08);
 
-	--ess-text-on-primary: #050a12;
-
-	/* ---------- Semantic text (Onyx) ----------
-	   These were previously absent, so every text token fell through to the
-	   Opal (light) values — dark ink on a #040609 canvas, i.e. invisible.
-	   Ratios below are measured against the composited card surface. */
-	--ess-text: #ffffff; /* 17.6:1 */
-	--ess-text-secondary: rgba(255, 255, 255, 0.82); /* 11.9:1 */
-	--ess-text-muted: rgba(255, 255, 255, 0.66); /* 7.8:1  */
-	--ess-text-inverse: #ffffff; /* nav rail is dark here */
-	--ess-text-inverse-secondary: rgba(255, 255, 255, 0.7);
-
-	/* ---------- Status (Onyx) ----------
-	   Light-mode status colours are darkened for white backgrounds and go
-	   muddy on near-black; these are the lifted equivalents. */
-	--ess-success: #4ade80; /* 10.1:1 */
-	--ess-success-bg: rgba(74, 222, 128, 0.13);
-	--ess-warning: #fbbf24; /* 10.5:1 */
-	--ess-warning-bg: rgba(251, 191, 36, 0.13);
-	--ess-danger: #fb7185; /* 6.5:1  */
-	--ess-danger-bg: rgba(251, 113, 133, 0.13);
-	--ess-info: #7dd3fc;
-	--ess-info-bg: rgba(125, 211, 252, 0.13);
-	--ess-neutral: #cbd5e1; /* 11.9:1 */
-	--ess-neutral-bg: rgba(203, 213, 225, 0.1);
-	--ess-pink: #f9a8d4; /* 9.3:1 on its own tint */
-	--ess-pink-bg: rgba(249, 168, 212, 0.13);
+	--ess-text: #f2f1f8;
+	--ess-text-secondary: rgba(242, 241, 248, 0.78);
+	--ess-text-muted: rgba(242, 241, 248, 0.58);
+	--ess-text-on-primary: #0b0d1c;
+	--ess-text-inverse: #f2f1f8;
+	--ess-text-inverse-secondary: rgba(242, 241, 248, 0.7);
 
 	--ess-primary: var(--acc);
-	--ess-primary-hover: #9dc0ea;
-	--ess-primary-press: #4a7cc0;
-	--ess-primary-soft: rgba(91, 143, 214, 0.16);
-	--ess-primary-ring: rgba(91, 143, 214, 0.45);
-	/* On the dark canvas the accent is already light enough for text. */
-	--ess-primary-text: #9dc0ea;
+	--ess-primary-hover: #a094ff;
+	--ess-primary-press: #7363f0;
+	--ess-primary-soft: rgba(139, 123, 255, 0.18);
+	--ess-primary-softer: rgba(139, 123, 255, 0.1);
+	--ess-primary-ring: rgba(139, 123, 255, 0.4);
+	--ess-primary-text: #b3a7ff;
 
-	--ess-elev-1: 0 1px 2px rgba(0, 0, 0, 0.5);
-	--ess-elev-2: 0 14px 34px -24px rgba(0, 0, 0, 0.9);
-	--ess-elev-3:
-		0 34px 64px -30px rgba(0, 0, 0, 0.95),
-		0 0 34px -16px var(--glow);
+	--ess-success: #4ade80;
+	--ess-success-bg: rgba(74, 222, 128, 0.14);
+	--ess-warning: #fbbf24;
+	--ess-warning-bg: rgba(251, 191, 36, 0.14);
+	--ess-danger: #fb7185;
+	--ess-danger-bg: rgba(251, 113, 133, 0.14);
+	--ess-info: #7dd3fc;
+	--ess-info-bg: rgba(125, 211, 252, 0.14);
+	--ess-neutral: #c7cadb;
+	--ess-neutral-bg: rgba(199, 202, 219, 0.12);
+	--ess-pink: #f9a8d4;
+	--ess-pink-bg: rgba(249, 168, 212, 0.14);
+
+	--ess-elev-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+	--ess-elev-2: 0 4px 14px -6px rgba(0, 0, 0, 0.6);
+	--ess-elev-3: 0 12px 32px -12px rgba(0, 0, 0, 0.7);
+	--ess-elev-4: 0 24px 60px -20px rgba(0, 0, 0, 0.8);
 }
 
 /* Keep the document background in step with the palette when the themed
    element is nested inside body (overscroll, short viewports). */
 body:has([data-ess-theme='dark']) {
-	background: #040609;
+	background: #0f1222;
 }

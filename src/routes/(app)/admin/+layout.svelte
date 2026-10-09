@@ -4,9 +4,9 @@
 	import { tick } from 'svelte';
 	import LayoutGrid from '@lucide/svelte/icons/layout-grid';
 	import Users from '@lucide/svelte/icons/users';
-	import Fingerprint from '@lucide/svelte/icons/fingerprint';
-	import Scale from '@lucide/svelte/icons/scale';
-	import BookOpen from '@lucide/svelte/icons/book-open';
+	import Clock from '@lucide/svelte/icons/clock';
+	import Calendar from '@lucide/svelte/icons/calendar';
+	import FileText from '@lucide/svelte/icons/file-text';
 	import Network from '@lucide/svelte/icons/network';
 	import ShieldCheck from '@lucide/svelte/icons/shield-check';
 	import DatabaseZap from '@lucide/svelte/icons/database-zap';
@@ -18,15 +18,16 @@
 	import { tabSeverities } from '$lib/admin-issues';
 	import { lockPageScroll } from '$lib/scroll-lock';
 	import SummaryStrip from '$lib/components/SummaryStrip.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 
 	let { data, children } = $props();
 
 	const ICONS: Record<AdminTabId, typeof Users> = {
 		overview: LayoutGrid,
 		people: Users,
-		biometric: Fingerprint,
-		balances: Scale,
-		policies: BookOpen,
+		biometric: Clock,
+		balances: Calendar,
+		policies: FileText,
 		org: Network,
 		access: ShieldCheck,
 		chat: MessagesSquare,
@@ -53,33 +54,15 @@
 
 	const jumps = $derived.by((): Jump[] => [
 		...tabs.map((t) => ({ label: t.label, kind: 'Section' as const, href: t.href })),
-		...(can('people.create_login')
-			? [{ label: 'Create a login', kind: 'Action' as const, href: '/admin/people?create=1' }]
-			: []),
-		...(can('announcements.post')
-			? [{ label: 'Post an announcement', kind: 'Action' as const, href: '/chat?c=announcements&compose=1' }]
-			: []),
-		...(can('people.directory')
-			? [{ label: 'Week-off rosters', kind: 'Action' as const, href: '/admin/people?view=weekoff' }]
-			: []),
-		...(can('people.bulk_import')
-			? [{ label: 'Bulk import logins', kind: 'Action' as const, href: '/admin/people?view=bulk' }]
-			: []),
-		...(can('people.password_activity')
-			? [{ label: 'Password activity', kind: 'Action' as const, href: '/admin/people?view=passwords' }]
-			: []),
-		...(can('policies.publish')
-			? [{ label: 'Publish a holiday calendar', kind: 'Action' as const, href: '/admin/policies' }]
-			: []),
-		...(can('system.roles')
-			? [{ label: 'Create a named role', kind: 'Action' as const, href: '/admin/access-control?new=1' }]
-			: []),
-		...(can('attendance.biometric_upload')
-			? [{ label: 'Upload a biometric report', kind: 'Action' as const, href: '/admin/biometric' }]
-			: []),
-		...(can('leave.set_balances')
-			? [{ label: 'Set leave balances', kind: 'Action' as const, href: '/admin/leave-balances' }]
-			: []),
+		...(can('people.create_login') ? [{ label: 'Create a login', kind: 'Action' as const, href: '/admin/people?create=1' }] : []),
+		...(can('announcements.post') ? [{ label: 'Post an announcement', kind: 'Action' as const, href: '/chat?c=announcements&compose=1' }] : []),
+		...(can('people.directory') ? [{ label: 'Week-off rosters', kind: 'Action' as const, href: '/admin/people?view=weekoff' }] : []),
+		...(can('people.bulk_import') ? [{ label: 'Bulk import logins', kind: 'Action' as const, href: '/admin/people?view=bulk' }] : []),
+		...(can('people.password_activity') ? [{ label: 'Password activity', kind: 'Action' as const, href: '/admin/people?view=passwords' }] : []),
+		...(can('policies.publish') ? [{ label: 'Publish a holiday calendar', kind: 'Action' as const, href: '/admin/policies' }] : []),
+		...(can('system.roles') ? [{ label: 'Create a named role', kind: 'Action' as const, href: '/admin/access-control?new=1' }] : []),
+		...(can('attendance.biometric_upload') ? [{ label: 'Upload a biometric report', kind: 'Action' as const, href: '/admin/biometric' }] : []),
+		...(can('leave.set_balances') ? [{ label: 'Set leave balances', kind: 'Action' as const, href: '/admin/leave-balances' }] : []),
 		{ label: 'Approve leave requests', kind: 'Action', href: '/leave' }
 	]);
 
@@ -89,9 +72,7 @@
 	let jumpInput = $state<HTMLInputElement | null>(null);
 	let unlockScroll: (() => void) | null = null;
 
-	const jumpMatches = $derived(
-		jumps.filter((j) => j.label.toLowerCase().includes(jumpQuery.trim().toLowerCase()))
-	);
+	const jumpMatches = $derived(jumps.filter((j) => j.label.toLowerCase().includes(jumpQuery.trim().toLowerCase())));
 
 	async function openJump() {
 		jumpQuery = '';
@@ -148,38 +129,35 @@
 
 <svelte:window onkeydown={onWindowKey} />
 
-<header class="admin-head">
-	<div class="head-text">
-		<span class="ess-eyebrow">Admin Controls</span>
-		<h1 class="ess-page-title">{current?.label ?? 'Admin Controls'}</h1>
-		{#if current}<p class="ess-page-sub">{current.blurb}</p>{/if}
-	</div>
-	<button type="button" class="ess-btn ess-btn--secondary jump-btn" onclick={openJump}>
-		<Search size={15} />
-		Jump to…
-		<kbd>Ctrl K</kbd>
-	</button>
-</header>
+<PageHeader
+	crumb={current && current.id !== 'overview' ? [{ label: 'Admin Controls', href: '/admin' }, current.label] : ['Admin Controls']}
+	title={current?.heading ?? 'Admin Controls'}
+	sub={current?.blurb}
+	compact
+>
+	{#snippet actions()}
+		<button type="button" class="ess-btn ess-btn--secondary jump-btn" onclick={openJump}>
+			<Search size={15} />
+			Jump to…
+			<kbd class="ess-kbd">Ctrl K</kbd>
+		</button>
+	{/snippet}
+</PageHeader>
 
 <nav class="admin-tabs" aria-label="Admin sections">
-	<div class="tab-row" bind:this={tabBar}>
+	<div class="ess-tabs ess-tabs--line tab-row" bind:this={tabBar}>
 		{#each tabs as tab, i (tab.id)}
 			{@const Icon = ICONS[tab.id]}
 			{@const sev = severities[tab.id]}
 			{#if i > 0 && tabs[i - 1].group !== tab.group}
 				<span class="group-sep" aria-hidden="true"></span>
 			{/if}
-			<a
-				href={tab.href}
-				class="tab"
-				aria-current={current?.id === tab.id ? 'page' : undefined}
-				title={sev ? tabHint(tab.id) : undefined}
-			>
-				<Icon size={16} />
+			<a href={tab.href} class="ess-tab tab" aria-current={current?.id === tab.id ? 'page' : undefined} title={sev ? tabHint(tab.id) : undefined}>
+				<Icon size={16} strokeWidth={1.75} />
 				{tab.label}
 				{#if sev && sev !== 'info'}
 					<span class="dot" data-sev={sev}>
-						<span class="sr-only">— needs attention</span>
+						<span class="ess-sr-only">— needs attention</span>
 					</span>
 				{/if}
 			</a>
@@ -225,63 +203,23 @@
 {/if}
 
 <style>
-	.admin-head {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: flex-end;
-		justify-content: space-between;
-		gap: 12px 20px;
-		margin-bottom: var(--ess-space-4);
-	}
-
-	.head-text {
-		display: grid;
-		gap: 2px;
-		min-width: 0;
-	}
-
-	.head-text .ess-page-title {
-		margin: 0;
-		text-wrap: balance;
-	}
-
-	.head-text .ess-page-sub {
-		margin: 2px 0 0;
-		max-width: 64ch;
-	}
-
 	.jump-btn {
 		gap: 8px;
 	}
 
-	kbd {
-		font-family: var(--ess-font-mono);
-		font-size: 10.5px;
-		padding: 1px 6px;
-		border: 1px solid var(--ess-border-strong);
-		border-bottom-width: 2px;
-		border-radius: 5px;
-		color: var(--ess-text-secondary);
-	}
-
-	/* Sticky under the page top, full bleed across .ess-main's gutter so the
-	   frosted band reads as the page's own toolbar. */
 	.admin-tabs {
-		--gutter: var(--ess-page-pad-x);
 		position: sticky;
 		top: 0;
 		z-index: 30;
-		margin: 0 calc(-1 * var(--gutter));
-		padding: 0 var(--gutter);
-		background: color-mix(in oklab, var(--ess-canvas) 84%, transparent);
-		backdrop-filter: blur(14px);
-		-webkit-backdrop-filter: blur(14px);
-		border-bottom: 1px solid var(--ess-border);
+		margin: 0 calc(-1 * var(--ess-page-pad-x));
+		padding: 0 var(--ess-page-pad-x);
+		background: color-mix(in oklab, var(--ess-canvas) 90%, transparent);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
 	}
 
 	.tab-row {
-		display: flex;
-		gap: 2px;
+		width: 100%;
 		overflow-x: auto;
 		scrollbar-width: none;
 	}
@@ -292,52 +230,16 @@
 	.group-sep {
 		flex-shrink: 0;
 		width: 1px;
-		margin: 12px 6px;
+		margin: 10px 6px;
 		background: var(--ess-border);
 	}
 
 	.tab {
-		position: relative;
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		padding: 13px 12px;
-		white-space: nowrap;
+		padding: 12px 14px;
 		font-size: 13.5px;
-		font-weight: 600;
-		color: var(--ess-text-secondary);
-		text-decoration: none;
-		transition: color var(--ess-t-fast);
 	}
-
 	.tab :global(svg) {
-		opacity: 0.8;
 		flex-shrink: 0;
-	}
-
-	.tab:hover {
-		color: var(--ess-text);
-	}
-
-	.tab[aria-current='page'] {
-		color: var(--ess-text);
-	}
-
-	.tab[aria-current='page']::after {
-		content: '';
-		position: absolute;
-		left: 10px;
-		right: 10px;
-		bottom: -1px;
-		height: 2px;
-		border-radius: 2px;
-		background: linear-gradient(90deg, var(--acc), var(--acc2));
-	}
-
-	.tab:focus-visible {
-		outline: none;
-		box-shadow: var(--ess-focus-ring);
-		border-radius: var(--ess-radius-xs);
 	}
 
 	.dot {
@@ -351,16 +253,6 @@
 	}
 	.dot[data-sev='warn'] {
 		background: var(--ess-warning);
-	}
-
-
-	.sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		overflow: hidden;
-		clip: rect(0 0 0 0);
-		white-space: nowrap;
 	}
 
 	.admin-body {
@@ -383,7 +275,7 @@
 		position: fixed;
 		inset: 0;
 		z-index: 90;
-		background: rgba(4, 2, 12, 0.45);
+		background: rgba(27, 31, 59, 0.42);
 	}
 
 	.jump {
@@ -394,8 +286,8 @@
 		transform: translateX(-50%);
 		width: min(560px, calc(100vw - 32px));
 		background: var(--ess-modal-bg);
-		border: 1px solid var(--ess-border-strong);
-		border-radius: var(--ess-radius-md);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-lg);
 		box-shadow: var(--ess-elev-4);
 		overflow: hidden;
 	}
@@ -427,7 +319,7 @@
 		gap: 12px;
 		padding: 9px 12px;
 		border: 0;
-		border-radius: var(--ess-radius-xs);
+		border-radius: var(--ess-radius-sm);
 		background: transparent;
 		font: inherit;
 		color: var(--ess-text);
@@ -453,7 +345,8 @@
 
 	@media (max-width: 720px) {
 		.admin-tabs {
-			--gutter: 16px;
+			margin: 0 -16px;
+			padding: 0 16px;
 		}
 		.jump-btn kbd {
 			display: none;

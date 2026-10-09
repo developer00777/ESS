@@ -1,9 +1,8 @@
-import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
-// Payroll is nav-visible but not built yet. The sidebar and dashboard render it
-// inert, so this only catches someone typing the URL directly — send them home
-// rather than rendering a blank page.
+// Payroll is nav-visible but not built yet. The page is an honest "not
+// available yet" state rather than a redirect, so someone who clicks the row
+// learns where payslips will appear and who to ask.
 export const load: PageServerLoad = async () => {
-	throw redirect(303, '/dashboard');
+	return {};
 };

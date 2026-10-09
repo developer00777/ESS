@@ -71,8 +71,8 @@
 <div class="ess-scrim scrim" role="presentation" onclick={onclose}></div>
 <div class="ess-modal modal" role="dialog" aria-modal="true" aria-labelledby="new-task-title">
 	<div class="ess-modal__head">
-		<strong id="new-task-title">{from ? 'Make a task from this message' : 'New task'}</strong>
-		<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={onclose} aria-label="Close"><X size={16} /></button>
+		<h2 id="new-task-title" class="ess-h2">{from ? 'Make a task from this message' : 'New task'}</h2>
+		<button type="button" class="ess-icon-btn" onclick={onclose} aria-label="Close"><X size={16} /></button>
 	</div>
 	<form class="ess-modal__body body" onsubmit={save}>
 		{#if from}<blockquote>"{from.text.slice(0, 280)}"</blockquote>{/if}
@@ -99,7 +99,7 @@
 		{#if approver}<p class="ess-help">{approver} approves this before it starts. They'll get a pop-up to approve it.</p>{/if}
 		{#if err}<p class="ess-error">{err}</p>{/if}
 		<div class="actions">
-			<button type="button" class="ess-btn ess-btn--ghost" onclick={onclose}>Cancel</button>
+			<button type="button" class="ess-btn ess-btn--secondary" onclick={onclose}>Cancel</button>
 			<button type="submit" class="ess-btn ess-btn--primary" disabled={busy || !title.trim()}>{from ? 'Create task' : 'Add task'}</button>
 		</div>
 	</form>

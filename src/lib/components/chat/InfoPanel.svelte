@@ -80,7 +80,7 @@
 <aside class="panel" aria-label="About this conversation">
 	<header>
 		<strong>Details</strong>
-		<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={onclose} aria-label="Close details"><X size={16} /></button>
+		<button type="button" class="ess-icon-btn" onclick={onclose} aria-label="Close details"><X size={18} /></button>
 	</header>
 	{#if channel.topic}<p class="topic">{channel.topic}</p>{/if}
 	<div class="tabs" role="tablist">
@@ -198,59 +198,67 @@
 		flex-direction: column;
 		min-height: 0;
 		height: 100%;
-		border-left: 1px solid var(--ess-border);
-		background: var(--ess-canvas);
+		background: var(--ess-surface);
 	}
 	header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 10px 12px 10px 16px;
+		padding: 14px 12px 14px 18px;
 		border-bottom: 1px solid var(--ess-border);
-		min-height: 54px;
+		min-height: 64px;
+	}
+	header strong {
+		font-family: var(--ess-font-display);
+		font-size: 21px;
+		font-weight: 600;
 	}
 	.topic {
-		margin: 10px 16px 0;
-		font-size: 13px;
+		margin: 12px 18px 0;
+		font-size: 13.5px;
 		color: var(--ess-text-secondary);
 	}
 	.tabs {
 		display: flex;
 		gap: 2px;
-		padding: 6px 10px 0;
+		padding: 8px 12px 0;
 		border-bottom: 1px solid var(--ess-border);
 	}
 	.tabs button {
 		border: 0;
 		background: none;
-		padding: 8px;
+		padding: 8px 10px;
 		font: inherit;
-		font-size: 12.5px;
-		font-weight: 600;
+		font-size: 13px;
+		font-weight: 500;
 		color: var(--ess-text-secondary);
 		cursor: pointer;
 		border-bottom: 2px solid transparent;
+		margin-bottom: -1px;
+	}
+	.tabs button:hover {
+		color: var(--ess-text);
 	}
 	.tabs button[aria-selected='true'] {
-		color: var(--ess-text);
+		color: var(--ess-primary-text);
 		border-bottom-color: var(--ess-primary);
 	}
 	.body {
 		flex: 1;
 		overflow-y: auto;
-		padding: 12px 14px;
+		padding: 14px 18px;
 		display: grid;
 		gap: 10px;
 		align-content: start;
 	}
 	.note {
 		margin: 0;
-		font-size: 12.5px;
+		font-size: 13px;
 		color: var(--ess-text-muted);
 	}
 	.err {
 		margin: 0;
-		font-size: 12.5px;
+		font-size: 13px;
 		color: var(--ess-danger);
 	}
 	.members,
@@ -265,6 +273,7 @@
 		display: flex;
 		align-items: center;
 		gap: 10px;
+		padding: 4px 0;
 	}
 	.who {
 		flex: 1;
@@ -272,23 +281,23 @@
 		display: grid;
 	}
 	.who strong {
-		font-size: 13px;
-		font-weight: 600;
+		font-size: 13.5px;
+		font-weight: 500;
 	}
 	.who small {
-		font-size: 11.5px;
+		font-size: 12px;
 		color: var(--ess-text-muted);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 	.badge {
-		font-size: 10px;
-		font-weight: 700;
-		padding: 0 6px;
-		border-radius: 5px;
-		background: var(--ess-sunken);
-		color: var(--ess-text-muted);
+		font-size: 11px;
+		font-weight: 500;
+		padding: 1px 7px;
+		border-radius: var(--ess-radius-xs);
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
 	}
 	.x {
 		border: 0;
@@ -296,6 +305,9 @@
 		cursor: pointer;
 		color: var(--ess-text-muted);
 		display: inline-flex;
+	}
+	.x:hover {
+		color: var(--ess-danger);
 	}
 	.add {
 		display: flex;
@@ -309,16 +321,16 @@
 	.todos li {
 		display: grid;
 		gap: 2px;
-		padding: 6px 8px;
-		border-radius: 8px;
+		padding: 8px 10px;
+		border-radius: var(--ess-radius-sm);
 		background: var(--ess-surface);
-		border: 1px solid var(--ess-border-subtle);
+		border: 1px solid var(--ess-border);
 	}
 	.todos label {
 		display: flex;
 		gap: 8px;
 		align-items: flex-start;
-		font-size: 13px;
+		font-size: 13.5px;
 		cursor: pointer;
 	}
 	.todos input {
@@ -330,7 +342,7 @@
 		color: var(--ess-text-muted);
 	}
 	.todos small {
-		font-size: 11px;
+		font-size: 11.5px;
 		color: var(--ess-text-muted);
 		padding-left: 22px;
 	}
@@ -348,13 +360,16 @@
 		display: flex;
 		gap: 8px;
 		align-items: center;
-		font-size: 13px;
+		font-size: 13.5px;
+	}
+	.check input {
+		accent-color: var(--ess-primary);
 	}
 	.export {
 		display: grid;
 		gap: 6px;
 		width: 100%;
-		padding-top: 10px;
+		padding-top: 12px;
 		border-top: 1px solid var(--ess-border-subtle);
 	}
 	.disabled {

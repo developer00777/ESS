@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
-	import IconChip from './IconChip.svelte';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 
 	interface Props {
 		icon: Component;
@@ -16,14 +16,15 @@
 		urgent?: boolean;
 	}
 
-	let { icon, label, href, onclick, soon = false, count = 0, urgent = false }: Props = $props();
+	let { icon: Icon, label, href, onclick, soon = false, count = 0, urgent = false }: Props = $props();
 </script>
 
 {#snippet content()}
-	<IconChip {icon} size="sm" />
+	<span class="ess-tile ess-tile--sm"><Icon size={17} strokeWidth={1.75} /></span>
 	<span class="label">{label}</span>
 	{#if soon}<span class="soon-badge">Soon</span>{/if}
 	{#if count > 0}<span class="count" class:urgent aria-label="{count} unread">{count}</span>{/if}
+	{#if !soon && count === 0}<ChevronRight size={15} class="chev" />{/if}
 {/snippet}
 
 {#if soon}
@@ -51,7 +52,7 @@
 		justify-content: center;
 		border-radius: var(--ess-radius-pill);
 		font-size: 11px;
-		font-weight: 700;
+		font-weight: 600;
 		font-variant-numeric: tabular-nums;
 		background: var(--ess-primary-soft);
 		color: var(--ess-primary-text);
@@ -65,8 +66,8 @@
 		display: flex;
 		align-items: center;
 		gap: 12px;
-		padding: 9px 10px;
-		border-radius: var(--ess-radius-sm);
+		padding: 8px 10px;
+		border-radius: var(--ess-radius-md);
 		text-decoration: none;
 		color: var(--ess-text);
 		background: transparent;
@@ -77,6 +78,11 @@
 		font-weight: 500;
 		cursor: pointer;
 		transition: background var(--ess-t-fast);
+	}
+
+	.row :global(.chev) {
+		margin-left: auto;
+		color: var(--ess-text-muted);
 	}
 
 	.row:hover {
@@ -94,14 +100,14 @@
 
 	.soon-badge {
 		margin-left: auto;
-		font-size: 9.5px;
-		font-weight: 700;
-		letter-spacing: 0.06em;
+		font-size: 10px;
+		font-weight: 600;
+		letter-spacing: 0.04em;
 		text-transform: uppercase;
-		padding: 2px 6px;
-		border-radius: var(--ess-radius-xs);
-		background: var(--ess-primary-soft);
-		color: var(--ess-primary-text);
+		padding: 2px 7px;
+		border-radius: var(--ess-radius-pill);
+		background: var(--ess-sunken);
+		color: var(--ess-text-muted);
 		white-space: nowrap;
 	}
 </style>

@@ -134,34 +134,36 @@
 
 <style>
 	.card {
-		margin-top: 6px;
+		margin-top: 8px;
 		max-width: 480px;
 		display: grid;
-		gap: 5px;
-		padding: 10px 12px;
+		gap: 6px;
+		padding: 12px 14px;
 		border: 1px solid var(--ess-border);
-		border-left: 4px solid var(--ess-primary);
-		border-radius: 10px;
+		border-radius: var(--ess-radius-md);
 		background: var(--ess-surface);
+		box-shadow: var(--ess-elev-1);
 	}
-	.card[data-tone='warn'] {
-		border-left-color: var(--ess-warning);
-	}
-	.card[data-tone='ok'] {
-		border-left-color: var(--ess-success);
-	}
-	.card[data-tone='bad'] {
-		border-left-color: var(--ess-danger);
-	}
-	.card[data-tone='muted'] {
-		border-left-color: var(--ess-border-strong);
+	.card strong {
+		font-size: 14.5px;
+		font-weight: 600;
 	}
 	.k {
-		font-size: 10.5px;
-		font-weight: 700;
-		letter-spacing: 0.08em;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 11.5px;
+		font-weight: 600;
+		letter-spacing: 0.06em;
 		text-transform: uppercase;
-		color: var(--ess-text-muted);
+		color: var(--ess-primary-text);
+	}
+	.k::before {
+		content: '';
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		background: currentColor;
 	}
 	.card[data-tone='warn'] .k {
 		color: var(--ess-warning);
@@ -169,25 +171,36 @@
 	.card[data-tone='ok'] .k {
 		color: var(--ess-success);
 	}
+	.card[data-tone='bad'] .k {
+		color: var(--ess-danger);
+	}
+	.card[data-tone='muted'] .k {
+		color: var(--ess-text-muted);
+	}
+	.card[data-tone='info'] .k {
+		color: var(--ess-info);
+	}
 	.line {
-		font-size: 12.5px;
+		font-size: 13px;
 		color: var(--ess-text-secondary);
 		overflow-wrap: anywhere;
 	}
 	.err {
 		font-size: 12.5px;
-		font-weight: 600;
+		font-weight: 500;
 		color: var(--ess-danger);
 	}
 	.btns {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 6px;
-		margin-top: 2px;
+		margin-top: 4px;
 	}
 	.celebrate {
 		grid-template-columns: auto 1fr;
 		align-items: center;
+		background: var(--ess-primary-softer);
+		border-color: var(--ess-primary-soft);
 	}
 	.emoji {
 		font-size: 22px;

@@ -36,7 +36,7 @@
 <aside class="panel" aria-label="Thread">
 	<header>
 		<strong>Thread</strong>
-		<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={onclose} aria-label="Close thread"><X size={16} /></button>
+		<button type="button" class="ess-icon-btn" onclick={onclose} aria-label="Close thread"><X size={18} /></button>
 	</header>
 	<div class="root">
 		<MessageItem message={shown} {meId} {meName} inThread status={shown.author ? statusOf(shown.author.id) : null} onchanged={refreshRoot} />
@@ -58,21 +58,26 @@
 		flex-direction: column;
 		min-height: 0;
 		height: 100%;
-		border-left: 1px solid var(--ess-border);
-		background: var(--ess-canvas);
+		background: var(--ess-surface);
 	}
 	header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 10px 12px 10px 16px;
+		padding: 14px 12px 14px 18px;
 		border-bottom: 1px solid var(--ess-border);
-		min-height: 54px;
+		min-height: 64px;
+	}
+	header strong {
+		font-family: var(--ess-font-display);
+		font-size: 21px;
+		font-weight: 600;
 	}
 	.root {
 		border-bottom: 1px solid var(--ess-border-subtle);
 		padding: 6px 0;
 		max-height: 40%;
 		overflow-y: auto;
+		background: var(--ess-sunken);
 	}
 </style>

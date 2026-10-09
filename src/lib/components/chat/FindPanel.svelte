@@ -52,7 +52,7 @@
 <aside class="panel" aria-label={mode === 'saved' ? 'Saved messages' : 'Search messages'}>
 	<header>
 		<strong>{mode === 'saved' ? 'Saved' : 'Search'}</strong>
-		<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={onclose} aria-label="Close"><X size={16} /></button>
+		<button type="button" class="ess-icon-btn" onclick={onclose} aria-label="Close"><X size={18} /></button>
 	</header>
 	{#if mode === 'search'}
 		<form class="bar" onsubmit={(e) => { e.preventDefault(); if (q.trim().length >= 2) void run(); }}>
@@ -81,27 +81,35 @@
 		flex-direction: column;
 		min-height: 0;
 		height: 100%;
-		border-left: 1px solid var(--ess-border);
-		background: var(--ess-canvas);
+		background: var(--ess-surface);
 	}
 	header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 10px 12px 10px 16px;
+		padding: 14px 12px 14px 18px;
 		border-bottom: 1px solid var(--ess-border);
-		min-height: 54px;
+		min-height: 64px;
+	}
+	header strong {
+		font-family: var(--ess-font-display);
+		font-size: 21px;
+		font-weight: 600;
 	}
 	.bar {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		margin: 10px 12px 0;
-		padding: 4px 4px 4px 10px;
-		border: 1px solid var(--ess-border-strong);
-		border-radius: 10px;
+		margin: 12px 14px 0;
+		padding: 4px 4px 4px 12px;
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-sm);
 		background: var(--ess-field-bg);
 		color: var(--ess-text-muted);
+	}
+	.bar:focus-within {
+		border-color: var(--ess-primary);
+		box-shadow: 0 0 0 3px var(--ring);
 	}
 	.bar input {
 		flex: 1;
@@ -111,6 +119,9 @@
 		font: inherit;
 		color: var(--ess-text);
 		min-width: 0;
+	}
+	.bar input:focus-visible {
+		box-shadow: none;
 	}
 	.body {
 		flex: 1;
@@ -124,16 +135,16 @@
 	.where {
 		border: 0;
 		background: none;
-		padding: 6px 16px 0;
+		padding: 8px 18px 0;
 		font: inherit;
-		font-size: 11.5px;
-		font-weight: 700;
+		font-size: 12px;
+		font-weight: 600;
 		color: var(--ess-primary-text);
 		cursor: pointer;
 	}
 	.note {
 		margin: 20px 16px;
-		font-size: 12.5px;
+		font-size: 13px;
 		color: var(--ess-text-muted);
 		text-align: center;
 	}

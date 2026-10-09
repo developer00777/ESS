@@ -13,6 +13,20 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-dev-only-access-secret-change-me}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-only-refresh-secret-change-me}
+      # start.sh needs these to seed (or recognise) the super admin login; they
+      # come from the .env beside this file.
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
+      SUPER_ADMIN_FULL_NAME: ${SUPER_ADMIN_FULL_NAME:-Super Admin}
+      # Optional integrations; empty means "not connected" and the app copes.
+      ZOOM_ACCOUNT_ID: ${ZOOM_ACCOUNT_ID:-}
+      ZOOM_CLIENT_ID: ${ZOOM_CLIENT_ID:-}
+      ZOOM_CLIENT_SECRET: ${ZOOM_CLIENT_SECRET:-}
+      ZOOM_WEBHOOK_SECRET: ${ZOOM_WEBHOOK_SECRET:-}
+      ZOOM_DEFAULT_HOST: ${ZOOM_DEFAULT_HOST:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM: ${RESEND_FROM:-}
+      PORTAL_URL: ${PORTAL_URL:-http://localhost:3000}
     depends_on:
       postgres:
         condition: service_healthy

@@ -16,6 +16,7 @@ import { startProhancePoller } from '$lib/server/prohance';
 import { startAnnouncementScheduler } from '$lib/server/announcements';
 import { loadCapabilities } from '$lib/server/capabilities';
 import { startChatScheduler } from '$lib/server/chat/scheduler';
+import { startLoginEmailSender } from '$lib/server/login-emails';
 import type { SessionUser } from '$lib/server/auth';
 
 // Kicks off the ProHance attendance poller with the server process. No-op
@@ -28,6 +29,9 @@ startAnnouncementScheduler();
 
 // Champ Chat: roster sync, reminders, digests, celebrations, retention.
 startChatScheduler();
+
+// Approved login emails go out one at a time at the cadence HR set.
+startLoginEmailSender();
 
 /** Privileges ride along on the request user (src/lib/capabilities.ts). */
 async function withCapabilities(user: SessionUser): Promise<SessionUser> {

@@ -13,22 +13,23 @@ Primary job on any screen: complete one HR task fast, with trustworthy numbers.
 
 ## Brand personality
 
-Cosmic, premium, focused — per the "Cosmic ESS" design system (`ESS portal design system (4)/`): dark glassmorphism, ambient nebula glow, starfield backdrop, violet/cyan (Nebula) accent with a quiet steel-blue (Onyx) alternate palette. Numbers are the heroes (Space Grotesk display, tabular figures); chrome recedes.
+Warm, editorial, focused — the "Timeline workspace" (the `ess-timeline-mockups` set): a warm off-white canvas, dark navy ink, an editorial serif (Newsreader) for the main headings, a clean sans (IBM Plex Sans) for body and controls, thin neutral dividers, restrained vivid violet for actions, pale lavender for the active navigation, 10px soft corners, small outline icons. Generous whitespace; metrics sit next to decisions; forms look like forms.
 
 ## Anti-references
 
 - Generic SaaS admin templates (Bootstrap-admin gray).
-- The previous light teal corporate look — replaced by Cosmic.
-- Decorative motion that delays task flow; orchestration on load.
+- The earlier "Cosmic" glassmorphism skin (nebula glow, starfield, glass cards) and the light teal corporate look before it.
+- Decorative motion that delays task flow; nested cards inside cards; giant promotional art.
 
 ## Design principles
 
 1. **Token-first**: every color/space/radius flows through `--ess-*` tokens (`src/lib/styles/ess-tokens.css`); component vocabulary in `ess-components.css`. No hardcoded colors in `.svelte` files.
-2. **Two palettes, one mechanism**: default = Nebula; `data-ess-theme="dark"` = Onyx. The sidebar toggle and `essTheme` localStorage key are preserved from the pre-Cosmic app.
-3. **Glass is the surface language**: cards are `.ess-card` (glass), tables sit in glass shells, primary actions glow. Legibility beats effect — body text ≥ 4.5:1 on glass.
-4. **Density where users work**: tables, rosters, and forms stay dense and calm; the cosmic drama lives in backgrounds and stat displays, never in task chrome.
-5. **Reduced motion respected**: starfield drift and card tilt disable under `prefers-reduced-motion`.
+2. **Two palettes, one mechanism**: default = Light; `data-ess-theme="dark"` = Dark. The `essTheme` localStorage key and the pre-paint script in `app.html` are preserved.
+3. **One shell**: a 210px sidebar (Today, Champ Hub, Leave, Attendance, Policies, Team, Admin Controls; Help & support and the person's avatar at the foot), a slim top bar (search, notifications, the person's menu), and `PageHeader` (crumb · serif title · one line · actions) on every page. Complex modules use local tabs (`.ess-tabs`); review and correction happen in contextual right panels or 500px drawers.
+4. **Rows, not cards-in-cards**: work queues are hairline rows (`.ess-rows`); a page is at most a main column plus one 360px aside (`.ess-split`).
+5. **Density where users work**: tables, rosters and forms stay dense and calm; serif is reserved for page and section headings.
+6. **Reduced motion respected**: `prefers-reduced-motion` and the Appearance "Reduced" setting disable transitions.
 
 ## Accessibility
 
-AA contrast for body text on glass surfaces; visible focus rings (accent, 3px); dark `color-scheme` on form controls; toggle and nav fully keyboard-operable.
+AA contrast for body text on white and off-white surfaces; visible focus rings (violet, 3px); `color-scheme` follows the palette on form controls; nav, tabs and menus fully keyboard-operable.

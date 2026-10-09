@@ -37,7 +37,7 @@
 <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="prefs-h">
 	<header>
 		<h2 id="prefs-h" class="ess-h3">Chat settings</h2>
-		<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={onclose} aria-label="Close"><X size={16} /></button>
+		<button type="button" class="ess-icon-btn" onclick={onclose} aria-label="Close"><X size={18} /></button>
 	</header>
 	<div class="body">
 		<div class="row">
@@ -76,7 +76,7 @@
 		position: fixed;
 		inset: 0;
 		z-index: 90;
-		background: rgba(4, 2, 12, 0.5);
+		background: rgba(27, 31, 59, 0.42);
 	}
 	.dialog {
 		position: fixed;
@@ -84,9 +84,9 @@
 		top: 50%;
 		left: 50%;
 		transform: translate(-50%, -50%);
-		width: min(480px, calc(100vw - 24px));
+		width: min(500px, calc(100vw - 24px));
 		background: var(--ess-modal-bg);
-		border: 1px solid var(--ess-border-strong);
+		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-lg);
 		box-shadow: var(--ess-elev-4);
 	}
@@ -94,27 +94,33 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 12px 14px;
+		padding: 14px 12px 14px 20px;
 		border-bottom: 1px solid var(--ess-border);
 	}
 	header h2 {
 		margin: 0;
+		font-family: var(--ess-font-display);
+		font-size: 22px;
+		font-weight: 600;
 	}
 	.body {
-		padding: 6px 16px 14px;
+		padding: 6px 20px 16px;
 	}
 	.row {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 14px;
-		padding: 12px 0;
+		padding: 14px 0;
 		border-bottom: 1px solid var(--ess-border-subtle);
 		cursor: pointer;
 	}
+	.row strong {
+		font-weight: 500;
+	}
 	.row p {
 		margin: 2px 0 0;
-		font-size: 12.5px;
+		font-size: 13px;
 		color: var(--ess-text-muted);
 	}
 	.row input {
@@ -124,18 +130,18 @@
 		flex-shrink: 0;
 	}
 	.ok {
-		font-weight: 700;
+		font-weight: 600;
 		color: var(--ess-success);
 		font-size: 13px;
 	}
 	.off {
-		font-size: 12.5px;
+		font-size: 13px;
 		color: var(--ess-text-muted);
 		text-align: right;
 	}
 	.foot {
 		margin: 12px 0 0;
-		font-size: 12px;
+		font-size: 12.5px;
 		color: var(--ess-text-muted);
 	}
 </style>

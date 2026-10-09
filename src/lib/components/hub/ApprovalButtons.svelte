@@ -30,7 +30,7 @@
 	{:else}
 		<div class="row">
 			<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy} onclick={(e) => { e.stopPropagation(); void go('approve'); }}>Approve</button>
-			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" disabled={busy} onclick={(e) => { e.stopPropagation(); rejecting = true; }}>Don't approve</button>
+			<button type="button" class="ess-btn ess-btn--outline ess-btn--sm" disabled={busy} onclick={(e) => { e.stopPropagation(); rejecting = true; }}>Don't approve</button>
 		</div>
 	{/if}
 </div>
@@ -38,15 +38,15 @@
 <style>
 	.approval {
 		display: grid;
-		gap: 6px;
+		gap: 8px;
 	}
 	.row {
 		display: flex;
-		gap: 6px;
+		gap: 8px;
 		flex-wrap: wrap;
 	}
 	.ess-input {
-		padding: 6px 10px;
+		padding: 7px 10px;
 		font-size: 13px;
 	}
 </style>

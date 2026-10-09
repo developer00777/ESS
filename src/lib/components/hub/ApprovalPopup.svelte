@@ -109,11 +109,11 @@
 		width: min(360px, calc(100vw - 32px));
 		display: grid;
 		gap: 8px;
-		padding: 14px 16px;
-		border-radius: var(--ess-radius-md);
+		padding: 16px 18px;
+		border-radius: var(--ess-radius-lg);
 		background: var(--ess-modal-bg);
-		border: 1px solid color-mix(in oklab, var(--ess-primary) 45%, var(--ess-border));
-		box-shadow: var(--ess-elev-4);
+		border: 1px solid var(--ess-border);
+		box-shadow: var(--ess-elev-3);
 		animation: rise var(--ess-t-slow) both;
 	}
 	@keyframes rise {
@@ -129,8 +129,8 @@
 	}
 	.k {
 		font-size: 11px;
-		font-weight: 700;
-		letter-spacing: 0.08em;
+		font-weight: 600;
+		letter-spacing: 0.12em;
 		text-transform: uppercase;
 		color: var(--ess-primary-text);
 	}
@@ -156,8 +156,9 @@
 		text-align: left;
 		font: inherit;
 		font-family: var(--ess-font-display);
-		font-size: 16px;
+		font-size: 19px;
 		font-weight: 600;
+		line-height: 1.25;
 		color: var(--ess-text);
 		cursor: pointer;
 		overflow-wrap: anywhere;
@@ -188,9 +189,9 @@
 		align-items: center;
 		gap: 4px;
 		padding: 1px 8px;
-		border-radius: 99px;
+		border-radius: var(--ess-radius-xs);
 		font-size: 11.5px;
-		font-weight: 600;
+		font-weight: 500;
 		background: var(--ess-neutral-bg);
 		color: var(--ess-neutral);
 	}

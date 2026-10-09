@@ -1,6 +1,17 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import ArrowRight from '@lucide/svelte/icons/arrow-right';
+	import Calendar from '@lucide/svelte/icons/calendar';
+	import Layers from '@lucide/svelte/icons/layers';
+	import ChartPie from '@lucide/svelte/icons/chart-pie';
+	import Check from '@lucide/svelte/icons/check';
+	import Info from '@lucide/svelte/icons/info';
+	import ExternalLink from '@lucide/svelte/icons/external-link';
+	import Mail from '@lucide/svelte/icons/mail';
+	import Avatar from '$lib/components/Avatar.svelte';
+	import { makeWeekOffResolver, workingDaysInRange } from '$lib/week-off';
 
 	let { data } = $props();
 
@@ -18,8 +29,54 @@
 	let error = $state('');
 	let submitting = $state(false);
 
-	async function handleSubmit(e: SubmitEvent) {
+	// Details → Review → Submit. The request is only sent from Review, so
+	// nobody books leave on a mistyped date.
+	let step = $state<0 | 1>(0);
+
+	const type = $derived(data.types.find((t) => t.id === leaveTypeId) ?? null);
+	const balance = $derived(type ? (data.available[type.id] ?? null) : null);
+
+	// Working days are counted against this person's own week-off roster, the
+	// same way the API charges them.
+	const isWeekOff = $derived(makeWeekOffResolver(data.weekOffRosters, data.weekOffAssignments));
+	const validRange = $derived(/^\d{4}-\d{2}-\d{2}$/.test(startDate) && /^\d{4}-\d{2}-\d{2}$/.test(endDate) && endDate >= startDate);
+	const requested = $derived(validRange ? workingDaysInRange(startDate, endDate, isWeekOff) : 0);
+	const remaining = $derived(balance ? Math.round((balance.remaining - requested) * 100) / 100 : null);
+
+	const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+	const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	const parse = (s: string) => {
+		const [y, m, d] = s.split('-').map(Number);
+		return new Date(y, m - 1, d);
+	};
+	const fmt = (s: string) => {
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return '—';
+		const d = parse(s);
+		return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]} ${d.getFullYear()} (${WD[d.getDay()]})`;
+	};
+	const fmtRange = () => {
+		if (!validRange) return 'Pick your dates';
+		const a = parse(startDate);
+		const b = parse(endDate);
+		if (startDate === endDate) return `${a.getDate()} ${MONTH_SHORT[a.getMonth()]} ${a.getFullYear()}`;
+		if (a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()) return `${a.getDate()} – ${b.getDate()} ${MONTH_SHORT[b.getMonth()]} ${b.getFullYear()}`;
+		return `${a.getDate()} ${MONTH_SHORT[a.getMonth()]} – ${b.getDate()} ${MONTH_SHORT[b.getMonth()]} ${b.getFullYear()}`;
+	};
+	const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
+	const today = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+	function toReview(e: SubmitEvent) {
 		e.preventDefault();
+		error = '';
+		if (!validRange) {
+			error = 'The end date cannot be before the start date';
+			return;
+		}
+		step = 1;
+	}
+
+	async function submit() {
+		if (submitting) return;
 		error = '';
 		submitting = true;
 		try {
@@ -31,9 +88,12 @@
 			if (!res.ok) {
 				const body = await res.json().catch(() => ({}));
 				error = body.message ?? 'Could not submit leave application';
+				step = 0;
 				return;
 			}
 			await goto('/leave');
+		} catch {
+			error = 'Could not confirm submission. Check your leave requests before trying again.';
 		} finally {
 			submitting = false;
 		}
@@ -41,110 +101,396 @@
 </script>
 
 <svelte:head>
-	<title>Apply Leave — Champ HR ESS Portal</title>
+	<title>Apply for leave — Champ HR</title>
 </svelte:head>
 
-<header class="page-header">
-	<h1 class="ess-page-title">Apply for Leave</h1>
-	<p class="ess-page-sub">Submit a request — it routes to your manager automatically</p>
+<a href="/leave" class="back"><ArrowLeft size={18} /> Back to Leave</a>
+
+<header class="head">
+	<h1 class="ess-page-title">Plan your time away.</h1>
+	<p class="ess-page-sub">Submit a leave request and we’ll take care of the rest.</p>
 </header>
 
-<form class="apply-card" onsubmit={handleSubmit}>
-	<label>
-		<span>Leave Type</span>
-		<select bind:value={leaveTypeId} required>
-			{#each data.types as type (type.id)}
-				<option value={type.id}>{type.name}</option>
-			{/each}
-		</select>
-	</label>
+<div class="ess-split apply">
+	<div class="ess-stack">
+		<ol class="ess-stepper ess-stepper--center steps">
+			<li class="ess-step" data-state={step > 0 ? 'done' : 'current'}>
+				<span class="ess-step__dot">{#if step > 0}<Check size={13} strokeWidth={3} />{:else}1{/if}</span>
+				<span class="ess-step__label">Details</span>
+				<span class="ess-step__meta">Enter your leave details</span>
+			</li>
+			<li class="ess-step" data-state={step === 1 ? 'current' : 'todo'}>
+				<span class="ess-step__dot">2</span>
+				<span class="ess-step__label">Review</span>
+				<span class="ess-step__meta">Check and confirm</span>
+			</li>
+			<li class="ess-step" data-state="todo">
+				<span class="ess-step__dot">3</span>
+				<span class="ess-step__label">Submit</span>
+				<span class="ess-step__meta">Request for approval</span>
+			</li>
+		</ol>
 
-	<div class="date-row">
-		<label>
-			<span>Start Date</span>
-			<input type="date" bind:value={startDate} required />
-		</label>
-		<label>
-			<span>End Date</span>
-			<input type="date" bind:value={endDate} required />
-		</label>
+		{#if step === 0}
+			<form class="ess-card form" onsubmit={toReview}>
+				<div class="form-head">
+					<h2 class="ess-h2">Leave details</h2>
+					<p>Tell us about your leave request.</p>
+				</div>
+
+				<label class="ess-field">
+					<span class="ess-label">Leave type <i class="req">*</i></span>
+					<span class="with-icon">
+						<Calendar size={17} strokeWidth={1.75} />
+						<select class="ess-select" bind:value={leaveTypeId} required>
+							{#each data.types as t (t.id)}
+								<option value={t.id}>{t.name}</option>
+							{/each}
+						</select>
+					</span>
+					{#if type}
+						<span class="ess-help">
+							{#if type.monthlyQuotaDays != null}
+								{Number(type.monthlyQuotaDays)} {Number(type.monthlyQuotaDays) === 1 ? 'day' : 'days'} each month; it does not carry over.
+							{:else if type.fixedDays}
+								A fixed {type.fixedDays}-day entitlement.
+							{:else if balance}
+								Use your {type.name.toLowerCase()} balance for planned time away.
+							{:else}
+								Counts against your {type.name.toLowerCase()} entitlement.
+							{/if}
+							{#if type.requiresDocumentation && type.documentationNote}{type.documentationNote}{/if}
+						</span>
+					{/if}
+				</label>
+
+				<div class="date-row">
+					<label class="ess-field">
+						<span class="ess-label">Start date <i class="req">*</i></span>
+						<span class="with-icon">
+							<Calendar size={17} strokeWidth={1.75} />
+							<input class="ess-input" type="date" bind:value={startDate} required />
+						</span>
+					</label>
+					<label class="ess-field">
+						<span class="ess-label">End date <i class="req">*</i></span>
+						<span class="with-icon">
+							<Calendar size={17} strokeWidth={1.75} />
+							<input class="ess-input" type="date" bind:value={endDate} min={startDate || undefined} required />
+						</span>
+					</label>
+				</div>
+
+				<label class="ess-field">
+					<span class="ess-label">Reason for leave</span>
+					<textarea class="ess-textarea" bind:value={reason} rows="4" maxlength="500" placeholder="Add any context for your manager"></textarea>
+					<span class="help-row"><span class="ess-help">This will be visible to your manager.</span><span class="ess-help">{reason.length}/500</span></span>
+				</label>
+
+				{#if error}
+					<p class="ess-error" role="alert">{error}</p>
+				{/if}
+
+				<div class="ess-notice ess-notice--info">
+					<span class="ess-notice__icon"><Info size={16} /></span>
+					<div class="ess-notice__body">
+						Leave requests are subject to your company’s leave policy.
+						<a href="/policies" class="policy-link">View leave policy <ExternalLink size={13} /></a>
+					</div>
+				</div>
+
+				<div class="actions">
+					<a href="/leave" class="ess-btn ess-btn--secondary">Cancel</a>
+					<button type="submit" class="ess-btn ess-btn--primary" disabled={!leaveTypeId}>
+						Continue to review <ArrowRight size={17} />
+					</button>
+				</div>
+			</form>
+		{:else}
+			<section class="ess-card form">
+				<div class="form-head">
+					<h2 class="ess-h2">Review your request</h2>
+					<p>Check the details, then send it for approval.</p>
+				</div>
+
+				<dl class="ess-kv review">
+					<dt>Leave type</dt>
+					<dd>{type?.name ?? '—'}</dd>
+					<dt>Start date</dt>
+					<dd>{fmt(startDate)}</dd>
+					<dt>End date</dt>
+					<dd>{fmt(endDate)}</dd>
+					<dt>Working days</dt>
+					<dd>{days(requested)}</dd>
+					<dt>Reason</dt>
+					<dd>{reason.trim() || 'No reason given'}</dd>
+					<dt>Goes to</dt>
+					<dd>{data.manager ? `${data.manager.fullName} for manager review, then HR` : 'HR'}</dd>
+				</dl>
+
+				{#if error}
+					<p class="ess-error" role="alert">{error}</p>
+				{/if}
+
+				<div class="actions">
+					<button type="button" class="ess-btn ess-btn--secondary" onclick={() => (step = 0)} disabled={submitting}><ArrowLeft size={17} /> Edit details</button>
+					<button type="button" class="ess-btn ess-btn--primary" onclick={submit} disabled={submitting}>
+						{submitting ? 'Submitting…' : 'Submit request'}
+						{#if !submitting}<ArrowRight size={17} />{/if}
+					</button>
+				</div>
+			</section>
+		{/if}
 	</div>
 
-	<label>
-		<span>Reason (optional)</span>
-		<textarea bind:value={reason} rows="4" placeholder="Add any context for your manager"></textarea>
-	</label>
+	<aside class="ess-stack">
+		<section class="ess-card impact">
+			<div class="form-head">
+				<h2 class="ess-h2">Leave impact summary</h2>
+				<p>Here’s how this request affects your balance.</p>
+			</div>
 
-	{#if error}
-		<p class="ess-error">{error}</p>
-	{/if}
+			<div class="impact-grid">
+				<div class="impact-cell">
+					<span class="ess-tile"><Calendar size={20} strokeWidth={1.75} /></span>
+					<span class="impact-label">Requested</span>
+					<strong>{requested} working {requested === 1 ? 'day' : 'days'}</strong>
+					<small>{fmtRange()}</small>
+				</div>
+				<div class="impact-cell">
+					<span class="ess-tile"><Layers size={20} strokeWidth={1.75} /></span>
+					<span class="impact-label">Available</span>
+					<strong>{balance ? days(balance.remaining) : '—'}</strong>
+					<small>{balance ? (balance.monthly ? 'This month' : `As of ${today}`) : 'No balance tracked'}</small>
+				</div>
+				<div class="impact-cell">
+					<span class="ess-tile"><ChartPie size={20} strokeWidth={1.75} /></span>
+					<span class="impact-label">Remaining</span>
+					<strong class:over={remaining != null && remaining < 0}>{remaining != null ? days(remaining) : '—'}</strong>
+					<small>After this request</small>
+				</div>
+			</div>
 
-	<div class="actions">
-		<button type="submit" class="ess-btn ess-btn--primary" disabled={submitting}>
-			{submitting ? 'Submitting…' : 'Submit Request'}
-		</button>
-		<a href="/leave" class="ess-btn ess-btn--ghost">Cancel</a>
-	</div>
-</form>
+			{#if remaining != null && remaining < 0}
+				<div class="ess-notice">
+					<span class="ess-notice__icon"><Info size={16} /></span>
+					<div class="ess-notice__body"><strong>More than your balance</strong>This request asks for {days(requested)} but only {days(balance!.remaining)} are available.</div>
+				</div>
+			{/if}
+
+			<div class="impact-section">
+				<span class="impact-label">Approval manager</span>
+				{#if data.manager}
+					<div class="manager">
+						<Avatar userId={data.manager.userId} fullName={data.manager.fullName} size="lg" />
+						<div class="manager-text">
+							<strong>{data.manager.fullName}</strong>
+							<small>Reviews first, then HR</small>
+						</div>
+					</div>
+				{:else}
+					<p class="quiet"><Mail size={14} /> No reporting manager is set, so this goes straight to HR.</p>
+				{/if}
+			</div>
+		</section>
+	</aside>
+</div>
 
 <style>
-	.page-header {
-		margin-bottom: 1.75rem;
+	.back {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 15px;
+		color: var(--ess-text-secondary);
+		margin-bottom: 22px;
 	}
-
-	.apply-card {
-		background: var(--ess-surface);
-		border: 1px solid var(--ess-border);
-		border-radius: var(--ess-radius-lg);
-		padding: 1.75rem;
-		max-width: 560px;
-		display: flex;
-		flex-direction: column;
-		gap: 1.1rem;
-	}
-
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-		font-size: 0.85rem;
-		font-weight: 600;
+	.back:hover {
 		color: var(--ess-text);
+	}
+	.head {
+		display: grid;
+		gap: 8px;
+		margin-bottom: var(--ess-space-6);
+	}
+	.head .ess-page-sub {
+		margin-top: 0;
+	}
+
+	.apply {
+		--ess-aside-width: 440px;
+	}
+
+	.steps {
+		padding: 4px 24px 0;
+	}
+
+	.form {
+		display: grid;
+		gap: 20px;
+		padding: var(--ess-space-6);
+	}
+	.form-head {
+		display: grid;
+		gap: 4px;
+	}
+	.form-head p {
+		color: var(--ess-text-secondary);
+		font-size: 15px;
+	}
+
+	.req {
+		color: var(--ess-danger);
+		font-style: normal;
+		margin-left: 2px;
+	}
+
+	.with-icon {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+	.with-icon > :global(svg) {
+		position: absolute;
+		left: 14px;
+		color: var(--ess-text-secondary);
+		pointer-events: none;
+	}
+	.with-icon .ess-select,
+	.with-icon .ess-input {
+		padding-left: 42px;
+		padding-top: 12px;
+		padding-bottom: 12px;
+		font-size: 15px;
 	}
 
 	.date-row {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-		gap: 1rem;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+		gap: 18px;
 	}
-
 	.date-row > * {
 		min-width: 0;
 	}
 
-	input,
-	select,
-	textarea {
-		border: 1px solid var(--ess-border-strong);
-		border-radius: var(--ess-radius-sm);
-		padding: 0.6rem 0.75rem;
-		font-size: 0.9rem;
-		font-family: inherit;
-		color: var(--ess-text);
-		background: var(--ess-surface);
+	.ess-textarea {
+		resize: vertical;
+		min-height: 110px;
+		font-size: 15px;
+	}
+	.help-row {
+		display: flex;
+		justify-content: space-between;
 	}
 
-	textarea {
-		resize: vertical;
+	.policy-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		margin-left: 8px;
+		text-decoration: underline;
 	}
 
 	.actions {
 		display: flex;
-		gap: 0.75rem;
-		margin-top: 0.25rem;
+		justify-content: flex-end;
+		gap: 12px;
+		padding-top: 18px;
+		border-top: 1px solid var(--ess-border-subtle);
+	}
+	.actions .ess-btn {
+		height: 46px;
+		padding: 0 22px;
 	}
 
-	.actions a {
-		text-decoration: none;
+	.review dd {
+		font-size: 15px;
+	}
+
+	.impact {
+		display: grid;
+		gap: 22px;
+	}
+	.impact-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+	.impact-cell {
+		display: grid;
+		gap: 4px;
+		padding: 0 14px;
+		border-right: 1px solid var(--ess-border-subtle);
+	}
+	.impact-cell:first-child {
+		padding-left: 0;
+	}
+	.impact-cell:last-child {
+		border-right: none;
+		padding-right: 0;
+	}
+	.impact-cell .ess-tile {
+		margin-bottom: 8px;
+	}
+	.impact-label {
+		font-size: 13.5px;
+		color: var(--ess-text-secondary);
+	}
+	.impact-cell strong {
+		font-family: var(--ess-font-display);
+		font-size: 22px;
+		font-weight: 600;
+		line-height: 1.15;
+	}
+	.impact-cell strong.over {
+		color: var(--ess-danger);
+	}
+	.impact-cell small {
+		font-size: 12.5px;
+		color: var(--ess-text-muted);
+	}
+
+	.impact-section {
+		display: grid;
+		gap: 12px;
+		padding-top: 20px;
+		border-top: 1px solid var(--ess-border-subtle);
+	}
+	.manager {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+	}
+	.manager-text {
+		display: grid;
+		gap: 2px;
+	}
+	.manager-text strong {
+		font-size: 15px;
+		font-weight: 500;
+	}
+	.manager-text small {
+		font-size: 13px;
+		color: var(--ess-text-secondary);
+	}
+	.quiet {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+		color: var(--ess-text-secondary);
+		font-size: 14px;
+	}
+
+	@media (max-width: 720px) {
+		.impact-grid {
+			grid-template-columns: 1fr;
+			gap: 16px;
+		}
+		.impact-cell {
+			padding: 0;
+			border-right: none;
+		}
+		.actions {
+			flex-direction: column-reverse;
+		}
 	}
 </style>

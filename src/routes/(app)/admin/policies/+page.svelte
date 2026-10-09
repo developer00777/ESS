@@ -1,9 +1,14 @@
 <script lang="ts">
 	import UploadCloud from '@lucide/svelte/icons/upload-cloud';
-	import UploadSteps from '$lib/components/UploadSteps.svelte';
 	import CalendarDays from '@lucide/svelte/icons/calendar-days';
 	import FileText from '@lucide/svelte/icons/file-text';
+	import FileImage from '@lucide/svelte/icons/file-image';
 	import CheckCircle from '@lucide/svelte/icons/check-circle';
+	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import Plus from '@lucide/svelte/icons/plus';
+	import X from '@lucide/svelte/icons/x';
+	import CloudUpload from '@lucide/svelte/icons/cloud-upload';
 	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
@@ -19,9 +24,7 @@
 	let successMsg = $state('');
 
 	let documentId = $state<string | null>(null);
-	let holidayTables = $state<
-		Array<{ shift_group_key: string; shift_group_label: string; holidays: Array<{ date: string; name: string; type: string }> }>
-	>([]);
+	let holidayTables = $state<Array<{ shift_group_key: string; shift_group_label: string; holidays: Array<{ date: string; name: string; type: string }> }>>([]);
 	let leaveTypesDraft = $state<
 		Array<{
 			code: string;
@@ -41,9 +44,31 @@
 
 	let archivingId = $state<string | null>(null);
 
+	/* A preview of the chosen file, so what was read can be checked against
+	   the page it came from. Revoked when the file changes. */
+	let previewUrl = $state<string | null>(null);
+	$effect(() => {
+		if (!file) {
+			previewUrl = null;
+			return;
+		}
+		const url = URL.createObjectURL(file);
+		previewUrl = url;
+		return () => URL.revokeObjectURL(url);
+	});
+	const isPdf = $derived(file?.type === 'application/pdf');
+
 	function onFileChange(e: Event) {
 		const input = e.target as HTMLInputElement;
 		file = input.files?.[0] ?? null;
+	}
+
+	function clearFile() {
+		file = null;
+		documentId = null;
+		holidayTables = [];
+		leaveTypesDraft = [];
+		errorMsg = '';
 	}
 
 	async function archiveCalendar(calendarId: string) {
@@ -181,6 +206,8 @@
 			successMsg = `Published ${body.publishedCalendars.length} shift-group calendar(s) for ${calendarYear}.`;
 			documentId = null;
 			holidayTables = [];
+			file = null;
+			await invalidateAll();
 		} finally {
 			publishing = false;
 		}
@@ -204,6 +231,8 @@
 			successMsg = `Published ${body.leaveTypes.length} leave type(s).`;
 			documentId = null;
 			leaveTypesDraft = [];
+			file = null;
+			await invalidateAll();
 		} finally {
 			publishing = false;
 		}
@@ -217,542 +246,633 @@
 		holidayTables[tableIdx].holidays.splice(rowIdx, 1);
 	}
 
-	/* Choose → review → published, for the shared step indicator. */
-	const step = $derived(
-		(kind === 'holiday_calendar' ? holidayTables.length : leaveTypesDraft.length) > 0
-			? 1
-			: successMsg
-				? 3
-				: 0
-	);
+	function switchKind(next: Kind) {
+		if (next === kind) return;
+		kind = next;
+		successMsg = '';
+		errorMsg = '';
+	}
+
+	/* Upload → review extraction → published, for the step indicator. */
+	const extracted = $derived(kind === 'holiday_calendar' ? holidayTables.length > 0 : leaveTypesDraft.length > 0);
+	const step = $derived(extracted ? 1 : successMsg ? 3 : 0);
+	const STEPS = ['Upload', 'Review extraction', 'Publish'];
+
+	const fmtDate = (v: string | Date | null | undefined) => (v ? new Date(v).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+	const fmtDays = (n: unknown) => (n == null || n === '' ? '—' : Number.isInteger(Number(n)) ? `${Number(n)} ${Number(n) === 1 ? 'day' : 'days'}` : `${Number(n).toFixed(1)} days`);
 </script>
 
 <svelte:head>
-	<title>Publish Policies — Champ HR ESS Portal</title>
+	<title>Publish policies — Champ HR</title>
 </svelte:head>
 
 <!-- Title and description come from the Admin Controls layout (src/lib/admin-tabs.ts). -->
 
-<div class="upload-card">
-	<div class="kind-tabs">
-		<button class:active={kind === 'holiday_calendar'} onclick={() => (kind = 'holiday_calendar')}>
-			<CalendarDays size={16} /> Holiday Calendar
-		</button>
-		<button class:active={kind === 'leave_policy'} onclick={() => (kind = 'leave_policy')}>
-			<FileText size={16} /> Leave Policy
-		</button>
+<nav class="ess-tabs ess-tabs--line kinds" aria-label="What to publish">
+	<button type="button" class="ess-tab" aria-selected={kind === 'holiday_calendar'} onclick={() => switchKind('holiday_calendar')}>
+		<CalendarDays size={16} strokeWidth={1.75} /> Holiday calendars
+	</button>
+	<button type="button" class="ess-tab" aria-selected={kind === 'leave_policy'} onclick={() => switchKind('leave_policy')}>
+		<FileText size={16} strokeWidth={1.75} /> Leave policies
+	</button>
+</nav>
+
+<section class="ess-card publish" aria-labelledby="pub-h">
+	<div class="pub-head">
+		<div>
+			<h2 class="ess-h2" id="pub-h">Publish a new {kind === 'holiday_calendar' ? 'holiday calendar' : 'leave policy'}</h2>
+			<p class="ess-caption">Upload the source document and review what was read from it before publishing.</p>
+		</div>
+		<ol class="ess-stepper steps" aria-label="Progress">
+			{#each STEPS as label, i (label)}
+				<li class="ess-step" data-state={i < step ? 'done' : i === step ? 'current' : 'todo'}>
+					<span class="ess-step__dot">{#if i < step}✓{/if}</span>
+					<span class="ess-step__label">{i + 1}. {label}</span>
+				</li>
+			{/each}
+		</ol>
 	</div>
 
-	<UploadSteps
-		steps={['Choose the document', 'Check what was read', 'Publish']}
-		current={step}
-	/>
-
-	<form class="upload-form" onsubmit={handleUpload}>
-		<label class="file-drop">
-			<UploadCloud size={22} />
-			<span>{file ? file.name : 'Choose a JPEG, PNG, or PDF'}</span>
-			<input type="file" accept="image/jpeg,image/png,application/pdf" onchange={onFileChange} />
-		</label>
-		<button type="submit" class="primary" disabled={!file || uploading}>
-			{extracting ? 'Extracting with AI…' : 'Upload & Extract'}
-		</button>
-	</form>
-
 	{#if errorMsg}
-		<p class="error">{errorMsg}</p>
+		<p class="ess-error msg"><AlertTriangle size={15} /> {errorMsg}</p>
 	{/if}
 	{#if successMsg}
-		<p class="success"><CheckCircle size={16} /> {successMsg}</p>
+		<div class="ess-notice ess-notice--success">
+			<span class="ess-notice__icon"><CheckCircle size={15} /></span>
+			<div class="ess-notice__body"><strong>Published.</strong> {successMsg}</div>
+		</div>
 	{/if}
-</div>
 
-{#if kind === 'holiday_calendar' && holidayTables.length > 0}
-	<div class="review-card">
-		<h2>Review extracted holidays</h2>
-		<p class="hint">Edit any row before publishing. Each table below becomes its own shift-group calendar.</p>
-
-		<div class="publish-meta">
-			<label>
-				<span>Calendar Year</span>
-				<input type="number" bind:value={calendarYear} />
-			</label>
-			<label>
-				<span>Effective From</span>
-				<input type="date" bind:value={effectiveFrom} />
-			</label>
+	<div class="pub-grid">
+		<!-- ---------- left: the document ---------- -->
+		<div class="doc">
+			<h3 class="ess-h3">Uploaded document</h3>
+			{#if file}
+				<div class="file-row">
+					<span class="ess-tile" class:ess-tile--bad={isPdf} class:ess-tile--info={!isPdf}>
+						{#if isPdf}<FileText size={20} strokeWidth={1.75} />{:else}<FileImage size={20} strokeWidth={1.75} />{/if}
+					</span>
+					<span class="file-text">
+						<strong>{file.name}</strong>
+						<span>{(file.size / 1024).toFixed(0)} KB · {isPdf ? 'PDF' : 'image'}</span>
+					</span>
+					<button type="button" class="ess-icon-btn" onclick={clearFile} aria-label="Remove file" title="Remove file"><Trash2 size={17} /></button>
+				</div>
+				{#if previewUrl}
+					<div class="doc-preview">
+						{#if isPdf}
+							<iframe src={previewUrl} title="Document preview"></iframe>
+						{:else}
+							<img src={previewUrl} alt="Document preview" />
+						{/if}
+					</div>
+				{/if}
+				{#if !extracted}
+					<form onsubmit={handleUpload} class="extract-row">
+						<button type="submit" class="ess-btn ess-btn--primary" disabled={uploading}>
+							<UploadCloud size={16} /> {extracting ? 'Reading with AI…' : 'Upload & read'}
+						</button>
+						<label class="ess-btn ess-btn--secondary">
+							Replace file
+							<input type="file" accept="image/jpeg,image/png,application/pdf" onchange={onFileChange} hidden />
+						</label>
+					</form>
+				{/if}
+			{:else}
+				<label class="file-drop">
+					<span class="ess-tile"><UploadCloud size={22} strokeWidth={1.75} /></span>
+					<strong>Choose the {kind === 'holiday_calendar' ? 'holiday calendar' : 'leave policy'}</strong>
+					<span>JPEG, PNG or PDF. It is read by AI; you review every value before anything is published.</span>
+					<span class="ess-btn ess-btn--secondary ess-btn--sm">Browse</span>
+					<input type="file" accept="image/jpeg,image/png,application/pdf" onchange={onFileChange} hidden />
+				</label>
+			{/if}
 		</div>
 
-		{#each holidayTables as table, tableIdx (table.shift_group_key)}
-			<div class="table-block">
-				<div class="table-head">
-					<input class="group-label" bind:value={table.shift_group_label} />
-					<code>{table.shift_group_key}</code>
+		<!-- ---------- right: what was read ---------- -->
+		<div class="fields">
+			{#if extracted}
+				<div class="ess-notice">
+					<span class="ess-notice__icon"><AlertTriangle size={15} /></span>
+					<div class="ess-notice__body">
+						<strong>Review extracted values</strong>
+						These were read from your document by AI. Check and correct each one before publishing.
+					</div>
 				</div>
-				<table>
+
+				{#if kind === 'holiday_calendar'}
+					<div class="fields-head">
+						<h3 class="ess-h3">Extracted holidays</h3>
+						<span class="ess-badge ess-badge--accent">Extracted values</span>
+					</div>
+					<div class="meta-row">
+						<label class="ess-field">
+							<span class="ess-label">Calendar year</span>
+							<input class="ess-input" type="number" bind:value={calendarYear} />
+						</label>
+						<label class="ess-field">
+							<span class="ess-label">Effective from</span>
+							<input class="ess-input" type="date" bind:value={effectiveFrom} />
+						</label>
+					</div>
+					<p class="ess-help">Each table becomes its own shift-group calendar. Edit any row before publishing.</p>
+
+					{#each holidayTables as table, tableIdx (table.shift_group_key)}
+						<div class="table-block">
+							<div class="table-head">
+								<input class="group-label" bind:value={table.shift_group_label} aria-label="Shift group name" />
+								<code>{table.shift_group_key}</code>
+							</div>
+							<div class="ess-table-shell">
+								<table class="ess-table edit">
+									<thead>
+										<tr><th>Date</th><th>Name</th><th>Type</th><th></th></tr>
+									</thead>
+									<tbody>
+										{#each table.holidays as row, rowIdx (rowIdx)}
+											<tr>
+												<td><input class="ess-input" type="date" bind:value={row.date} /></td>
+												<td><input class="ess-input" type="text" bind:value={row.name} /></td>
+												<td>
+													<select class="ess-select" bind:value={row.type}>
+														<option value="PUBLIC">Public</option>
+														<option value="RESTRICTED">Restricted</option>
+														<option value="OPTIONAL">Optional</option>
+													</select>
+												</td>
+												<td class="row-act">
+													<button type="button" class="ess-icon-btn" onclick={() => removeHolidayRow(tableIdx, rowIdx)} aria-label="Remove row"><X size={16} /></button>
+												</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+							<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => addHolidayRow(tableIdx)}><Plus size={14} /> Add holiday row</button>
+						</div>
+					{/each}
+
+					<div class="publish-row">
+						<button type="button" class="ess-btn ess-btn--primary" onclick={handlePublishHolidayCalendar} disabled={publishing}>
+							<CloudUpload size={17} /> {publishing ? 'Publishing…' : 'Publish calendar'}
+						</button>
+					</div>
+				{:else}
+					<div class="fields-head">
+						<h3 class="ess-h3">Extracted policy details</h3>
+						<span class="ess-badge ess-badge--accent">Extracted values</span>
+					</div>
+					<label class="ess-field eff">
+						<span class="ess-label">Effective from</span>
+						<input class="ess-input" type="date" bind:value={effectiveFrom} />
+					</label>
+					<p class="ess-help">Publishing upserts by leave type code.</p>
+
+					{#each leaveTypesDraft as lt, idx (idx)}
+						<div class="lt-block">
+							<div class="lt-grid">
+								<label class="ess-field">
+									<span class="ess-label">Leave code</span>
+									<input class="ess-input" type="text" bind:value={lt.code} />
+									<span class="ess-help">Unique code used in the system</span>
+								</label>
+								<label class="ess-field">
+									<span class="ess-label">Policy name</span>
+									<input class="ess-input" type="text" bind:value={lt.name} />
+									<span class="ess-help">Name as it will appear to employees</span>
+								</label>
+								<label class="ess-field">
+									<span class="ess-label">Accrual per month (days)</span>
+									<input class="ess-input" type="number" step="0.1" bind:value={lt.accrual_per_month} />
+									<span class="ess-help">Number of days accrued each month</span>
+								</label>
+								<label class="ess-field">
+									<span class="ess-label">Carry-forward cap (days)</span>
+									<input class="ess-input" type="number" bind:value={lt.carry_forward_cap_days} />
+									<span class="ess-help">Maximum balance carried into the next year</span>
+								</label>
+								<label class="ess-field">
+									<span class="ess-label">Fixed days</span>
+									<input class="ess-input" type="number" bind:value={lt.fixed_days} />
+									<span class="ess-help">For types granted as a fixed block</span>
+								</label>
+								<label class="ess-field">
+									<span class="ess-label">Eligibility</span>
+									<input class="ess-input" type="text" bind:value={lt.eligibility} />
+								</label>
+							</div>
+							<label class="check">
+								<input type="checkbox" bind:checked={lt.requires_documentation} />
+								<span>Requires documentation</span>
+							</label>
+							{#if lt.requires_documentation}
+								<label class="ess-field">
+									<span class="ess-label">Documentation note</span>
+									<input class="ess-input" type="text" bind:value={lt.documentation_note} />
+								</label>
+							{/if}
+							<label class="ess-field">
+								<span class="ess-label">Notes</span>
+								<textarea class="ess-textarea" rows="3" bind:value={lt.notes}></textarea>
+							</label>
+						</div>
+					{/each}
+
+					<div class="publish-row">
+						<button type="button" class="ess-btn ess-btn--primary" onclick={handlePublishLeavePolicy} disabled={publishing}>
+							<CloudUpload size={17} /> {publishing ? 'Publishing…' : 'Publish policy'}
+						</button>
+					</div>
+				{/if}
+			{:else}
+				<div class="waiting">
+					<span class="ess-tile ess-tile--neutral"><FileText size={20} strokeWidth={1.75} /></span>
+					<strong>Nothing to review yet</strong>
+					<span>Choose a document on the left and read it. The values found appear here for you to check and edit before publishing.</span>
+				</div>
+			{/if}
+		</div>
+	</div>
+</section>
+
+<!-- ---------- currently published ---------- -->
+{#if kind === 'holiday_calendar'}
+	<section class="ess-card" aria-labelledby="cur-h">
+		<div class="ess-card-head">
+			<div>
+				<h2 class="ess-h2" id="cur-h">Currently published holiday calendars</h2>
+				<p class="ess-caption">The calendars employees resolve to, one per shift group.</p>
+			</div>
+		</div>
+		{#if data.publishedCalendars.length === 0}
+			<p class="ess-help">No holiday calendar published yet.</p>
+		{:else}
+			<div class="ess-table-shell">
+				<table class="ess-table">
 					<thead>
-						<tr><th>Date</th><th>Name</th><th>Type</th><th></th></tr>
+						<tr>
+							<th>Version</th>
+							<th>Shift group</th>
+							<th class="ess-num">Year</th>
+							<th class="ess-num">Holidays</th>
+							<th>Status</th>
+							<th>Effective from</th>
+							<th>Actions</th>
+						</tr>
 					</thead>
 					<tbody>
-						{#each table.holidays as row, rowIdx (rowIdx)}
+						{#each data.publishedCalendars as cal (cal.id)}
 							<tr>
-								<td><input type="date" bind:value={row.date} /></td>
-								<td><input type="text" bind:value={row.name} /></td>
+								<td class="muted">v{cal.version}</td>
+								<td><strong>{cal.shiftGroupName}</strong></td>
+								<td class="ess-num">{cal.year}</td>
+								<td class="ess-num">{cal.holidays.length}</td>
+								<td><span class="ess-badge ess-badge--ok">Published</span></td>
+								<td>{fmtDate(cal.effectiveFrom)}</td>
 								<td>
-									<select bind:value={row.type}>
-										<option value="PUBLIC">Public</option>
-										<option value="RESTRICTED">Restricted</option>
-										<option value="OPTIONAL">Optional</option>
-									</select>
-								</td>
-								<td>
-									<button type="button" class="link-danger" onclick={() => removeHolidayRow(tableIdx, rowIdx)}
-										>Remove</button
-									>
+									<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm danger" onclick={() => archiveCalendar(cal.id)} disabled={archivingId === cal.id}>
+										{archivingId === cal.id ? 'Archiving…' : 'Archive'}
+									</button>
 								</td>
 							</tr>
 						{/each}
 					</tbody>
 				</table>
-				<button type="button" class="link" onclick={() => addHolidayRow(tableIdx)}>+ Add holiday row</button>
 			</div>
-		{/each}
-
-		<button class="primary" onclick={handlePublishHolidayCalendar} disabled={publishing}>
-			{publishing ? 'Publishing…' : 'Publish Calendar'}
-		</button>
-	</div>
-{/if}
-
-{#if kind === 'leave_policy' && leaveTypesDraft.length > 0}
-	<div class="review-card">
-		<h2>Review extracted leave types</h2>
-		<p class="hint">Edit any field before publishing. Publishing upserts by leave type code.</p>
-
-		<label class="single-meta">
-			<span>Effective From</span>
-			<input type="date" bind:value={effectiveFrom} />
-		</label>
-
-		{#each leaveTypesDraft as lt, idx (idx)}
-			<div class="leave-type-block">
-				<div class="lt-row">
-					<label><span>Code</span><input type="text" bind:value={lt.code} /></label>
-					<label><span>Name</span><input type="text" bind:value={lt.name} /></label>
-				</div>
-				<div class="lt-row">
-					<label><span>Accrual / month</span><input type="number" step="0.1" bind:value={lt.accrual_per_month} /></label>
-					<label><span>Fixed days</span><input type="number" bind:value={lt.fixed_days} /></label>
-					<label><span>Carry-forward cap</span><input type="number" bind:value={lt.carry_forward_cap_days} /></label>
-				</div>
-				<label class="checkbox-row">
-					<input type="checkbox" bind:checked={lt.requires_documentation} />
-					<span>Requires documentation</span>
-				</label>
-				{#if lt.requires_documentation}
-					<label><span>Documentation note</span><input type="text" bind:value={lt.documentation_note} /></label>
-				{/if}
-				<label><span>Notes</span><textarea bind:value={lt.notes}></textarea></label>
-			</div>
-		{/each}
-
-		<button class="primary" onclick={handlePublishLeavePolicy} disabled={publishing}>
-			{publishing ? 'Publishing…' : 'Publish Leave Policy'}
-		</button>
-	</div>
-{/if}
-
-<div class="current-state">
-	<h2>Currently published holiday calendars</h2>
-	<div class="current-grid">
-		{#each data.publishedCalendars as cal (cal.id)}
-			<div class="current-card">
-				<strong>{cal.shiftGroupName} · {cal.year} · v{cal.version}</strong>
-				<span>{cal.holidays.length} holidays</span>
-				<button
-					type="button"
-					class="link-danger archive-btn"
-					onclick={() => archiveCalendar(cal.id)}
-					disabled={archivingId === cal.id}
-				>
-					{archivingId === cal.id ? 'Archiving…' : 'Archive'}
-				</button>
-			</div>
-		{/each}
-		{#if data.publishedCalendars.length === 0}
-			<p class="empty">No holiday calendar published yet.</p>
 		{/if}
-	</div>
-
-	<h2>Currently published leave types</h2>
-	<div class="current-grid">
-		{#each data.leaveTypes as lt (lt.id)}
-			<div class="current-card">
-				<strong>{lt.code ?? lt.name}</strong>
-				<span>{lt.name} · v{lt.policyVersion}</span>
-				<!--
-					How fast the balance may be drawn down, which is a separate question
-					from how much of it someone has. Blank is no limit, and is what ships:
-					the published policy sets an accrual rate and a carry-forward cap and
-					says nothing about a per-month ceiling.
-				-->
-				<label class="cap-field">
-					<span>Max per month</span>
-					<input
-						type="number"
-						min="0.5"
-						step="0.5"
-						placeholder="no limit"
-						value={lt.monthlyUsageCap ?? ''}
-						disabled={savingCapId === lt.id}
-						onchange={(e) => saveMonthlyCap(lt.id, e.currentTarget.value)}
-					/>
-					<span class="cap-unit">days</span>
-				</label>
-				{#if capError[lt.id]}
-					<span class="cap-error">{capError[lt.id]}</span>
-				{/if}
-				{#if confirmingDeleteType === lt.id}
-					<span class="card-actions">
-						<button
-							type="button"
-							class="link-danger"
-							onclick={() => deleteLeaveType(lt.id)}
-							disabled={deletingTypeId === lt.id}
-						>
-							{deletingTypeId === lt.id ? 'Deleting…' : 'Confirm delete'}
-						</button>
-						<button type="button" class="link" onclick={() => (confirmingDeleteType = null)}>
-							Cancel
-						</button>
-					</span>
-				{:else}
-					<span class="card-actions">
-						<button
-							type="button"
-							class="link-danger archive-btn"
-							onclick={() => archiveLeaveType(lt.id)}
-							disabled={archivingId === lt.id}
-						>
-							{archivingId === lt.id ? 'Archiving…' : 'Archive'}
-						</button>
-						<button
-							type="button"
-							class="link-danger archive-btn"
-							onclick={() => (confirmingDeleteType = lt.id)}
-							title="Permanently delete this leave type and all leave taken under it"
-						>
-							Delete
-						</button>
-					</span>
-				{/if}
+	</section>
+{:else}
+	<section class="ess-card" aria-labelledby="curl-h">
+		<div class="ess-card-head">
+			<div>
+				<h2 class="ess-h2" id="curl-h">Currently published policies</h2>
+				<p class="ess-caption">The leave types currently in effect. "Max per month" limits how fast a balance may be drawn down; blank is no limit.</p>
 			</div>
-		{/each}
+		</div>
 		{#if data.leaveTypes.length === 0}
-			<p class="empty">No leave policy published yet.</p>
+			<p class="ess-help">No leave policy published yet.</p>
+		{:else}
+			<div class="ess-table-shell">
+				<table class="ess-table">
+					<thead>
+						<tr>
+							<th>Version</th>
+							<th>Policy name</th>
+							<th>Code</th>
+							<th>Accrual per month</th>
+							<th>Carry-forward cap</th>
+							<th>Max per month</th>
+							<th>Status</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.leaveTypes as lt (lt.id)}
+							<tr>
+								<td class="muted">v{lt.policyVersion}</td>
+								<td><strong>{lt.name}</strong></td>
+								<td class="mono">{lt.code ?? '—'}</td>
+								<td>{lt.monthlyQuotaDays != null ? `${fmtDays(lt.monthlyQuotaDays)} quota` : lt.fixedDays != null ? `${lt.fixedDays} fixed` : fmtDays(lt.accrualPerMonth)}</td>
+								<td>{fmtDays(lt.carryForwardCap)}</td>
+								<td>
+									<span class="cap">
+										<input
+											class="ess-input cap-input"
+											type="number"
+											min="0.5"
+											step="0.5"
+											placeholder="no limit"
+											value={lt.monthlyUsageCap ?? ''}
+											disabled={savingCapId === lt.id}
+											onchange={(e) => saveMonthlyCap(lt.id, e.currentTarget.value)}
+											aria-label="Max per month for {lt.name}"
+										/>
+										<span class="muted">days</span>
+									</span>
+									{#if capError[lt.id]}<span class="ess-error">{capError[lt.id]}</span>{/if}
+								</td>
+								<td><span class="ess-badge ess-badge--ok">Published</span></td>
+								<td>
+									{#if confirmingDeleteType === lt.id}
+										<span class="acts">
+											<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" onclick={() => deleteLeaveType(lt.id)} disabled={deletingTypeId === lt.id}>
+												{deletingTypeId === lt.id ? 'Deleting…' : 'Confirm delete'}
+											</button>
+											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (confirmingDeleteType = null)}>Cancel</button>
+										</span>
+									{:else}
+										<span class="acts">
+											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => archiveLeaveType(lt.id)} disabled={archivingId === lt.id}>
+												{archivingId === lt.id ? 'Archiving…' : 'Archive'}
+											</button>
+											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm danger" onclick={() => (confirmingDeleteType = lt.id)} title="Permanently delete this leave type and all leave taken under it">
+												Delete
+											</button>
+										</span>
+									{/if}
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 		{/if}
-	</div>
-</div>
+	</section>
+{/if}
 
 <style>
-
-	.upload-card,
-	.review-card,
-	.current-state {
-		background: var(--ess-sunken);
-		border-radius: var(--ess-radius-lg);
-		padding: 1.5rem;
-		margin-bottom: 1.5rem;
-		max-width: 780px;
+	.kinds {
+		margin-bottom: 20px;
 	}
 
-	.kind-tabs {
+	.pub-head {
 		display: flex;
-		gap: 0.5rem;
-		margin-bottom: 1rem;
-	}
-
-	.kind-tabs button {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		padding: 0.5rem 1rem;
-		border-radius: var(--ess-radius-md);
-		border: 1px solid transparent;
-		background: var(--ess-surface);
-		cursor: pointer;
-		font-size: 0.85rem;
-	}
-
-	.kind-tabs button.active {
-		border-color: var(--ess-primary);
-		color: var(--ess-primary-text);
-		font-weight: 700;
-	}
-
-	.upload-form {
-		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 24px;
 		flex-wrap: wrap;
-		gap: 1rem;
-		align-items: center;
+		margin-bottom: 18px;
 	}
-
-	.file-drop {
-		flex: 1;
+	.steps {
+		min-width: 420px;
+		flex: 0 1 460px;
+	}
+	.msg {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		padding: 1rem;
+		gap: 6px;
+		margin-bottom: 12px;
+	}
+	.ess-notice {
+		margin-bottom: 14px;
+	}
+
+	.pub-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+		gap: 20px;
+		align-items: start;
+	}
+	.doc,
+	.fields {
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
+		padding: 18px;
+		display: grid;
+		gap: 14px;
+		align-content: start;
+		min-width: 0;
+	}
+	.file-row {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 14px;
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
+	}
+	.file-text {
+		flex: 1;
+		display: grid;
+		min-width: 0;
+	}
+	.file-text strong {
+		font-size: 14.5px;
+		font-weight: 500;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.file-text span {
+		font-size: 12.5px;
+		color: var(--ess-text-muted);
+	}
+	.doc-preview {
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-sunken);
+		overflow: hidden;
+		max-height: 520px;
+	}
+	.doc-preview iframe {
+		display: block;
+		width: 100%;
+		height: 520px;
+		border: 0;
+	}
+	.doc-preview img {
+		display: block;
+		width: 100%;
+		max-height: 520px;
+		object-fit: contain;
+	}
+	.extract-row {
+		display: flex;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+	.file-drop {
+		display: grid;
+		justify-items: center;
+		gap: 8px;
+		padding: 36px 20px;
 		border: 1px dashed var(--ess-border-strong);
 		border-radius: var(--ess-radius-md);
-		background: var(--ess-surface);
+		background: var(--ess-sunken);
+		text-align: center;
 		cursor: pointer;
-		font-size: 0.85rem;
+		transition: border-color var(--ess-t-fast);
+	}
+	.file-drop:hover {
+		border-color: var(--ess-primary);
+	}
+	.file-drop strong {
+		font-size: 15px;
+		font-weight: 500;
+	}
+	.file-drop > span:not(.ess-tile):not(.ess-btn) {
+		font-size: 13px;
+		color: var(--ess-text-secondary);
+		max-width: 36ch;
 	}
 
-	.file-drop input {
-		display: none;
-	}
-
-	button.primary {
-		background: var(--ess-primary);
-		color: var(--ess-text-on-primary);
-		border: none;
-		padding: 0.7rem 1.25rem;
-		border-radius: var(--ess-radius-md);
-		cursor: pointer;
-		font-weight: 600;
-		white-space: nowrap;
-	}
-
-	button.primary:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
-	.error {
-		color: var(--ess-danger);
-		margin-top: 0.75rem;
-		font-size: 0.85rem;
-	}
-
-	.success {
+	.fields-head {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
-		color: var(--ess-success);
-		margin-top: 0.75rem;
-		font-size: 0.85rem;
+		justify-content: space-between;
+		gap: 12px;
 	}
-
-	.hint {
-		font-size: 0.8rem;
-		color: var(--ess-text-secondary);
-		margin-bottom: 1rem;
+	.meta-row,
+	.lt-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 14px;
 	}
-
-	.publish-meta,
-	.single-meta {
-		display: flex;
-		gap: 1rem;
-		margin-bottom: 1.25rem;
+	.eff {
+		max-width: 260px;
 	}
-
-	.publish-meta label,
-	.single-meta {
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-		font-size: 0.8rem;
-	}
-
 	.table-block {
-		background: var(--ess-surface);
-		border-radius: var(--ess-radius-md);
-		padding: 1rem;
-		margin-bottom: 1rem;
+		display: grid;
+		gap: 10px;
 	}
-
 	.table-head {
 		display: flex;
 		align-items: center;
-		gap: 0.6rem;
-		margin-bottom: 0.6rem;
+		gap: 10px;
 	}
-
 	.group-label {
-		font-weight: 700;
-		border: none;
-		background: transparent;
-		font-size: 0.95rem;
-	}
-
-	.table-head code {
-		font-size: 0.7rem;
-		color: var(--ess-text-secondary);
-		background: var(--ess-sunken);
-		padding: 0.15rem 0.4rem;
-		border-radius: 4px;
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 0.82rem;
-	}
-
-	th {
-		text-align: left;
-		color: var(--ess-text-secondary);
+		flex: 1;
+		font-family: var(--ess-font-display);
+		font-size: 18px;
 		font-weight: 600;
-		padding: 0.3rem;
-	}
-
-	td {
-		padding: 0.25rem;
-	}
-
-	td input,
-	td select {
-		width: 100%;
-		border: 1px solid var(--ess-border-strong);
-		border-radius: 4px;
-		padding: 0.3rem;
-	}
-
-	.link,
-	.link-danger {
-		background: none;
 		border: none;
-		font-size: 0.78rem;
-		cursor: pointer;
-		padding: 0.2rem 0;
+		border-bottom: 1px dashed transparent;
+		background: transparent;
+		color: var(--ess-text);
+		padding: 2px 0;
+	}
+	.group-label:hover,
+	.group-label:focus {
+		border-bottom-color: var(--ess-border-strong);
+		outline: none;
+		box-shadow: none;
+	}
+	code,
+	.mono {
+		font-family: var(--ess-font-mono);
+		font-size: 12px;
+		color: var(--ess-text-muted);
+	}
+	.edit td {
+		padding: 6px 10px;
+	}
+	.edit th {
+		padding: 8px 10px;
+	}
+	.edit .ess-input,
+	.edit .ess-select {
+		padding: 7px 10px;
+		font-size: 13px;
+	}
+	.row-act {
+		width: 48px;
+	}
+	.lt-block {
+		display: grid;
+		gap: 12px;
+		padding: 14px;
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
+	}
+	.check {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 13.5px;
+	}
+	.check input {
+		accent-color: var(--ess-primary);
+	}
+	.publish-row {
+		display: flex;
+		justify-content: flex-end;
+		padding-top: 4px;
+	}
+	.waiting {
+		display: grid;
+		justify-items: center;
+		gap: 8px;
+		padding: 48px 24px;
+		text-align: center;
+		color: var(--ess-text-secondary);
+		font-size: 13.5px;
+	}
+	.waiting strong {
+		color: var(--ess-text);
+		font-size: 15px;
+	}
+	.waiting span:not(.ess-tile) {
+		max-width: 40ch;
 	}
 
-	.link {
-		color: var(--ess-primary-text);
+	.muted {
+		color: var(--ess-text-muted);
 	}
-
-	.link-danger {
+	.cap {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+	}
+	.cap-input {
+		width: 88px;
+		padding: 6px 8px;
+		font-size: 13px;
+	}
+	.acts {
+		display: inline-flex;
+		gap: 4px;
+	}
+	.danger {
+		color: var(--ess-danger);
+	}
+	.danger:hover:not(:disabled) {
+		background: var(--ess-danger-bg);
 		color: var(--ess-danger);
 	}
 
-	.leave-type-block {
-		background: var(--ess-surface);
-		border-radius: var(--ess-radius-md);
-		padding: 1rem;
-		margin-bottom: 1rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.6rem;
+	@media (max-width: 1100px) {
+		.pub-grid {
+			grid-template-columns: 1fr;
+		}
+		.steps {
+			min-width: 0;
+			flex: 1 1 100%;
+		}
 	}
-
-	.lt-row {
-		display: flex;
-		gap: 1rem;
-	}
-
-	.lt-row label,
-	.leave-type-block > label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		font-size: 0.78rem;
-		flex: 1;
-	}
-
-	.checkbox-row {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.82rem;
-	}
-
-	input,
-	select,
-	textarea {
-		font-family: inherit;
-		padding: 0.45rem;
-		border-radius: 6px;
-		border: 1px solid var(--ess-border-strong);
-		color: var(--ess-text);
-		background: var(--ess-surface);
-	}
-
-	.current-state h2 {
-		font-size: 1rem;
-		margin-bottom: 0.75rem;
-	}
-
-	.current-state h2:not(:first-child) {
-		margin-top: 1.5rem;
-	}
-
-	.current-grid {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.75rem;
-		margin-bottom: 1rem;
-	}
-
-	.current-card {
-		background: var(--ess-surface);
-		border-radius: var(--ess-radius-md);
-		padding: 0.75rem 1rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.2rem;
-		font-size: 0.8rem;
-		min-width: 140px;
-	}
-
-	.cap-field {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		margin-top: 0.45rem;
-		font-size: 0.72rem;
-		color: var(--ess-text-muted);
-	}
-
-	.cap-field input {
-		width: 5rem;
-		padding: 0.25rem 0.4rem;
-		border: 1px solid var(--ess-border);
-		border-radius: var(--ess-radius-sm);
-		background: var(--ess-surface);
-		color: var(--ess-text);
-		font-size: 0.75rem;
-	}
-
-	.cap-unit {
-		opacity: 0.7;
-	}
-
-	.cap-error {
-		font-size: 0.7rem;
-		color: var(--ess-danger, #b3261e);
-	}
-
-	.archive-btn {
-		align-self: flex-start;
-		margin-top: 0.2rem;
-	}
-
-	.card-actions {
-		display: flex;
-		gap: 0.75rem;
-		align-items: center;
-		margin-top: 0.2rem;
-	}
-
-	.archive-btn:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
-	.empty {
-		font-size: 0.82rem;
-		color: var(--ess-text-secondary);
+	@media (max-width: 640px) {
+		.meta-row,
+		.lt-grid {
+			grid-template-columns: 1fr;
+		}
 	}
 </style>

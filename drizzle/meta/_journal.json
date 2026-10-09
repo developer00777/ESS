@@ -176,6 +176,13 @@
       "when": 1791462016603,
       "tag": "0024_task_approval_and_scheduling",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791466279672,
+      "tag": "0025_login_email_approval",
+      "breakpoints": true
     }
   ]
 }

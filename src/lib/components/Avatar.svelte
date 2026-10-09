@@ -25,15 +25,21 @@
 			.toUpperCase()
 	);
 
-	const src = $derived(
-		`/api/profile-picture/${userId}${version ? `?v=${encodeURIComponent(String(version))}` : ''}`
-	);
+	// Each person gets one of a few quiet tints, picked from their id so it is
+	// the same on every screen.
+	const tint = $derived.by(() => {
+		let h = 0;
+		for (const ch of userId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+		return ['lavender', 'mint', 'peach', 'sky', 'rose'][h % 5];
+	});
+
+	const src = $derived(`/api/profile-picture/${userId}${version ? `?v=${encodeURIComponent(String(version))}` : ''}`);
 </script>
 
 {#if hasPicture && !failed}
 	<img class="avatar avatar--{size}" {src} alt={fullName} onerror={() => (failed = true)} />
 {:else}
-	<span class="avatar avatar--{size}" aria-hidden="true">{initials}</span>
+	<span class="avatar avatar--{size}" data-tint={tint} aria-hidden="true">{initials}</span>
 {/if}
 
 <style>
@@ -42,41 +48,56 @@
 		place-items: center;
 		border-radius: 50%;
 		flex-shrink: 0;
-		background: linear-gradient(150deg, var(--acc2), var(--acc));
-		color: var(--ess-text-on-primary);
-		font-weight: 700;
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
+		font-weight: 600;
+		letter-spacing: 0.01em;
 		object-fit: cover;
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.5),
-			0 6px 16px -8px var(--glow);
+	}
+
+	.avatar[data-tint='mint'] {
+		background: var(--ess-success-bg);
+		color: var(--ess-success);
+	}
+	.avatar[data-tint='peach'] {
+		background: var(--ess-warning-bg);
+		color: var(--ess-warning);
+	}
+	.avatar[data-tint='sky'] {
+		background: var(--ess-info-bg);
+		color: var(--ess-info);
+	}
+	.avatar[data-tint='rose'] {
+		background: var(--ess-pink-bg);
+		color: var(--ess-pink);
 	}
 
 	.avatar--sm {
-		width: 26px;
-		height: 26px;
-		font-size: 10px;
+		width: 28px;
+		height: 28px;
+		font-size: 11px;
 	}
 
 	.avatar--md {
-		width: 34px;
-		height: 34px;
-		font-size: var(--ess-fs-caption);
+		width: 36px;
+		height: 36px;
+		font-size: 13px;
 	}
 
 	.avatar--lg {
 		width: 56px;
 		height: 56px;
-		font-size: var(--ess-fs-h2);
+		font-size: 20px;
 	}
 
 	.avatar--xl {
 		width: 104px;
 		height: 104px;
-		font-size: 34px;
+		font-size: 36px;
+		font-family: var(--ess-font-display);
 	}
 
 	img.avatar {
-		/* The gradient is the initials background; an image covers it entirely. */
 		background: var(--ess-sunken);
 	}
 </style>

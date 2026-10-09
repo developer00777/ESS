@@ -12,7 +12,7 @@ import { actionLines, assignMode, TASK_PRIORITIES, type Reach, type TaskPriority
 import type { MeetingItemView, MeetingRowView, MeetingSummary, MeetingView, PersonRef } from '$lib/tasks/types';
 import { assignableFor, createTask, loadOrg, reachFor, treeOf, type Result } from '$lib/server/tasks/service';
 import { extractItems, type Attendee } from './extract';
-import { createZoomMeeting, defaultZoomHost, deleteZoomMeeting, listSummaries, meetingSummary, pastParticipants, recordStatus, zoomConfigured, zoomStartUrl, ZoomError, type ZoomSummary } from '$lib/server/zoom/client';
+import { createZoomMeeting, defaultZoomHost, deleteZoomMeeting, listSummaries, zoomUserCheck, meetingSummary, pastParticipants, recordStatus, zoomConfigured, zoomStartUrl, ZoomError, type ZoomSummary } from '$lib/server/zoom/client';
 
 /**
  * Meetings and their minutes.
@@ -580,30 +580,36 @@ export async function zoomAccountFor(userId: string): Promise<{ key: string; lin
 	return u ? { key: u.email.toLowerCase(), linked: false } : null;
 }
 
-export type HostOption = { value: string; label: string; detail: string };
+export type HostOption = { value: string; label: string; detail: string; isDefault: boolean };
 
 /**
- * Whose account can host a meeting this person schedules: their own, any
- * lead above them in the reporting line, or the company account.
+ * Whose account can host a meeting this person schedules. The company account
+ * (ZOOM_DEFAULT_HOST, or found in Zoom when unset) comes first and is what is used when nobody picks
+ * anything. Their own account, and those of the leads above them, are offered
+ * as well, but only when Zoom confirms that person is a licensed user in the
+ * company account, so the list never offers a host that would fail.
  */
 export async function hostOptions(viewer: SessionUser): Promise<HostOption[]> {
 	const org = await loadOrg();
 	const out: HostOption[] = [];
-	const mine = await zoomAccountFor(viewer.id);
-	if (mine) out.push({ value: 'self', label: 'My Zoom account', detail: mine.linked ? mine.key : `${mine.key} (if you have a Zoom licence)` });
+	const def = await defaultZoomHost();
+	if (def) out.push({ value: 'default', label: 'Company account (default)', detail: def, isDefault: true });
+
+	const offer = async (userId: string, value: string, label: string) => {
+		const acc = await zoomAccountFor(userId);
+		if (!acc || acc.key.toLowerCase() === def?.toLowerCase()) return;
+		const check = await zoomUserCheck(acc.key);
+		if (check.licensed) out.push({ value, label, detail: acc.key, isDefault: false });
+	};
+	await offer(viewer.id, 'self', 'My Zoom account');
 	const seen = new Set([viewer.id]);
 	let up = org.byId.get(viewer.id)?.reportsTo ?? null;
 	while (up && !seen.has(up)) {
 		seen.add(up);
 		const lead = org.byId.get(up);
-		if (lead?.isActive) {
-			const acc = await zoomAccountFor(up);
-			if (acc) out.push({ value: up, label: `${lead.fullName}'s account`, detail: acc.linked ? acc.key : acc.key + ' (if they have a Zoom licence)' });
-		}
+		if (lead?.isActive) await offer(up, up, `${lead.fullName}'s account`);
 		up = lead?.reportsTo ?? null;
 	}
-	const def = defaultZoomHost();
-	if (def) out.push({ value: 'default', label: 'Company account', detail: def });
 	return out;
 }
 
@@ -628,10 +634,11 @@ export async function scheduleMeeting(viewer: SessionUser, input: ScheduleInput)
 	let joinUrl: string | null = null;
 	let hostEmail: string | null = viewer.email;
 	if (zoomConfigured()) {
-		// Only hosts this person may use: themselves, a lead above them, or the company account.
+		// Nothing picked, or something not offered: the company account hosts.
+		// Only with no company account set is the person's own account tried.
 		const options = await hostOptions(viewer);
-		const choice = input.host && input.host !== 'self' ? input.host : 'self';
-		if (!options.some((o) => o.value === choice)) return { ok: false, message: 'Pick one of the host accounts offered' };
+		const picked = input.host && options.some((o) => o.value === input.host) ? input.host : null;
+		const choice = picked ?? (options.some((o) => o.value === 'default') ? 'default' : 'self');
 		const chosen = choice === 'default' ? null : await zoomAccountFor(choice === 'self' ? viewer.id : choice);
 		try {
 			const z = await createZoomMeeting({ hosts: chosen ? [chosen.key] : [], topic, startLocal: `${input.date}T${input.time}:00`, durationMin: duration, agenda });
@@ -641,7 +648,7 @@ export async function scheduleMeeting(viewer: SessionUser, input: ScheduleInput)
 		} catch (err) {
 			console.error('[meetings] could not create the video call:', err);
 			await recordStatus({ lastError: err instanceof Error ? err.message : String(err) }).catch(() => {});
-			return { ok: false, message: err instanceof ZoomError && err.status === 400 && err.message.startsWith('Video') ? err.message : 'The video call could not be set up. Try again, or tell HR if it keeps happening.' };
+			return { ok: false, message: scheduleFailureMessage(err) };
 		}
 	}
 	const [m] = await db
@@ -662,6 +669,26 @@ export async function scheduleMeeting(viewer: SessionUser, input: ScheduleInput)
 	await publish([viewer.id, ...invited], { type: 'meetings.changed', meetingId: m.id });
 	await logActivity({ actorUserId: viewer.id, action: 'meeting.schedule', targetType: 'meeting', targetId: m.id, details: { topic, invited: invited.length, video: !!joinUrl } }).catch(() => {});
 	return { ok: true, id: m.id };
+}
+
+/**
+ * What went wrong creating the call, in words the person scheduling can act
+ * on (or pass to HR). The raw Zoom error is in the server log and on Admin
+ * Controls › Zoom as "Last problem".
+ */
+function scheduleFailureMessage(err: unknown): string {
+	if (!(err instanceof ZoomError)) return 'The video call could not be set up. Try again, or tell HR if it keeps happening.';
+	if (err.status === 400 && err.message.startsWith('Video')) return err.message;
+	// 4711: the token lacks a scope. 124: invalid or revoked token.
+	if (err.code === 4711 || /does not contain scopes|scope/i.test(err.message)) {
+		return 'The company Zoom app is not allowed to create meetings yet. Ask HR to add the "create meetings" permission (meeting:write:meeting:admin) to the Zoom app.';
+	}
+	if (err.code === 124 || err.status === 401) return 'The company Zoom app was refused by Zoom. Ask HR to check its keys in Admin Controls › Zoom.';
+	if (err.status === 404 || err.code === 1001 || err.code === 1120) {
+		return "That host account is not a licensed user in the company Zoom account. Pick another host, or ask HR to set ZOOM_DEFAULT_HOST.";
+	}
+	if (err.status === 429) return 'Zoom is limiting requests right now. Try again in a minute.';
+	return 'The video call could not be set up. Try again, or tell HR if it keeps happening.';
 }
 
 export async function cancelMeeting(viewer: SessionUser, meetingId: string): Promise<Result> {

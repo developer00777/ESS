@@ -1,17 +1,36 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { tick } from 'svelte';
 	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
+	import Info from '@lucide/svelte/icons/info';
+	import Check from '@lucide/svelte/icons/check';
+	import X from '@lucide/svelte/icons/x';
+	import Gift from '@lucide/svelte/icons/gift';
 
+	/**
+	 * "Raise attendance correction" — a right-hand drawer over the Attendance
+	 * page. A correction asks HR to review the record; it never rewrites the
+	 * biometric punch itself.
+	 *
+	 * Controlled by the page: `open` is bindable, `initialDate` pre-fills the
+	 * date when opened from a calendar day, and `recordFor` lets the drawer
+	 * show the current biometric record beside the request.
+	 */
 	interface Props {
+		open?: boolean;
 		/** Pre-fills the date when opened from a specific calendar cell. */
 		initialDate?: string;
 		monthlyUsed?: number;
 		monthlyCap?: number;
+		/** The current record for a date, shown beside the form. */
+		recordFor?: (date: string) => { checkIn: string | null; checkOut: string | null } | null;
+		/** The person chose the Comp-off tab: the page opens the comp-off claim instead. */
+		oncompoff?: () => void;
 	}
 
-	let { initialDate = '', monthlyUsed = 0, monthlyCap = 3 }: Props = $props();
+	let { open = $bindable(false), initialDate = '', monthlyUsed = 0, monthlyCap = 3, recordFor, oncompoff }: Props = $props();
 
 	const REASONS = [
 		{ value: 'login_not_captured', label: 'Login not captured', capped: true },
@@ -27,7 +46,6 @@
 		{ value: 'incorrect_working_hours', label: 'Incorrect working hours', capped: false }
 	];
 
-	let open = $state(false);
 	let date = $state(initialDate);
 	let reason = $state('missing_biometric_punch');
 	let description = $state('');
@@ -35,7 +53,26 @@
 	let claimedCheckOut = $state('');
 	let submitting = $state(false);
 	let errorMsg = $state('');
+	let tab = $state<'correction' | 'compoff'>('correction');
 	let result = $state<{ status: string; aiSummary: string | null; aiEvidenceNote: string | null; aiFlags: string[]; aiConfidence: string | null; triaged: boolean } | null>(null);
+	let firstField = $state<HTMLInputElement | null>(null);
+
+	const today = new Date().toISOString().slice(0, 10);
+	const MAX_DESCRIPTION = 500;
+
+	// Opening from a calendar day pre-fills that day; a sensible reason follows
+	// from what the record is missing.
+	$effect(() => {
+		if (!open) return;
+		date = initialDate || date;
+		const rec = initialDate && recordFor ? recordFor(initialDate) : null;
+		if (rec && rec.checkIn && !rec.checkOut) reason = 'logout_not_captured';
+		else if (rec && !rec.checkIn && rec.checkOut) reason = 'login_not_captured';
+		tab = 'correction';
+		void tick().then(() => firstField?.focus());
+	});
+
+	const current = $derived(date && recordFor ? recordFor(date) : null);
 
 	const selectedCapped = $derived(REASONS.find((r) => r.value === reason)?.capped ?? false);
 	const willExceedCap = $derived(selectedCapped && monthlyUsed >= monthlyCap);
@@ -46,11 +83,8 @@
 	const canSubmit = $derived(Boolean(date) && described >= MIN_DESCRIPTION && !submitting);
 
 	/**
-	 * Why the button is disabled, said out loud.
-	 *
-	 * A greyed-out Submit with nothing next to it is indistinguishable from a
-	 * broken form — someone who typed a couple of characters has no way to know a
-	 * minimum exists, so they retry the same thing or give up.
+	 * Why the button is disabled, said out loud: a greyed-out Submit with
+	 * nothing next to it is indistinguishable from a broken form.
 	 */
 	const blockedBecause = $derived.by(() => {
 		if (!date) return 'Pick the date this applies to.';
@@ -62,6 +96,8 @@
 		return null;
 	});
 
+	const fmtDate = (d: string) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'long' }) : '');
+
 	function reset() {
 		date = initialDate;
 		reason = 'missing_biometric_punch';
@@ -70,6 +106,11 @@
 		claimedCheckOut = '';
 		errorMsg = '';
 		result = null;
+	}
+
+	function close() {
+		open = false;
+		reset();
 	}
 
 	async function submit() {
@@ -102,6 +143,10 @@
 		}
 	}
 
+	function onKey(e: KeyboardEvent) {
+		if (e.key === 'Escape' && open) close();
+	}
+
 	const FLAG_LABELS: Record<string, string> = {
 		no_prohance_activity: 'No ProHance activity found',
 		prohance_supports_claim: 'ProHance activity supports the claim',
@@ -114,31 +159,40 @@
 	};
 </script>
 
-<div class="deviation-block">
-	{#if !open}
-		<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (open = true)}>
-			<AlertTriangle size={14} /> Raise attendance deviation
-		</button>
-	{:else}
-		<div class="panel">
-			<div class="panel-head">
-				<strong><AlertTriangle size={15} /> Attendance correction request</strong>
-				<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => { open = false; reset(); }}>
-					Close
-				</button>
-			</div>
+<svelte:window onkeydown={onKey} />
 
+{#if open}
+	<div class="ess-scrim scrim" role="presentation" onclick={close}></div>
+	<div class="ess-drawer drawer" role="dialog" aria-modal="true" aria-labelledby="dev-title">
+		<header class="head">
+			<div>
+				<h2 id="dev-title" class="ess-h2">Raise attendance correction</h2>
+				<p class="sub">Request a correction for a missing or incorrect check-in / check-out. Your request is reviewed by HR and, past the monthly limit, your manager.</p>
+			</div>
+			<button type="button" class="ess-icon-btn" onclick={close} aria-label="Close"><X size={18} /></button>
+		</header>
+
+		{#if !result}
+			<div class="tabs" role="tablist">
+				<button type="button" role="tab" aria-selected={tab === 'correction'} onclick={() => (tab = 'correction')}>Correction</button>
+				<button type="button" role="tab" aria-selected={tab === 'compoff'} onclick={() => (tab = 'compoff')}>Comp-off</button>
+			</div>
+		{/if}
+
+		<div class="body">
 			{#if result}
 				<div class="outcome">
-					<p class="outcome-head">
-						<CheckCircle2 size={16} />
-						{#if result.status === 'needs_manager_approval'}
-							Submitted — this is past your {monthlyCap}-per-month limit, so it needs both HR and your
-							Reporting Manager.
-						{:else}
-							Submitted for HR review.
-						{/if}
-					</p>
+					<div class="ess-notice ess-notice--success">
+						<span class="ess-notice__icon"><CheckCircle2 size={15} /></span>
+						<div class="ess-notice__body">
+							<strong>Submitted for review.</strong>
+							{#if result.status === 'needs_manager_approval'}
+								This is past your {monthlyCap}-per-month limit, so it needs both HR and your reporting manager.
+							{:else}
+								HR will review it against the records and let you know.
+							{/if}
+						</div>
+					</div>
 
 					{#if result.triaged && result.aiSummary}
 						<div class="ai-card">
@@ -155,251 +209,384 @@
 								</div>
 							{/if}
 							<p class="ai-disclaimer">
-								This is an automated reading of your request against the attendance records. It does
-								not approve or reject anything — HR reviews every request.
+								This is an automated reading of your request against the attendance records. It does not approve or reject anything — HR reviews every request.
 							</p>
 						</div>
 					{/if}
 
-					<button type="button" class="ess-btn ess-btn--sm" onclick={() => { reset(); open = false; }}>
-						Done
-					</button>
+					<div class="progress">
+						<span class="progress-title">Request progress</span>
+						<ol class="ess-stepper ess-stepper--center">
+							<li class="ess-step" data-state="done"><span class="ess-step__dot"><Check size={12} strokeWidth={3} /></span><span class="ess-step__label">Submitted</span><span class="ess-step__meta">Just now</span></li>
+							<li class="ess-step" data-state="current"><span class="ess-step__dot"></span><span class="ess-step__label">HR review</span><span class="ess-step__meta">In progress</span></li>
+							<li class="ess-step" data-state="todo"><span class="ess-step__dot"></span><span class="ess-step__label">Resolved</span><span class="ess-step__meta">You’ll be notified</span></li>
+						</ol>
+					</div>
+				</div>
+			{:else if tab === 'compoff'}
+				<div class="compoff-tab">
+					<span class="ess-tile"><Gift size={20} strokeWidth={1.75} /></span>
+					<h3 class="ess-h3">Worked on a holiday or week off?</h3>
+					<p>That is not a correction — it earns a comp-off. Work 7+ hours on a holiday or your week off, claim it, and your reporting manager approves it. Spend it within 3 months by applying for Comp-Off leave.</p>
+					<button type="button" class="ess-btn ess-btn--primary" onclick={() => { close(); oncompoff?.(); }}>Request comp-off</button>
 				</div>
 			{:else}
-				<p class="hint">
-					Raise this when your attendance wasn't captured correctly — a missed punch, a missing
-					login/logout, or a day wrongly marked Half Day or Absent.
-				</p>
-
-				<div class="cap-line" class:cap-warn={willExceedCap}>
-					Biometric-related requests used this month: <strong>{monthlyUsed} of {monthlyCap}</strong>
-					{#if willExceedCap}
-						— further requests need HR <em>and</em> your Reporting Manager.
-					{/if}
+				<div class="ess-notice ess-notice--info">
+					<span class="ess-notice__icon"><Info size={15} /></span>
+					<div class="ess-notice__body">You are requesting an attendance correction, not a change to the biometric record. HR reviews it against your attendance and ProHance records.</div>
 				</div>
 
-				<div class="grid">
-					<label>
-						<span>Date</span>
-						<input class="ess-input" type="date" bind:value={date} max={new Date().toISOString().slice(0, 10)} />
-					</label>
-					<label>
-						<span>Reason</span>
-						<select class="ess-select" bind:value={reason}>
-							{#each REASONS as r (r.value)}
-								<option value={r.value}>{r.label}</option>
-							{/each}
-						</select>
-					</label>
-					<label>
-						<span>Actual in (optional)</span>
+				<div class="cap-line" class:cap-warn={willExceedCap}>
+					<span>Monthly allowance</span>
+					<strong>{Math.min(monthlyUsed, monthlyCap)} of {monthlyCap} used</strong>
+					<span class="ess-meter ess-meter--thin" class:ess-meter--warn={willExceedCap}><span style="width:{Math.min(100, (monthlyUsed / monthlyCap) * 100)}%"></span></span>
+					<small>
+						{#if willExceedCap}
+							Biometric-related requests past the limit need HR <em>and</em> your reporting manager.
+						{:else}
+							{monthlyCap - monthlyUsed} remaining this month for biometric-related requests.
+						{/if}
+					</small>
+				</div>
+
+				<label class="ess-field">
+					<span class="ess-label">Date</span>
+					<input bind:this={firstField} class="ess-input" type="date" bind:value={date} max={today} />
+					{#if date}<span class="ess-help">{fmtDate(date)}</span>{/if}
+				</label>
+
+				<label class="ess-field">
+					<span class="ess-label">Reason</span>
+					<select class="ess-select" bind:value={reason}>
+						{#each REASONS as r (r.value)}
+							<option value={r.value}>{r.label}</option>
+						{/each}
+					</select>
+				</label>
+
+				<div class="times">
+					<label class="ess-field">
+						<span class="ess-label">Reported check-in time <small>(optional)</small></span>
 						<input class="ess-input" type="time" bind:value={claimedCheckIn} />
 					</label>
-					<label>
-						<span>Actual out (optional)</span>
+					<label class="ess-field">
+						<span class="ess-label">Reported check-out time <small>(optional)</small></span>
 						<input class="ess-input" type="time" bind:value={claimedCheckOut} />
 					</label>
 				</div>
+				<span class="ess-help">Enter the times you actually started and finished. Approving writes these to your record.</span>
 
-				<label class="full">
-					<span>What happened?</span>
+				<label class="ess-field">
+					<span class="ess-label">Explanation</span>
 					<textarea
-						class="ess-input"
-						rows="3"
+						class="ess-textarea"
+						rows="4"
 						bind:value={description}
+						maxlength={MAX_DESCRIPTION}
 						aria-describedby="dev-desc-help"
 						placeholder="e.g. Biometric didn't register my punch at the gate; I was at my desk from 09:20 and my ProHance session shows the full day."
 					></textarea>
-					<!-- The minimum is stated up front rather than only once it is
-					     violated, so nobody types two words and meets a dead button. -->
-					<span class="help" id="dev-desc-help">
-						A sentence or two is enough — at least {MIN_DESCRIPTION} characters.
+					<span class="help-row">
+						<span class="ess-help" id="dev-desc-help">A sentence or two is enough — at least {MIN_DESCRIPTION} characters.</span>
+						<span class="ess-help count">{described}/{MAX_DESCRIPTION}</span>
 					</span>
 				</label>
 
-				{#if errorMsg}<p class="ess-error">{errorMsg}</p>{/if}
+				{#if date}
+					<div class="record">
+						<span class="record-title">Current biometric record <small>({fmtDate(date)})</small></span>
+						<div class="record-grid">
+							<div><span>Check-in</span><strong>{current?.checkIn ?? 'Missing'}</strong></div>
+							<div><span>Check-out</span><strong>{current?.checkOut ?? 'Missing'}</strong></div>
+						</div>
+					</div>
+				{/if}
 
-				<div class="actions">
-					<button type="button" class="ess-btn" onclick={submit} disabled={!canSubmit}>
-						{submitting ? 'Submitting…' : 'Submit request'}
-					</button>
-					{#if blockedBecause}
-						<span class="blocked" role="status">{blockedBecause}</span>
-					{/if}
-					<span class="assist">
-						<Sparkles size={12} /> Your description is checked against your attendance and ProHance records
-						to help HR review it faster.
-					</span>
+				<div class="progress">
+					<span class="progress-title">Request progress</span>
+					<ol class="ess-stepper ess-stepper--center">
+						<li class="ess-step" data-state="current"><span class="ess-step__dot"></span><span class="ess-step__label">Submitted</span><span class="ess-step__meta">Your request</span></li>
+						<li class="ess-step" data-state="todo"><span class="ess-step__dot"></span><span class="ess-step__label">HR review</span><span class="ess-step__meta">Checked against records</span></li>
+						<li class="ess-step" data-state="todo"><span class="ess-step__dot"></span><span class="ess-step__label">Resolved</span><span class="ess-step__meta">You’ll be notified</span></li>
+					</ol>
 				</div>
+
+				{#if errorMsg}<p class="ess-error">{errorMsg}</p>{/if}
+				{#if blockedBecause}
+					<p class="blocked" role="status"><AlertTriangle size={13} /> {blockedBecause}</p>
+				{/if}
+				<p class="assist"><Sparkles size={12} /> Your description is checked against your attendance and ProHance records to help HR review it faster.</p>
 			{/if}
 		</div>
-	{/if}
-</div>
+
+		<footer class="foot">
+			{#if result}
+				<button type="button" class="ess-btn ess-btn--primary" onclick={close}>Done</button>
+			{:else if tab === 'correction'}
+				<button type="button" class="ess-btn ess-btn--secondary" onclick={close}>Cancel</button>
+				<button type="button" class="ess-btn ess-btn--primary" onclick={submit} disabled={!canSubmit}>
+					{submitting ? 'Submitting…' : 'Submit for review'}
+				</button>
+			{:else}
+				<button type="button" class="ess-btn ess-btn--secondary" onclick={close}>Cancel</button>
+			{/if}
+		</footer>
+	</div>
+{/if}
 
 <style>
-	.deviation-block {
-		margin-top: 0.75rem;
+	.scrim {
+		z-index: 80;
+	}
+	.drawer {
+		z-index: 81;
+		width: min(520px, 100vw);
 	}
 
-	.panel {
-		background: var(--ess-surface);
-		border: 1px solid var(--ess-border-strong);
-		border-radius: var(--ess-radius-md);
-		padding: 1rem 1.1rem;
-	}
-
-	.panel-head {
+	.head {
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		justify-content: space-between;
-		gap: 0.75rem;
-		margin-bottom: 0.6rem;
+		gap: 12px;
+		padding: 24px 24px 12px;
 	}
-
-	.panel-head strong {
-		display: flex;
-		align-items: center;
-		gap: 0.45rem;
-		font-size: 0.92rem;
-		color: var(--ess-text);
+	.head .ess-h2 {
+		font-size: 26px;
 	}
-
-	.hint {
-		font-size: 0.8rem;
+	.sub {
+		margin-top: 6px;
+		font-size: 13.5px;
+		line-height: 1.5;
 		color: var(--ess-text-secondary);
-		margin: 0 0 0.7rem;
-		max-width: 72ch;
+	}
+
+	.tabs {
+		display: flex;
+		gap: 4px;
+		padding: 0 24px;
+		border-bottom: 1px solid var(--ess-border);
+	}
+	.tabs button {
+		background: none;
+		border: none;
+		border-bottom: 2px solid transparent;
+		margin-bottom: -1px;
+		padding: 10px 14px;
+		font: inherit;
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--ess-text-secondary);
+		cursor: pointer;
+	}
+	.tabs button[aria-selected='true'] {
+		color: var(--ess-primary-text);
+		border-bottom-color: var(--ess-primary);
+	}
+
+	.body {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		padding: 18px 24px;
+		display: grid;
+		gap: 14px;
+		align-content: start;
 	}
 
 	.cap-line {
-		font-size: 0.78rem;
-		color: var(--ess-text-secondary);
+		display: grid;
+		grid-template-columns: 1fr auto;
+		gap: 6px 12px;
+		align-items: center;
+		padding: 12px 14px;
+		border-radius: var(--ess-radius-md);
 		background: var(--ess-sunken);
-		border-radius: var(--ess-radius-xs);
-		padding: 0.45rem 0.6rem;
-		margin-bottom: 0.8rem;
+		font-size: 13px;
+		color: var(--ess-text-secondary);
 	}
-
+	.cap-line strong {
+		color: var(--ess-text);
+		font-weight: 500;
+	}
+	.cap-line .ess-meter {
+		grid-column: 1 / -1;
+	}
+	.cap-line small {
+		grid-column: 1 / -1;
+		font-size: 12px;
+		color: var(--ess-text-muted);
+	}
 	.cap-warn {
-		color: var(--ess-warning);
 		background: var(--ess-warning-bg);
 	}
-
-	.grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-		gap: 0.6rem;
-		margin-bottom: 0.6rem;
+	.cap-warn small {
+		color: var(--ess-warning);
 	}
 
-	label {
+	.times {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 12px;
+	}
+	.times + .ess-help {
+		margin-top: -8px;
+	}
+	.ess-label small {
+		font-weight: 400;
+		color: var(--ess-text-muted);
+	}
+	.help-row {
 		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		font-size: 0.75rem;
+		justify-content: space-between;
+		gap: 10px;
+	}
+	.count {
+		font-variant-numeric: tabular-nums;
+	}
+
+	.record {
+		padding: 12px 14px;
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-sunken);
+	}
+	.record-title {
+		display: block;
+		font-size: 13px;
+		font-weight: 500;
+		margin-bottom: 8px;
+	}
+	.record-title small {
+		font-weight: 400;
+		color: var(--ess-text-muted);
+	}
+	.record-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+	}
+	.record-grid div {
+		display: grid;
+		gap: 2px;
+	}
+	.record-grid div + div {
+		border-left: 1px solid var(--ess-border);
+		padding-left: 14px;
+	}
+	.record-grid span {
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 	}
-
-	label.full {
-		margin-bottom: 0.7rem;
+	.record-grid strong {
+		font-family: var(--ess-font-display);
+		font-size: 20px;
+		font-weight: 600;
 	}
 
-	textarea.ess-input {
-		resize: vertical;
-		font-family: inherit;
+	.progress {
+		padding: 14px 16px 10px;
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-primary-softer);
+	}
+	.progress-title {
+		display: block;
+		font-size: 13px;
+		font-weight: 500;
+		margin-bottom: 12px;
+	}
+	.progress .ess-step__meta {
+		font-size: 11.5px;
 	}
 
-	.actions {
+	.blocked {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		flex-wrap: wrap;
+		gap: 6px;
+		font-size: 12.5px;
+		color: var(--ess-warning);
+		margin: 0;
 	}
-
 	.assist {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.3rem;
-		font-size: 0.72rem;
+		gap: 6px;
+		font-size: 12px;
 		color: var(--ess-text-muted);
-		max-width: 52ch;
+		margin: 0;
 	}
 
-	.help {
-		font-size: 0.7rem;
-		color: var(--ess-text-muted);
-		margin-top: 0.2rem;
-	}
-
-	/* Why Submit is disabled. Amber rather than red: nothing has gone wrong yet,
-	   the form is simply not finished. */
-	.blocked {
-		font-size: 0.75rem;
-		color: var(--ess-warning);
-		max-width: 52ch;
-	}
-
-	.outcome-head {
+	.foot {
 		display: flex;
-		align-items: center;
-		gap: 0.45rem;
-		font-size: 0.85rem;
-		color: var(--ess-text);
-		margin: 0 0 0.75rem;
+		justify-content: flex-end;
+		gap: 10px;
+		padding: 14px 24px;
+		border-top: 1px solid var(--ess-border);
+		background: var(--ess-surface);
 	}
 
+	.compoff-tab {
+		display: grid;
+		justify-items: start;
+		gap: 10px;
+		padding: 8px 0;
+	}
+	.compoff-tab p {
+		font-size: 14px;
+		line-height: 1.55;
+		color: var(--ess-text-secondary);
+		margin: 0;
+	}
+
+	.outcome {
+		display: grid;
+		gap: 14px;
+	}
 	.ai-card {
 		background: var(--ess-sunken);
-		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
-		padding: 0.8rem 0.9rem;
-		margin-bottom: 0.85rem;
+		padding: 12px 14px;
 	}
-
 	.ai-head {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.35rem;
-		font-size: 0.68rem;
-		font-weight: 700;
+		gap: 6px;
+		font-size: 11px;
+		font-weight: 600;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		color: var(--ess-primary-text);
 	}
-
 	.ai-summary {
-		font-size: 0.85rem;
+		font-size: 13.5px;
 		color: var(--ess-text);
-		margin: 0.5rem 0 0;
+		margin: 8px 0 0;
 	}
-
 	.ai-note {
-		font-size: 0.78rem;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
-		margin: 0.35rem 0 0;
-		max-width: 72ch;
+		margin: 6px 0 0;
 	}
-
 	.flags {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.35rem;
-		margin-top: 0.55rem;
+		gap: 6px;
+		margin-top: 8px;
 	}
-
 	.flag {
-		font-size: 0.68rem;
-		font-weight: 600;
-		padding: 2px 7px;
+		font-size: 11px;
+		font-weight: 500;
+		padding: 2px 8px;
 		border-radius: var(--ess-radius-xs);
 		background: var(--ess-primary-soft);
 		color: var(--ess-primary-text);
 	}
-
 	.ai-disclaimer {
-		font-size: 0.7rem;
+		font-size: 11.5px;
 		color: var(--ess-text-muted);
-		margin: 0.6rem 0 0;
-		max-width: 72ch;
+		margin: 8px 0 0;
+	}
+
+	@media (max-width: 480px) {
+		.times {
+			grid-template-columns: 1fr;
+		}
 	}
 </style>

@@ -63,9 +63,9 @@
 	{/if}
 	<strong class="title">{task.title}</strong>
 	<div class="chips">
-		<span class="chip p-{task.priority}">{PRIORITY_LABEL[task.priority]}</span>
+		<span class="ess-badge p-{task.priority}">{PRIORITY_LABEL[task.priority]}</span>
 		{#if task.dueDate}<span class="chip due {tone}"><CalendarIcon size={12} />{tone === 'overdue' ? 'Overdue · ' : ''}{dueLabel(task.dueDate)}</span>{/if}
-		{#if task.blocked}<span class="chip blocked"><Ban size={12} />Blocked</span>{/if}
+		{#if task.blocked}<span class="ess-badge ess-badge--bad"><Ban size={12} />Blocked</span>{/if}
 		{#if task.subtasks.total}<span class="chip plain"><ListChecks size={12} />{task.subtasks.done}/{task.subtasks.total}</span>{/if}
 	</div>
 	{#if task.source || showAssignee}
@@ -84,10 +84,10 @@
 <style>
 	.card {
 		display: grid;
-		gap: 7px;
-		padding: 10px 12px;
-		border-radius: 12px;
-		background: var(--ess-pane-raised-bg);
+		gap: 8px;
+		padding: 12px 14px;
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-surface);
 		border: 1px solid var(--ess-border);
 		box-shadow: var(--ess-elev-1);
 		cursor: grab;
@@ -102,11 +102,11 @@
 		box-shadow: var(--ess-elev-2);
 	}
 	.card.request {
-		border-color: color-mix(in oklab, var(--ess-primary) 45%, var(--ess-border));
+		border-color: var(--ess-primary);
 	}
 	.title {
-		font-size: 13.5px;
-		font-weight: 600;
+		font-size: 14px;
+		font-weight: 500;
 		line-height: 1.35;
 		overflow-wrap: anywhere;
 	}
@@ -118,8 +118,8 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 5px;
-		font-size: 11.5px;
-		font-weight: 600;
+		font-size: 12px;
+		font-weight: 500;
 		color: var(--ess-primary-text);
 	}
 	.req.declined {
@@ -128,37 +128,35 @@
 	.chips {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 5px;
+		align-items: center;
+		gap: 6px;
 	}
 	.chip {
 		display: inline-flex;
 		align-items: center;
 		gap: 4px;
-		padding: 1px 8px;
-		border-radius: 99px;
-		font-size: 11.5px;
-		font-weight: 600;
-		background: var(--ess-neutral-bg);
-		color: var(--ess-neutral);
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--ess-text-muted);
 		white-space: nowrap;
 	}
-	.chip.p-high,
-	.chip.overdue,
-	.chip.blocked {
+	.chip.overdue {
+		color: var(--ess-danger);
+	}
+	.chip.soon {
+		color: var(--ess-warning);
+	}
+	.p-high {
 		background: var(--ess-danger-bg);
 		color: var(--ess-danger);
 	}
-	.chip.p-medium,
-	.chip.soon {
+	.p-medium {
 		background: var(--ess-warning-bg);
 		color: var(--ess-warning);
 	}
-	.chip.due:not(.overdue):not(.soon),
-	.chip.plain {
-		background: transparent;
-		color: var(--ess-text-muted);
-		padding-inline: 0;
-		font-weight: 500;
+	.p-low {
+		background: var(--ess-success-bg);
+		color: var(--ess-success);
 	}
 	.foot {
 		display: flex;
@@ -172,9 +170,9 @@
 		align-items: center;
 		gap: 5px;
 		min-width: 0;
-		font-size: 11.5px;
+		font-size: 12px;
 		font-weight: 500;
-		color: var(--ess-info);
+		color: var(--ess-text-secondary);
 	}
 	.src span {
 		white-space: nowrap;

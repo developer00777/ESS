@@ -1,6 +1,7 @@
 /* ESS Design System — single entry point.
    Token and component layers live in src/lib/styles/; nothing else should
-   define global color/spacing/radius values. See
-   "ESS portal design system/ESS Design System.dc.html" for the full spec. */
+   define global color/spacing/radius values. The look is the "Timeline
+   workspace" (ess-timeline-mockups): warm off-white canvas, navy ink,
+   editorial serif headings, violet actions, lavender selection. */
 @import './lib/styles/ess-tokens.css';
 @import './lib/styles/ess-components.css';

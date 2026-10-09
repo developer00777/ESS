@@ -31,8 +31,12 @@ export type AdminTab = {
 	id: AdminTabId;
 	href: string;
 	label: string;
+	/** The serif line the page opens with. */
+	heading: string;
 	/** One line under the page title, in place of each page's own header. */
 	blurb: string;
+	/** Which mockup category the tab sits in: People, Attendance, Leave, Policies, Access, System. */
+	category: 'People' | 'Attendance' | 'Leave' | 'Policies' | 'Access' | 'System';
 	group: 0 | 1 | 2 | 3;
 	/** Any one of these opens the tab. Empty = anyone who can open Admin Controls. */
 	caps: CapabilityKey[];
@@ -43,6 +47,8 @@ export const ADMIN_TABS: AdminTab[] = [
 		id: 'overview',
 		href: '/admin',
 		label: 'Overview',
+		heading: 'A clear view of your operations.',
+		category: 'People',
 		blurb: 'What needs your attention across the portal, worked out from live data.',
 		group: 0,
 		caps: []
@@ -51,14 +57,18 @@ export const ADMIN_TABS: AdminTab[] = [
 		id: 'people',
 		href: '/admin/people',
 		label: 'People',
+		heading: 'Manage every employee with care.',
+		category: 'People',
 		blurb: 'Logins, bulk imports, week-off rosters and password activity.',
 		group: 1,
-		caps: ['people.directory', 'people.create_login', 'people.bulk_import', 'people.reset_password', 'people.password_activity']
+		caps: ['people.directory', 'people.create_login', 'people.send_logins', 'people.bulk_import', 'people.reset_password', 'people.password_activity']
 	},
 	{
 		id: 'biometric',
 		href: '/admin/biometric',
-		label: 'Biometric',
+		label: 'Attendance',
+		heading: 'Turn attendance data into clarity.',
+		category: 'Attendance',
 		blurb: 'Load the device report for days the scheduled feed never sent.',
 		group: 1,
 		caps: ['attendance.biometric_upload']
@@ -66,7 +76,9 @@ export const ADMIN_TABS: AdminTab[] = [
 	{
 		id: 'balances',
 		href: '/admin/leave-balances',
-		label: 'Leave Balances',
+		label: 'Leave balances',
+		heading: 'Balances you can account for.',
+		category: 'Leave',
 		blurb: 'Set opening balances from a spreadsheet, such as the HRone carry-forward.',
 		group: 1,
 		caps: ['leave.set_balances']
@@ -75,6 +87,8 @@ export const ADMIN_TABS: AdminTab[] = [
 		id: 'policies',
 		href: '/admin/policies',
 		label: 'Policies',
+		heading: 'Publish with confidence.',
+		category: 'Policies',
 		blurb: 'Publish the holiday calendar and leave policy from the source document.',
 		group: 2,
 		caps: ['policies.publish']
@@ -82,7 +96,9 @@ export const ADMIN_TABS: AdminTab[] = [
 	{
 		id: 'org',
 		href: '/admin/org-chart',
-		label: 'Org Chart',
+		label: 'Org chart',
+		heading: 'See how your people connect.',
+		category: 'People',
 		blurb: 'Who reports to whom, from the live roster.',
 		group: 2,
 		caps: ['org.view']
@@ -91,6 +107,8 @@ export const ADMIN_TABS: AdminTab[] = [
 		id: 'access',
 		href: '/admin/access-control',
 		label: 'Roles & access',
+		heading: 'The right access for every role.',
+		category: 'Access',
 		blurb: 'Named roles such as IT Support, what each one may do, and who holds them.',
 		group: 2,
 		caps: ['access.view', 'system.roles']
@@ -99,6 +117,8 @@ export const ADMIN_TABS: AdminTab[] = [
 		id: 'chat',
 		href: '/admin/chat-rules',
 		label: 'Chat rules',
+		heading: 'Set clear boundaries for conversation.',
+		category: 'Access',
 		blurb: 'Who employees can message directly, and who can start group chats.',
 		group: 2,
 		caps: ['chat.manage_rules']
@@ -107,6 +127,8 @@ export const ADMIN_TABS: AdminTab[] = [
 		id: 'zoom',
 		href: '/admin/zoom',
 		label: 'Zoom',
+		heading: 'Bring meetings into your workday.',
+		category: 'System',
 		blurb: 'Connect Zoom so meeting minutes arrive in Champ Hub, and link Zoom names to logins.',
 		group: 2,
 		caps: ['system.zoom']
@@ -114,7 +136,9 @@ export const ADMIN_TABS: AdminTab[] = [
 	{
 		id: 'cleanup',
 		href: '/admin/cleanup',
-		label: 'Data Cleanup',
+		label: 'Data cleanup',
+		heading: 'Review carefully. Keep what matters.',
+		category: 'System',
 		blurb: 'Remove seeded and test data. Everything here is permanent.',
 		group: 3,
 		caps: ['system.cleanup']
@@ -122,7 +146,9 @@ export const ADMIN_TABS: AdminTab[] = [
 	{
 		id: 'tweaks',
 		href: '/admin/tweaks',
-		label: 'Design Tweaks',
+		label: 'Appearance',
+		heading: 'Make the workspace feel right.',
+		category: 'System',
 		blurb: 'Preview design variants in your browser only. Employees are unaffected.',
 		group: 3,
 		caps: ['system.design_tweaks']

@@ -139,7 +139,7 @@
 			<li class="none">Nothing matches. Try fewer letters.</li>
 		{/each}
 	</ul>
-	<p class="foot">↑ ↓ to move · Enter to open · Esc to close</p>
+	<p class="foot"><kbd class="ess-kbd">↑</kbd> <kbd class="ess-kbd">↓</kbd> to move <span class="ess-dot-sep"></span> <kbd class="ess-kbd">Enter</kbd> to open <span class="ess-dot-sep"></span> <kbd class="ess-kbd">Esc</kbd> to close</p>
 </div>
 
 <style>
@@ -192,16 +192,35 @@
 		border: 0;
 		background: transparent;
 		color: var(--ess-text);
-		padding: 8px 10px;
-		border-radius: 9px;
+		padding: 10px 12px;
+		border-radius: var(--ess-radius-sm);
 		cursor: pointer;
 		text-align: left;
 		font: inherit;
 		font-size: 13.5px;
 	}
+	li button :global(svg) {
+		color: var(--ess-text-muted);
+		flex: none;
+	}
 	li button.on {
 		background: var(--ess-primary-soft);
 		color: var(--ess-primary-text);
+	}
+	li button.on :global(svg) {
+		color: var(--ess-primary);
+	}
+	li + li button {
+		border-top: 1px solid var(--ess-border-subtle);
+		border-radius: 0;
+	}
+	li:last-child button {
+		border-bottom-left-radius: var(--ess-radius-sm);
+		border-bottom-right-radius: var(--ess-radius-sm);
+	}
+	li:first-child button {
+		border-top-left-radius: var(--ess-radius-sm);
+		border-top-right-radius: var(--ess-radius-sm);
 	}
 	.label {
 		flex: 1;
@@ -222,8 +241,12 @@
 	}
 	.foot {
 		margin: 0;
-		padding: 8px 14px;
-		border-top: 1px solid var(--ess-border-subtle);
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		padding: 9px 14px;
+		border-top: 1px solid var(--ess-border);
+		background: var(--ess-sunken);
 		font-size: 11.5px;
 		color: var(--ess-text-muted);
 	}

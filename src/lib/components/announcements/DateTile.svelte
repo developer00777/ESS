@@ -9,54 +9,53 @@
 	const n = $derived(daysUntil(date, now));
 </script>
 
-<span class="tile" class:holiday class:today={n === 0} class:past={n < 0} aria-hidden="true">
-	<span class="wd">{WD[d.getUTCDay()]}</span>
+<span class="tile" class:holiday class:today={n === 0} class:past={n < 0} aria-hidden="true" title={WD[d.getUTCDay()]}>
 	<span class="d">{d.getUTCDate()}</span>
 	<span class="m">{MO[d.getUTCMonth()]}</span>
 </span>
 
 <style>
+	/* The mockups' date tile: a quiet bordered box, serif day over the month. */
 	.tile {
-		width: 52px;
+		width: 54px;
 		flex-shrink: 0;
 		display: grid;
 		justify-items: center;
-		padding: 6px 0;
-		border-radius: 12px;
-		background: var(--ess-primary-soft);
-		color: var(--ess-primary-text);
+		padding: 7px 0 6px;
+		border-radius: var(--ess-radius-md);
+		border: 1px solid var(--ess-border);
+		background: var(--ess-sunken);
+		color: var(--ess-text-secondary);
 		line-height: 1.1;
-	}
-	.wd {
-		font-size: 10px;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
 	}
 	.d {
 		font-family: var(--ess-font-display);
-		font-size: 20px;
+		font-size: 21px;
 		font-weight: 600;
 		color: var(--ess-text);
 		font-variant-numeric: tabular-nums;
 	}
 	.m {
-		font-size: 10.5px;
-		font-weight: 600;
+		font-size: 11.5px;
+		font-weight: 500;
 	}
 	.holiday {
+		border-color: transparent;
 		background: var(--ess-success-bg);
 		color: var(--ess-success);
 	}
+	.holiday .d {
+		color: var(--ess-success);
+	}
 	.today {
-		background: var(--ess-primary);
-		color: var(--ess-text-on-primary);
+		border-color: transparent;
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
 	}
 	.today .d {
-		color: var(--ess-text-on-primary);
+		color: var(--ess-primary-text);
 	}
 	.past {
-		background: var(--ess-sunken);
 		color: var(--ess-text-muted);
 	}
 	.past .d {

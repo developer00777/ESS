@@ -17,8 +17,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.where(eq(employeeProfiles.userId, user.id))
 		.limit(1);
 
-	let resolvedCalendar: { shiftGroupName: string; year: number; holidays: (typeof holidays.$inferSelect)[] } | null =
-		null;
+	let resolvedCalendar: {
+		shiftGroupName: string;
+		year: number;
+		publishedAt: string | null;
+		holidays: (typeof holidays.$inferSelect)[];
+	} | null = null;
 
 	if (profile?.shiftGroupId) {
 		const [group] = await db.select().from(shiftGroups).where(eq(shiftGroups.id, profile.shiftGroupId)).limit(1);
@@ -30,7 +34,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 		if (calendar && group) {
 			const rows = await db.select().from(holidays).where(eq(holidays.calendarId, calendar.id));
-			resolvedCalendar = { shiftGroupName: group.name, year: calendar.year, holidays: rows };
+			resolvedCalendar = {
+				shiftGroupName: group.name,
+				year: calendar.year,
+				publishedAt: calendar.publishedAt?.toISOString() ?? null,
+				holidays: rows.sort((a, b) => a.date.localeCompare(b.date))
+			};
 		}
 	}
 

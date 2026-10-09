@@ -218,18 +218,13 @@
 <aside bind:this={panelEl} class="panel" aria-label="Settings for {person.fullName}">
 	<header class="panel-head">
 		<div class="who">
-			<Avatar userId={person.id} fullName={person.fullName} hasPicture={person.hasPicture} size="sm" />
+			<Avatar userId={person.id} fullName={person.fullName} hasPicture={person.hasPicture} size="md" />
 			<div class="who-text">
-				<strong>{person.fullName}</strong>
+				<h2 class="ess-h2">{person.fullName}</h2>
 				<span class="meta">{person.employeeCode ?? 'No code'} · {person.email}</span>
 			</div>
 		</div>
-		<button
-			type="button"
-			class="close-btn"
-			onclick={() => requestClose(onclose)}
-			aria-label="Close"
-		>
+		<button type="button" class="ess-icon-btn" onclick={() => requestClose(onclose)} aria-label="Close">
 			<X size={18} />
 		</button>
 	</header>
@@ -244,11 +239,11 @@
 				which is the thing the portal deliberately no longer says out loud.
 			-->
 			{#if canEditRole}
-				<label class="field">
-					<span class="label">Role</span>
+				<label class="ess-field field">
+					<span class="ess-label">Role</span>
 					{#if isSelf}
 						<span class="static-value">{role.replace('_', ' ')}</span>
-						<span class="hint">You cannot change your own role.</span>
+						<span class="ess-help">You cannot change your own role.</span>
 					{:else}
 						<select class="ess-select" bind:value={role}>
 							{#each roles as r (r)}
@@ -259,8 +254,8 @@
 				</label>
 			{/if}
 
-			<label class="field">
-				<span class="label">Reports to</span>
+			<label class="ess-field field">
+				<span class="ess-label">Reports to</span>
 				<select class="ess-select" bind:value={reportsTo}>
 					<option value="">— not set —</option>
 					{#if canPickChief || initialReportsTo === CHIEF_PICK}
@@ -270,7 +265,7 @@
 						<option value={p.id}>{optionLabel(p)}</option>
 					{/each}
 				</select>
-				<span class="hint">
+				<span class="ess-help">
 					{#if reportsTo === CHIEF_PICK}
 						Leave, comp-off and attendance corrections go straight to the
 						concerned HR{hrUserId ? '' : ' (any admin while none is set)'} for a single approval.
@@ -280,15 +275,15 @@
 				</span>
 			</label>
 
-			<label class="field">
-				<span class="label">Concerned HR</span>
+			<label class="ess-field field">
+				<span class="ess-label">Concerned HR</span>
 				<select class="ess-select" bind:value={hrUserId}>
 					<option value="">— any admin —</option>
 					{#each candidates as p (p.id)}
 						<option value={p.id}>{optionLabel(p)}</option>
 					{/each}
 				</select>
-				<span class="hint">
+				<span class="ess-help">
 					Handles the second approval. Other admins can still act, so nothing stalls if they are away.
 				</span>
 			</label>
@@ -297,30 +292,30 @@
 		<section class="group">
 			<h3>Schedule</h3>
 
-			<label class="field">
-				<span class="label">Shift group</span>
+			<label class="ess-field field">
+				<span class="ess-label">Shift group</span>
 				<select class="ess-select" class:unset={!shiftGroupId} bind:value={shiftGroupId}>
 					<option value="">— not set —</option>
 					{#each shiftGroups as g (g.id)}
 						<option value={g.id}>{g.name}</option>
 					{/each}
 				</select>
-				<span class="hint">Resolves which holiday calendar applies.</span>
+				<span class="ess-help">Resolves which holiday calendar applies.</span>
 			</label>
 
-			<label class="field">
-				<span class="label">Shift type</span>
+			<label class="ess-field field">
+				<span class="ess-label">Shift type</span>
 				<input class="ess-input" bind:value={shiftType} placeholder="e.g. Day Shift" />
 			</label>
 
-			<label class="field">
-				<span class="label">Office timings</span>
+			<label class="ess-field field">
+				<span class="ess-label">Office timings</span>
 				<input class="ess-input" bind:value={officeTimings} placeholder="e.g. 9:00 AM - 6:00 PM" />
-				<span class="hint">Bounds how far a check-out may sit from its check-in on a night shift.</span>
+				<span class="ess-help">Bounds how far a check-out may sit from its check-in on a night shift.</span>
 			</label>
 
-			<label class="field">
-				<span class="label">Week-off roster</span>
+			<label class="ess-field field">
+				<span class="ess-label">Week-off roster</span>
 				<select class="ess-select" bind:value={weekOffRosterId}>
 					<option value="">Saturday + Sunday (default)</option>
 					{#each rosters as r (r.id)}
@@ -329,7 +324,7 @@
 						</option>
 					{/each}
 				</select>
-				<span class="hint">Reflects on this employee's leave and attendance calendars.</span>
+				<span class="ess-help">Reflects on this employee's leave and attendance calendars.</span>
 			</label>
 		</section>
 	</div>
@@ -341,7 +336,7 @@
 		<div class="actions">
 			<button
 				type="button"
-				class="ess-btn ess-btn--ghost"
+				class="ess-btn ess-btn--secondary"
 				onclick={() => requestClose(onclose)}
 				disabled={saving}
 			>
@@ -366,7 +361,7 @@
 	.backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgb(0 0 0 / 0.4);
+		background: rgba(27, 31, 59, 0.42);
 		border: none;
 		padding: 0;
 		z-index: 900;
@@ -379,19 +374,10 @@
 		top: 0;
 		right: 0;
 		bottom: 0;
-		width: min(440px, 100vw);
-		/* --ess-surface is barely-there by design (0.05 alpha in dark), which is
-		   right for a card sitting on the page but leaves a floating panel
-		   see-through and its text unreadable over the scrolling roster. The
-		   opaque canvas goes underneath, with the surface tint layered on top —
-		   frosted rather than transparent. */
-		background:
-			linear-gradient(var(--ess-surface), var(--ess-surface)),
-			var(--ess-canvas);
-		backdrop-filter: blur(20px) saturate(1.4);
-		-webkit-backdrop-filter: blur(20px) saturate(1.4);
-		border-left: 1px solid var(--ess-border-strong);
-		box-shadow: -12px 0 32px rgb(0 0 0 / 0.18);
+		width: min(500px, 100vw);
+		background: var(--ess-modal-bg);
+		border-left: 1px solid var(--ess-border);
+		box-shadow: var(--ess-elev-4);
 		display: flex;
 		flex-direction: column;
 		z-index: 901;
@@ -400,10 +386,7 @@
 	}
 
 	/* The page is locked while this is open, so a wheel gesture over the scrim
-	   does nothing. Once the panel body reaches its own end, though, the browser
-	   would hand the gesture up to the next scrollable ancestor — containing it
-	   stops the scroll chaining out of the panel and, on touch, stops the
-	   rubber-band pull-to-refresh that a locked page would otherwise still get. */
+	   does nothing. Containing the panel's own scroll stops it chaining out. */
 	.panel,
 	.backdrop {
 		overscroll-behavior: contain;
@@ -414,14 +397,14 @@
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: 12px;
-		padding: 18px 20px;
+		padding: 20px 24px;
 		border-bottom: 1px solid var(--ess-border);
 	}
 
 	.who {
 		display: flex;
 		align-items: center;
-		gap: 10px;
+		gap: 12px;
 		min-width: 0;
 	}
 
@@ -429,6 +412,10 @@
 		display: flex;
 		flex-direction: column;
 		min-width: 0;
+	}
+
+	.who-text .ess-h2 {
+		font-size: 22px;
 	}
 
 	.who-text .meta {
@@ -439,59 +426,29 @@
 		text-overflow: ellipsis;
 	}
 
-	.close-btn {
-		background: transparent;
-		border: none;
-		color: var(--ess-text-muted);
-		cursor: pointer;
-		padding: 4px;
-		border-radius: 6px;
-		display: inline-flex;
-		flex-shrink: 0;
-	}
-
-	.close-btn:hover {
-		color: var(--ess-text);
-		background: var(--ess-sunken);
-	}
-
 	.panel-body {
 		flex: 1;
 		overflow-y: auto;
 		overscroll-behavior: contain;
-		padding: 18px 20px;
+		padding: 20px 24px;
 	}
 
 	.group + .group {
-		margin-top: 1.75rem;
+		margin-top: 24px;
+		padding-top: 20px;
+		border-top: 1px solid var(--ess-border-subtle);
 	}
 
 	.group h3 {
-		font-size: var(--ess-fs-eyebrow);
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-		color: var(--ess-text-secondary);
-		margin-bottom: 0.85rem;
+		font-family: var(--ess-font-display);
+		font-size: 18px;
+		font-weight: 600;
+		color: var(--ess-text);
+		margin-bottom: 12px;
 	}
 
 	.field {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		margin-bottom: 1rem;
-	}
-
-	.label {
-		font-size: var(--ess-fs-caption);
-		font-weight: 600;
-		color: var(--ess-text);
-	}
-
-	.hint {
-		font-size: 0.72rem;
-		color: var(--ess-text-secondary);
-		line-height: 1.4;
+		margin-bottom: 14px;
 	}
 
 	.static-value {
@@ -507,11 +464,9 @@
 		border-color: var(--ess-warning);
 	}
 
-	/* Sits over the panel's own layered background, so the sunken tint reads as
-	   a subtle step down rather than a window onto the page behind. */
 	.panel-foot {
 		border-top: 1px solid var(--ess-border);
-		padding: 14px 20px;
+		padding: 14px 24px;
 		background: var(--ess-sunken);
 	}
 

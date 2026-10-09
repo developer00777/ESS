@@ -267,7 +267,7 @@
 		}}
 	>
 		<div class="form-head">
-			<h2 class="ess-h3">{f.id ? 'Edit announcement' : 'New announcement'}</h2>
+			<h2 class="ess-h2">{f.id ? 'Edit announcement' : 'Post announcement'}</h2>
 			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={reset}>{f.id ? 'Cancel edit' : 'Clear'}</button>
 		</div>
 		<input type="hidden" name="id" value={f.id} />
@@ -420,7 +420,7 @@
 				{saving ? 'Saving…' : f.id && f.isLive ? 'Save changes' : f.when === 'later' ? 'Schedule' : 'Publish now'}
 			</button>
 			{#if !f.isLive}
-				<button class="ess-btn ess-btn--secondary" type="submit" name="intent" value="draft" disabled={saving}>Save draft</button>
+				<button class="ess-btn ess-btn--outline" type="submit" name="intent" value="draft" disabled={saving}>Save draft</button>
 			{/if}
 			{#if f.isLive}
 				<span class="ess-help">Changing the wording shows it as unread again, marked "Edited".</span>
@@ -458,7 +458,7 @@
 
 <section class="ess-panel" aria-labelledby="posted-h">
 	<div class="list-head">
-		<h2 class="ess-h3" id="posted-h">Posted</h2>
+		<h2 class="ess-h2" id="posted-h">Posted</h2>
 		<span class="ess-caption">Holidays from the published calendars appear for employees by themselves and are not listed here.</span>
 	</div>
 	{#if data.posts.length === 0}
@@ -467,7 +467,7 @@
 		<div class="ess-table-shell">
 			<table class="ess-table">
 				<thead>
-					<tr><th>Announcement</th><th>Status</th><th>Audience</th><th>Read</th><th>Confirmed</th><th><span class="sr-only">Actions</span></th></tr>
+					<tr><th>Announcement</th><th>Status</th><th>Audience</th><th>Read</th><th>Confirmed</th><th><span class="ess-sr-only">Actions</span></th></tr>
 				</thead>
 				<tbody>
 					{#each data.posts as p (p.id)}
@@ -514,7 +514,7 @@
 	<div class="ess-modal pending" role="dialog" aria-modal="true" aria-labelledby="pending-h">
 		<div class="ess-modal__head">
 			<div>
-				<h2 class="ess-h3" id="pending-h">
+				<h2 class="ess-h3 pending-h" id="pending-h">
 					{pending ? `${pending.pending.length} ${pending.pending.length === 1 ? 'person hasn’t' : 'people haven’t'} confirmed yet` : 'Loading…'}
 				</h2>
 				<p class="ess-caption">“{pendingFor.title}”{pending ? ` · ${pending.audience - pending.pending.length} of ${pending.audience} confirmed` : ''}</p>
@@ -558,6 +558,7 @@
 	.form {
 		display: grid;
 		gap: 16px;
+		padding: var(--ess-space-5);
 	}
 	.form-head,
 	.list-head {
@@ -573,6 +574,7 @@
 	.form-head h2,
 	.list-head h2 {
 		margin: 0;
+		font-size: 20px;
 	}
 	fieldset.field {
 		border: 0;
@@ -593,12 +595,16 @@
 		align-content: start;
 		text-align: left;
 		padding: 11px 12px;
-		border: 1.5px solid var(--ess-border);
-		border-radius: var(--ess-radius-sm);
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
 		background: var(--ess-surface);
 		font: inherit;
 		color: inherit;
 		cursor: pointer;
+		transition: border-color var(--ess-t-fast), background var(--ess-t-fast);
+	}
+	.kind:hover {
+		border-color: var(--ess-border-strong);
 	}
 	.kind strong {
 		display: flex;
@@ -715,21 +721,22 @@
 	}
 	.preview {
 		position: sticky;
-		top: 64px;
+		top: 16px;
 		display: grid;
 		gap: 8px;
 	}
 	.pv-box {
 		display: grid;
 		gap: 10px;
-		padding: 14px;
+		padding: 16px;
 		border: 1px dashed var(--ess-border-strong);
 		border-radius: var(--ess-radius-md);
+		background: var(--ess-sunken);
 	}
 	.pv-rows {
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
-		background: var(--ess-glass-raised-bg);
+		background: var(--ess-surface);
 		overflow: hidden;
 	}
 	.pv-detail {
@@ -746,11 +753,11 @@
 	}
 	.kind-chip {
 		font-size: 11px;
-		font-weight: 700;
+		font-weight: 600;
 		padding: 1px 8px;
-		border-radius: var(--ess-radius-pill);
-		background: var(--ess-sunken);
-		color: var(--ess-text-secondary);
+		border-radius: var(--ess-radius-xs);
+		background: var(--ess-neutral-bg);
+		color: var(--ess-neutral);
 	}
 	.kind-chip[data-kind='urgent'] {
 		background: var(--ess-danger-bg);
@@ -771,7 +778,7 @@
 	.bar i {
 		display: block;
 		height: 100%;
-		background: linear-gradient(90deg, var(--acc), var(--acc2));
+		background: var(--ess-primary);
 	}
 	.bar.ack i {
 		background: var(--ess-success);
@@ -782,7 +789,7 @@
 		background: none;
 		font: inherit;
 		font-size: var(--ess-fs-caption);
-		font-weight: 600;
+		font-weight: 500;
 		color: var(--ess-primary-text);
 		cursor: pointer;
 	}
@@ -824,12 +831,9 @@
 	.plist li:first-child {
 		border-top: 0;
 	}
-	.sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		overflow: hidden;
-		clip: rect(0 0 0 0);
+	.pending-h {
+		font-family: var(--ess-font-display);
+		font-size: 20px;
 	}
 	@media (max-width: 960px) {
 		.compose {

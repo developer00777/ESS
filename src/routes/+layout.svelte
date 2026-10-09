@@ -9,7 +9,4 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<div class="cosmos" aria-hidden="true"></div>
-<div class="stars" aria-hidden="true"></div>
-
 {@render children()}

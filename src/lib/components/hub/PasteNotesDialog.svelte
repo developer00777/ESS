@@ -42,8 +42,8 @@
 <div class="ess-scrim scrim" role="presentation" onclick={onclose}></div>
 <div class="ess-modal modal" role="dialog" aria-modal="true" aria-labelledby="paste-title">
 	<div class="ess-modal__head">
-		<strong id="paste-title">{meetingId ? `Notes for ${knownTopic}` : 'Minutes from notes'}</strong>
-		<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={onclose} aria-label="Close"><X size={16} /></button>
+		<h2 id="paste-title" class="ess-h2">{meetingId ? `Notes for ${knownTopic}` : 'Minutes from notes'}</h2>
+		<button type="button" class="ess-icon-btn" onclick={onclose} aria-label="Close"><X size={16} /></button>
 	</div>
 	<form class="ess-modal__body body" onsubmit={save}>
 		{#if !meetingId}
@@ -65,7 +65,7 @@
 		</div>
 		{#if err}<p class="ess-error">{err}</p>{/if}
 		<div class="actions">
-			<button type="button" class="ess-btn ess-btn--ghost" onclick={onclose}>Cancel</button>
+			<button type="button" class="ess-btn ess-btn--secondary" onclick={onclose}>Cancel</button>
 			<button type="submit" class="ess-btn ess-btn--primary" disabled={busy || !notes.trim()}>Find action items</button>
 		</div>
 	</form>

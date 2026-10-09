@@ -3,21 +3,26 @@
 	import { goto, invalidateAll, replaceState } from '$app/navigation';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import Info from '@lucide/svelte/icons/info';
+	import Search from '@lucide/svelte/icons/search';
 	import Hash from '@lucide/svelte/icons/hash';
 	import Megaphone from '@lucide/svelte/icons/megaphone';
 	import Headset from '@lucide/svelte/icons/headset';
 	import Bell from '@lucide/svelte/icons/bell';
 	import Users from '@lucide/svelte/icons/users';
+	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import PenLine from '@lucide/svelte/icons/pen-line';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import ChatSidebar from '$lib/components/chat/ChatSidebar.svelte';
 	import MessageList from '$lib/components/chat/MessageList.svelte';
 	import Composer from '$lib/components/chat/Composer.svelte';
 	import ThreadPanel from '$lib/components/chat/ThreadPanel.svelte';
 	import InfoPanel from '$lib/components/chat/InfoPanel.svelte';
+	import FindPanel from '$lib/components/chat/FindPanel.svelte';
+	import NewChatDialog from '$lib/components/chat/NewChatDialog.svelte';
+	import ChatPrefs from '$lib/components/chat/ChatPrefs.svelte';
 	import AnnouncementFeed from '$lib/components/announcements/AnnouncementFeed.svelte';
 	import AnnouncementAdmin from '$lib/components/announcements/AnnouncementAdmin.svelte';
 	import ChampPanel from '$lib/components/champ/ChampPanel.svelte';
-	import SideSheet from '$lib/components/hub/SideSheet.svelte';
 	import NewTaskDialog from '$lib/components/hub/NewTaskDialog.svelte';
 	import { chat, channelLabel, type SidebarChannel } from '$lib/chat/client.svelte';
 	import type { ChatMessageView } from '$lib/server/chat/messages';
@@ -38,24 +43,25 @@
 	});
 	const active = $derived(channels.find((c) => c.id === activeId) ?? null);
 	const champOpen = $derived(activeId === 'champ');
+	let champWaiting = $state(0);
 
 	$effect(() => {
 		chat.openChannelId = activeId;
 		return () => (chat.openChannelId = null);
 	});
 
-	/** The strip above the conversation: the open one, then the most recent, unread first. */
-	const recent = $derived(
-		[...channels]
-			.sort((a, b) => Number(b.id === activeId) - Number(a.id === activeId) || Number(b.unread > 0 && !b.muted) - Number(a.unread > 0 && !a.muted) || b.lastMessageAt.localeCompare(a.lastMessageAt))
-			.slice(0, 10)
-	);
-	const pillLabel = (c: SidebarChannel) => (c.kind === 'channel' ? '#' : '') + channelLabel(c, me.id);
+	function select(id: string) {
+		if (id === activeId) return;
+		void goto(`/hub/c/${id}`);
+	}
 
-	/* ---------- sheets ---------- */
+	/* ---------- side panel ---------- */
 
-	let sheet = $state<'thread' | 'info' | null>(null);
+	type Panel = 'thread' | 'info' | 'search' | 'saved' | null;
+	let panel = $state<Panel>(null);
 	let thread = $state<ChatMessageView | null>(null);
+	let newOpen = $state(false);
+	let prefsOpen = $state(false);
 	let manageAnnouncements = $state(page.url.searchParams.has('compose'));
 	let makeFrom = $state<{ messageId: string; text: string; mentionIds: string[] } | null>(null);
 	const draft = $derived.by(() => {
@@ -69,10 +75,10 @@
 
 	function openThread(m: ChatMessageView) {
 		thread = m;
-		sheet = 'thread';
+		panel = 'thread';
 	}
-	function closeSheet() {
-		sheet = null;
+	function closePanel() {
+		panel = null;
 		thread = null;
 		if (page.url.searchParams.has('t')) {
 			const url = new URL(page.url);
@@ -80,6 +86,15 @@
 			replaceState(url, {});
 		}
 	}
+
+	// Switching conversation closes a thread; details and search stay.
+	$effect(() => {
+		void activeId;
+		if (panel === 'thread') {
+			panel = null;
+			thread = null;
+		}
+	});
 
 	// ?t=<id> opens a thread (from a notification about a reply).
 	$effect(() => {
@@ -107,18 +122,19 @@
 
 	type Presence = { id: string; label: string; state: string; online: boolean };
 	let presence = $state(new Map<string, Presence>());
-	$effect(() => {
-		const ids = members.map((m) => m.id).slice(0, 300);
+	const presenceIds = $derived([...new Set([...members.map((m) => m.id), ...channels.flatMap((c) => (c.kind === 'dm' ? c.others.map((o) => o.id) : []))])].slice(0, 300));
+	async function loadPresence(ids: string[]) {
 		if (!ids.length) return;
-		const load = async () => {
-			const r = await fetch(`/api/chat/presence?ids=${ids.join(',')}`);
-			if (!r.ok) return;
-			const next = new Map(presence);
-			for (const p of (await r.json()) as Presence[]) next.set(p.id, p);
-			presence = next;
-		};
-		void load();
-		const t = setInterval(load, 60_000);
+		const r = await fetch(`/api/chat/presence?ids=${ids.join(',')}`);
+		if (!r.ok) return;
+		const next = new Map(presence);
+		for (const p of (await r.json()) as Presence[]) next.set(p.id, p);
+		presence = next;
+	}
+	$effect(() => {
+		const ids = presenceIds;
+		void loadPresence(ids);
+		const t = setInterval(() => loadPresence(ids), 60_000);
 		return () => clearInterval(t);
 	});
 	const statusOf = (id: string) => presence.get(id) ?? null;
@@ -137,7 +153,22 @@
 	// Tasks come from conversations between people, not from feeds.
 	const canMakeTasks = $derived(!!active && (active.kind === 'channel' || active.kind === 'dm' || active.kind === 'group' || active.kind === 'desk'));
 
+	const subtitle = $derived.by(() => {
+		if (!active) return '';
+		if (other) return `${statusOf(other.id)?.label ?? ''}${statusOf(other.id)?.online ? ' · online' : ''}${active.pinnedAs ? ` · ${active.pinnedAs === 'manager' ? 'Your reporting manager' : 'Your concerned HR'}` : ''}`.replace(/^ · /, '');
+		if (active.kind === 'desk') return `${active.deskOwnerId === me.id ? 'Private to you and HR · goes to your concerned HR first' : `Question from ${channelLabel(active, me.id)}`} · ${active.deskStatus === 'resolved' ? 'Resolved' : 'Open'}`;
+		if (active.kind === 'announcements') return 'Notices from HR: what needs you, what is coming up, updates';
+		if (active.kind === 'system') return 'Requests waiting on you, decisions on yours, reminders';
+		const n = members.length ? `${members.length + 1} members` : '';
+		const t = active.topic || (active.source === 'team' ? 'Team channel' : active.source === 'shift' ? 'Shift channel' : '');
+		return [n, t].filter(Boolean).join(' · ');
+	});
+
 	let list = $state<ReturnType<typeof MessageList> | null>(null);
+	const nameOf = (cid: string) => {
+		const c = channels.find((x) => x.id === cid);
+		return c ? (c.kind === 'channel' ? '#' : '') + channelLabel(c, me.id) : 'Conversation';
+	};
 
 	async function refreshFeed() {
 		await invalidateAll();
@@ -146,59 +177,61 @@
 </script>
 
 <svelte:head>
-	<title>{champOpen ? 'Champ' : active ? pillLabel(active) : 'Chat'} · Champ Hub — Champ HR ESS Portal</title>
+	<title>{champOpen ? 'Champ' : active ? nameOf(active.id) : 'Chat'} · Champ Hub — Champ HR ESS Portal</title>
 </svelte:head>
 
-<div class="conv">
-	<nav class="strip" aria-label="Recent conversations">
-		<a class="back" href="/hub/chats" aria-label="All chats"><ArrowLeft size={15} /></a>
-		<a class="pill champ" href="/hub/c/champ" aria-current={champOpen ? 'page' : undefined}><span class="ch">CH</span>Champ</a>
-		{#each recent as c (c.id)}
-			<a class="pill" href="/hub/c/{c.id}" aria-current={c.id === activeId ? 'page' : undefined} class:unread={c.unread > 0 && !c.muted}>
-				<span>{pillLabel(c)}</span>
-				{#if !c.muted && (c.kind === 'channel' ? c.mentions : c.unread) > 0}<span class="n">{c.kind === 'channel' ? c.mentions : c.unread}</span>{/if}
-			</a>
-		{/each}
-	</nav>
+<div class="conv ess-card" class:with-panel={!!panel}>
+	<div class="side-col">
+		<ChatSidebar
+			{channels}
+			{activeId}
+			meId={me.id}
+			isHr={data.can.hrDesk}
+			{presence}
+			{champWaiting}
+			onselect={select}
+			onnew={() => (newOpen = true)}
+			onfind={(m) => (panel = m)}
+			onsettings={() => (prefsOpen = true)}
+		/>
+	</div>
 
 	<section class="main" aria-label="Conversation">
 		{#if champOpen}
+			<header class="head">
+				<a class="back" href="/hub/chats" aria-label="All chats"><ArrowLeft size={16} /></a>
+				<span class="ess-tile ess-tile--round head-ic"><Sparkles size={18} strokeWidth={1.75} /></span>
+				<div class="title">
+					<h2>Champ</h2>
+					<small>Ask about leave, holidays, your tasks or your team</small>
+				</div>
+			</header>
 			<div class="champ-view">
-				<ChampPanel firstName={me.fullName.split(' ')[0]} initialQuestion={page.url.searchParams.get('ask') ?? ''} />
+				<ChampPanel firstName={me.fullName.split(' ')[0]} initialQuestion={page.url.searchParams.get('ask') ?? ''} onwaiting={(n) => (champWaiting = n)} />
 			</div>
 		{:else if active}
 			<header class="head">
-				<span class="head-ic">
-					{#if active.kind === 'announcements'}<Megaphone size={17} />
-					{:else if active.kind === 'system'}<Bell size={17} />
-					{:else if active.kind === 'desk'}<Headset size={17} />
-					{:else if active.kind === 'group'}<Users size={17} />
-					{:else if other}<Avatar userId={other.id} fullName={other.fullName} size="sm" />
-					{:else}<Hash size={17} />{/if}
+				<a class="back" href="/hub/chats" aria-label="All chats"><ArrowLeft size={16} /></a>
+				<span class="head-ic" class:ess-tile={!other} class:ess-tile--round={!other}>
+					{#if active.kind === 'announcements'}<Megaphone size={18} strokeWidth={1.75} />
+					{:else if active.kind === 'system'}<Bell size={18} strokeWidth={1.75} />
+					{:else if active.kind === 'desk'}<Headset size={18} strokeWidth={1.75} />
+					{:else if active.kind === 'group'}<Users size={18} strokeWidth={1.75} />
+					{:else if other}<Avatar userId={other.id} fullName={other.fullName} size="md" />
+					{:else}<Hash size={18} strokeWidth={1.75} />{/if}
 				</span>
 				<div class="title">
-					<strong>{channelLabel(active, me.id)}</strong>
-					<small>
-						{#if other}
-							{statusOf(other.id)?.label ?? ''}{statusOf(other.id)?.online ? ' · online' : ''}{active.pinnedAs ? ` · ${active.pinnedAs === 'manager' ? 'Your reporting manager' : 'Your concerned HR'}` : ''}
-						{:else if active.kind === 'desk'}
-							{active.deskOwnerId === me.id ? 'Private to you and HR · goes to your concerned HR first' : `Question from ${channelLabel(active, me.id)}`} · {active.deskStatus === 'resolved' ? 'Resolved' : 'Open'}
-						{:else if active.kind === 'announcements'}
-							Notices from HR: what needs you, what is coming up, updates
-						{:else if active.kind === 'system'}
-							Requests waiting on you, decisions on yours, reminders
-						{:else}
-							{active.topic || (active.source === 'team' ? 'Team channel' : active.source === 'shift' ? 'Shift channel' : '')}
-						{/if}
-					</small>
+					<h2>{channelLabel(active, me.id)}</h2>
+					<small>{subtitle}</small>
 				</div>
 				{#if active.kind === 'announcements' && data.can.postAnnouncements}
 					<button type="button" class="ess-btn ess-btn--sm {manageAnnouncements ? 'ess-btn--secondary' : 'ess-btn--primary'}" onclick={() => (manageAnnouncements = !manageAnnouncements)}>
 						<PenLine size={14} /> {manageAnnouncements ? 'Back to the feed' : 'Post & manage'}
 					</button>
 				{/if}
+				<button type="button" class="ess-icon-btn" aria-label="Search messages" title="Search messages" aria-pressed={panel === 'search'} onclick={() => (panel = panel === 'search' ? null : 'search')}><Search size={18} /></button>
 				{#if active.kind !== 'announcements'}
-					<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" aria-label="Details" aria-pressed={sheet === 'info'} onclick={() => (sheet = sheet === 'info' ? null : 'info')}><Info size={16} /></button>
+					<button type="button" class="ess-icon-btn" aria-label="Details" title="Details" aria-pressed={panel === 'info'} onclick={() => (panel = panel === 'info' ? null : 'info')}><Info size={18} /></button>
 				{/if}
 			</header>
 
@@ -234,159 +267,130 @@
 			<div class="none"><p>Loading…</p></div>
 		{/if}
 	</section>
+
+	{#if panel}
+		<div class="panel-col">
+			{#if panel === 'thread' && thread && active}
+				{#key thread.id}
+					<ThreadPanel root={thread} meId={me.id} meName={me.fullName} {members} canPost={!disabledReason} {statusOf} onclose={closePanel} />
+				{/key}
+			{:else if panel === 'info' && active}
+				<InfoPanel
+					channel={active}
+					meId={me.id}
+					meName={me.fullName}
+					can={{ hrDesk: data.can.hrDesk, export: data.can.export, createChannels: data.can.createChannels }}
+					{statusOf}
+					onclose={closePanel}
+					onleft={() => {
+						closePanel();
+						void chat.refresh().then(() => goto('/hub/chats'));
+					}}
+				/>
+			{:else if panel === 'search' || panel === 'saved'}
+				<FindPanel
+					mode={panel}
+					meId={me.id}
+					meName={me.fullName}
+					{nameOf}
+					onopen={(m) => {
+						if (m.channelId !== activeId) void goto(`/hub/c/${m.channelId}${m.threadRootId ? `?t=${m.threadRootId}` : ''}`);
+						else if (m.threadRootId) void fetch(`/api/chat/messages?ids=${m.threadRootId}`).then(async (r) => { const [root] = r.ok ? await r.json() : []; if (root) openThread(root); });
+					}}
+					onclose={closePanel}
+				/>
+			{:else}
+				<div class="none"><p>Nothing to show.</p></div>
+			{/if}
+		</div>
+	{/if}
 </div>
 
-{#if sheet === 'thread' && thread && active}
-	<SideSheet label="Thread" onclose={closeSheet}>
-		{#key thread.id}
-			<ThreadPanel root={thread} meId={me.id} meName={me.fullName} {members} canPost={!disabledReason} {statusOf} onclose={closeSheet} />
-		{/key}
-	</SideSheet>
-{:else if sheet === 'info' && active}
-	<SideSheet label="Conversation details" onclose={closeSheet}>
-		<InfoPanel
-			channel={active}
-			meId={me.id}
-			meName={me.fullName}
-			can={{ hrDesk: data.can.hrDesk, export: data.can.export, createChannels: data.can.createChannels }}
-			{statusOf}
-			onclose={closeSheet}
-			onleft={() => {
-				closeSheet();
-				void chat.refresh().then(() => goto('/hub/chats'));
-			}}
-		/>
-	</SideSheet>
+{#if newOpen}
+	<NewChatDialog scope={data.can.createChannels as 'anywhere' | 'team' | 'none'} onclose={() => (newOpen = false)} onopen={async (id) => { newOpen = false; await chat.refresh(); await goto(`/hub/c/${id}`); }} />
 {/if}
+{#if prefsOpen}<ChatPrefs onclose={() => (prefsOpen = false)} />{/if}
 {#if makeFrom}
 	<NewTaskDialog meId={me.id} from={makeFrom} onclose={() => (makeFrom = null)} />
 {/if}
 
 <style>
 	.conv {
-		--h: calc(100dvh - 2 * var(--ess-page-pad-y) - 72px);
+		--h: calc(100dvh - 2 * var(--ess-page-pad-y) - 150px);
 		height: var(--h);
-		min-height: 460px;
+		min-height: 520px;
+		padding: 0;
+		display: grid;
+		grid-template-columns: 300px minmax(0, 1fr);
+		overflow: hidden;
+	}
+	.conv.with-panel {
+		grid-template-columns: 300px minmax(0, 1fr) 360px;
+	}
+	.side-col,
+	.panel-col {
+		min-height: 0;
+		min-width: 0;
+	}
+	.panel-col {
+		border-left: 1px solid var(--ess-border);
+	}
+	.main {
+		flex: 1;
+		min-height: 0;
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
-		border: 1px solid var(--ess-border);
-		border-radius: var(--ess-radius-lg);
-		overflow: hidden;
-		background: var(--ess-glass-bg);
-		box-shadow: var(--ess-glass-shadow);
 	}
-	.strip {
+	.head {
 		display: flex;
 		align-items: center;
-		gap: 6px;
-		overflow-x: auto;
-		padding: 8px 12px;
-		border-bottom: 1px solid var(--ess-border-subtle);
-		flex: none;
+		gap: 12px;
+		padding: 12px 14px 12px 20px;
+		min-height: 72px;
+		border-bottom: 1px solid var(--ess-border);
 	}
 	.back {
-		display: grid;
+		display: none;
 		place-items: center;
-		width: 30px;
-		height: 30px;
-		border-radius: 9px;
+		width: 32px;
+		height: 32px;
+		border-radius: var(--ess-radius-sm);
 		color: var(--ess-text-secondary);
 		flex: none;
 	}
 	.back:hover {
 		background: var(--ess-surface-hover);
 	}
-	.pill {
-		flex: none;
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		max-width: 200px;
-		padding: 4px 11px;
-		border-radius: 99px;
-		border: 1px solid var(--ess-border);
-		color: var(--ess-text-secondary);
-		font-size: 12.5px;
-		font-weight: 500;
-	}
-	.pill span:not(.n):not(.ch) {
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.pill.unread {
-		color: var(--ess-text);
-		font-weight: 700;
-	}
-	.pill[aria-current='page'] {
-		border-color: var(--ess-primary);
-		background: var(--ess-primary-soft);
-		color: var(--ess-primary-text);
-	}
-	.pill.champ {
-		padding-left: 5px;
-	}
-	.ch {
-		width: 20px;
-		height: 20px;
-		border-radius: 50%;
-		display: grid;
-		place-items: center;
-		background: linear-gradient(150deg, var(--acc2), var(--acc));
-		color: var(--ess-text-on-primary);
-		font-size: 8.5px;
-		font-weight: 800;
-	}
-	.n {
-		min-width: 16px;
-		height: 16px;
-		padding: 0 4px;
-		border-radius: 99px;
-		background: var(--ess-primary);
-		color: var(--ess-text-on-primary);
-		font-size: 10px;
-		font-weight: 700;
-		display: grid;
-		place-items: center;
-	}
-	.main {
-		flex: 1;
-		min-height: 0;
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-	}
-	.head {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		padding: 8px 12px 8px 16px;
-		min-height: 56px;
-		border-bottom: 1px solid var(--ess-border);
-	}
 	.head-ic {
-		color: var(--ess-text-muted);
-		display: inline-flex;
+		flex: none;
+		display: grid;
+		place-items: center;
 	}
 	.title {
 		flex: 1;
 		min-width: 0;
 		display: grid;
 	}
-	.title strong {
+	.title h2 {
 		font-family: var(--ess-font-display);
-		font-size: 15.5px;
+		font-size: 24px;
 		font-weight: 600;
+		line-height: 1.15;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 	.title small {
-		font-size: 12px;
-		color: var(--ess-text-muted);
+		font-size: 13px;
+		color: var(--ess-text-secondary);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+	.ess-icon-btn[aria-pressed='true'] {
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
 	}
 	.ann {
 		flex: 1;
@@ -411,10 +415,44 @@
 		color: var(--ess-text-muted);
 		padding: 24px;
 	}
+	@media (max-width: 1240px) {
+		.conv,
+		.conv.with-panel {
+			grid-template-columns: 260px minmax(0, 1fr);
+		}
+		.conv.with-panel .panel-col {
+			position: fixed;
+			z-index: 60;
+			top: 0;
+			right: 0;
+			bottom: 0;
+			width: min(400px, 100vw);
+			background: var(--ess-modal-bg);
+			box-shadow: var(--ess-elev-4);
+		}
+	}
+	@media (max-width: 900px) {
+		.conv,
+		.conv.with-panel {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.side-col {
+			display: none;
+		}
+		.back {
+			display: grid;
+		}
+	}
 	@media (max-width: 720px) {
 		.conv {
-			--h: calc(100dvh - 140px);
-			border-radius: var(--ess-radius-md);
+			--h: calc(100dvh - 180px);
+		}
+		.head {
+			padding-left: 12px;
+			min-height: 60px;
+		}
+		.title h2 {
+			font-size: 20px;
 		}
 	}
 </style>

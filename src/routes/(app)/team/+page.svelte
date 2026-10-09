@@ -1,16 +1,30 @@
 <script lang="ts">
 	import Users from '@lucide/svelte/icons/users';
+	import UserPlus from '@lucide/svelte/icons/user-plus';
 	import UploadCloud from '@lucide/svelte/icons/upload-cloud';
+	import FileSpreadsheet from '@lucide/svelte/icons/file-spreadsheet';
+	import Search from '@lucide/svelte/icons/search';
+	import X from '@lucide/svelte/icons/x';
+	import Mail from '@lucide/svelte/icons/mail';
+	import Plus from '@lucide/svelte/icons/plus';
+	import Clock from '@lucide/svelte/icons/clock';
+	import ShieldCheck from '@lucide/svelte/icons/shield-check';
+	import Building2 from '@lucide/svelte/icons/building-2';
+	import UserRound from '@lucide/svelte/icons/user-round';
+	import Briefcase from '@lucide/svelte/icons/briefcase';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import { enhance } from '$app/forms';
 	import { invalidateAll, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import KeyRound from '@lucide/svelte/icons/key-round';
 	import CalendarDays from '@lucide/svelte/icons/calendar-days';
 	import Settings from '@lucide/svelte/icons/settings';
 	import PersonSettingsPanel from '$lib/components/PersonSettingsPanel.svelte';
-	import { WEEKDAY_LABELS } from '$lib/week-off';
+	import LoginEmailQueue from '$lib/components/LoginEmailQueue.svelte';
+	import { WEEKDAY_LABELS, DEFAULT_WEEKDAYS_OFF, weekdaysOffOn } from '$lib/week-off';
 	import { BASE_ROLE_LABEL } from '$lib/capabilities';
 	import { CHIEF_PICK } from '$lib/chief';
 
@@ -24,13 +38,17 @@
 		embedded = false
 	}: { data: PageData; form: ActionData; embedded?: boolean } = $props();
 
-	type View = 'roster' | 'weekoff' | 'bulk' | 'passwords';
+	type View = 'roster' | 'weekoff' | 'bulk' | 'logins' | 'passwords';
 
-	const views = $derived<{ id: View; label: string }[]>([
-		{ id: 'roster', label: 'Roster' },
-		{ id: 'weekoff', label: 'Week-off rosters' },
-		...(data.canBulkImport ? [{ id: 'bulk' as const, label: 'Bulk import' }] : []),
-		...(data.canSeePasswordActivity ? [{ id: 'passwords' as const, label: 'Password activity' }] : [])
+	/* The employee-facing /team shows People and Week-off schedules. Login
+	   import, login delivery and password activity are administration and only
+	   appear on the People tab of Admin Controls. */
+	const views = $derived<{ id: View; label: string; count?: number }[]>([
+		{ id: 'roster', label: embedded ? 'Directory' : 'People' },
+		{ id: 'weekoff', label: embedded ? 'Week-off rosters' : 'Week-off schedules' },
+		...(embedded && data.canBulkImport ? [{ id: 'bulk' as const, label: 'Bulk import' }] : []),
+		...(embedded && data.canApproveLogins ? [{ id: 'logins' as const, label: 'Login delivery', count: data.pendingLoginEmails }] : []),
+		...(embedded && data.canSeePasswordActivity ? [{ id: 'passwords' as const, label: 'Password activity' }] : [])
 	]);
 
 	function initialView(): View {
@@ -39,7 +57,9 @@
 		if (form && Object.keys(form).some((k) => k.startsWith('bulkImport'))) return 'bulk';
 		const asked = page.url.searchParams.get('view');
 		if (asked === 'weekoff') return 'weekoff';
+		if (!embedded) return 'roster';
 		if (asked === 'bulk' && data.canBulkImport) return asked;
+		if (asked === 'logins' && data.canApproveLogins) return asked;
 		if (asked === 'passwords' && data.canSeePasswordActivity) return asked;
 		return 'roster';
 	}
@@ -428,17 +448,87 @@
 			return true;
 		})
 	);
+
+	/* ---------- selection, for the right-hand panel ---------- */
+
+	let selectedId = $state<string | null>(null);
+	const selected = $derived(data.roster.find((p) => p.id === selectedId) ?? null);
+	const BADGE: Record<string, string> = { present: 'present', left: 'cancelled', absent: 'absent' };
+	const roleLabel = (p: { role: string; customRoleName: string | null }) =>
+		p.customRoleName ?? BASE_ROLE_LABEL[p.role as keyof typeof BASE_ROLE_LABEL] ?? p.role.replace('_', ' ');
+
+	/* ---------- this week's roster grid ---------- */
+
+	function dateKey(d: Date) {
+		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+	}
+	/** Monday to Sunday of the current week. */
+	const weekDays = (() => {
+		const now = new Date();
+		const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+		return Array.from({ length: 7 }, (_, i) => {
+			const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+			return { key: dateKey(d), weekday: d.getDay(), label: WEEKDAY_LABELS[d.getDay()], day: d.getDate(), month: d.toLocaleDateString(undefined, { month: 'short' }) };
+		});
+	})();
+	const weekRange = `${weekDays[0].day} – ${weekDays[6].day} ${weekDays[6].month} ${new Date().getFullYear()}`;
+	const rosterById = $derived(new Map(data.weekOffRosters.map((r) => [r.id, r])));
+	/** Which weekdays this person is off on a given date, from their roster. */
+	function offOn(person: (typeof data.roster)[number], key: string): number[] {
+		const roster = person.weekOffRosterId ? rosterById.get(person.weekOffRosterId) : null;
+		if (!roster) return DEFAULT_WEEKDAYS_OFF;
+		return weekdaysOffOn(roster, key);
+	}
+	let gridFilter = $state('');
+	const gridRows = $derived(
+		data.roster.filter((p) => !gridFilter || p.weekOffRosterId === gridFilter || (gridFilter === 'default' && !p.weekOffRosterId))
+	);
+
+	/* ---------- bulk import signpost ---------- */
+
+	const bulkStep = $derived(reviewImport ? (reviewImport.status === 'applied' ? 3 : 1) : 0);
+	const bulkStepHints = $derived([
+		reviewImport?.filename ?? 'Choose a spreadsheet',
+		reviewImport && reviewImport.status !== 'applied' ? 'Check and fix any issues' : 'Check each row',
+		reviewImport?.status === 'applied' ? `${createdCount} created` : 'Set up the accounts'
+	]);
+
+	/* ---------- password activity ---------- */
+
+	let pwSearch = $state('');
+	let pwAction = $state('');
+	let pwSelected = $state<number | null>(null);
+	const pwActions = $derived([...new Set(data.passwordActivity.map((e) => e.label))]);
+	const pwRows = $derived(
+		data.passwordActivity
+			.map((e, i) => ({ ...e, i }))
+			.filter((e) => {
+				const q = pwSearch.trim().toLowerCase();
+				if (q && !(e.targetName ?? '').toLowerCase().includes(q) && !(e.targetEmail ?? '').toLowerCase().includes(q) && !(e.actorName ?? '').toLowerCase().includes(q)) return false;
+				if (pwAction && e.label !== pwAction) return false;
+				return true;
+			})
+	);
+	const pwThisWeek = $derived(data.passwordActivity.filter((e) => Date.now() - new Date(e.createdAt).getTime() < 7 * 86_400_000).length);
+	const pwEvent = $derived(pwSelected === null ? null : (data.passwordActivity[pwSelected] ?? null));
+	const whenLong = (d: string | Date) => new Date(d).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 </script>
 
 <svelte:head>
-	<title>Team — Champ HR ESS Portal</title>
+	<title>{embedded ? 'People — Admin Controls' : 'Team'} — Champ HR ESS Portal</title>
 </svelte:head>
 
 {#if !embedded}
-	<header class="page-header">
-		<h1 class="ess-page-title">Team Roster</h1>
-		<p class="ess-page-sub">Live status and pending approvals for your team</p>
-	</header>
+	<PageHeader crumb={['Team', view === 'weekoff' ? 'Schedules' : 'People']} title={view === 'weekoff' ? 'A balanced week for everyone.' : 'Know your people.'} sub={view === 'weekoff' ? 'Plan and manage team week-off schedules with ease.' : 'Find and manage your team members, their availability and schedules.'} compact>
+		{#snippet actions()}
+			{#if data.canCreateLogin && view === 'roster'}
+				<button class="ess-btn ess-btn--primary" onclick={() => (showCreateForm = !showCreateForm)}>
+					<UserPlus size={17} />
+					Add person
+				</button>
+			{/if}
+		{/snippet}
+	</PageHeader>
 {/if}
 
 <!--
@@ -447,1465 +537,1648 @@
 	switch shows one at a time; the choice is kept in the URL (?view=) so a
 	refresh or a shared link lands on the same part.
 -->
-<div class="ess-segmented view-switch" role="group" aria-label="Show">
+<div class="ess-tabs view-tabs" role="tablist" aria-label="Show">
 	{#each views as v (v.id)}
-		<button type="button" aria-pressed={view === v.id} onclick={() => setView(v.id)}>{v.label}</button>
+		<button type="button" role="tab" class="ess-tab" aria-selected={view === v.id} onclick={() => setView(v.id)}>
+			{v.label}
+			{#if v.count}<span class="ess-count">{v.count}</span>{/if}
+		</button>
 	{/each}
 </div>
 
+<!-- ============================== PEOPLE ============================== -->
 {#if view === 'roster'}
-<div class="stat-grid">
-	<div class="ess-stat">
-		<span class="ess-stat__label">Team size</span>
-		<span class="ess-stat__value">{data.teamSize}</span>
-	</div>
-	<div class="ess-stat">
-		<span class="ess-stat__label">Present now</span>
-		<span class="ess-stat__value stat-success">{data.presentNow}</span>
-	</div>
-	<div class="ess-stat">
-		<span class="ess-stat__label">On leave</span>
-		<span class="ess-stat__value">{data.onLeave}</span>
-	</div>
-	<div class="ess-stat">
-		<span class="ess-stat__label">Pending approvals</span>
-		<span class="ess-stat__value stat-warning">{data.pendingApprovals}</span>
-	</div>
-</div>
-
-<div class="toolbar">
-	<input
-		class="ess-input search-input"
-		placeholder="Search name, employee code, or email"
-		bind:value={search}
-	/>
-	<div class="ess-segmented">
-		<button type="button" aria-pressed={filter === 'all'} onclick={() => (filter = 'all')}>All</button>
-		<button type="button" aria-pressed={filter === 'present'} onclick={() => (filter = 'present')}>Present</button>
-		<button type="button" aria-pressed={filter === 'absent'} onclick={() => (filter = 'absent')}>On leave</button>
-	</div>
-	{#if data.canCreateLogin}
-		<button class="ess-btn ess-btn--primary create-btn" onclick={() => (showCreateForm = !showCreateForm)}>
-			<Users size={16} />
-			Add Employee
-		</button>
-	{/if}
-</div>
-
-{#if showCreateForm && data.canCreateLogin}
-	<!--
-		Access is one choice: a base role, or a named role a Super Admin made
-		(IT Support, Operations…). The named role decides the base role too, so the
-		hint under the field says what the person will actually be able to do.
-	-->
-	<form method="POST" action="?/createEmployee" use:enhance class="create-card create-grid">
-		<label class="ess-field">
-			<span class="ess-label">Full Name</span>
-			<input class="ess-input" name="fullName" required />
-		</label>
-		<label class="ess-field">
-			<span class="ess-label">Email</span>
-			<input class="ess-input" name="email" type="email" required />
-		</label>
-		<label class="ess-field">
-			<span class="ess-label">Access role</span>
-			<select class="ess-select" name="access" bind:value={newAccess}>
-				{#each data.creatableRoles as role (role)}
-					<option value="base:{role}">{BASE_ROLE_LABEL[role]}</option>
-				{/each}
-				{#if data.namedRoles.length > 0}
-					<optgroup label="Named roles">
-						{#each data.namedRoles as named (named.id)}
-							<option value="named:{named.id}">{named.name}</option>
-						{/each}
-					</optgroup>
-				{/if}
-			</select>
-			<span class="ess-help">{accessHint}</span>
-		</label>
-		{#if !data.teamLeadTeamId}
-			<label class="ess-field">
-				<span class="ess-label">Team</span>
-				<select class="ess-select" name="teamId">
-					<option value="">— none yet —</option>
-					{#each data.allTeams as team (team.id)}
-						<option value={team.id}>{team.name}</option>
-					{/each}
-				</select>
-			</label>
-			<label class="ess-field">
-				<span class="ess-label">Reports to</span>
-				<select class="ess-select" name="reportsTo">
-					<option value="">— not set —</option>
-					{#if data.canPickChief}<option value={CHIEF_PICK}>Chief</option>{/if}
-					{#each data.allPeople as p (p.id)}
-						<option value={p.id}>{p.fullName}</option>
-					{/each}
-				</select>
-			</label>
-			<label class="ess-field">
-				<span class="ess-label">Concerned HR</span>
-				<select class="ess-select" name="hrUserId">
-					<option value="">— any admin —</option>
-					{#each data.hrPeople as p (p.id)}
-						<option value={p.id}>{p.fullName}</option>
-					{/each}
-				</select>
-			</label>
-		{/if}
-		<label class="ess-field">
-			<span class="ess-label">Shift Group</span>
-			{#if data.shiftGroups.length > 0}
-				<select class="ess-select" name="shiftGroupId" required>
-					{#each data.shiftGroups as group (group.id)}
-						<option value={group.id}>{group.name}</option>
-					{/each}
-				</select>
-			{:else}
-				<select class="ess-select" disabled>
-					<option>No published holiday calendar yet</option>
-				</select>
-			{/if}
-		</label>
-		<div class="create-actions">
-			<button type="submit" class="ess-btn ess-btn--primary" disabled={data.shiftGroups.length === 0}>
-				Create Login
-			</button>
+	<div class="ess-figures figures">
+		<div class="ess-figure">
+			<span class="ess-tile ess-tile--sm"><Users size={18} /></span>
+			<div><div class="ess-figure__value">{data.teamSize}</div><div class="ess-figure__label">Total people</div></div>
 		</div>
-	</form>
-	{#if data.shiftGroups.length === 0}
-		<p class="ess-error section-gap">
-			Publish a holiday calendar for at least one shift group before creating logins.
+		<div class="ess-figure">
+			<span class="ess-figure__dot ess-figure__dot--ok"></span>
+			<div><div class="ess-figure__value">{data.presentNow}</div><div class="ess-figure__label">Present now</div></div>
+		</div>
+		<div class="ess-figure">
+			<span class="ess-figure__dot ess-figure__dot--warn"></span>
+			<div><div class="ess-figure__value">{data.onLeave}</div><div class="ess-figure__label">On leave today</div></div>
+		</div>
+		<div class="ess-figure">
+			<span class="ess-figure__dot"></span>
+			<div><div class="ess-figure__value">{data.pendingApprovals}</div><div class="ess-figure__label">Pending approvals</div></div>
+		</div>
+	</div>
+
+	<div class="toolbar">
+		<label class="ess-search grow">
+			<Search size={17} />
+			<input class="ess-input" placeholder="Search by name, code or email…" bind:value={search} aria-label="Search people" />
+		</label>
+		<select class="ess-select status-filter" bind:value={filter} aria-label="Filter by status">
+			<option value="all">All statuses</option>
+			<option value="present">Present now</option>
+			<option value="absent">Not present</option>
+		</select>
+	</div>
+
+	{#if deleteError}
+		<p class="ess-alert ess-alert--danger">{deleteError}</p>
+	{/if}
+
+	{#if settingsNotice}
+		<p class="ess-alert ess-alert--warning notice">
+			<span>{settingsNotice}</span>
+			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (settingsNotice = '')}>Dismiss</button>
 		</p>
 	{/if}
+
+	{#if resetIssued}
+		<div class="ess-notice ess-notice--success">
+			<span class="ess-notice__icon"><KeyRound size={15} /></span>
+			<div class="ess-notice__body">
+				<strong>Password reset for {resetIssued.name}.</strong>
+				Share this once — it won't be shown again: <code class="code">{resetIssued.password}</code>
+			</div>
+			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (resetIssued = null)}>Dismiss</button>
+		</div>
+	{/if}
+
 	{#if form?.success}
-		<p class="temp-pass">
-			Created {form.email} — temporary password: <code>{form.tempPassword}</code>
-			{#if form.emailSent}
-				<br />Emailed to them as well.
-			{/if}
-		</p>
-		<!-- The account exists either way, so the password above is the fallback. -->
-		{#if !form.emailSent}
-			<p class="mail-warn">
-				Could not email these details{form.emailError ? ` — ${form.emailError}` : ''}. Pass the
-				password above on directly.
-			</p>
-		{/if}
+		<div class="ess-notice ess-notice--success">
+			<span class="ess-notice__icon"><UserPlus size={15} /></span>
+			<div class="ess-notice__body">
+				<strong>Created {form.email}</strong>
+				Temporary password: <code class="code">{form.tempPassword}</code>. Their login email waits for an admin to approve it{data.canApproveLogins ? ' in Login delivery' : ''}. Nothing has been emailed yet.
+			</div>
+		</div>
 	{:else if form?.message}
-		<p class="ess-error">{form.message}</p>
+		<p class="ess-alert ess-alert--danger">{form.message}</p>
 	{/if}
-{/if}
 
-{#if deleteError}
-	<p class="ess-error section-gap">{deleteError}</p>
-{/if}
-
-{#if resetFor}
-	<div class="reset-panel">
-		<div class="reset-head">
-			<KeyRound size={16} />
-			<strong>Reset password — {resetFor.name}</strong>
-		</div>
-		<p class="reset-note">
-			Existing passwords are one-way hashed and can never be read back, so a reset issues a new
-			one. It is shown once here for hand-off, and {resetFor.name} must change it at next login.
-		</p>
-		<div class="reset-controls">
-			<input
-				class="ess-input reset-input"
-				bind:value={resetValue}
-				spellcheck="false"
-				autocomplete="off"
-				aria-label="New password"
-			/>
-			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (resetValue = generatePassword())}>
-				Regenerate
-			</button>
-			<button
-				type="button"
-				class="ess-btn ess-btn--sm"
-				onclick={submitReset}
-				disabled={resettingId !== null}
-			>
-				{resettingId ? 'Resetting…' : 'Reset password'}
-			</button>
-			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (resetFor = null)}>
-				Cancel
-			</button>
-		</div>
-		{#if resetError}<p class="ess-error">{resetError}</p>{/if}
-	</div>
-{/if}
-
-{#if resetIssued}
-	<div class="reset-issued">
-		<strong>Password reset for {resetIssued.name}.</strong>
-		Share this once — it won't be shown again:
-		<code>{resetIssued.password}</code>
-		<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (resetIssued = null)}>
-			Dismiss
-		</button>
-	</div>
-{/if}
-
-<!-- Save errors surface inside the panel, next to the fields that caused them. -->
-
-{#if settingsNotice}
-	<p class="settings-notice section-gap">
-		{settingsNotice}
-		<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (settingsNotice = '')}>
-			Dismiss
-		</button>
-	</p>
-{/if}
-
-{#if editingPerson}
-	{#key editingPerson.id}
-		<PersonSettingsPanel
-			person={editingPerson}
-			people={data.allPeople}
-			shiftGroups={data.allShiftGroups}
-			rosters={data.weekOffRosters}
-			roles={ROLES}
-			canEditRole={data.isSuperAdmin}
-			canPickChief={data.canPickChief}
-			currentUserId={data.currentUserId}
-			onnotice={(m) => (settingsNotice = m)}
-			onclose={() => (editingPerson = null)}
-			onsaved={async () => {
-				editingPerson = null;
-				await invalidateAll();
-			}}
-		/>
-	{/key}
-{/if}
-
-<div class="ess-table-shell roster-shell">
-	<div class="roster-row roster-head">
-		<span>Name</span>
-		<span>Emp code</span>
-		<span>Reports to</span>
-		<span>Concerned HR</span>
-		<span>Shift</span>
-		<span>Week off</span>
-		<span>Status</span>
-		<span class="align-right">Leave left</span>
-		<span class="align-right">{data.isSuperAdmin ? '' : ''}</span>
-	</div>
-	{#each filteredRoster as person (person.id)}
-		<!-- The whole row opens the settings panel for Super Admins. Keyboard
-		     users get the same via the Settings button in the last cell, so the
-		     row itself carries no tab stop and no duplicate announcement. -->
-		<div
-			class="roster-row"
-			class:clickable={person.canEditSettings}
-			onclick={person.canEditSettings ? () => (editingPerson = person) : undefined}
-			onkeydown={undefined}
-			role={person.canEditSettings ? 'presentation' : undefined}
-		>
-			<span class="name-cell">
-				<Avatar
-					userId={person.id}
-					fullName={person.fullName}
-					hasPicture={person.hasPicture}
-					size="sm"
-				/>
-				{person.fullName}
-			</span>
-			<span class="code-cell">
-				{#if person.employeeCode}
-					{person.employeeCode}
-				{:else}
-					<span class="code-missing" title="No employee code — biometric attendance can't be matched"
-						>Not set</span
-					>
-				{/if}
-			</span>
-			<span class="link-cell">
-				{#if person.reportsToName}
-					{person.reportsToName}
-				{:else if person.reportsToChief}
-					<span class="chief" title="Approvals go straight to the concerned HR.">Chief</span>
-				{:else}
-					<span class="code-missing" title="No reporting manager — approvals fall back to HR">
-						Not set
-					</span>
-				{/if}
-			</span>
-			<span class="link-cell">
-				{person.hrName ?? 'Any admin'}
-			</span>
-			<span class="shift-cell">
-				{#if person.shiftGroupName}
-					{person.shiftGroupName}
-				{:else}
-					<span class="code-missing">Not set</span>
-				{/if}
-			</span>
-			<span class="weekoff-cell">
-				{person.weekOffName ?? 'Sat + Sun'}
-				<span class="weekoff-summary">{person.weekOffSummary}</span>
-			</span>
-			<span><span class="ess-badge ess-badge--{person.status}">{statusLabel[person.status]}</span></span>
-			<span class="align-right">{person.leaveLeft}</span>
-			<!-- Buttons sit inside the clickable row, so each stops its click from
-			     also opening the panel. -->
-			<span class="align-right" onclick={(e) => e.stopPropagation()} role="presentation">
-				{#if person.canEditSettings}
-					<button
-						type="button"
-						class="row-reset"
-						onclick={() => (editingPerson = person)}
-						aria-label="Settings for {person.fullName}"
-						title="Settings for {person.fullName}"
-					>
-						<Settings size={15} />
-					</button>
-				{/if}
-				{#if data.canDeletePeople && person.id !== data.currentUserId}
-					{#if confirmingDelete === person.id}
-						<span class="confirm-delete">
-							<button
-								type="button"
-								class="ess-btn ess-btn--sm ess-btn--danger"
-								onclick={() => deleteEmployee(person.id)}
-								disabled={deletingId === person.id}
-							>
-								{deletingId === person.id ? 'Deleting…' : 'Confirm'}
-							</button>
-							<button
-								type="button"
-								class="ess-btn ess-btn--sm ess-btn--ghost"
-								onclick={() => (confirmingDelete = null)}
-								disabled={deletingId === person.id}
-							>
-								Cancel
-							</button>
-						</span>
-					{:else}
-						<button
-							type="button"
-							class="row-reset"
-							onclick={() => openReset(person)}
-							aria-label="Reset password for {person.fullName}"
-							title="Reset password for {person.fullName}"
-						>
-							<KeyRound size={15} />
-						</button>
-						<button
-							type="button"
-							class="row-delete"
-							onclick={() => (confirmingDelete = person.id)}
-							aria-label="Delete {person.fullName}"
-							title="Delete {person.fullName}"
-						>
-							<Trash2 size={15} />
-						</button>
-					{/if}
-				{/if}
-			</span>
-			<!--
-				The login this person has not used yet. Spans the whole row rather than
-				taking an eleventh column: it is present for a handful of people at a
-				time, and it disappears on its own the moment they sign in and set their
-				own password. Stops its own clicks so selecting or copying the password
-				doesn't open the settings panel behind it.
-			-->
-			{#if person.temporaryPassword}
-				<span class="pending-login" onclick={(e) => e.stopPropagation()} role="presentation">
-					<span class="pending-login-label">Hasn't signed in yet — temporary password</span>
-					<code>{person.temporaryPassword}</code>
-					<button
-						type="button"
-						class="ess-btn ess-btn--sm ess-btn--ghost"
-						onclick={() => copyTemporaryPassword(person.id, person.temporaryPassword!)}
-					>
-						{copiedPasswordFor === person.id ? 'Copied' : 'Copy'}
-					</button>
-				</span>
-			{/if}
-		</div>
-	{:else}
-		<p class="ess-empty">No employees match this search.</p>
-	{/each}
-	<div class="table-foot">
-		<span>{filteredRoster.length} of {data.teamSize} employees</span>
-	</div>
-</div>
-{/if}
-
-{#if view === 'weekoff'}
-<section class="weekoff-section">
-	<div class="section-head">
-		<div>
-			<h2 class="section-title">Week-off Rosters</h2>
-			<p class="section-sub">
-				{#if data.canAuthorRosters}
-					Save a week-off pattern once — all Sundays, Saturday + Sunday, or a rotation that repeats over
-					several weeks — then publish it so team managers can apply it. Assigning a roster in the table
-					above reflects on that employee's leave calendar straight away.
-				{:else}
-					Patterns published by the Super Admin. Apply one to anyone on your team from the Week off column
-					above; their leave calendar updates immediately.
-				{/if}
-			</p>
-		</div>
-		{#if data.canAuthorRosters}
-			<button
-				class="ess-btn ess-btn--secondary"
-				onclick={() => {
-					if (showRosterEditor) resetRosterForm();
-					showRosterEditor = !showRosterEditor;
+	{#if editingPerson}
+		{#key editingPerson.id}
+			<PersonSettingsPanel
+				person={editingPerson}
+				people={data.allPeople}
+				shiftGroups={data.allShiftGroups}
+				rosters={data.weekOffRosters}
+				roles={ROLES}
+				canEditRole={data.isSuperAdmin}
+				canPickChief={data.canPickChief}
+				currentUserId={data.currentUserId}
+				onnotice={(m) => (settingsNotice = m)}
+				onclose={() => (editingPerson = null)}
+				onsaved={async () => {
+					editingPerson = null;
+					await invalidateAll();
 				}}
-			>
-				<CalendarDays size={16} />
-				{showRosterEditor ? 'Close' : 'New Roster'}
-			</button>
-		{/if}
-	</div>
-
-	{#if rosterError}
-		<p class="ess-error section-gap">{rosterError}</p>
+			/>
+		{/key}
 	{/if}
 
-	{#if data.canAuthorRosters && showRosterEditor}
-		<div class="create-card roster-editor">
-			<label class="ess-field">
-				<span class="ess-label">Roster name</span>
-				<input class="ess-input" bind:value={rosterName} placeholder="e.g. All Sundays" />
-			</label>
-			<label class="ess-field">
-				<span class="ess-label">Description (optional)</span>
-				<input class="ess-input" bind:value={rosterDescription} placeholder="Who this is for" />
-			</label>
-			<label class="ess-field">
-				<span class="ess-label">Applies to</span>
-				<select class="ess-select" bind:value={rosterTeamId}>
-					<option value="">All teams</option>
-					{#each data.allTeams as team (team.id)}
-						<option value={team.id}>{team.name}</option>
-					{/each}
-				</select>
-			</label>
-			<label class="ess-field">
-				<span class="ess-label">Pattern</span>
-				<select class="ess-select" bind:value={rosterPattern}>
-					<option value="fixed">Same every week</option>
-					<option value="rotational">Rotational</option>
-				</select>
-			</label>
+	<div class="ess-split people-split">
+		<section class="ess-card directory">
+			<div class="ess-card-head">
+				<div>
+					<h2 class="ess-h2">{embedded ? 'Employee directory' : 'People'}</h2>
+					<p class="ess-caption">{filteredRoster.length} of {data.teamSize} {data.teamSize === 1 ? 'person' : 'people'}</p>
+				</div>
+				{#if data.canCreateLogin && embedded}
+					<button class="ess-btn ess-btn--primary" onclick={() => (showCreateForm = !showCreateForm)}>
+						<Plus size={17} />
+						Create login
+					</button>
+				{/if}
+			</div>
 
-			{#if rosterPattern === 'fixed'}
-				<div class="ess-field day-field">
-					<span class="ess-label">Days off every week</span>
-					<div class="day-picker">
-						{#each WEEKDAY_LABELS as label, day (label)}
-							<button
-								type="button"
-								class="day-chip"
-								class:selected={rosterWeekdays.includes(day)}
-								onclick={() => toggleFixedDay(day)}
-								aria-pressed={rosterWeekdays.includes(day)}
-							>
-								{label}
-							</button>
+			<div class="table-wrap">
+				<table class="ess-table roster">
+					<thead>
+						<tr>
+							<th>Name</th>
+							<th>Reports to</th>
+							<th>Concerned HR</th>
+							<th>Shift</th>
+							<th>Week off</th>
+							<th>Today</th>
+							<th class="ess-num">Leave left</th>
+							<th><span class="ess-sr-only">Actions</span></th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each filteredRoster as person (person.id)}
+							<!-- The whole row selects the person for the panel on the right.
+							     Keyboard users get the same via the View button. -->
+							<tr class="person-row" class:is-selected={selectedId === person.id} onclick={() => (selectedId = person.id)}>
+								<td>
+									<span class="name-cell">
+										<Avatar userId={person.id} fullName={person.fullName} hasPicture={person.hasPicture} size="md" />
+										<span class="name-text">
+											<strong>{person.fullName}</strong>
+											<small>
+												{#if person.employeeCode}<span class="code-cell">{person.employeeCode}</span>{:else}<span class="missing" title="No employee code — biometric attendance can't be matched">No code</span>{/if}
+												<span class="ess-dot-sep"></span>{person.email}
+											</small>
+										</span>
+									</span>
+								</td>
+								<td class="muted-cell">
+									{#if person.reportsToName}
+										{person.reportsToName}
+									{:else if person.reportsToChief}
+										<span class="chief" title="Approvals go straight to the concerned HR.">Chief</span>
+									{:else}
+										<span class="missing" title="No reporting manager — approvals fall back to HR">Not set</span>
+									{/if}
+								</td>
+								<td class="muted-cell">{person.hrName ?? 'Any admin'}</td>
+								<td class="muted-cell">
+									{#if person.shiftGroupName}
+										{person.shiftGroupName}
+										{#if person.officeTimings}<small class="sub">{person.officeTimings}</small>{/if}
+									{:else}
+										<span class="missing">Not set</span>
+									{/if}
+								</td>
+								<td class="muted-cell">
+									{person.weekOffName ?? 'Sat + Sun'}
+									<small class="sub">{person.weekOffSummary}</small>
+								</td>
+								<td><span class="ess-badge ess-badge--{BADGE[person.status]}">{statusLabel[person.status]}</span></td>
+								<td class="ess-num">{person.leaveLeft}</td>
+								<!-- Buttons sit inside the clickable row, so each stops its click
+								     from also changing the selection. -->
+								<td class="actions-cell">
+									<span class="row-actions" onclick={(e) => e.stopPropagation()} role="presentation">
+										<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" onclick={() => (selectedId = person.id)}>View</button>
+										{#if person.canEditSettings}
+											<button type="button" class="ess-icon-btn" onclick={() => (editingPerson = person)} aria-label="Settings for {person.fullName}" title="Settings for {person.fullName}">
+												<Settings size={16} />
+											</button>
+										{/if}
+										{#if data.canDeletePeople && person.id !== data.currentUserId}
+											{#if confirmingDelete === person.id}
+												<span class="confirm-delete">
+													<button type="button" class="ess-btn ess-btn--sm ess-btn--danger" onclick={() => deleteEmployee(person.id)} disabled={deletingId === person.id}>
+														{deletingId === person.id ? 'Deleting…' : 'Confirm'}
+													</button>
+													<button type="button" class="ess-btn ess-btn--sm ess-btn--ghost" onclick={() => (confirmingDelete = null)} disabled={deletingId === person.id}>Cancel</button>
+												</span>
+											{:else}
+												<button type="button" class="ess-icon-btn" onclick={() => openReset(person)} aria-label="Reset password for {person.fullName}" title="Reset password for {person.fullName}">
+													<KeyRound size={16} />
+												</button>
+												<button type="button" class="ess-icon-btn danger" onclick={() => (confirmingDelete = person.id)} aria-label="Delete {person.fullName}" title="Delete {person.fullName}">
+													<Trash2 size={16} />
+												</button>
+											{/if}
+										{/if}
+									</span>
+								</td>
+							</tr>
+							<!--
+								The login this person has not used yet. Spans the whole row: it is
+								present for a handful of people at a time, and it disappears on its
+								own the moment they sign in and set their own password.
+							-->
+							{#if person.temporaryPassword}
+								<tr class="pending-row">
+									<td colspan="8">
+										<span class="pending-login" onclick={(e) => e.stopPropagation()} role="presentation">
+											<Mail size={14} />
+											<span>Hasn't signed in yet — temporary password</span>
+											<code class="code">{person.temporaryPassword}</code>
+											<button type="button" class="ess-btn ess-btn--sm ess-btn--ghost" onclick={() => copyTemporaryPassword(person.id, person.temporaryPassword!)}>
+												{copiedPasswordFor === person.id ? 'Copied' : 'Copy'}
+											</button>
+										</span>
+									</td>
+								</tr>
+							{/if}
+						{:else}
+							<tr><td colspan="8"><div class="ess-empty">No one matches this search.</div></td></tr>
 						{/each}
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<aside class="ess-stack side">
+			{#if showCreateForm && data.canCreateLogin}
+				<!--
+					Access is one choice: a base role, or a named role a Super Admin made
+					(IT Support, Operations…). The named role decides the base role too, so the
+					hint under the field says what the person will actually be able to do.
+				-->
+				<form method="POST" action="?/createEmployee" use:enhance class="ess-card create-panel">
+					<div class="ess-card-head">
+						<div>
+							<h2 class="ess-h2">Create login</h2>
+							<p class="ess-caption">Create an employee account; their login email waits for approval.</p>
+						</div>
+						<button type="button" class="ess-icon-btn" onclick={() => (showCreateForm = false)} aria-label="Close"><X size={18} /></button>
+					</div>
+					<label class="ess-field">
+						<span class="ess-label">Full name <span class="req">*</span></span>
+						<input class="ess-input" name="fullName" required />
+					</label>
+					<label class="ess-field">
+						<span class="ess-label">Work email <span class="req">*</span></span>
+						<input class="ess-input" name="email" type="email" required />
+					</label>
+					<label class="ess-field">
+						<span class="ess-label">Access role <span class="req">*</span></span>
+						<select class="ess-select" name="access" bind:value={newAccess}>
+							{#each data.creatableRoles as role (role)}
+								<option value="base:{role}">{BASE_ROLE_LABEL[role]}</option>
+							{/each}
+							{#if data.namedRoles.length > 0}
+								<optgroup label="Named roles">
+									{#each data.namedRoles as named (named.id)}
+										<option value="named:{named.id}">{named.name}</option>
+									{/each}
+								</optgroup>
+							{/if}
+						</select>
+						<span class="ess-help">{accessHint}</span>
+					</label>
+					{#if !data.teamLeadTeamId}
+						<label class="ess-field">
+							<span class="ess-label">Team</span>
+							<select class="ess-select" name="teamId">
+								<option value="">— none yet —</option>
+								{#each data.allTeams as team (team.id)}
+									<option value={team.id}>{team.name}</option>
+								{/each}
+							</select>
+						</label>
+						<label class="ess-field">
+							<span class="ess-label">Reports to</span>
+							<select class="ess-select" name="reportsTo">
+								<option value="">— not set —</option>
+								{#if data.canPickChief}<option value={CHIEF_PICK}>Chief</option>{/if}
+								{#each data.allPeople as p (p.id)}
+									<option value={p.id}>{p.fullName}</option>
+								{/each}
+							</select>
+						</label>
+						<label class="ess-field">
+							<span class="ess-label">Concerned HR</span>
+							<select class="ess-select" name="hrUserId">
+								<option value="">— any admin —</option>
+								{#each data.hrPeople as p (p.id)}
+									<option value={p.id}>{p.fullName}</option>
+								{/each}
+							</select>
+						</label>
+					{/if}
+					<label class="ess-field">
+						<span class="ess-label">Shift group <span class="req">*</span></span>
+						{#if data.shiftGroups.length > 0}
+							<select class="ess-select" name="shiftGroupId" required>
+								{#each data.shiftGroups as group (group.id)}
+									<option value={group.id}>{group.name}</option>
+								{/each}
+							</select>
+						{:else}
+							<select class="ess-select" disabled>
+								<option>No published holiday calendar yet</option>
+							</select>
+						{/if}
+					</label>
+					<div class="ess-alert ess-alert--info small">
+						A secure temporary password is generated and shown once the login exists. The login email goes out only after an admin approves it.
+					</div>
+					{#if data.shiftGroups.length === 0}
+						<p class="ess-error">Publish a holiday calendar for at least one shift group before creating logins.</p>
+					{/if}
+					<button type="submit" class="ess-btn ess-btn--primary wide" disabled={data.shiftGroups.length === 0}>Create login</button>
+				</form>
+			{:else if resetFor}
+				<div class="ess-card">
+					<div class="ess-card-head">
+						<div>
+							<h2 class="ess-h2">Reset password</h2>
+							<p class="ess-caption">{resetFor.name}</p>
+						</div>
+						<button type="button" class="ess-icon-btn" onclick={() => (resetFor = null)} aria-label="Close"><X size={18} /></button>
+					</div>
+					<p class="ess-caption">
+						Existing passwords are one-way hashed and can never be read back, so a reset issues a new one. It is shown once here for hand-off, and {resetFor.name} must change it at next login.
+					</p>
+					<label class="ess-field reset-field">
+						<span class="ess-label">New temporary password</span>
+						<input class="ess-input mono" bind:value={resetValue} spellcheck="false" autocomplete="off" />
+					</label>
+					{#if resetError}<p class="ess-error">{resetError}</p>{/if}
+					<div class="btn-row">
+						<button type="button" class="ess-btn ess-btn--secondary" onclick={() => (resetValue = generatePassword())}>Regenerate</button>
+						<button type="button" class="ess-btn ess-btn--primary" onclick={submitReset} disabled={resettingId !== null}>
+							{resettingId ? 'Resetting…' : 'Reset password'}
+						</button>
 					</div>
 				</div>
+			{:else if selected}
+				<div class="ess-card person-panel">
+					<div class="person-top">
+						<Avatar userId={selected.id} fullName={selected.fullName} hasPicture={selected.hasPicture} size="lg" />
+						<button type="button" class="ess-icon-btn" onclick={() => (selectedId = null)} aria-label="Close"><X size={18} /></button>
+					</div>
+					<div class="person-name">
+						<h2 class="ess-h2">{selected.fullName}</h2>
+						<span class="ess-badge ess-badge--{BADGE[selected.status]}">{statusLabel[selected.status]}</span>
+					</div>
+					<p class="ess-caption">
+						{#if selected.employeeCode}{selected.employeeCode}<span class="ess-dot-sep"></span>{/if}{selected.email}
+					</p>
+
+					<dl class="facts">
+						{#if data.isSuperAdmin}
+							<div><dt><Briefcase size={16} /></dt><dd><span>Access</span><strong>{roleLabel(selected)}</strong></dd></div>
+						{/if}
+						<div>
+							<dt><UserRound size={16} /></dt>
+							<dd>
+								<span>Reporting manager</span>
+								<strong>
+									{#if selected.reportsToName}{selected.reportsToName}{:else if selected.reportsToChief}Chief{:else}Not set{/if}
+								</strong>
+							</dd>
+						</div>
+						<div><dt><ShieldCheck size={16} /></dt><dd><span>Concerned HR</span><strong>{selected.hrName ?? 'Any admin'}</strong></dd></div>
+						<div>
+							<dt><Clock size={16} /></dt>
+							<dd>
+								<span>Assigned shift</span>
+								<strong>{selected.shiftGroupName ?? 'Not set'}</strong>
+								{#if selected.officeTimings || selected.shiftType}<small>{[selected.shiftType, selected.officeTimings].filter(Boolean).join(' · ')}</small>{/if}
+							</dd>
+						</div>
+						<div>
+							<dt><CalendarDays size={16} /></dt>
+							<dd>
+								<span>Week off</span>
+								<strong>{selected.weekOffName ?? 'Sat + Sun'}</strong>
+								<small>{selected.weekOffSummary}</small>
+							</dd>
+						</div>
+						<div><dt><Building2 size={16} /></dt><dd><span>Leave left</span><strong>{selected.leaveLeft} {selected.leaveLeft === 1 ? 'day' : 'days'}</strong></dd></div>
+					</dl>
+
+					{#if selected.canEditSettings}
+						<button type="button" class="ess-btn ess-btn--outline wide" onclick={() => (editingPerson = selected)}>
+							<Settings size={16} /> Edit settings
+						</button>
+					{/if}
+
+					<div class="today-card">
+						<div class="today-head">
+							<span class="label"><CalendarDays size={15} /> Today</span>
+							<span class="ess-badge ess-badge--{BADGE[selected.status]}">{statusLabel[selected.status]}</span>
+						</div>
+						<p>
+							{#if selected.status === 'present'}Checked in and at work.{:else if selected.status === 'left'}Checked out for the day.{:else}No check-in recorded today.{/if}
+						</p>
+					</div>
+
+					{#if selected.temporaryPassword}
+						<div class="ess-notice">
+							<span class="ess-notice__icon"><Mail size={14} /></span>
+							<div class="ess-notice__body">
+								<strong>Hasn't signed in yet</strong>
+								Temporary password <code class="code">{selected.temporaryPassword}</code>
+							</div>
+							<button type="button" class="ess-btn ess-btn--sm ess-btn--ghost" onclick={() => copyTemporaryPassword(selected!.id, selected!.temporaryPassword!)}>
+								{copiedPasswordFor === selected.id ? 'Copied' : 'Copy'}
+							</button>
+						</div>
+					{/if}
+
+					{#if data.canDeletePeople && selected.id !== data.currentUserId}
+						<div class="btn-row">
+							<button type="button" class="ess-btn ess-btn--secondary" onclick={() => openReset(selected!)}><KeyRound size={15} /> Reset password</button>
+							{#if confirmingDelete === selected.id}
+								<button type="button" class="ess-btn ess-btn--danger" onclick={() => deleteEmployee(selected!.id)} disabled={deletingId === selected.id}>
+									{deletingId === selected.id ? 'Deleting…' : 'Confirm delete'}
+								</button>
+								<button type="button" class="ess-btn ess-btn--ghost" onclick={() => (confirmingDelete = null)}>Cancel</button>
+							{:else}
+								<button type="button" class="ess-btn ess-btn--ghost danger-text" onclick={() => (confirmingDelete = selected!.id)}><Trash2 size={15} /> Delete</button>
+							{/if}
+						</div>
+					{/if}
+				</div>
 			{:else}
-				<label class="ess-field">
-					<span class="ess-label">Week 1 starts</span>
-					<input class="ess-input" type="date" bind:value={rosterAnchor} />
-				</label>
-				<div class="ess-field rotation-field">
-					<span class="ess-label">Rotation ({rotationWeeks.length} weeks, then repeats)</span>
-					{#each rotationWeeks as week, i (i)}
-						<div class="rotation-row">
-							<span class="rotation-label">Week {i + 1}</span>
+				<div class="ess-card placeholder">
+					<span class="ess-tile ess-tile--lg"><Users size={24} strokeWidth={1.5} /></span>
+					<strong>Select a person</strong>
+					<p class="ess-caption">Their reporting line, shift, week off and today's status show here.</p>
+				</div>
+			{/if}
+		</aside>
+	</div>
+{/if}
+
+<!-- ============================== WEEK OFF ============================== -->
+{#if view === 'weekoff'}
+	{#if rosterError}
+		<p class="ess-alert ess-alert--danger">{rosterError}</p>
+	{/if}
+
+	<div class="ess-split weekoff-split">
+		<div class="ess-stack">
+			<section class="ess-card">
+				<div class="ess-card-head">
+					<div>
+						<h2 class="ess-h2">Team weekly roster</h2>
+						<p class="ess-caption">{gridRows.length} {gridRows.length === 1 ? 'person' : 'people'}<span class="ess-dot-sep"></span>{weekRange}</p>
+					</div>
+					<select class="ess-select grid-filter" bind:value={gridFilter} aria-label="Show people on">
+						<option value="">All rosters</option>
+						<option value="default">Saturday + Sunday (default)</option>
+						{#each data.weekOffRosters as r (r.id)}
+							<option value={r.id}>{r.name}</option>
+						{/each}
+					</select>
+				</div>
+				<div class="table-wrap">
+					<table class="ess-table grid">
+						<thead>
+							<tr>
+								<th>Employee</th>
+								{#each weekDays as d (d.key)}
+									<th class="day-head"><span>{d.label}</span><small>{d.day} {d.month}</small></th>
+								{/each}
+							</tr>
+						</thead>
+						<tbody>
+							{#each gridRows as person (person.id)}
+								<tr>
+									<td>
+										<span class="name-cell">
+											<Avatar userId={person.id} fullName={person.fullName} hasPicture={person.hasPicture} size="md" />
+											<span class="name-text">
+												<strong>{person.fullName}</strong>
+												<small>{person.weekOffName ?? 'Sat + Sun'}</small>
+											</span>
+										</span>
+									</td>
+									{#each weekDays as d (d.key)}
+										{@const off = offOn(person, d.key).includes(d.weekday)}
+										<td class="day-cell"><span class="mark" class:off>{off ? 'Off' : 'Work'}</span></td>
+									{/each}
+								</tr>
+							{:else}
+								<tr><td colspan="8"><div class="ess-empty">Nobody is on this roster.</div></td></tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+				<div class="legend">
+					<span><i class="mark-dot"></i> Work day</span>
+					<span><i class="mark-dot off"></i> Week off</span>
+				</div>
+			</section>
+
+			<section class="ess-card">
+				<div class="ess-card-head">
+					<div>
+						<h2 class="ess-h2">Schedule templates</h2>
+						<p class="ess-caption">
+							{#if data.canAuthorRosters}
+								Save a week-off pattern once, then publish it so team managers can apply it from a person's settings.
+							{:else}
+								Patterns published by the Super Admin. Apply one from a person's settings on the People tab; their leave calendar updates immediately.
+							{/if}
+						</p>
+					</div>
+					{#if data.canAuthorRosters}
+						<button
+							class="ess-btn ess-btn--primary"
+							onclick={() => {
+								if (showRosterEditor) resetRosterForm();
+								showRosterEditor = !showRosterEditor;
+							}}
+						>
+							<Plus size={17} />
+							{showRosterEditor ? 'Close editor' : 'New roster'}
+						</button>
+					{/if}
+				</div>
+				{#if data.weekOffRosters.length > 0}
+					<div class="templates">
+						{#each data.weekOffRosters as roster (roster.id)}
+							<div class="template" class:is-editing={editingRosterId === roster.id}>
+								<div class="template-main">
+									<div class="template-head">
+										<strong>{roster.name}</strong>
+										<span class="ess-badge ess-badge--{roster.status === 'published' ? 'approved' : 'pending'}">{roster.status === 'published' ? 'Published' : 'Draft'}</span>
+										<span class="ess-badge">{roster.teamId ? (data.allTeams.find((t) => t.id === roster.teamId)?.name ?? 'Team-specific') : 'All teams'}</span>
+									</div>
+									<span class="template-summary">{roster.summary}</span>
+									{#if roster.pattern === 'rotational'}
+										<span class="template-sub">{roster.weeks.join(' · ')}</span>
+									{/if}
+									{#if roster.description}
+										<span class="template-sub">{roster.description}</span>
+									{/if}
+								</div>
+								{#if data.canAuthorRosters}
+									<div class="template-actions">
+										<button type="button" class="ess-btn ess-btn--sm ess-btn--secondary" onclick={() => editRoster(roster)}>Edit</button>
+										<button type="button" class="ess-btn ess-btn--sm ess-btn--ghost" onclick={() => togglePublish(roster)}>
+											{roster.status === 'published' ? 'Unpublish' : 'Publish'}
+										</button>
+										<button type="button" class="ess-icon-btn danger" onclick={() => deleteRoster(roster.id)} aria-label="Delete {roster.name}" title="Delete {roster.name}">
+											<Trash2 size={15} />
+										</button>
+									</div>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				{:else}
+					<div class="ess-empty">
+						<span class="ess-empty__icon"><CalendarDays size={22} /></span>
+						<span class="ess-empty__title">No rosters yet</span>
+						<span>{data.canAuthorRosters ? 'Everyone is on the default Saturday + Sunday.' : 'No published rosters yet. Everyone on your team is on the default Saturday + Sunday.'}</span>
+					</div>
+				{/if}
+			</section>
+		</div>
+
+		<aside class="ess-stack side">
+			{#if data.canAuthorRosters && showRosterEditor}
+				<div class="ess-card editor">
+					<div class="ess-card-head">
+						<div>
+							<h2 class="ess-h2">{editingRosterId ? 'Edit roster' : 'New roster'}</h2>
+							<p class="ess-caption">Define the week-off schedule, then assign it from each person's settings.</p>
+						</div>
+					</div>
+					<label class="ess-field">
+						<span class="ess-label">Name <span class="req">*</span></span>
+						<input class="ess-input" bind:value={rosterName} placeholder="e.g. Standard Sunday off" />
+					</label>
+					<label class="ess-field">
+						<span class="ess-label">Description</span>
+						<input class="ess-input" bind:value={rosterDescription} placeholder="Who this is for" />
+					</label>
+					<label class="ess-field">
+						<span class="ess-label">Applies to</span>
+						<select class="ess-select" bind:value={rosterTeamId}>
+							<option value="">All teams</option>
+							{#each data.allTeams as team (team.id)}
+								<option value={team.id}>{team.name}</option>
+							{/each}
+						</select>
+					</label>
+					<label class="ess-field">
+						<span class="ess-label">Cycle <span class="req">*</span></span>
+						<select class="ess-select" bind:value={rosterPattern}>
+							<option value="fixed">Same every week</option>
+							<option value="rotational">Rotation over several weeks</option>
+						</select>
+					</label>
+
+					{#if rosterPattern === 'fixed'}
+						<div class="ess-field">
+							<span class="ess-label">Days off every week</span>
 							<div class="day-picker">
 								{#each WEEKDAY_LABELS as label, day (label)}
-									<button
-										type="button"
-										class="day-chip"
-										class:selected={week.includes(day)}
-										onclick={() => toggleRotationDay(i, day)}
-										aria-pressed={week.includes(day)}
-									>
+									<button type="button" class="day-chip" class:selected={rosterWeekdays.includes(day)} onclick={() => toggleFixedDay(day)} aria-pressed={rosterWeekdays.includes(day)}>
 										{label}
 									</button>
 								{/each}
 							</div>
-							{#if rotationWeeks.length > 2}
-								<button type="button" class="row-delete" onclick={() => removeRotationWeek(i)} aria-label="Remove week {i + 1}">
-									<Trash2 size={14} />
-								</button>
-							{/if}
 						</div>
-					{/each}
-					<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm add-week" onclick={addRotationWeek}>
-						Add week
-					</button>
-				</div>
-			{/if}
-
-			<div class="roster-actions">
-				<button type="button" class="ess-btn ess-btn--primary" onclick={saveRoster} disabled={rosterSaving}>
-					{rosterSaving ? 'Saving…' : editingRosterId ? 'Save changes' : 'Save roster'}
-				</button>
-				<button
-					type="button"
-					class="ess-btn ess-btn--ghost"
-					onclick={() => {
-						resetRosterForm();
-						showRosterEditor = false;
-					}}
-				>
-					Cancel
-				</button>
-			</div>
-		</div>
-	{/if}
-
-	{#if data.weekOffRosters.length > 0}
-		<div class="roster-list">
-			{#each data.weekOffRosters as roster (roster.id)}
-				<div class="roster-card">
-					<div class="roster-card-main">
-						<div class="roster-card-head">
-							<strong>{roster.name}</strong>
-							<span class="ess-badge ess-badge--{roster.status === 'published' ? 'approved' : 'pending'}">
-								{roster.status === 'published' ? 'Published' : 'Draft'}
-							</span>
-							{#if roster.teamId}
-								<span class="scope-chip">
-									{data.allTeams.find((t) => t.id === roster.teamId)?.name ?? 'Team-specific'}
-								</span>
-							{:else}
-								<span class="scope-chip">All teams</span>
-							{/if}
-						</div>
-						<span class="roster-summary">{roster.summary}</span>
-						{#if roster.pattern === 'rotational'}
-							<span class="roster-weeks">{roster.weeks.join(' · ')}</span>
-						{/if}
-						{#if roster.description}
-							<span class="roster-desc">{roster.description}</span>
-						{/if}
-					</div>
-					{#if data.canAuthorRosters}
-						<div class="roster-card-actions">
-							<button type="button" class="ess-btn ess-btn--sm ess-btn--ghost" onclick={() => editRoster(roster)}>
-								Edit
-							</button>
-							<button type="button" class="ess-btn ess-btn--sm ess-btn--secondary" onclick={() => togglePublish(roster)}>
-								{roster.status === 'published' ? 'Unpublish' : 'Publish'}
-							</button>
-							<button
-								type="button"
-								class="row-delete"
-								onclick={() => deleteRoster(roster.id)}
-								aria-label="Delete {roster.name}"
-								title="Delete {roster.name}"
-							>
-								<Trash2 size={15} />
-							</button>
+					{:else}
+						<label class="ess-field">
+							<span class="ess-label">Effective from (week 1 starts)</span>
+							<input class="ess-input" type="date" bind:value={rosterAnchor} />
+							<span class="ess-help">The rotation counts from this date onwards.</span>
+						</label>
+						<div class="ess-field">
+							<span class="ess-label">Rotation ({rotationWeeks.length} weeks, then repeats)</span>
+							{#each rotationWeeks as week, i (i)}
+								<div class="rotation-row">
+									<span class="rotation-label">Week {i + 1}</span>
+									<div class="day-picker">
+										{#each WEEKDAY_LABELS as label, day (label)}
+											<button type="button" class="day-chip" class:selected={week.includes(day)} onclick={() => toggleRotationDay(i, day)} aria-pressed={week.includes(day)}>
+												{label}
+											</button>
+										{/each}
+									</div>
+									{#if rotationWeeks.length > 2}
+										<button type="button" class="ess-icon-btn danger" onclick={() => removeRotationWeek(i)} aria-label="Remove week {i + 1}">
+											<Trash2 size={14} />
+										</button>
+									{/if}
+								</div>
+							{/each}
+							<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm add-week" onclick={addRotationWeek}><Plus size={14} /> Add week</button>
 						</div>
 					{/if}
+
+					{#if editingRosterId}
+						{@const n = data.roster.filter((p) => p.weekOffRosterId === editingRosterId).length}
+						<div class="assigned">
+							<span class="ess-label">Assigned people</span>
+							<span class="assigned-row"><Users size={16} /> {n} {n === 1 ? 'person' : 'people'} on this roster</span>
+						</div>
+					{/if}
+
+					<div class="btn-row end">
+						<button type="button" class="ess-btn ess-btn--secondary" onclick={() => { resetRosterForm(); showRosterEditor = false; }}>Cancel</button>
+						<button type="button" class="ess-btn ess-btn--primary" onclick={saveRoster} disabled={rosterSaving}>
+							{rosterSaving ? 'Saving…' : editingRosterId ? 'Save changes' : 'Save roster'}
+						</button>
+					</div>
 				</div>
-			{/each}
-		</div>
-	{:else}
-		<p class="ess-empty">
-			{data.canAuthorRosters
-				? 'No week-off rosters yet — everyone is on the default Saturday + Sunday.'
-				: 'No published rosters yet. Everyone on your team is on the default Saturday + Sunday.'}
-		</p>
-	{/if}
-</section>
+			{:else}
+				<div class="ess-card placeholder">
+					<span class="ess-tile ess-tile--lg"><CalendarDays size={24} strokeWidth={1.5} /></span>
+					<strong>{data.canAuthorRosters ? 'Author a roster' : 'Week-off rosters'}</strong>
+					<p class="ess-caption">
+						{#if data.canAuthorRosters}
+							Create a pattern here, publish it, then assign it to people from their settings on the People tab.
+						{:else}
+							Assign a published roster to anyone on your team from their settings on the People tab.
+						{/if}
+					</p>
+					{#if data.canAuthorRosters}
+						<button class="ess-btn ess-btn--primary" onclick={() => (showRosterEditor = true)}><Plus size={16} /> New roster</button>
+					{/if}
+				</div>
+				<div class="ess-card legend-card">
+					<strong class="ess-h3">Legend</strong>
+					<div class="legend col">
+						<span><i class="mark-dot"></i> Work day</span>
+						<span><i class="mark-dot off"></i> Week off, from the person's roster</span>
+					</div>
+					<p class="ess-caption">Anyone without a roster is on Saturday + Sunday.</p>
+				</div>
+			{/if}
+		</aside>
+	</div>
 {/if}
 
-{#if data.canBulkImport || data.canSeePasswordActivity}
-	{#if view === 'bulk' && data.canBulkImport}
-	<section class="bulk-import-section">
-		<div class="section-head">
-			<div>
-				<h2 class="section-title">Bulk Import Logins</h2>
-				<p class="section-sub">
-					Upload any HR spreadsheet — the sheet and columns are detected automatically. Each new
-					login gets its own temporary password, emailed to that employee, and must be changed on
-					first sign-in.
-				</p>
-			</div>
-			<button class="ess-btn ess-btn--secondary" onclick={() => (showBulkImport = !showBulkImport)}>
-				<UploadCloud size={16} />
-				{showBulkImport ? 'Close' : 'Import from Spreadsheet'}
-			</button>
+<!-- ============================== BULK IMPORT ============================== -->
+{#if view === 'bulk' && data.canBulkImport}
+	<ol class="ess-stepper ess-stepper--center bulk-steps">
+		{#each ['Upload', 'Review', 'Create logins'] as label, i (label)}
+			<li class="ess-step" data-state={i < bulkStep ? 'done' : i === bulkStep ? 'current' : 'todo'}>
+				<span class="ess-step__dot">{#if i < bulkStep}✓{/if}</span>
+				<span class="ess-step__label">{i + 1}. {label}</span>
+				<span class="ess-step__meta">{bulkStepHints[i]}</span>
+			</li>
+		{/each}
+	</ol>
+
+	<div class="ess-split bulk-split">
+		<div class="ess-stack">
+			<section class="ess-card">
+				<div class="ess-card-head">
+					<div>
+						<h2 class="ess-h2">Import preview</h2>
+						<p class="ess-caption">Upload any HR spreadsheet — the sheet and columns are detected automatically. Each new login gets its own temporary password and must be changed on first sign-in.</p>
+					</div>
+					<button class="ess-btn ess-btn--secondary" onclick={() => (showBulkImport = !showBulkImport)}>
+						<UploadCloud size={16} />
+						{showBulkImport ? 'Close' : reviewImport ? 'Replace file' : 'Upload spreadsheet'}
+					</button>
+				</div>
+
+				{#if showBulkImport}
+					<form
+						method="POST"
+						action="?/uploadBulkImport"
+						enctype="multipart/form-data"
+						use:enhance={() => {
+							uploadingBulk = true;
+							return async ({ result, update }) => {
+								uploadingBulk = false;
+								await update({ reset: false });
+								if (result.type === 'success' && result.data?.bulkImportUploaded) {
+									await invalidateAll();
+									await loadReview(result.data.bulkImportUploaded as string);
+								}
+							};
+						}}
+						class="upload-form"
+					>
+						<label class="ess-field grow">
+							<span class="ess-label">Spreadsheet (.xlsx)</span>
+							<input class="ess-input" type="file" name="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onchange={onBulkFileChange} required />
+						</label>
+						<button type="submit" class="ess-btn ess-btn--primary" disabled={uploadingBulk}>
+							{uploadingBulk ? 'Parsing…' : 'Upload & review'}
+						</button>
+					</form>
+				{/if}
+
+				{#if form?.bulkImportError}
+					<p class="ess-alert ess-alert--danger">{form.bulkImportError}</p>
+				{/if}
+				{#if form?.bulkImportSheet}
+					<p class="ess-alert ess-alert--info">
+						Read sheet <strong>"{form.bulkImportSheet}"</strong>
+						{#if form.bulkImportStrategy === 'ai-mapped'}
+							— columns were matched automatically, so check the rows below carefully.
+						{:else}
+							using known column names.
+						{/if}
+						{#if form.bulkImportNote}<br /><em>{form.bulkImportNote}</em>{/if}
+					</p>
+				{/if}
+				{#if form?.bulkImportApplied}
+					<div class="ess-notice ess-notice--success">
+						<span class="ess-notice__icon"><Users size={14} /></span>
+						<div class="ess-notice__body">
+							<strong>Created {form.bulkImportApplied.createdCount} login(s). {form.bulkImportApplied.skippedCount} already existed and were left untouched.</strong>
+							{form.bulkImportApplied.queuedCount ?? 0} login email(s) are waiting for an admin to approve them{data.canApproveLogins ? ' in Login delivery' : ''}. Nothing has been emailed yet.
+							{#if form.bulkImportApplied.redirectedTo}
+								<br />Once approved, they go to <strong>{form.bulkImportApplied.redirectedTo}</strong>, not to the employees.
+							{/if}
+						</div>
+					</div>
+					<!--
+						The accounts exist regardless of whether the mail went out, so a failed
+						send is not an error state for the import — but each of these people is
+						someone who cannot log in until HR passes their password on by hand.
+						The password is shown here because this is the only moment it exists in
+						plaintext; once this screen is left, only its hash remains.
+					-->
+					{#if !form.bulkImportApplied.mailerConfigured}
+						<p class="ess-alert ess-alert--warning">No Resend API key is configured, so approved emails will wait until one is. Set <code>RESEND_API_KEY</code>, or pass these logins on manually.</p>
+					{/if}
+					{#if form.bulkImportApplied.emailFailures.length > 0}
+						<div class="ess-alert ess-alert--warning col">
+							<p>Could not email {form.bulkImportApplied.emailFailures.length} login(s) — copy these down now and pass them on directly. They are not recoverable after you leave this screen; re-issue the batch if you lose them.</p>
+							<ul class="fail-list">
+								{#each form.bulkImportApplied.emailFailures as failure (failure.email)}
+									<li><strong>{failure.email}</strong> — <code class="code">{failure.temporaryPassword}</code><span class="fail-reason">{failure.error}</span></li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+				{/if}
+
+				{#if form?.bulkImportReissued}
+					<div class="ess-notice ess-notice--success">
+						<span class="ess-notice__icon"><Mail size={14} /></span>
+						<div class="ess-notice__body">
+							<strong>Re-issued {form.bulkImportReissued.reissuedCount} login(s) with a fresh temporary password.</strong>
+							{form.bulkImportReissued.queuedCount ?? 0} login email(s) are waiting for an admin to approve them. Nothing has been emailed yet.
+							{#if form.bulkImportReissued.redirectedTo}
+								<br />Once approved, they go to <strong>{form.bulkImportReissued.redirectedTo}</strong>, not to the employees.
+							{/if}
+							{#if form.bulkImportReissued.alreadyOnboardedCount > 0}
+								<br />{form.bulkImportReissued.alreadyOnboardedCount} had already signed in and set their own password — those were left alone.
+							{/if}
+							{#if form.bulkImportReissued.inactiveCount > 0}
+								<br />{form.bulkImportReissued.inactiveCount} deactivated account(s) skipped.
+							{/if}
+						</div>
+					</div>
+					{#if !form.bulkImportReissued.mailerConfigured}
+						<p class="ess-alert ess-alert--warning">No Resend API key is configured, so approved emails will wait until one is. Set <code>RESEND_API_KEY</code>, or pass these logins on manually.</p>
+					{/if}
+					{#if form.bulkImportReissued.emailFailures.length > 0}
+						<div class="ess-alert ess-alert--warning col">
+							<p>{form.bulkImportReissued.emailFailures.length} of them have no usable email address, so nothing was queued for them — copy these down now and pass them on directly:</p>
+							<ul class="fail-list">
+								{#each form.bulkImportReissued.emailFailures as failure (failure.email)}
+									<li><strong>{failure.email}</strong> — <code class="code">{failure.temporaryPassword}</code><span class="fail-reason">{failure.error}</span></li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+				{/if}
+
+				{#if data.bulkImports.length > 0}
+					<div class="imports">
+						{#each data.bulkImports as imp (imp.id)}
+							<button type="button" class="import-row" class:is-selected={selectedImportId === imp.id} onclick={() => loadReview(imp.id)}>
+								<span class="ess-tile ess-tile--sm ess-tile--ok"><FileSpreadsheet size={17} /></span>
+								<span class="import-main">
+									<strong>{imp.filename}</strong>
+									<small>{imp.rowCount} row(s)<span class="ess-dot-sep"></span>{whenLong(imp.createdAt)}</small>
+								</span>
+								<span class="ess-badge ess-badge--{imp.status === 'applied' ? 'approved' : 'pending'}">{imp.status === 'applied' ? 'Applied' : 'Pending review'}</span>
+								<ChevronRight size={16} class="chev" />
+							</button>
+						{/each}
+					</div>
+				{/if}
+
+				{#if loadingReview}
+					<div class="ess-skeleton" style="width: 60%"></div>
+				{/if}
+
+				{#if reviewImport}
+					{@const locked = reviewImport.status === 'applied'}
+					<div class="review-block">
+						{#if needsReviewCount > 0 && !locked}
+							<div class="ess-notice">
+								<span class="ess-notice__icon">!</span>
+								<div class="ess-notice__body">
+									<strong>{needsReviewCount} row(s) need a decision before applying</strong>
+									A reporting-line manager couldn't be confidently matched, the name closely matches an existing account under a different email, or the sheet's email column doesn't hold a usable login id. Each row says which below.
+								</div>
+							</div>
+						{/if}
+
+						<div class="table-wrap">
+							<table class="ess-table review">
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th>Employee code</th>
+										<th>Work email</th>
+										<th>Role</th>
+										<th>Reports to</th>
+										<th>Validation</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each reviewRows as row (row.id)}
+										<tr class:attention={row.status === 'needs_review'}>
+											<td><strong>{row.fullName}</strong></td>
+											<td class="code-cell">{row.employeeCode ?? '—'}</td>
+											<td>
+												{#if locked || row.status === 'skipped_existing'}
+													{row.officialEmail}
+												{:else}
+													<input class="ess-input" type="email" value={row.officialEmail} onblur={(e) => onEmailBlur(row.id, e)} disabled={savingRowId === row.id} />
+												{/if}
+											</td>
+											<td>
+												{#if locked || row.status === 'skipped_existing'}
+													{row.role.replace('_', ' ')}
+												{:else}
+													<select class="ess-select" value={row.role} onchange={(e) => onRoleChange(row.id, e)} disabled={savingRowId === row.id}>
+														{#each ROLES as r (r)}
+															<option value={r}>{r.replace('_', ' ')}</option>
+														{/each}
+													</select>
+												{/if}
+											</td>
+											<td>
+												{#if locked || row.status === 'skipped_existing'}
+													{managerName(row)}
+												{:else}
+													<select class="ess-select" value={row.reportsToRowId ?? ''} onchange={(e) => onManagerChange(row.id, e)} disabled={savingRowId === row.id}>
+														<option value="">— none —</option>
+														{#each reviewRows.filter((r) => r.id !== row.id) as candidate (candidate.id)}
+															<option value={candidate.id}>{candidate.fullName}</option>
+														{/each}
+													</select>
+													{#if row.reportingAuthorityRaw}
+														<span class="raw-hint">sheet said: "{row.reportingAuthorityRaw}"</span>
+													{/if}
+												{/if}
+											</td>
+											<td>
+												<span class="ess-badge ess-badge--{row.status === 'needs_review' ? 'pending' : row.status === 'skipped_existing' ? 'cancelled' : 'approved'}">
+													{row.status === 'needs_review' ? 'Needs attention' : row.status === 'skipped_existing' ? 'Already exists' : row.status === 'created' ? 'Created' : 'Valid'}
+												</span>
+											</td>
+										</tr>
+										<!--
+											What the parser noticed about this row. Shown on every row that has
+											notes, not just flagged ones — "the email column is not an email" has
+											to be readable here or the flag is a dead end.
+										-->
+										{#if rowErrors[row.id] || (row.repairNotes && row.repairNotes.length > 0 && row.status !== 'skipped_existing')}
+											<tr class="notes-row">
+												<td colspan="6">
+													<ul class="row-notes">
+														{#if rowErrors[row.id]}
+															<li class="row-note-error">{rowErrors[row.id]}</li>
+														{/if}
+														{#each row.repairNotes ?? [] as note (note)}
+															{#if row.status !== 'skipped_existing'}
+																<li>{note}</li>
+															{/if}
+														{/each}
+													</ul>
+												</td>
+											</tr>
+										{/if}
+										{#if row.status === 'needs_review' && row.existingUser}
+											<tr class="notes-row">
+												<td colspan="6">
+													<div class="duplicate-banner">
+														<span>
+															"{row.fullName}" closely matches an existing account: <strong>{row.existingUser.fullName}</strong> ({row.existingUser.email}). Same person?
+														</span>
+														<div class="btn-row">
+															<button type="button" class="ess-btn ess-btn--sm ess-btn--secondary" onclick={() => resolveDuplicate(row.id, 'link')} disabled={savingRowId === row.id}>Yes, same person — skip</button>
+															<button type="button" class="ess-btn ess-btn--sm ess-btn--ghost" onclick={() => resolveDuplicate(row.id, 'create_new')} disabled={savingRowId === row.id}>No, create as new</button>
+														</div>
+													</div>
+												</td>
+											</tr>
+										{/if}
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				{:else if !loadingReview && data.bulkImports.length === 0 && !showBulkImport}
+					<div class="ess-empty">
+						<span class="ess-empty__icon"><FileSpreadsheet size={22} /></span>
+						<span class="ess-empty__title">No imports yet</span>
+						<span>Upload the HR spreadsheet to create logins in bulk.</span>
+					</div>
+				{/if}
+			</section>
 		</div>
 
-		{#if showBulkImport}
-			<form
-				method="POST"
-				action="?/uploadBulkImport"
-				enctype="multipart/form-data"
-				use:enhance={() => {
-					uploadingBulk = true;
-					return async ({ result, update }) => {
-						uploadingBulk = false;
-						await update({ reset: false });
-						if (result.type === 'success' && result.data?.bulkImportUploaded) {
-							await invalidateAll();
-							await loadReview(result.data.bulkImportUploaded as string);
-						}
-					};
-				}}
-				class="create-card"
-			>
-				<label class="ess-field bulk-file-field">
-					<span class="ess-label">Spreadsheet (.xlsx)</span>
-					<input
-						class="ess-input"
-						type="file"
-						name="file"
-						accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-						onchange={onBulkFileChange}
-						required
-					/>
-				</label>
-				<button type="submit" class="ess-btn ess-btn--primary" disabled={uploadingBulk}>
-					{uploadingBulk ? 'Parsing…' : 'Upload & Review'}
-				</button>
-			</form>
-			{#if form?.bulkImportError}
-				<p class="ess-error section-gap">{form.bulkImportError}</p>
-			{/if}
-			{#if form?.bulkImportSheet}
-				<p class="mapping-note">
-					Read sheet <strong>"{form.bulkImportSheet}"</strong>
-					{#if form.bulkImportStrategy === 'ai-mapped'}
-						— columns were matched automatically, so check the rows below carefully.
-					{:else}
-						using known column names.
-					{/if}
-					{#if form.bulkImportNote}<br /><em>{form.bulkImportNote}</em>{/if}
-				</p>
-			{/if}
-			{#if form?.bulkImportApplied}
-				<p class="temp-pass">
-					Created {form.bulkImportApplied.createdCount} login(s). {form.bulkImportApplied.skippedCount} already
-					existed and were left untouched.
-					{#if form.bulkImportApplied.redirectedTo}
-						<br />Credentials for all of them were sent to
-						<strong>{form.bulkImportApplied.redirectedTo}</strong>, not to the employees.
-					{:else}
-						<br />Emailed login details to {form.bulkImportApplied.emailedCount} of them.
-					{/if}
-				</p>
-				<!--
-					The accounts exist regardless of whether the mail went out, so a failed
-					send is not an error state for the import — but each of these people is
-					someone who cannot log in until HR passes their password on by hand, and
-					re-running the import will not retry them. The password is shown here
-					because this is the only moment it exists in plaintext; once this screen
-					is left, only its hash remains and the login has to be re-issued.
-				-->
-				{#if !form.bulkImportApplied.mailerConfigured}
-					<p class="mail-warn">
-						No Resend API key is configured, so no credentials were emailed. Set
-						<code>RESEND_API_KEY</code> and pass these logins on manually.
-					</p>
-				{/if}
-				{#if form.bulkImportApplied.emailFailures.length > 0}
-					<p class="mail-warn">
-						Could not email {form.bulkImportApplied.emailFailures.length} login(s) — copy these
-						down now and pass them on directly. They are not recoverable after you leave this
-						screen; re-issue the batch below if you lose them.
-					</p>
-					<ul class="mail-warn-list">
-						{#each form.bulkImportApplied.emailFailures as failure (failure.email)}
-							<li>
-								<strong>{failure.email}</strong> — <code>{failure.temporaryPassword}</code>
-								<span class="mail-warn-reason">{failure.error}</span>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			{/if}
-
-			{#if form?.bulkImportReissued}
-				<p class="temp-pass">
-					Re-issued {form.bulkImportReissued.reissuedCount} login(s) with a fresh temporary
-					password.
-					{#if form.bulkImportReissued.redirectedTo}
-						<br />All of them were sent to
-						<strong>{form.bulkImportReissued.redirectedTo}</strong>, not to the employees.
-					{:else}
-						<br />Emailed {form.bulkImportReissued.emailedCount} of them.
-					{/if}
-					{#if form.bulkImportReissued.alreadyOnboardedCount > 0}
-						<br />{form.bulkImportReissued.alreadyOnboardedCount} had already signed in and set
-						their own password — those were left alone.
-					{/if}
-					{#if form.bulkImportReissued.inactiveCount > 0}
-						<br />{form.bulkImportReissued.inactiveCount} deactivated account(s) skipped.
-					{/if}
-				</p>
-				{#if !form.bulkImportReissued.mailerConfigured}
-					<p class="mail-warn">
-						No Resend API key is configured, so nothing was emailed. Set
-						<code>RESEND_API_KEY</code> and pass these logins on manually.
-					</p>
-				{/if}
-				{#if form.bulkImportReissued.emailFailures.length > 0}
-					<p class="mail-warn">
-						Could not email {form.bulkImportReissued.emailFailures.length} of them — copy these
-						down now and pass them on directly:
-					</p>
-					<ul class="mail-warn-list">
-						{#each form.bulkImportReissued.emailFailures as failure (failure.email)}
-							<li>
-								<strong>{failure.email}</strong> — <code>{failure.temporaryPassword}</code>
-								<span class="mail-warn-reason">{failure.error}</span>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			{/if}
-		{/if}
-
-		{#if data.bulkImports.length > 0}
-			<div class="import-list">
-				{#each data.bulkImports as imp (imp.id)}
-					<button type="button" class="import-row" onclick={() => loadReview(imp.id)}>
-						<span class="import-main">
-							<strong>{imp.filename}</strong>
-							<span class="meta">{imp.rowCount} row(s)</span>
-						</span>
-						<span class="ess-badge ess-badge--{imp.status === 'applied' ? 'approved' : 'pending'}">
-							{imp.status === 'applied' ? 'Applied' : 'Pending review'}
-						</span>
-					</button>
-				{/each}
-			</div>
-		{/if}
-
-		{#if loadingReview}
-			<p class="ess-empty">Loading review…</p>
-		{/if}
-
-		{#if reviewImport}
-			{@const locked = reviewImport.status === 'applied'}
-			<div class="review-block">
-				{#if needsReviewCount > 0 && !locked}
-					<p class="ess-error section-gap">
-						{needsReviewCount} row(s) need a decision before applying — a reporting-line manager couldn't be
-						confidently matched, the name closely matches an existing account under a different email, or the
-						sheet's email column doesn't hold a usable login id. Each row says which below.
-					</p>
-				{/if}
-
-				<div class="ess-table-shell review-table-shell">
-					<table class="ess-table">
-						<thead>
-							<tr>
-								<th>Name</th>
-								<th>Code</th>
-								<th>Email</th>
-								<th>Role</th>
-								<th>Reports to</th>
-								<th>Status</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each reviewRows as row (row.id)}
-								<tr>
-									<td>{row.fullName}</td>
-									<td>{row.employeeCode ?? '—'}</td>
-									<td>
-										{#if locked || row.status === 'skipped_existing'}
-											{row.officialEmail}
-										{:else}
-											<input
-												class="ess-input"
-												type="email"
-												value={row.officialEmail}
-												onblur={(e) => onEmailBlur(row.id, e)}
-												disabled={savingRowId === row.id}
-											/>
-										{/if}
-									</td>
-									<td>
-										{#if locked || row.status === 'skipped_existing'}
-											{row.role.replace('_', ' ')}
-										{:else}
-											<select
-												class="ess-select"
-												value={row.role}
-												onchange={(e) => onRoleChange(row.id, e)}
-												disabled={savingRowId === row.id}
-											>
-												{#each ROLES as r (r)}
-													<option value={r}>{r.replace('_', ' ')}</option>
-												{/each}
-											</select>
-										{/if}
-									</td>
-									<td>
-										{#if locked || row.status === 'skipped_existing'}
-											{managerName(row)}
-										{:else}
-											<select
-												class="ess-select"
-												value={row.reportsToRowId ?? ''}
-												onchange={(e) => onManagerChange(row.id, e)}
-												disabled={savingRowId === row.id}
-											>
-												<option value="">— none —</option>
-												{#each reviewRows.filter((r) => r.id !== row.id) as candidate (candidate.id)}
-													<option value={candidate.id}>{candidate.fullName}</option>
-												{/each}
-											</select>
-											{#if row.reportingAuthorityRaw}
-												<span class="raw-hint">sheet said: "{row.reportingAuthorityRaw}"</span>
-											{/if}
-										{/if}
-									</td>
-									<td>
-										<span
-											class="ess-badge ess-badge--{row.status === 'needs_review'
-												? 'pending'
-												: row.status === 'skipped_existing'
-													? 'cancelled'
-													: 'approved'}"
-										>
-											{row.status.replace('_', ' ')}
-										</span>
-									</td>
-								</tr>
-								<!--
-								What the parser noticed about this row. Shown on every row that has
-								notes, not just flagged ones: a row can be applied with a drifted
-								column, but "the email column is not an email" is the one that makes
-								the resulting account unusable, and it has to be readable here or the
-								flag is a dead end — the email cell to its left is the fix.
-							-->
-							{#if rowErrors[row.id] || (row.repairNotes && row.repairNotes.length > 0 && row.status !== 'skipped_existing')}
-								<tr class="notes-row">
-									<td colspan="6">
-										<ul class="row-notes">
-											{#if rowErrors[row.id]}
-												<li class="row-note-error">{rowErrors[row.id]}</li>
-											{/if}
-											{#each row.repairNotes ?? [] as note (note)}
-												{#if row.status !== 'skipped_existing'}
-													<li>{note}</li>
-												{/if}
-											{/each}
-										</ul>
-									</td>
-								</tr>
-							{/if}
-							{#if row.status === 'needs_review' && row.existingUser}
-									<tr class="duplicate-row">
-										<td colspan="6">
-											<div class="duplicate-banner">
-												<span>
-													"{row.fullName}" closely matches an existing account:
-													<strong>{row.existingUser.fullName}</strong> ({row.existingUser.email}). Same person?
-												</span>
-												<div class="duplicate-actions">
-													<button
-														type="button"
-														class="ess-btn ess-btn--sm ess-btn--secondary"
-														onclick={() => resolveDuplicate(row.id, 'link')}
-														disabled={savingRowId === row.id}
-													>
-														Yes, same person — skip
-													</button>
-													<button
-														type="button"
-														class="ess-btn ess-btn--sm ess-btn--ghost"
-														onclick={() => resolveDuplicate(row.id, 'create_new')}
-														disabled={savingRowId === row.id}
-													>
-														No, create as new
-													</button>
-												</div>
-											</div>
-										</td>
-									</tr>
-								{/if}
-							{/each}
-						</tbody>
-					</table>
-					<div class="ess-table-foot">
-						<span>
-							{#if locked}
-								{createdCount} login(s) created from this import
-							{:else}
-								{readyCount} ready · {needsReviewCount} needs review
-							{/if}
-						</span>
-						{#if !locked}
-							<form
-								method="POST"
-								action="?/applyBulkImport"
-								use:enhance={() => {
-									applyingBulk = true;
-									return async ({ update }) => {
-										applyingBulk = false;
-										await update();
-										await invalidateAll();
-										if (selectedImportId) await loadReview(selectedImportId);
-									};
-								}}
-							>
-								<input type="hidden" name="importId" value={reviewImport.id} />
-								<!--
-									Dry-run escape hatch: sends every credentials mail for this batch to one
-									reviewer instead of to the employees, for checking the template and the
-									Resend setup against a real inbox. The accounts are still created for
-									real — only the delivery address changes.
-								-->
-								<input
-									class="mail-redirect"
-									type="email"
-									name="sendCredentialsTo"
-									placeholder="Send all logins to this address instead (optional)"
-								/>
-								<button
-									type="submit"
-									class="ess-btn ess-btn--primary"
-									disabled={applyingBulk || needsReviewCount > 0 || readyCount === 0}
-								>
-									{applyingBulk ? 'Creating logins…' : `Create ${readyCount} login(s)`}
-								</button>
-							</form>
+		<aside class="ess-stack side">
+			<div class="ess-card">
+				<h2 class="ess-h2 card-title">Import summary</h2>
+				{#if reviewImport}
+					{@const locked = reviewImport.status === 'applied'}
+					<dl class="summary">
+						<div><dt>File</dt><dd class="file">{reviewImport.filename}</dd></div>
+						<div><dt>Total rows</dt><dd>{reviewRows.length}</dd></div>
+						{#if locked}
+							<div><dt>Logins created</dt><dd class="ok">{createdCount}</dd></div>
+							<div><dt>Already existed</dt><dd>{reviewRows.filter((r) => r.status === 'skipped_existing').length}</dd></div>
 						{:else}
-							<!--
-								Applied imports keep this: the credentials mail is the only copy of a
-								temporary password ever made, so a batch whose mail didn't land (no
-								Resend key at the time, an unverified sending domain, the provider's
-								rate limit, or an address the sheet got wrong) leaves people holding a
-								password that does not work. Nothing can be re-sent — the plaintext is
-								gone — so this mints a new one per account and mails it again.
-							-->
-							<form
-								method="POST"
-								action="?/resendBulkImportLogins"
-								use:enhance={() => {
-									reissuingBulk = true;
-									return async ({ update }) => {
-										reissuingBulk = false;
-										await update();
-										await invalidateAll();
-										if (selectedImportId) await loadReview(selectedImportId);
-									};
-								}}
-							>
-								<input type="hidden" name="importId" value={reviewImport.id} />
-								<input
-									class="mail-redirect"
-									type="email"
-									name="sendCredentialsTo"
-									placeholder="Send all logins to this address instead (optional)"
-								/>
-								<button
-									type="submit"
-									class="ess-btn ess-btn--secondary"
-									disabled={reissuingBulk || createdCount === 0}
-									title="Gives every account this import created a new temporary password and emails it again. Anyone who has already set their own password is left alone."
-								>
-									{reissuingBulk
-										? 'Re-issuing logins…'
-										: `Re-issue & email ${createdCount} login(s)`}
-								</button>
-							</form>
+							<div><dt>Ready to create logins</dt><dd class="ok">{readyCount}</dd></div>
+							<div><dt>Need attention</dt><dd class:warn={needsReviewCount > 0}>{needsReviewCount}</dd></div>
+							<div><dt>Already exist</dt><dd>{reviewRows.filter((r) => r.status === 'skipped_existing').length}</dd></div>
 						{/if}
+					</dl>
+					{#if !locked && needsReviewCount > 0}
+						<div class="ess-notice">
+							<span class="ess-notice__icon">!</span>
+							<div class="ess-notice__body">
+								<strong>{needsReviewCount} row(s) need attention</strong>
+								Fix the flagged rows in the preview before the logins can be created.
+							</div>
+						</div>
+					{/if}
+					{#if !locked}
+						<form
+							method="POST"
+							action="?/applyBulkImport"
+							class="apply-form"
+							use:enhance={() => {
+								applyingBulk = true;
+								return async ({ update }) => {
+									applyingBulk = false;
+									await update();
+									await invalidateAll();
+									if (selectedImportId) await loadReview(selectedImportId);
+								};
+							}}
+						>
+							<input type="hidden" name="importId" value={reviewImport.id} />
+							<!--
+								Dry-run escape hatch: sends every credentials mail for this batch to one
+								reviewer instead of to the employees, for checking the template and the
+								Resend setup against a real inbox. The accounts are still created.
+							-->
+							<label class="ess-field">
+								<span class="ess-label">Send all login emails to (optional)</span>
+								<input class="ess-input" type="email" name="sendCredentialsTo" placeholder="A test inbox instead of the employees" />
+							</label>
+							<button type="submit" class="ess-btn ess-btn--primary wide" disabled={applyingBulk || needsReviewCount > 0 || readyCount === 0}>
+								<Users size={17} />
+								{applyingBulk ? 'Creating logins…' : `Create ${readyCount} login(s)`}
+							</button>
+							<p class="ess-help center">This creates the accounts and queues their login emails for approval.</p>
+						</form>
+					{:else}
+						<!--
+							Applied imports keep this: the credentials mail is the only copy of a
+							temporary password ever made, so a batch whose mail didn't land leaves
+							people holding a password that does not work. This mints a new one per
+							account and queues it again.
+						-->
+						<form
+							method="POST"
+							action="?/resendBulkImportLogins"
+							class="apply-form"
+							use:enhance={() => {
+								reissuingBulk = true;
+								return async ({ update }) => {
+									reissuingBulk = false;
+									await update();
+									await invalidateAll();
+									if (selectedImportId) await loadReview(selectedImportId);
+								};
+							}}
+						>
+							<input type="hidden" name="importId" value={reviewImport.id} />
+							<label class="ess-field">
+								<span class="ess-label">Send all login emails to (optional)</span>
+								<input class="ess-input" type="email" name="sendCredentialsTo" placeholder="A test inbox instead of the employees" />
+							</label>
+							<button type="submit" class="ess-btn ess-btn--secondary wide" disabled={reissuingBulk || createdCount === 0} title="Gives every account this import created a new temporary password and queues its email again. Anyone who has already set their own password is left alone.">
+								<Mail size={16} />
+								{reissuingBulk ? 'Re-issuing logins…' : `Re-issue & email ${createdCount} login(s)`}
+							</button>
+						</form>
+					{/if}
+				{:else}
+					<p class="ess-caption">Upload a spreadsheet, or pick an earlier import, to see what it will create.</p>
+				{/if}
+			</div>
+
+			{#if data.canApproveLogins}
+				<div class="ess-card">
+					<h2 class="ess-h2 card-title">Login email queue</h2>
+					<div class="queue-hint">
+						<span class="ess-tile"><Mail size={20} strokeWidth={1.75} /></span>
+						<div>
+							<strong>{data.pendingLoginEmails ? 'Pending review' : 'Nothing waiting'}</strong>
+							<p class="ess-caption">
+								{#if data.pendingLoginEmails}
+									{data.pendingLoginEmails} login email(s) wait for approval before anything is sent.
+								{:else}
+									New logins' emails appear here for approval; they go out one at a time once approved.
+								{/if}
+							</p>
+						</div>
+					</div>
+					<div class="queue-figure">
+						<div><div class="ess-figure__value">{data.pendingLoginEmails}</div><div class="ess-figure__label">emails queued</div></div>
+						<button type="button" class="ess-link" onclick={() => setView('logins')}>Review delivery <ChevronRight size={14} /></button>
+					</div>
+					<div class="next-steps">
+						<strong>What happens next?</strong>
+						<ol>
+							<li><span>1</span> Accounts are created for the ready rows.</li>
+							<li><span>2</span> An admin approves their login emails in Login delivery.</li>
+							<li><span>3</span> People sign in and set their own password.</li>
+						</ol>
 					</div>
 				</div>
-			</div>
-		{/if}
-	</section>
-	{/if}
+			{/if}
+		</aside>
+	</div>
+{/if}
 
-	{#if view === 'passwords' && data.canSeePasswordActivity}
-	<section class="password-activity-section">
-		<h2 class="section-title">Password Activity</h2>
-		<p class="section-sub">
-			Who changed or reset whose password, and when. A password someone has chosen for themselves is never stored
-			or shown — it is one-way hashed and cannot be recovered by anyone, including a Super Admin. An unused
-			temporary password is the exception: it stays readable on the roster above so it can be passed on, and is
-			erased the moment that person signs in and sets their own.
-		</p>
-		<div class="ess-table-shell">
-			<table class="ess-table">
-				<thead>
-					<tr>
-						<th>When</th>
-						<th>Action</th>
-						<th>By</th>
-						<th>For</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each data.passwordActivity as entry, i (i)}
-						<tr>
-							<td>{new Date(entry.createdAt).toLocaleString()}</td>
-							<td>{entry.label}</td>
-							<td>{entry.actorName ?? 'Unknown'}</td>
-							<td>{entry.targetName ?? entry.targetEmail ?? '—'}</td>
-						</tr>
-					{:else}
-						<tr><td colspan="4" class="ess-empty">No password activity recorded yet.</td></tr>
-					{/each}
-				</tbody>
-			</table>
+<!-- ============================== LOGIN DELIVERY ============================== -->
+{#if view === 'logins' && data.canApproveLogins}
+	<LoginEmailQueue />
+{/if}
+
+<!-- ============================== PASSWORD ACTIVITY ============================== -->
+{#if view === 'passwords' && data.canSeePasswordActivity}
+	<div class="pw-figures">
+		<div class="ess-metric">
+			<span class="ess-tile"><ShieldCheck size={20} strokeWidth={1.75} /></span>
+			<div class="ess-metric__body">
+				<span class="ess-metric__value">{pwThisWeek}</span>
+				<span class="ess-metric__label">{pwThisWeek === 1 ? 'change' : 'changes'} this week</span>
+			</div>
 		</div>
-	</section>
-	{/if}
+		<div class="ess-metric">
+			<span class="ess-tile ess-tile--warn"><Clock size={20} strokeWidth={1.75} /></span>
+			<div class="ess-metric__body">
+				<span class="ess-metric__value">{data.passwordActivity.length}</span>
+				<span class="ess-metric__label">events recorded</span>
+			</div>
+		</div>
+	</div>
+
+	<div class="ess-card toolbar-card">
+		<label class="ess-search grow">
+			<Search size={17} />
+			<input class="ess-input" placeholder="Search by name or email…" bind:value={pwSearch} aria-label="Search password activity" />
+		</label>
+		<label class="ess-field inline">
+			<span class="ess-label">Action type</span>
+			<select class="ess-select" bind:value={pwAction}>
+				<option value="">All actions</option>
+				{#each pwActions as a (a)}
+					<option value={a}>{a}</option>
+				{/each}
+			</select>
+		</label>
+		{#if pwSearch || pwAction}
+			<button type="button" class="ess-btn ess-btn--ghost" onclick={() => { pwSearch = ''; pwAction = ''; }}>Reset filters</button>
+		{/if}
+	</div>
+
+	<div class="ess-split pw-split">
+		<section class="ess-card">
+			<div class="ess-card-head">
+				<div>
+					<h2 class="ess-h2">Password activity</h2>
+					<p class="ess-caption">
+						Who changed or reset whose password, and when. A password someone has chosen for themselves is never stored or shown — it is one-way hashed and cannot be recovered by anyone, including a Super Admin.
+					</p>
+				</div>
+				<span class="ess-caption nowrap">{pwRows.length} of {data.passwordActivity.length}</span>
+			</div>
+			<div class="table-wrap">
+				<table class="ess-table">
+					<thead>
+						<tr>
+							<th>Employee</th>
+							<th>Action</th>
+							<th>Performed by</th>
+							<th>Date</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each pwRows as entry (entry.i)}
+							<tr class="person-row" class:is-selected={pwSelected === entry.i} onclick={() => (pwSelected = entry.i)}>
+								<td>
+									<strong>{entry.targetName ?? entry.targetEmail ?? '—'}</strong>
+									{#if entry.targetName && entry.targetEmail}<small class="sub">{entry.targetEmail}</small>{/if}
+								</td>
+								<td><span class="action-cell"><KeyRound size={15} /> {entry.label}</span></td>
+								<td class="muted-cell">{entry.actorName ?? 'Unknown'}{#if entry.actorName && entry.actorName === entry.targetName}<small class="sub">Self</small>{/if}</td>
+								<td class="muted-cell nowrap">{whenLong(entry.createdAt)}</td>
+							</tr>
+						{:else}
+							<tr><td colspan="4"><div class="ess-empty">{data.passwordActivity.length ? 'Nothing matches these filters.' : 'No password activity recorded yet.'}</div></td></tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<aside class="ess-stack side">
+			{#if pwEvent}
+				<div class="ess-card">
+					<div class="ess-card-head">
+						<h2 class="ess-h2">Event details</h2>
+						<button type="button" class="ess-icon-btn" onclick={() => (pwSelected = null)} aria-label="Close"><X size={18} /></button>
+					</div>
+					<div class="event-who">
+						<span class="ess-avatar">{(pwEvent.targetName ?? pwEvent.targetEmail ?? '?').split(' ').map((p) => p[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()}</span>
+						<div>
+							<strong>{pwEvent.targetName ?? pwEvent.targetEmail ?? '—'}</strong>
+							{#if pwEvent.targetEmail}<small class="sub">{pwEvent.targetEmail}</small>{/if}
+						</div>
+					</div>
+					<dl class="ess-kv">
+						<dt>Action</dt><dd>{pwEvent.label}</dd>
+						<dt>Performed by</dt><dd>{pwEvent.actorName ?? 'Unknown'}{pwEvent.actorName && pwEvent.actorName === pwEvent.targetName ? ' (self)' : ''}</dd>
+						<dt>Date &amp; time</dt><dd>{whenLong(pwEvent.createdAt)}</dd>
+					</dl>
+					<p class="ess-caption">
+						{#if pwEvent.actorName && pwEvent.actorName === pwEvent.targetName}
+							{pwEvent.actorName} changed their own password.
+						{:else}
+							{pwEvent.actorName ?? 'Someone'} performed "{pwEvent.label}" for {pwEvent.targetName ?? pwEvent.targetEmail ?? 'an account'}. An unused temporary password stays readable on the directory until that person signs in and sets their own.
+						{/if}
+					</p>
+				</div>
+			{:else}
+				<div class="ess-card placeholder">
+					<span class="ess-tile ess-tile--lg"><ShieldCheck size={24} strokeWidth={1.5} /></span>
+					<strong>Select an event</strong>
+					<p class="ess-caption">Who did what, and when, shows here.</p>
+				</div>
+			{/if}
+		</aside>
+	</div>
 {/if}
 
 <style>
-	.create-card.create-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-		gap: 12px 14px;
-		align-items: start;
+	.view-tabs {
+		margin-bottom: 20px;
 	}
 
-	.create-actions {
-		display: flex;
-		align-items: flex-end;
-		min-height: 62px;
+	.figures {
+		margin-bottom: 16px;
 	}
-
-	.chief {
-		font-weight: 600;
-		color: var(--ess-primary-text);
-	}
-
-	.view-switch {
-		margin-bottom: 1.25rem;
-		flex-wrap: wrap;
-	}
-
-	.page-header {
-		margin-bottom: 1.5rem;
-	}
-
-	.stat-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-		gap: 14px;
-		margin-bottom: 1.5rem;
-	}
-
-	.stat-success {
-		color: var(--ess-success);
-	}
-
-	.stat-warning {
-		color: var(--ess-warning);
+	.figures .ess-figure {
+		padding: 16px 20px;
 	}
 
 	.toolbar {
 		display: flex;
 		align-items: center;
-		flex-wrap: wrap;
 		gap: 10px;
-		margin-bottom: 1rem;
+		flex-wrap: wrap;
+		margin-bottom: 16px;
 	}
-
-	.search-input {
+	.toolbar-card {
+		display: flex;
+		align-items: flex-end;
+		gap: 12px;
+		flex-wrap: wrap;
+		padding: 14px 16px;
+		margin-bottom: 16px;
+	}
+	.grow {
 		flex: 1;
-		max-width: 280px;
+		min-width: 240px;
+	}
+	.status-filter {
+		width: auto;
+		min-width: 170px;
+	}
+	.ess-field.inline {
+		min-width: 200px;
+	}
+	.ess-field.inline .ess-label {
+		font-size: 12.5px;
+		color: var(--ess-text-secondary);
 	}
 
-	.create-btn {
-		margin-left: auto;
+	.ess-alert {
+		margin-bottom: 14px;
+	}
+	.ess-alert.notice {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+	}
+	.ess-alert.col {
+		flex-direction: column;
+	}
+	.ess-alert.small {
+		font-size: 13px;
+	}
+	.ess-notice {
+		margin-bottom: 14px;
+	}
+	.ess-notice__icon {
+		font-weight: 700;
 	}
 
-	.create-card {
+	.code {
+		font-family: var(--ess-font-mono);
+		font-size: 12.5px;
+		letter-spacing: 0.02em;
+		color: var(--ess-text);
 		background: var(--ess-surface);
 		border: 1px solid var(--ess-border);
-		border-radius: var(--ess-radius-md);
-		padding: 1.25rem;
-		display: flex;
-		flex-wrap: wrap;
-		gap: 1rem;
-		align-items: end;
-		margin-bottom: 1rem;
+		border-radius: 4px;
+		padding: 1px 6px;
+		user-select: all;
 	}
 
-	.create-card .ess-field {
-		flex: 1;
-		min-width: 160px;
-	}
+	/* ---------- tables ---------- */
 
-	.section-gap {
-		display: block;
-		margin-bottom: 1rem;
-	}
-
-	.temp-pass {
-		background: var(--ess-success-bg);
-		color: var(--ess-success);
-		border-radius: var(--ess-radius-sm);
-		padding: 0.75rem 1rem;
-		font-size: 0.85rem;
-		margin-bottom: 1rem;
-	}
-
-	/* Credentials that never reached their owner — the import still succeeded, so
-	   this warns rather than alarms. */
-	.mail-warn {
-		background: var(--ess-warning-bg);
-		color: var(--ess-warning);
-		border-radius: var(--ess-radius-sm);
-		padding: 0.75rem 1rem;
-		font-size: 0.85rem;
-		margin-bottom: 0.5rem;
-	}
-
-	.mail-warn-list {
-		margin: 0 0 1rem;
-		padding-left: 1.25rem;
-		font-size: 0.8rem;
-		color: var(--ess-text-muted);
-	}
-
-	.mail-warn-list li {
-		margin-bottom: 0.35rem;
-	}
-
-	.mail-warn-list code {
-		font-family: var(--ess-font-mono, Consolas, Menlo, monospace);
-		background: var(--ess-surface-alt, rgba(0, 0, 0, 0.05));
-		border-radius: 3px;
-		padding: 0.05rem 0.3rem;
-		color: var(--ess-text);
-	}
-
-	/* Why the send failed, secondary to the credentials themselves — the operator
-	   is here to copy a password down, not to read a provider error. */
-	.mail-warn-reason {
-		display: block;
-		font-size: 0.75rem;
-		opacity: 0.8;
-	}
-
-	.mail-redirect {
-		display: block;
-		width: 100%;
-		max-width: 22rem;
-		margin-bottom: 0.5rem;
-		padding: 0.45rem 0.6rem;
-		border: 1px solid var(--ess-border);
-		border-radius: var(--ess-radius-sm);
-		font-size: 0.8rem;
-	}
-
-	/* The 5-column roster can't compress below ~640px and stay readable, so
-	   it scrolls inside its own shell instead of overflowing the page. */
-	.roster-shell {
+	.table-wrap {
+		margin: 0 calc(-1 * var(--ess-space-5));
 		overflow-x: auto;
-		/* Contained so overshooting a sideways scroll does not reach the page —
-		   on a trackpad an uncontained horizontal flick navigates back a route. */
 		overscroll-behavior-x: contain;
 	}
-
-	/* Full-width second line under a roster row, for the one person in ten who
-	   still hasn't used their login. */
-	.pending-login {
-		grid-column: 1 / -1;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin-top: 0.5rem;
-		padding: 0.35rem 0.6rem;
-		border-radius: var(--ess-radius-sm);
-		background: var(--ess-warning-bg);
-		color: var(--ess-warning);
-		font-size: 0.75rem;
+	.table-wrap .ess-table th:first-child,
+	.table-wrap .ess-table td:first-child {
+		padding-left: var(--ess-space-5);
 	}
-
-	.pending-login code {
-		font-family: var(--ess-font-mono, Consolas, Menlo, monospace);
-		font-size: 0.8rem;
-		letter-spacing: 0.02em;
-		color: var(--ess-text);
-		background: var(--ess-surface);
-		border-radius: 3px;
-		padding: 0.1rem 0.4rem;
-		user-select: all;
+	.table-wrap .ess-table th:last-child,
+	.table-wrap .ess-table td:last-child {
+		padding-right: var(--ess-space-5);
 	}
-
-	.pending-login-label {
-		opacity: 0.85;
+	.roster {
+		min-width: 1040px;
 	}
-
-	.roster-row {
-		display: grid;
-		grid-template-columns: 1.5fr 0.8fr 1.1fr 1.1fr 1fr 1.2fr 0.9fr 0.6fr 0.8fr;
-		padding: 0.7rem 1.1rem;
-		font-size: var(--ess-fs-body);
-		align-items: center;
-		min-width: 1280px;
-	}
-
-	/* The whole row opens the settings panel, so it reads as a target. */
-	.roster-row.clickable {
-		cursor: pointer;
-		transition: background var(--ess-t-fast);
-	}
-
-	.roster-row.clickable:hover {
-		background: var(--ess-sunken);
-	}
-
-	/* An advisory outcome, not an error: the save worked, but it had a
-	   consequence worth naming. */
-	.settings-notice {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		flex-wrap: wrap;
-		background: var(--ess-warning-bg);
-		color: var(--ess-warning);
-		border-radius: var(--ess-radius-sm);
-		padding: 0.7rem 1rem;
-		font-size: var(--ess-fs-caption);
-	}
-
-	.link-cell {
-		color: var(--ess-text-secondary);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		min-width: 0;
-	}
-
-	.weekoff-cell {
-		min-width: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-
-	/* The pattern in words under the roster name — "Rotational A" means nothing
-	   on its own, "Week 2: Sat + Sun" is what the manager actually needs. */
-	.weekoff-summary {
-		font-size: var(--ess-fs-caption);
-		color: var(--ess-text-secondary);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.shift-cell {
-		min-width: 0;
-	}
-
-	.shift-select {
-		width: 100%;
-		max-width: 150px;
-		background: var(--ess-field-bg);
-		border: 1px solid var(--ess-border);
-		border-radius: var(--ess-radius-xs);
-		color: var(--ess-text);
-		font-size: var(--ess-fs-caption);
-		padding: 4px 6px;
+	.person-row {
 		cursor: pointer;
 	}
-
-	.shift-select:hover:not(:disabled) {
-		border-color: var(--ess-primary);
-	}
-
-	.shift-select:disabled {
-		opacity: 0.5;
-	}
-
-	/* Unassigned is a real problem — it leaves the employee with no holiday
-	   calendar — so it reads as a warning rather than a neutral empty value. */
-	.shift-select.shift-unset {
-		color: var(--ess-warning);
-		border-color: var(--ess-warning);
-	}
-
-	.code-cell {
-		font-family: var(--ess-font-mono);
-		font-size: var(--ess-fs-caption);
-		letter-spacing: 0.02em;
-		color: var(--ess-text);
-	}
-
-	.code-missing {
-		font-family: var(--ess-font-sans);
-		color: var(--ess-warning);
-	}
-
-	.row-delete {
-		background: transparent;
-		border: none;
-		color: var(--ess-text-muted);
-		cursor: pointer;
-		padding: 4px;
-		border-radius: 6px;
-		display: inline-flex;
-		transition:
-			color var(--ess-t-fast),
-			background var(--ess-t-fast);
-	}
-
-	.reset-panel {
-		background: var(--ess-surface);
-		border: 1px solid var(--ess-border-strong);
-		border-radius: var(--ess-radius-md);
-		padding: 16px 18px;
-		margin-bottom: 14px;
-	}
-
-	.reset-head {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		color: var(--ess-text);
-		margin-bottom: 6px;
-	}
-
-	.reset-note {
-		color: var(--ess-text-secondary);
-		font-size: var(--ess-fs-caption);
-		margin: 0 0 12px;
-		max-width: 74ch;
-	}
-
-	.reset-controls {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 8px;
-	}
-
-	.reset-input {
-		font-family: var(--ess-font-mono);
-		max-width: 260px;
-	}
-
-	.reset-issued {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 10px;
-		background: var(--ess-success-bg);
-		border: 1px solid var(--ess-success);
-		color: var(--ess-text);
-		border-radius: var(--ess-radius-md);
-		padding: 12px 16px;
-		margin-bottom: 14px;
-		font-size: var(--ess-fs-caption);
-	}
-
-	.reset-issued code {
-		font-family: var(--ess-font-mono);
-		font-size: var(--ess-fs-body);
-		font-weight: 600;
-		background: var(--ess-sunken);
-		border: 1px solid var(--ess-border);
-		border-radius: var(--ess-radius-xs);
-		padding: 4px 10px;
-		user-select: all;
-	}
-
-	.row-reset {
-		background: transparent;
-		border: none;
-		color: var(--ess-text-muted);
-		cursor: pointer;
-		padding: 4px;
-		border-radius: 6px;
-		display: inline-flex;
-		margin-right: 2px;
-		transition:
-			color var(--ess-t-fast),
-			background var(--ess-t-fast);
-	}
-
-	.row-reset:hover {
-		color: var(--ess-primary-text);
-		background: var(--ess-primary-soft);
-	}
-
-	.row-delete:hover {
-		color: var(--ess-danger);
-		background: var(--ess-danger-bg);
-	}
-
-	.confirm-delete {
-		display: inline-flex;
-		gap: 0.35rem;
-		justify-content: flex-end;
-	}
-
-	.roster-row:not(:last-child) {
-		border-bottom: 1px solid var(--ess-border-subtle);
-	}
-
-	.roster-head {
-		font-weight: 700;
-		color: var(--ess-text-secondary);
-		font-size: var(--ess-fs-eyebrow);
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-		background: var(--ess-sunken);
-		border-bottom: 1px solid var(--ess-border);
-	}
-
 	.name-cell {
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		font-weight: 500;
-	}
-
-	.email-cell {
-		color: var(--ess-text-secondary);
-	}
-
-	.role {
-		text-transform: capitalize;
-		color: var(--ess-text-secondary);
+		gap: 12px;
 		min-width: 0;
 	}
-
-	.align-right {
+	.name-text {
+		display: grid;
+		min-width: 0;
+		line-height: 1.3;
+	}
+	.name-text strong {
+		font-weight: 500;
+		white-space: nowrap;
+	}
+	.name-text small,
+	.sub {
+		display: block;
+		font-size: 12.5px;
+		color: var(--ess-text-muted);
+		white-space: nowrap;
+	}
+	.muted-cell {
+		color: var(--ess-text-secondary);
+		white-space: nowrap;
+	}
+	.nowrap {
+		white-space: nowrap;
+	}
+	.code-cell {
+		font-family: var(--ess-font-mono);
+		font-size: 12.5px;
+		letter-spacing: 0.02em;
+	}
+	.missing {
+		color: var(--ess-warning);
+	}
+	.chief {
+		font-weight: 500;
+		color: var(--ess-primary-text);
+	}
+	.actions-cell {
 		text-align: right;
-		font-variant-numeric: tabular-nums;
+	}
+	.row-actions {
+		display: inline-flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 2px;
+	}
+	.row-actions .ess-btn--secondary {
+		margin-right: 6px;
+	}
+	.ess-icon-btn.danger:hover {
+		color: var(--ess-danger);
+		background: var(--ess-danger-bg);
+	}
+	.danger-text {
+		color: var(--ess-danger);
+	}
+	.confirm-delete {
+		display: inline-flex;
+		gap: 6px;
+	}
+	.pending-row td {
+		padding-top: 0;
+		border-bottom: 1px solid var(--ess-border-subtle);
+	}
+	.pending-login {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+		padding: 6px 12px;
+		border-radius: var(--ess-radius-sm);
+		background: var(--ess-warning-bg);
+		color: var(--ess-warning);
+		font-size: 12.5px;
+	}
+	.action-cell {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+	}
+	.action-cell :global(svg) {
+		color: var(--ess-text-muted);
 	}
 
-	.table-foot {
-		padding: 10px 16px;
-		border-top: 1px solid var(--ess-border);
-		background: var(--ess-sunken);
-		font-size: var(--ess-fs-caption);
+	/* ---------- right panel ---------- */
+
+	.side {
+		position: sticky;
+		top: 20px;
+	}
+	.placeholder {
+		display: grid;
+		justify-items: center;
+		text-align: center;
+		gap: 8px;
+		padding: 36px 24px;
+	}
+	.placeholder strong {
+		font-size: 15px;
+		font-weight: 600;
+	}
+	.placeholder p {
+		max-width: 30ch;
+	}
+	.placeholder .ess-btn {
+		margin-top: 6px;
+	}
+
+	.person-top {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+	}
+	.person-name {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+		margin-top: 14px;
+	}
+	.person-name .ess-h2 {
+		font-size: 24px;
+	}
+	.facts {
+		display: grid;
+		gap: 14px;
+		margin: 18px 0;
+		padding: 18px 0;
+		border-top: 1px solid var(--ess-border-subtle);
+		border-bottom: 1px solid var(--ess-border-subtle);
+	}
+	.facts > div {
+		display: flex;
+		gap: 12px;
+	}
+	.facts dt {
+		margin: 0;
+		color: var(--ess-text-muted);
+		padding-top: 2px;
+	}
+	.facts dd {
+		margin: 0;
+		display: grid;
+		line-height: 1.35;
+	}
+	.facts dd span {
+		font-size: 13px;
 		color: var(--ess-text-secondary);
 	}
-
-	.weekoff-section,
-	.bulk-import-section,
-	.password-activity-section {
-		margin-top: 2rem;
+	.facts dd strong {
+		font-weight: 500;
+	}
+	.facts dd small {
+		font-size: 12.5px;
+		color: var(--ess-text-muted);
+	}
+	.wide {
+		width: 100%;
+	}
+	.today-card {
+		margin-top: 14px;
+		padding: 14px 16px;
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-primary-softer);
+	}
+	.today-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+		margin-bottom: 4px;
+	}
+	.today-head .label {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font-weight: 500;
+	}
+	.today-card p {
+		font-size: 13px;
+		color: var(--ess-text-secondary);
+	}
+	.person-panel .ess-notice {
+		margin: 14px 0 0;
+	}
+	.btn-row {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+		margin-top: 14px;
+	}
+	.btn-row.end {
+		justify-content: flex-end;
 	}
 
-	.roster-editor {
+	.create-panel,
+	.editor {
+		display: grid;
+		gap: 14px;
+	}
+	.create-panel .ess-card-head,
+	.editor .ess-card-head {
+		margin-bottom: 0;
 		align-items: flex-start;
 	}
+	.req {
+		color: var(--ess-danger);
+	}
+	.mono {
+		font-family: var(--ess-font-mono);
+	}
+	.reset-field {
+		margin-top: 12px;
+	}
 
-	.day-field,
-	.rotation-field {
-		flex-basis: 100%;
+	/* ---------- week-off grid ---------- */
+
+	.grid-filter {
+		width: auto;
+		min-width: 200px;
+	}
+	.grid {
+		min-width: 760px;
+	}
+	.day-head span {
+		display: block;
+		color: var(--ess-text);
+	}
+	.day-head small {
+		font-size: 12px;
+		color: var(--ess-text-muted);
+	}
+	.day-cell {
+		text-align: center;
+	}
+	.mark {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		padding: 5px 12px;
+		border-radius: var(--ess-radius-sm);
+		background: var(--ess-sunken);
+		color: var(--ess-text-secondary);
+		font-size: 13px;
+	}
+	.mark::before,
+	.mark-dot {
+		content: '';
+		display: inline-block;
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--ess-border-strong);
+	}
+	.mark.off {
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
+	}
+	.mark.off::before,
+	.mark-dot.off {
+		background: var(--ess-primary);
+	}
+	.legend {
+		display: flex;
+		gap: 20px;
+		margin-top: 14px;
+		padding-top: 12px;
+		border-top: 1px solid var(--ess-border-subtle);
+		font-size: 13px;
+		color: var(--ess-text-secondary);
+	}
+	.legend.col {
+		flex-direction: column;
+		gap: 8px;
+		border: none;
+		padding: 0;
+		margin: 10px 0;
+	}
+	.legend span {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+	}
+	.legend-card .ess-h3 {
+		display: block;
+	}
+
+	.templates {
+		display: grid;
+		gap: 10px;
+	}
+	.template {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 14px;
+		flex-wrap: wrap;
+		padding: 14px 16px;
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
+	}
+	.template.is-editing {
+		border-color: var(--ess-primary);
+		background: var(--ess-primary-softer);
+	}
+	.template-main {
+		display: grid;
+		gap: 3px;
+		min-width: 0;
+	}
+	.template-head {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+	.template-head strong {
+		font-weight: 500;
+		font-size: 14.5px;
+	}
+	.template-summary {
+		font-size: 13.5px;
+		color: var(--ess-text-secondary);
+	}
+	.template-sub {
+		font-size: 12.5px;
+		color: var(--ess-text-muted);
+	}
+	.template-actions {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		flex-shrink: 0;
 	}
 
 	.day-picker {
@@ -1913,18 +2186,17 @@
 		flex-wrap: wrap;
 		gap: 6px;
 	}
-
 	/* A row of weekday toggles reads faster than a multi-select, and makes the
 	   selected pattern legible at a glance while it's being built. */
 	.day-chip {
-		min-width: 46px;
+		min-width: 44px;
 		padding: 6px 10px;
 		border-radius: var(--ess-radius-pill);
 		border: 1px solid var(--ess-border);
 		background: var(--ess-field-bg);
 		color: var(--ess-text-secondary);
-		font-size: var(--ess-fs-caption);
-		font-weight: 600;
+		font-size: 12.5px;
+		font-weight: 500;
 		font-family: inherit;
 		cursor: pointer;
 		transition:
@@ -1932,235 +2204,316 @@
 			color var(--ess-t-fast),
 			border-color var(--ess-t-fast);
 	}
-
 	.day-chip:hover {
 		border-color: var(--ess-primary);
 	}
-
 	.day-chip.selected {
 		background: var(--ess-primary);
 		border-color: var(--ess-primary);
 		color: var(--ess-text-on-primary);
 	}
-
 	.rotation-row {
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		margin-bottom: 8px;
+		flex-wrap: wrap;
+		margin-top: 8px;
 	}
-
 	.rotation-label {
-		font-size: var(--ess-fs-caption);
-		font-weight: 600;
+		font-size: 12.5px;
+		font-weight: 500;
 		color: var(--ess-text-secondary);
-		min-width: 4.2rem;
+		min-width: 3.6rem;
 	}
-
 	.add-week {
-		margin-top: 4px;
+		justify-self: start;
+		margin-top: 8px;
 	}
-
-	.roster-actions {
-		display: flex;
+	.assigned {
+		display: grid;
+		gap: 6px;
+	}
+	.assigned-row {
+		display: inline-flex;
+		align-items: center;
 		gap: 8px;
-		flex-basis: 100%;
+		color: var(--ess-text-secondary);
+		font-size: 13.5px;
 	}
 
-	.roster-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin-top: 1rem;
-	}
+	/* ---------- bulk import ---------- */
 
-	.roster-card {
+	.bulk-steps {
+		max-width: 760px;
+		margin: 4px auto 24px;
+	}
+	.upload-form {
 		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
+		align-items: flex-end;
+		gap: 10px;
 		flex-wrap: wrap;
-		background: var(--ess-surface);
-		border: 1px solid var(--ess-border);
+		padding: 16px;
+		margin-bottom: 14px;
+		border: 1px dashed var(--ess-border-strong);
 		border-radius: var(--ess-radius-md);
-		padding: 0.8rem 1rem;
-	}
-
-	.roster-card-main {
-		display: flex;
-		flex-direction: column;
-		gap: 0.2rem;
-		min-width: 0;
-	}
-
-	.roster-card-head {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-
-	.scope-chip {
-		font-size: 0.7rem;
-		font-weight: 600;
-		color: var(--ess-text-secondary);
 		background: var(--ess-sunken);
-		border: 1px solid var(--ess-border-subtle);
-		border-radius: var(--ess-radius-pill);
-		padding: 0.1rem 0.5rem;
 	}
-
-	.roster-summary {
-		font-size: var(--ess-fs-caption);
-		color: var(--ess-text);
+	.imports {
+		display: grid;
+		gap: 8px;
+		margin-bottom: 14px;
 	}
-
-	.roster-weeks,
-	.roster-desc {
-		font-size: var(--ess-fs-caption);
-		color: var(--ess-text-secondary);
-	}
-
-	.roster-card-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		flex-shrink: 0;
-	}
-
-	.section-head {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		flex-wrap: wrap;
-		gap: 1rem;
-		margin-bottom: 1rem;
-	}
-
-	.section-title {
-		font-size: var(--ess-fs-h3);
-		font-weight: 700;
-		margin-bottom: 0.25rem;
-	}
-
-	.section-sub {
-		font-size: var(--ess-fs-caption);
-		color: var(--ess-text-secondary);
-		max-width: 560px;
-	}
-
-	.mail-warn code {
-		background: var(--ess-sunken);
-		padding: 0.1rem 0.4rem;
-		border-radius: 4px;
-	}
-
-	.bulk-file-field {
-		flex: 1;
-		min-width: 220px;
-	}
-
-	.import-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin: 1rem 0;
-	}
-
 	.import-row {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		background: var(--ess-surface);
+		gap: 12px;
+		width: 100%;
+		padding: 12px 14px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
-		padding: 0.7rem 1rem;
-		cursor: pointer;
-		font-family: inherit;
+		background: var(--ess-surface);
+		color: var(--ess-text);
+		font: inherit;
 		text-align: left;
+		cursor: pointer;
+		transition: border-color var(--ess-t-fast);
 	}
-
+	.import-row:hover {
+		border-color: var(--ess-border-strong);
+	}
+	.import-row.is-selected {
+		border-color: var(--ess-primary);
+		background: var(--ess-primary-softer);
+	}
 	.import-main {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
+		flex: 1;
+		display: grid;
+		min-width: 0;
 	}
-
-	.import-main .meta {
-		font-size: var(--ess-fs-caption);
-		color: var(--ess-text-secondary);
+	.import-main strong {
+		font-weight: 500;
 	}
-
-	.review-block {
-		margin-top: 1rem;
+	.import-main small {
+		font-size: 12.5px;
+		color: var(--ess-text-muted);
 	}
-
-	.review-table-shell {
-		overflow-x: auto;
-		/* Contained so overshooting a sideways scroll does not reach the page —
-		   on a trackpad an uncontained horizontal flick navigates back a route. */
-		overscroll-behavior-x: contain;
+	.import-row :global(.chev) {
+		color: var(--ess-text-muted);
 	}
-
-	.review-table-shell .ess-table td input,
-	.review-table-shell .ess-table td select {
-		min-width: 150px;
+	.review {
+		min-width: 900px;
 	}
-
+	.review td .ess-input,
+	.review td .ess-select {
+		min-width: 160px;
+		padding: 7px 10px;
+	}
+	.review td .ess-select {
+		padding-right: 30px;
+	}
+	tr.attention td {
+		background: var(--ess-warning-bg);
+	}
 	.raw-hint {
 		display: block;
-		font-size: 0.7rem;
-		color: var(--ess-text-secondary);
-		margin-top: 0.2rem;
+		font-size: 11.5px;
+		color: var(--ess-text-muted);
+		margin-top: 4px;
 	}
-
-	.mapping-note {
-		display: block;
-		margin-bottom: 1rem;
-		padding: 0.6rem 0.9rem;
-		border-radius: var(--ess-radius-sm);
-		background: var(--ess-info-bg);
-		color: var(--ess-info);
-		font-size: var(--ess-fs-caption);
-	}
-
-	.duplicate-row td {
-		padding: 0;
-		border-bottom: 1px solid var(--ess-border-subtle);
-	}
-
 	.notes-row td {
 		padding: 0;
-		border-bottom: 1px solid var(--ess-border-subtle);
 	}
-
 	.row-notes {
 		margin: 0;
-		padding: 0.4rem 1rem 0.5rem 2.25rem;
-		font-size: 0.75rem;
+		padding: 8px 20px 10px 40px;
+		font-size: 12.5px;
 		color: var(--ess-warning);
 		background: var(--ess-warning-bg);
 	}
-
 	.row-note-error {
-		color: var(--ess-danger, var(--ess-error, #b3261e));
-		font-weight: 600;
+		color: var(--ess-danger);
+		font-weight: 500;
 	}
-
 	.duplicate-banner {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 1rem;
+		gap: 12px;
+		flex-wrap: wrap;
+		padding: 10px 20px;
+		font-size: 13px;
 		background: var(--ess-warning-bg);
+		color: var(--ess-text);
+	}
+	.duplicate-banner .btn-row {
+		margin: 0;
+	}
+	.fail-list {
+		margin: 8px 0 0;
+		padding-left: 18px;
+		font-size: 13px;
+		color: var(--ess-text);
+	}
+	.fail-list li {
+		margin-bottom: 4px;
+	}
+	.fail-reason {
+		display: block;
+		font-size: 12px;
+		color: var(--ess-text-muted);
+	}
+	.card-title {
+		margin-bottom: 14px;
+	}
+	.summary {
+		display: grid;
+		margin: 0 0 14px;
+	}
+	.summary > div {
+		display: flex;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 10px 0;
+		border-bottom: 1px solid var(--ess-border-subtle);
+		font-size: 14px;
+	}
+	.summary dt {
+		color: var(--ess-text-secondary);
+	}
+	.summary dd {
+		margin: 0;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+	}
+	.summary dd.file {
+		font-weight: 500;
+		font-family: var(--ess-font-mono);
+		font-size: 12.5px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		max-width: 60%;
+	}
+	.summary dd.ok {
+		color: var(--ess-success);
+	}
+	.summary dd.warn {
 		color: var(--ess-warning);
-		padding: 0.6rem 1rem;
-		font-size: 0.8rem;
+	}
+	.apply-form {
+		display: grid;
+		gap: 12px;
+	}
+	.center {
+		text-align: center;
+	}
+	.queue-hint {
+		display: flex;
+		gap: 14px;
+		align-items: flex-start;
+		padding: 14px;
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-primary-softer);
+	}
+	.queue-hint strong {
+		font-weight: 600;
+	}
+	.queue-figure {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 14px 0;
+		margin: 6px 0;
+		border-bottom: 1px solid var(--ess-border-subtle);
+	}
+	.queue-figure .ess-link {
+		background: none;
+		border: none;
+		font: inherit;
+		font-size: 13px;
+		font-weight: 500;
+		cursor: pointer;
+	}
+	.next-steps strong {
+		display: block;
+		font-size: 13.5px;
+		margin-bottom: 8px;
+	}
+	.next-steps ol {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 8px;
+	}
+	.next-steps li {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		font-size: 13px;
+		color: var(--ess-text-secondary);
+	}
+	.next-steps li span {
+		display: inline-grid;
+		place-items: center;
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		border: 1px solid var(--ess-primary-soft);
+		color: var(--ess-primary-text);
+		font-size: 12px;
+		font-weight: 600;
+		flex: none;
 	}
 
-	.duplicate-actions {
+	/* ---------- password activity ---------- */
+
+	.pw-figures {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
+		gap: 14px;
+		margin-bottom: 16px;
+	}
+	.event-who {
 		display: flex;
-		gap: 0.5rem;
-		flex-shrink: 0;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 16px;
+	}
+	.event-who strong {
+		font-weight: 500;
+	}
+	.pw-split .ess-kv {
+		padding: 14px 0;
+		border-top: 1px solid var(--ess-border-subtle);
+		border-bottom: 1px solid var(--ess-border-subtle);
+		margin-bottom: 12px;
+	}
+
+	@media (max-width: 1100px) {
+		.side {
+			position: static;
+		}
+	}
+	@media (max-width: 720px) {
+		.table-wrap {
+			margin: 0 calc(-1 * var(--ess-space-4));
+		}
+		.table-wrap .ess-table th:first-child,
+		.table-wrap .ess-table td:first-child {
+			padding-left: var(--ess-space-4);
+		}
+		.table-wrap .ess-table th:last-child,
+		.table-wrap .ess-table td:last-child {
+			padding-right: var(--ess-space-4);
+		}
+		.view-tabs {
+			width: 100%;
+		}
+		.view-tabs .ess-tab {
+			min-width: 0;
+			flex: 1;
+		}
 	}
 </style>

@@ -1,21 +1,23 @@
 <script lang="ts">
-	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
-	import User from '@lucide/svelte/icons/user';
+	import CalendarDays from '@lucide/svelte/icons/calendar-days';
+	import LayoutGrid from '@lucide/svelte/icons/layout-grid';
 	import Calendar from '@lucide/svelte/icons/calendar';
 	import Clock from '@lucide/svelte/icons/clock';
-	import Wallet from '@lucide/svelte/icons/wallet';
+	import FileText from '@lucide/svelte/icons/file-text';
 	import Users from '@lucide/svelte/icons/users';
-	import BookOpen from '@lucide/svelte/icons/book-open';
-	import MessagesSquare from '@lucide/svelte/icons/messages-square';
-	import LogOut from '@lucide/svelte/icons/log-out';
-	import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
-	import Moon from '@lucide/svelte/icons/moon';
-	import Sun from '@lucide/svelte/icons/sun';
+	import Settings from '@lucide/svelte/icons/settings';
+	import Wallet from '@lucide/svelte/icons/wallet';
+	import CircleHelp from '@lucide/svelte/icons/circle-help';
 	import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
 	import PanelLeftOpen from '@lucide/svelte/icons/panel-left-open';
 	import Avatar from './Avatar.svelte';
 	import type { Role } from '$lib/server/auth';
 
+	/**
+	 * The 210px sidebar from the Timeline mockups: brand, the main sections,
+	 * then Help & support and the person's avatar at the foot. Admin Controls
+	 * only shows for people whose privileges open it.
+	 */
 	interface Props {
 		activePath: string;
 		role: Role;
@@ -23,9 +25,11 @@
 		userId: string;
 		hasPicture?: boolean;
 		pictureVersion?: number | null;
+		/** Whether this login may open Admin Controls at all. */
+		canAdmin?: boolean;
 		/** Open admin problems, shown on the Admin Controls row. */
 		adminIssueCount?: number;
-		/** Champ Hub: unread chat (DMs, mentions, ESS notices, announcements) plus requests, minutes and due work; red when urgent. */
+		/** Champ Hub: unread chat plus requests, minutes and due work; red when urgent. */
 		chatBadge?: { count: number; urgent: boolean };
 	}
 
@@ -36,192 +40,100 @@
 		userId,
 		hasPicture = false,
 		pictureVersion,
+		canAdmin = false,
 		adminIssueCount = 0,
 		chatBadge = { count: 0, urgent: false }
 	}: Props = $props();
 
-	let theme = $state<'light' | 'dark'>('light');
 	let shell = $state<'classic' | 'rail'>('classic');
 
 	$effect(() => {
-		theme = document.documentElement.getAttribute('data-ess-theme') === 'dark' ? 'dark' : 'light';
-		shell =
-			document.documentElement.getAttribute('data-ess-shell') === 'rail' ? 'rail' : 'classic';
+		shell = document.documentElement.getAttribute('data-ess-shell') === 'rail' ? 'rail' : 'classic';
 	});
-
-	function setTheme(next: 'light' | 'dark') {
-		theme = next;
-		if (next === 'dark') {
-			document.documentElement.setAttribute('data-ess-theme', 'dark');
-		} else {
-			document.documentElement.removeAttribute('data-ess-theme');
-		}
-		localStorage.setItem('essTheme', next);
-	}
 
 	function toggleShell() {
 		const next = shell === 'rail' ? 'classic' : 'rail';
 		shell = next;
-		if (next === 'rail') {
-			document.documentElement.setAttribute('data-ess-shell', 'rail');
-		} else {
-			document.documentElement.removeAttribute('data-ess-shell');
-		}
+		if (next === 'rail') document.documentElement.setAttribute('data-ess-shell', 'rail');
+		else document.documentElement.removeAttribute('data-ess-shell');
 		localStorage.setItem('essShell', next);
 	}
 
-	/* Nav grouped per the Cosmic shell spec: "Me" (personal) / "Manage" (lead+). */
-	type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; soon?: boolean };
+	type NavItem = { href: string; label: string; icon: typeof Calendar; soon?: boolean };
 
-	const meItems: NavItem[] = [
-		{ href: '/dashboard', label: 'Home', icon: LayoutDashboard },
-		{ href: '/hub', label: 'Champ Hub', icon: MessagesSquare },
-		{ href: '/profile', label: 'My Profile', icon: User },
+	const items = $derived.by((): NavItem[] => [
+		{ href: '/dashboard', label: 'Today', icon: CalendarDays },
+		{ href: '/hub', label: 'Champ Hub', icon: LayoutGrid },
 		{ href: '/leave', label: 'Leave', icon: Calendar },
 		{ href: '/attendance', label: 'Attendance', icon: Clock },
-		/* Payroll has no route yet, so it stays visible (employees expect it in
-		   the nav) but is inert and badged rather than 404-ing on click. */
-		{ href: '/payroll', label: 'Payroll', icon: Wallet, soon: true },
-		{ href: '/policies', label: 'Policies', icon: BookOpen }
-	];
+		{ href: '/policies', label: 'Policies', icon: FileText },
+		...(role !== 'employee' ? [{ href: '/team', label: 'Team', icon: Users }] : []),
+		...(canAdmin ? [{ href: '/admin', label: 'Admin Controls', icon: Settings }] : []),
+		/* Payroll is not built yet. The row stays so people know where it will
+		   live, and opens an honest "not available yet" page. */
+		{ href: '/payroll', label: 'Payroll', icon: Wallet, soon: true }
+	]);
 
-	const teamItem: NavItem = { href: '/team', label: 'Team', icon: Users };
-	/* Every admin surface — biometric upload, leave balances, policies, org
-	   chart, access, cleanup, design tweaks — is a tab inside Admin Controls
-	   rather than its own rail row. Seven rows of rarely-used tools pushed the
-	   rail past the fold for admins and hid which of them needed attention; one
-	   entry with a count of open problems says both. */
-	const adminHubItem: NavItem = {
-		href: '/admin',
-		label: 'Admin Controls',
-		icon: SlidersHorizontal
-	};
-
-	let sections = $derived.by(() => {
-		const manage = [
-			...(role !== 'employee' ? [teamItem] : []),
-			...(role === 'super_admin' || role === 'admin' ? [adminHubItem] : [])
-		];
-		return [
-			{ label: 'Me', items: meItems },
-			{ label: 'Manage', items: manage }
-		].filter((s) => s.items.length > 0);
-	});
+	const isActive = (href: string) =>
+		href === '/dashboard' ? activePath === '/dashboard' || activePath === '/' : activePath === href || activePath.startsWith(href + '/');
 </script>
 
-<nav class="rail">
+<nav class="rail" aria-label="Main">
 	<div class="brand">
-		<div class="brand-mark">CH</div>
-		<div class="brand-text">
-			<strong>Champ HR</strong>
-			<span>ESS Portal</span>
-		</div>
+		<a href="/dashboard" class="brand-link" aria-label="Champ HR, Today">
+			<span class="brand-mark" aria-hidden="true">
+				<svg viewBox="0 0 40 40" width="30" height="30">
+					<path d="M20.5 9.5A11 11 0 1 0 20.5 30.5" fill="none" stroke="currentColor" stroke-width="6.5" stroke-linecap="round" />
+					<path d="M25 10v20M25 20h10M35 10v20" fill="none" stroke="currentColor" stroke-width="6.5" stroke-linecap="round" />
+				</svg>
+			</span>
+			<span class="brand-text">Champ HR</span>
+		</a>
 		<button
 			type="button"
 			class="collapse-btn"
 			onclick={toggleShell}
-			aria-label={shell === 'rail' ? 'Expand sidebar' : 'Collapse sidebar'}
-			title={shell === 'rail' ? 'Expand sidebar' : 'Collapse sidebar'}
+			aria-label={shell === 'rail' ? 'Expand navigation' : 'Collapse navigation'}
+			title={shell === 'rail' ? 'Expand navigation' : 'Collapse navigation'}
 		>
-			{#if shell === 'rail'}
-				<PanelLeftOpen size={16} />
-			{:else}
-				<PanelLeftClose size={16} />
-			{/if}
-		</button>
-	</div>
-
-	<div class="theme-toggle" role="group" aria-label="Theme">
-		<button
-			type="button"
-			class="theme-btn"
-			aria-pressed={theme === 'light'}
-			onclick={() => setTheme('light')}
-			title="Light mode"
-		>
-			<Sun size={14} />
-			<span class="theme-label">Light</span>
-		</button>
-		<button
-			type="button"
-			class="theme-btn"
-			aria-pressed={theme === 'dark'}
-			onclick={() => setTheme('dark')}
-			title="Dark mode"
-		>
-			<Moon size={14} />
-			<span class="theme-label">Dark</span>
+			{#if shell === 'rail'}<PanelLeftOpen size={16} />{:else}<PanelLeftClose size={16} />{/if}
 		</button>
 	</div>
 
 	<div class="nav-list">
-		{#each sections as section (section.label)}
-			<span class="nav-eyebrow">{section.label}</span>
-			{#each section.items as item (item.href)}
+		{#each items as item (item.href)}
+			<a
+				href={item.href}
+				class="nav-item"
+				class:soon={item.soon}
+				aria-current={isActive(item.href) ? 'page' : undefined}
+				data-tip={item.soon ? `${item.label} — coming soon` : item.label}
+				aria-label={item.label}
+			>
+				<item.icon size={19} strokeWidth={1.75} />
+				<span class="nav-label">{item.label}</span>
 				{#if item.soon}
-					<span
-						class="nav-soon"
-						data-tip="{item.label} — coming soon"
-						aria-disabled="true"
-						title="{item.label} — coming soon"
-					>
-						<item.icon size={18} />
-						<span class="nav-label">{item.label}</span>
-						<span class="soon-badge">Soon</span>
+					<span class="soon-badge">Coming soon</span>
+				{:else if item.href === '/admin' && adminIssueCount > 0}
+					<span class="count warn" aria-label="{adminIssueCount} need{adminIssueCount === 1 ? 's' : ''} attention">{adminIssueCount}</span>
+				{:else if item.href === '/hub' && chatBadge.count > 0}
+					<span class="count" class:urgent={chatBadge.urgent} aria-label="{chatBadge.count} unread{chatBadge.urgent ? ', something is urgent' : ''}">
+						{chatBadge.count > 99 ? '99+' : chatBadge.count}
 					</span>
-				{:else}
-					<a
-						href={item.href}
-						class:active={activePath.startsWith(item.href)}
-						data-tip={item.label}
-						aria-label={item.label}
-					>
-						<item.icon size={18} />
-						<span class="nav-label">{item.label}</span>
-						{#if item === adminHubItem && adminIssueCount > 0}
-							<span
-								class="issue-count"
-								aria-label="{adminIssueCount} need{adminIssueCount === 1 ? 's' : ''} attention"
-								>{adminIssueCount}</span
-							>
-						{:else if item.href === '/hub' && chatBadge.count > 0}
-							<span
-								class="issue-count"
-								class:news={!chatBadge.urgent}
-								class:urgent={chatBadge.urgent}
-								aria-label="{chatBadge.count} unread{chatBadge.urgent ? ', something is urgent' : ''}"
-								>{chatBadge.count > 99 ? '99+' : chatBadge.count}</span
-							>
-						{/if}
-					</a>
 				{/if}
-			{/each}
+			</a>
 		{/each}
 	</div>
 
 	<div class="rail-foot">
-		<div class="foot-user">
-			<a href="/profile" class="foot-avatar-link" title="My Profile">
-				<Avatar {userId} {fullName} {hasPicture} size="md" version={pictureVersion ?? undefined} />
-			</a>
-			<!--
-				Name only. A privilege level — employee, team lead, admin — is a
-				permissions setting, not a job title, and printing it under someone's
-				own photo on every screen turns an access-control detail into a public
-				ranking of colleagues. It is shown only where it is being assigned,
-				to the person assigning it. `role` still drives which nav rows appear;
-				it is just never spelled out to its owner.
-			-->
-			<div class="foot-info">
-				<strong>{fullName}</strong>
-			</div>
-		</div>
-		<form method="POST" action="/logout">
-			<button type="submit" class="logout-btn" aria-label="Log out" data-tip="Log out">
-				<LogOut size={18} />
-				<span class="logout-label">Log out</span>
-			</button>
-		</form>
+		<a href="/hr-contacts" class="nav-item" aria-current={isActive('/hr-contacts') ? 'page' : undefined} data-tip="Help & support" aria-label="Help & support">
+			<CircleHelp size={19} strokeWidth={1.75} />
+			<span class="nav-label">Help &amp; support</span>
+		</a>
+		<a href="/profile" class="nav-item me" aria-current={isActive('/profile') ? 'page' : undefined} data-tip="My profile" aria-label="My profile">
+			<Avatar {userId} {fullName} {hasPicture} size="sm" version={pictureVersion ?? undefined} />
+			<span class="nav-label me-name">{fullName}</span>
+		</a>
 	</div>
 </nav>
 
@@ -233,201 +145,139 @@
 		color: var(--ess-text-inverse);
 		display: flex;
 		flex-direction: column;
-		/* 100dvh, not 100vh: with a mobile browser's toolbar showing, 100vh is
-		   taller than the visible viewport, so the rail foot — the profile link
-		   and Log out — sat below the fold. Being `position: sticky`, the rail
-		   never scrolled into reach either, leaving both controls unusable. */
 		height: 100vh;
 		height: 100dvh;
 		position: sticky;
 		top: 0;
-		padding: 20px 14px;
+		padding: 18px 12px 16px;
 		border-right: 1px solid var(--ess-border-inverse);
 	}
 
 	.brand {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		padding: 8px 8px 16px;
+		gap: 4px;
+		padding: 4px 6px 18px;
+		margin-bottom: 22px;
 		border-bottom: 1px solid var(--ess-border-inverse);
-		margin-bottom: 14px;
+	}
+
+	.brand-link {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		min-width: 0;
+		color: var(--ess-text);
 	}
 
 	.brand-mark {
-		width: 38px;
-		height: 38px;
-		border-radius: var(--ess-radius-sm);
-		background: linear-gradient(150deg, var(--acc2), var(--acc));
-		color: var(--ess-text-on-primary);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-weight: 800;
-		font-size: 13px;
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.5),
-			0 6px 16px -8px var(--glow);
+		display: grid;
+		place-items: center;
+		width: 30px;
+		height: 30px;
+		color: var(--ess-primary);
+		flex: none;
 	}
 
 	.brand-text {
-		display: flex;
-		flex-direction: column;
-		line-height: 1.25;
-	}
-
-	.brand-text strong {
-		font-size: 15px;
-	}
-
-	.brand-text span {
-		font-size: var(--ess-fs-caption);
-		color: var(--ess-text-inverse-secondary);
-	}
-
-	.theme-toggle {
-		display: flex;
-		gap: 2px;
-		padding: 3px;
-		margin-bottom: 14px;
-		background: rgba(255, 255, 255, 0.08);
-		border-radius: var(--ess-radius-sm);
-	}
-
-	.theme-btn {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
-		border: none;
-		border-radius: 6px;
-		padding: 6px 0;
-		background: transparent;
-		color: var(--ess-text-inverse-secondary);
-		font-size: 12px;
-		font-weight: 700;
-		cursor: pointer;
-	}
-
-	.theme-btn[aria-pressed='true'] {
-		background: linear-gradient(180deg, color-mix(in oklab, var(--acc) 82%, #fff), var(--acc));
-		color: var(--ess-text-on-primary);
-		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+		font-size: 19px;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		white-space: nowrap;
 	}
 
 	.collapse-btn {
 		margin-left: auto;
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		display: grid;
+		place-items: center;
 		width: 28px;
 		height: 28px;
-		flex-shrink: 0;
+		flex: none;
 		background: transparent;
 		border: 1px solid transparent;
-		border-radius: 8px;
-		color: var(--ess-text-inverse-secondary);
+		border-radius: 7px;
+		color: var(--ess-text-muted);
 		cursor: pointer;
+		opacity: 0;
+		transition:
+			background var(--ess-t-fast),
+			color var(--ess-t-fast),
+			opacity var(--ess-t-fast);
+	}
+	.rail:hover .collapse-btn,
+	.collapse-btn:focus-visible {
+		opacity: 1;
+	}
+	.collapse-btn:hover {
+		background: var(--ess-surface-hover);
+		color: var(--ess-text);
+	}
+
+	.nav-list {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		overflow-x: hidden;
+		padding: 2px;
+		overscroll-behavior: contain;
+	}
+
+	.nav-item {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		height: 44px;
+		padding: 0 14px;
+		border-radius: var(--ess-radius-md);
+		color: var(--ess-text-secondary);
+		font-size: 14.5px;
+		font-weight: 500;
+		white-space: nowrap;
 		transition:
 			background var(--ess-t-fast),
 			color var(--ess-t-fast);
 	}
-
-	.collapse-btn:hover {
-		background: rgba(255, 255, 255, 0.08);
-		color: var(--ess-text-inverse);
+	.nav-item :global(svg) {
+		flex: none;
+		color: var(--ess-text-muted);
+		transition: color var(--ess-t-fast);
+	}
+	.nav-item:hover {
+		background: var(--ess-surface-hover);
+		color: var(--ess-text);
+	}
+	.nav-item:hover :global(svg) {
+		color: var(--ess-text);
+	}
+	.nav-item[aria-current='page'] {
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
+	}
+	.nav-item[aria-current='page'] :global(svg) {
+		color: var(--ess-primary);
 	}
 
-	.nav-list {
-		margin: 0;
-		padding: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 3px;
-		flex: 1;
-		min-height: 0;
-		overflow-y: auto;
-		/* Scrolling past the end of the nav must not carry on into the page
-		   behind it: the rail is sticky, so the page would slide under a list
-		   that looks stationary. */
-		overscroll-behavior: contain;
-	}
-
-	.nav-eyebrow {
-		font-size: var(--ess-fs-eyebrow);
-		font-weight: 700;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: rgba(255, 255, 255, 0.82);
-		padding: 0 12px 4px;
-	}
-
-	.nav-eyebrow:not(:first-child) {
-		padding-top: 16px;
-	}
-
-	.nav-list a {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		height: 40px;
-		padding: 0 12px;
-		border: 1px solid transparent;
-		border-radius: var(--ess-radius-sm);
-		text-decoration: none;
-		color: var(--ess-text-inverse-secondary);
-		font-size: var(--ess-fs-body);
-		font-weight: 500;
-		transition:
-			background var(--ess-t-fast),
-			color var(--ess-t-fast),
-			border-color var(--ess-t-fast);
-	}
-
-	/* Same geometry as a nav link so the rail rhythm holds, but inert: no
-	   href, no hover affordance, and a badge that says why. */
-	.nav-soon {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		height: 40px;
-		padding: 0 12px;
-		border: 1px solid transparent;
-		border-radius: var(--ess-radius-sm);
-		color: var(--ess-text-inverse-secondary);
-		font-size: var(--ess-fs-body);
-		font-weight: 500;
-		opacity: 0.55;
-		cursor: not-allowed;
-		position: relative;
-		user-select: none;
+	.nav-item.soon {
+		color: var(--ess-text-muted);
 	}
 
 	.soon-badge {
 		margin-left: auto;
-		font-size: 9.5px;
-		font-weight: 700;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		padding: 2px 6px;
-		border-radius: var(--ess-radius-xs);
-		background: var(--ess-primary-soft);
-		color: var(--ess-primary-text);
+		font-size: 10px;
+		font-weight: 600;
+		letter-spacing: 0.02em;
+		padding: 2px 7px;
+		border-radius: var(--ess-radius-pill);
+		background: var(--ess-sunken);
+		color: var(--ess-text-muted);
 		white-space: nowrap;
 	}
 
-	:global([data-ess-shell='rail']) .nav-soon {
-		justify-content: center;
-		padding: 0;
-		height: 46px;
-	}
-
-	:global([data-ess-shell='rail']) .soon-badge {
-		display: none;
-	}
-
-	.issue-count {
+	.count {
 		margin-left: auto;
 		min-width: 20px;
 		height: 20px;
@@ -437,217 +287,86 @@
 		align-items: center;
 		justify-content: center;
 		font-size: 11px;
-		font-weight: 700;
+		font-weight: 600;
 		font-variant-numeric: tabular-nums;
-		background: var(--ess-warning-bg);
-		color: var(--ess-warning);
-	}
-
-	.issue-count.news {
 		background: var(--ess-primary-soft);
 		color: var(--ess-primary-text);
 	}
-
-	.issue-count.urgent {
+	.nav-item[aria-current='page'] .count {
+		background: var(--ess-surface);
+	}
+	.count.warn {
+		background: var(--ess-warning-bg);
+		color: var(--ess-warning);
+	}
+	.count.urgent {
 		background: var(--ess-danger);
 		color: #fff;
 	}
 
-	/* Collapsed rail: the count shrinks to a corner dot-with-number so the
-	   icon stays centred. */
-	:global([data-ess-shell='rail']) .issue-count {
+	.rail-foot {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding-top: 12px;
+		border-top: 1px solid var(--ess-border-inverse);
+	}
+
+	.me {
+		padding-left: 12px;
+	}
+	.me-name {
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	/* ------------------------------------------------------------
+	   COMPACT RAIL — 68px icon column ([data-ess-shell='rail'] on <html>).
+	------------------------------------------------------------ */
+
+	:global([data-ess-shell='rail']) .rail {
+		width: var(--ess-rail-width-collapsed);
+		padding: 14px 10px 12px;
+		align-items: center;
+	}
+	:global([data-ess-shell='rail']) .brand {
+		flex-direction: column;
+		gap: 8px;
+		padding: 0 0 12px;
+		justify-content: center;
+		width: 100%;
+	}
+	:global([data-ess-shell='rail']) .brand-text,
+	:global([data-ess-shell='rail']) .nav-label,
+	:global([data-ess-shell='rail']) .soon-badge {
+		display: none;
+	}
+	:global([data-ess-shell='rail']) .collapse-btn {
+		margin-left: 0;
+		opacity: 1;
+	}
+	:global([data-ess-shell='rail']) .nav-list,
+	:global([data-ess-shell='rail']) .rail-foot {
+		width: 100%;
+		overflow: visible;
+	}
+	:global([data-ess-shell='rail']) .nav-item {
+		justify-content: center;
+		padding: 0;
+		height: 46px;
+	}
+	:global([data-ess-shell='rail']) .count {
 		position: absolute;
 		top: 4px;
-		right: 6px;
+		right: 4px;
 		min-width: 16px;
 		height: 16px;
 		padding: 0 4px;
 		font-size: 9.5px;
 	}
 
-	.nav-list a:hover {
-		background: rgba(255, 255, 255, 0.06);
-		color: var(--ess-text-inverse);
-	}
-
-	.nav-list a.active {
-		color: #fff;
-		font-weight: 600;
-		border-color: color-mix(in oklab, var(--acc) 45%, transparent);
-		background: linear-gradient(
-			100deg,
-			color-mix(in oklab, var(--acc) 34%, transparent),
-			rgba(255, 255, 255, 0.05)
-		);
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.24),
-			0 10px 24px -14px var(--glow);
-	}
-
-	.rail-foot {
-		border-top: 1px solid var(--ess-border-inverse);
-		padding-top: 14px;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 8px;
-	}
-
-	.foot-user {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		min-width: 0;
-	}
-
-	.foot-avatar-link {
-		display: block;
-		line-height: 0;
-		flex-shrink: 0;
-		border-radius: 50%;
-	}
-
-	.foot-info {
-		display: flex;
-		flex-direction: column;
-		line-height: 1.2;
-		min-width: 0;
-	}
-
-	.foot-info strong {
-		font-size: var(--ess-fs-body);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	/* Sign-out reads as a real button at rest, not a bare glyph: it carries a
-	   visible border and surface in both shells. Previously the only styling
-	   was on :hover, so at rest it was indistinguishable from a plain icon. */
-	.logout-btn {
-		background: var(--ess-surface);
-		border: 1px solid var(--ess-border-strong);
-		color: var(--ess-text-inverse);
-		cursor: pointer;
-		padding: 7px 12px;
-		border-radius: var(--ess-radius-sm);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 8px;
-		font: inherit;
-		font-size: 0.8rem;
-		font-weight: 600;
-		position: relative;
-		transition:
-			background 150ms ease-out,
-			color 150ms ease-out,
-			border-color 150ms ease-out;
-	}
-
-	.logout-label {
-		white-space: nowrap;
-	}
-
-	/* Sign-out is destructive-ish and easy to hit by accident next to the
-	   avatar, so the hover state names it in the danger colour rather than
-	   reading as just another grey icon button. */
-	.logout-btn:hover {
-		background: var(--ess-danger-bg);
-		border-color: var(--ess-danger);
-		color: var(--ess-danger);
-	}
-
-	.logout-btn:focus-visible {
-		outline: none;
-		box-shadow: var(--ess-focus-ring);
-	}
-
-	:global([data-ess-shell='rail']) .logout-label {
-		display: none;
-	}
-
-	/* Collapsed rail: a full-width square button, so it still reads as an
-	   action rather than a stray icon under the avatar. */
-	:global([data-ess-shell='rail']) .logout-btn {
-		padding: 0;
-		width: 40px;
-		height: 40px;
-	}
-
-	:global([data-ess-shell='rail']) .rail-foot form {
-		display: flex;
-		justify-content: center;
-		width: 100%;
-	}
-
-	/* ------------------------------------------------------------
-	   RAIL SHELL — 74px icon-only column, per the Cosmic shell spec
-	   ([data-ess-shell='rail'] on <html>, persisted as essShell).
-	------------------------------------------------------------ */
-
-	:global([data-ess-shell='rail']) .rail {
-		width: 74px;
-		padding: 14px 10px;
-		align-items: center;
-	}
-
-	:global([data-ess-shell='rail']) .brand {
-		flex-direction: column;
-		gap: 8px;
-		padding: 0 0 14px;
-		justify-content: center;
-		width: 100%;
-	}
-
-	:global([data-ess-shell='rail']) .brand-text {
-		display: none;
-	}
-
-	:global([data-ess-shell='rail']) .collapse-btn {
-		margin-left: 0;
-	}
-
-	:global([data-ess-shell='rail']) .theme-toggle {
-		flex-direction: column;
-		width: 100%;
-	}
-
-	:global([data-ess-shell='rail']) .theme-label {
-		display: none;
-	}
-
-	:global([data-ess-shell='rail']) .nav-eyebrow {
-		display: none;
-	}
-
-	:global([data-ess-shell='rail']) .nav-label {
-		display: none;
-	}
-
-	/* The expanded rail scrolls its nav list, but `overflow:auto` clips the
-	   hover tooltips below. In the collapsed rail every item fits without
-	   scrolling, so the clipping container is removed rather than worked
-	   around with a portal. */
-	:global([data-ess-shell='rail']) .nav-list {
-		width: 100%;
-		gap: 6px;
-		overflow: visible;
-	}
-
-	:global([data-ess-shell='rail']) .nav-list a {
-		justify-content: center;
-		padding: 0;
-		height: 46px;
-		position: relative;
-	}
-
-	/* Collapsed rail shows icons only, so the label has to come back on hover
-	   — a native `title` waits ~1s and can't be styled, which made items like
-	   "Publish Policies" and "Design Tweaks" unidentifiable at a glance. */
-	:global([data-ess-shell='rail']) .nav-list a::after,
-	:global([data-ess-shell='rail']) .nav-soon::after,
-	:global([data-ess-shell='rail']) .logout-btn::after {
+	/* Icon-only rails show the label on hover. */
+	:global([data-ess-shell='rail']) .nav-item::after {
 		content: attr(data-tip);
 		position: absolute;
 		left: calc(100% + 10px);
@@ -656,8 +375,7 @@
 		background: var(--ess-text);
 		color: var(--ess-canvas);
 		font-size: 12px;
-		font-weight: 600;
-		letter-spacing: 0.01em;
+		font-weight: 500;
 		white-space: nowrap;
 		padding: 6px 10px;
 		border-radius: var(--ess-radius-xs);
@@ -669,112 +387,49 @@
 			transform 140ms ease-out;
 		z-index: 60;
 	}
-
-	:global([data-ess-shell='rail']) .nav-list a:hover::after,
-	:global([data-ess-shell='rail']) .nav-list a:focus-visible::after,
-	:global([data-ess-shell='rail']) .nav-soon:hover::after,
-	:global([data-ess-shell='rail']) .logout-btn:hover::after,
-	:global([data-ess-shell='rail']) .logout-btn:focus-visible::after {
+	:global([data-ess-shell='rail']) .nav-item:hover::after,
+	:global([data-ess-shell='rail']) .nav-item:focus-visible::after {
 		opacity: 1;
 		transform: translateY(-50%) translateX(0);
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		:global([data-ess-shell='rail']) .nav-list a::after,
-		:global([data-ess-shell='rail']) .logout-btn::after {
-			transition: none;
-		}
-	}
-
-	:global([data-ess-shell='rail']) .rail-foot {
-		flex-direction: column;
-		gap: 8px;
-		justify-content: center;
-		width: 100%;
-	}
-
-	:global([data-ess-shell='rail']) .foot-info {
-		display: none;
-	}
-
-	/* ------------------------------------------------------------
-	   LIGHT (OPAL) — the rail is a light pane, so the white-alpha
-	   fills/borders above (correct on the dark Onyx pane) are retuned
-	   to ink-alpha. Scoped to the default palette; dark keeps the above.
-	------------------------------------------------------------ */
-	:global(:root:not([data-ess-theme='dark'])) .theme-toggle {
-		background: rgba(20, 18, 35, 0.05);
-	}
-	:global(:root:not([data-ess-theme='dark'])) .nav-eyebrow {
-		color: rgba(20, 18, 35, 0.6);
-	}
-	:global(:root:not([data-ess-theme='dark'])) .nav-list a:hover {
-		background: rgba(20, 18, 35, 0.05);
-	}
-	:global(:root:not([data-ess-theme='dark'])) .nav-list a.active {
-		color: var(--ess-text);
-	}
-	:global(:root:not([data-ess-theme='dark'])) .collapse-btn:hover {
-		background: rgba(20, 18, 35, 0.06);
-		color: var(--ess-text);
-	}
-
-	/* Below tablet the full 264px rail leaves too little room for content
-	   (measured: 400px viewport → ~136px of usable width), so the sidebar
-	   always collapses to the icon rail regardless of the stored preference. */
+	/* Below tablet the full rail leaves too little room, so it always collapses. */
 	@media (max-width: 720px) {
 		.rail {
-			width: 74px;
-			padding: 14px 8px;
+			width: var(--ess-rail-width-collapsed);
+			padding: 14px 8px 12px;
 			align-items: center;
 		}
-
-		.brand,
-		.theme-toggle,
-		.rail-foot {
-			flex-direction: column;
-			width: 100%;
-			justify-content: center;
-		}
-
 		.brand {
+			flex-direction: column;
 			gap: 8px;
-			padding: 0 0 14px;
+			padding: 0 0 12px;
+			justify-content: center;
+			width: 100%;
 		}
-
 		.collapse-btn,
 		.brand-text,
-		.theme-label,
-		.nav-eyebrow,
 		.nav-label,
-		.foot-info {
+		.soon-badge {
 			display: none;
 		}
-
-		.nav-list {
+		.nav-list,
+		.rail-foot {
 			width: 100%;
-			gap: 6px;
 		}
-
-		.nav-list a {
+		.nav-item {
 			justify-content: center;
 			padding: 0;
 			height: 46px;
-			position: relative;
 		}
-
-		.issue-count {
+		.count {
 			position: absolute;
 			top: 4px;
-			right: 6px;
+			right: 4px;
 			min-width: 16px;
 			height: 16px;
 			padding: 0 4px;
 			font-size: 9.5px;
-		}
-
-		.rail-foot {
-			gap: 8px;
 		}
 	}
 </style>

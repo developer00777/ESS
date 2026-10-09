@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Paperclip from '@lucide/svelte/icons/paperclip';
 	import SendHorizontal from '@lucide/svelte/icons/send-horizontal';
+	import Smile from '@lucide/svelte/icons/smile';
 	import X from '@lucide/svelte/icons/x';
 	import { SLASH_COMMANDS, detectSensitive, SENSITIVE_LABEL } from '$lib/chat/rules';
 	import { fileSize } from '$lib/chat/format';
@@ -32,8 +33,11 @@
 	let sending = $state(false);
 	let error = $state('');
 	let confirmSensitive = $state<string | null>(null);
+	let emojiOpen = $state(false);
 	/** Name → id for people picked from the @ list. */
 	let picked = $state<Record<string, string>>({});
+
+	const EMOJI = ['👍', '❤️', '😂', '🎉', '🙏', '✅', '👀', '🔥', '😊', '🤔', '👏', '💯'];
 
 	type Item = { value: string; label: string; hint: string };
 	let pop = $state<Item[]>([]);
@@ -92,6 +96,18 @@
 		});
 	}
 
+	/** Drop an emoji in at the caret. */
+	function insertEmoji(e: string) {
+		emojiOpen = false;
+		const pos = ta?.selectionStart ?? text.length;
+		text = text.slice(0, pos) + e + text.slice(pos);
+		queueMicrotask(() => {
+			ta?.focus();
+			ta?.setSelectionRange(pos + e.length, pos + e.length);
+			autosize();
+		});
+	}
+
 	function onKey(e: KeyboardEvent) {
 		if (pop.length) {
 			if (e.key === 'ArrowDown') {
@@ -113,6 +129,10 @@
 				pop = [];
 				return;
 			}
+		}
+		if (e.key === 'Escape' && emojiOpen) {
+			emojiOpen = false;
+			return;
 		}
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
@@ -223,6 +243,19 @@
 			</div>
 		{/if}
 		<div class="box">
+			<label class="icon" title="Attach a file">
+				<Paperclip size={18} strokeWidth={1.75} />
+				<span class="sr-only">Attach a file</span>
+				<input
+					bind:this={fileInput}
+					type="file"
+					accept="image/*,application/pdf,.docx,.xlsx,.pptx,.csv,.txt"
+					onchange={(e) => {
+						const f = (e.currentTarget as HTMLInputElement).files?.[0];
+						if (f) void upload(f);
+					}}
+				/>
+			</label>
 			<textarea
 				bind:this={ta}
 				bind:value={text}
@@ -245,21 +278,18 @@
 					}
 				}}
 			></textarea>
-			<label class="icon" title="Attach a file">
-				<Paperclip size={17} />
-				<span class="sr-only">Attach a file</span>
-				<input
-					bind:this={fileInput}
-					type="file"
-					accept="image/*,application/pdf,.docx,.xlsx,.pptx,.csv,.txt"
-					onchange={(e) => {
-						const f = (e.currentTarget as HTMLInputElement).files?.[0];
-						if (f) void upload(f);
-					}}
-				/>
-			</label>
+			<div class="emoji-wrap">
+				<button type="button" class="icon" title="Emoji" aria-label="Add an emoji" aria-expanded={emojiOpen} onclick={() => (emojiOpen = !emojiOpen)}>
+					<Smile size={18} strokeWidth={1.75} />
+				</button>
+				{#if emojiOpen}
+					<div class="emoji" role="listbox" aria-label="Emoji">
+						{#each EMOJI as e (e)}<button type="button" role="option" aria-selected="false" onmousedown={(ev) => { ev.preventDefault(); insertEmoji(e); }}>{e}</button>{/each}
+					</div>
+				{/if}
+			</div>
 			<button type="button" class="send" aria-label="Send" disabled={sending || uploading || (!text.trim() && !file)} onclick={() => send()}>
-				<SendHorizontal size={17} />
+				<SendHorizontal size={18} />
 			</button>
 		</div>
 		<p class="hint">
@@ -279,22 +309,27 @@
 <style>
 	.composer {
 		position: relative;
-		padding: 8px 14px 10px;
+		padding: 10px 16px 10px;
 		border-top: 1px solid var(--ess-border);
+		background: var(--ess-surface);
 	}
 	.box {
 		display: flex;
 		align-items: flex-end;
-		gap: 6px;
-		padding: 5px 6px 5px 12px;
-		border: 1px solid var(--ess-border-strong);
-		border-radius: 12px;
+		gap: 4px;
+		padding: 6px 6px 6px 8px;
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
 		background: var(--ess-field-bg);
+		transition:
+			border-color var(--ess-t-fast),
+			box-shadow var(--ess-t-fast);
 	}
 	/* One quiet cue for the whole box. The portal-wide :focus-visible ring
 	   would otherwise draw a second box around the textarea inside it. */
 	.box:focus-within {
-		border-color: color-mix(in oklab, var(--ess-primary) 70%, var(--ess-border-strong));
+		border-color: var(--ess-primary);
+		box-shadow: 0 0 0 3px var(--ring);
 	}
 	textarea:focus,
 	textarea:focus-visible {
@@ -308,18 +343,22 @@
 		resize: none;
 		outline: none;
 		font: inherit;
+		font-size: 14.5px;
 		color: var(--ess-text);
 		line-height: 1.45;
-		padding: 6px 0;
+		padding: 8px 6px;
 		max-height: 160px;
+	}
+	textarea::placeholder {
+		color: var(--ess-text-muted);
 	}
 	.icon,
 	.send {
-		width: 34px;
-		height: 34px;
+		width: 38px;
+		height: 38px;
 		display: grid;
 		place-items: center;
-		border-radius: 9px;
+		border-radius: var(--ess-radius-sm);
 		border: 0;
 		background: none;
 		color: var(--ess-text-secondary);
@@ -334,32 +373,67 @@
 		opacity: 0;
 		cursor: pointer;
 	}
-	.icon:hover {
+	.icon:hover,
+	.icon[aria-expanded='true'] {
 		background: var(--ess-surface-hover);
+		color: var(--ess-text);
+	}
+	.emoji-wrap {
+		position: relative;
+	}
+	.emoji {
+		position: absolute;
+		right: 0;
+		bottom: calc(100% + 8px);
+		display: grid;
+		grid-template-columns: repeat(6, 32px);
+		gap: 2px;
+		padding: 6px;
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-modal-bg);
+		box-shadow: var(--ess-elev-3);
+		z-index: 10;
+	}
+	.emoji button {
+		width: 32px;
+		height: 32px;
+		border: 0;
+		border-radius: 6px;
+		background: none;
+		font-size: 18px;
+		cursor: pointer;
+	}
+	.emoji button:hover {
+		background: var(--ess-primary-soft);
 	}
 	.send {
 		background: var(--ess-primary);
 		color: var(--ess-text-on-primary);
+		overflow: visible;
+	}
+	.send:hover:not(:disabled) {
+		background: var(--ess-primary-hover);
 	}
 	.send:disabled {
 		opacity: 0.4;
 		cursor: default;
 	}
 	.hint {
-		margin: 5px 4px 0;
-		font-size: 11px;
+		margin: 6px 4px 0;
+		font-size: 11.5px;
 		color: var(--ess-text-muted);
 	}
 	.warn {
 		color: var(--ess-warning);
-		font-weight: 600;
+		font-weight: 500;
 	}
 	.err {
 		color: var(--ess-danger);
-		font-weight: 600;
+		font-weight: 500;
 	}
 	.disabled {
-		margin: 4px 0;
+		margin: 6px 0;
 		font-size: 13px;
 		color: var(--ess-text-muted);
 		text-align: center;
@@ -370,8 +444,8 @@
 		align-items: center;
 		gap: 8px;
 		margin-bottom: 8px;
-		padding: 8px 10px;
-		border-radius: 10px;
+		padding: 10px 12px;
+		border-radius: var(--ess-radius-md);
 		background: var(--ess-warning-bg);
 		color: var(--ess-warning);
 		font-size: 13px;
@@ -384,9 +458,10 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 6px;
-		margin-bottom: 6px;
-		padding: 4px 8px;
-		border-radius: 8px;
+		margin-bottom: 8px;
+		padding: 5px 10px;
+		border-radius: var(--ess-radius-sm);
+		border: 1px solid var(--ess-border);
 		background: var(--ess-sunken);
 		font-size: 12.5px;
 	}
@@ -403,18 +478,18 @@
 	}
 	.pop {
 		position: absolute;
-		left: 14px;
+		left: 16px;
 		bottom: calc(100% - 4px);
-		width: min(380px, calc(100% - 28px));
+		width: min(380px, calc(100% - 32px));
 		max-height: 260px;
 		overflow-y: auto;
 		list-style: none;
 		margin: 0;
 		padding: 6px;
-		border: 1px solid var(--ess-border-strong);
-		border-radius: 12px;
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
 		background: var(--ess-modal-bg);
-		box-shadow: var(--ess-elev-4);
+		box-shadow: var(--ess-elev-3);
 		z-index: 10;
 	}
 	.pop button {
@@ -426,15 +501,18 @@
 		background: none;
 		text-align: left;
 		padding: 7px 9px;
-		border-radius: 8px;
+		border-radius: var(--ess-radius-sm);
 		font: inherit;
-		font-size: 13px;
+		font-size: 13.5px;
 		color: var(--ess-text);
 		cursor: pointer;
 	}
+	.pop strong {
+		font-weight: 500;
+	}
 	.pop small {
 		color: var(--ess-text-muted);
-		font-size: 11.5px;
+		font-size: 12px;
 	}
 	.pop li[aria-selected='true'] button,
 	.pop button:hover {

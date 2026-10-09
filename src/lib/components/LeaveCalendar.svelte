@@ -297,8 +297,9 @@
 	.calendar-box {
 		background: var(--ess-surface);
 		border: 1px solid var(--ess-border);
-		border-radius: var(--ess-radius-lg);
-		padding: 1.5rem 1.75rem;
+		border-radius: var(--ess-radius-md);
+		box-shadow: var(--ess-elev-1);
+		padding: 20px 22px;
 	}
 
 	/* A 7-column month grid can't compress below ~300px and stay legible,
@@ -308,8 +309,6 @@
 		.calendar-box {
 			padding: 1rem;
 			overflow-x: auto;
-			/* Contained so overshooting a sideways scroll does not reach the page —
-			   on a trackpad an uncontained horizontal flick navigates back a route. */
 			overscroll-behavior-x: contain;
 		}
 
@@ -325,94 +324,98 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		margin-bottom: 0.75rem;
+		gap: 12px;
+		margin-bottom: 14px;
 	}
 
 	.month-nav {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 6px;
 	}
 
 	.month-label {
+		display: flex;
+		align-items: center;
+		gap: 10px;
 		font-family: var(--ess-font-display);
-		font-size: 1.15rem;
-		font-weight: 700;
+		font-size: 21px;
+		font-weight: 600;
 		color: var(--ess-text);
-		/* Widened from 11rem to fit the FY chip without the arrows shifting
-		   as the month name changes length. */
+		/* Wide enough for the FY chip so the arrows never shift as the month
+		   name changes length. */
 		min-width: 19rem;
-		text-align: center;
+		justify-content: center;
 		white-space: nowrap;
 	}
 
 	/* Secondary to the month itself — it qualifies the date rather than
 	   naming it. */
 	.fy-label {
-		font-size: 0.7rem;
-		font-weight: 600;
-		letter-spacing: 0.02em;
+		font-family: var(--ess-font-sans);
+		font-size: 11.5px;
+		font-weight: 500;
 		color: var(--ess-text-secondary);
 		background: var(--ess-sunken);
-		border: 1px solid var(--ess-border-subtle);
 		border-radius: var(--ess-radius-pill);
-		padding: 0.12rem 0.45rem;
-		margin-left: 0.35rem;
-		vertical-align: middle;
+		padding: 2px 8px;
 	}
 
 	.nav-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 2rem;
-		height: 2rem;
-		border-radius: var(--ess-radius-pill);
-		border: none;
-		background: var(--ess-sunken);
-		color: var(--ess-text);
+		display: grid;
+		place-items: center;
+		width: 34px;
+		height: 34px;
+		border-radius: var(--ess-radius-sm);
+		border: 1px solid var(--ess-border);
+		background: var(--ess-surface);
+		color: var(--ess-text-secondary);
 		cursor: pointer;
+		transition:
+			border-color var(--ess-t-fast),
+			color var(--ess-t-fast);
 	}
 
 	.nav-btn:hover {
-		background: var(--ess-primary);
-		color: #fff;
+		border-color: var(--ess-border-strong);
+		color: var(--ess-text);
 	}
 
 	.today-btn {
 		border: 1px solid var(--ess-border-strong);
 		background: var(--ess-surface);
-		color: var(--ess-primary-text);
-		font-weight: 600;
-		font-size: 0.85rem;
-		padding: 0.4rem 0.9rem;
+		color: var(--ess-text);
+		font-weight: 500;
+		font-size: 13px;
+		padding: 7px 14px;
 		border-radius: var(--ess-radius-sm);
 		cursor: pointer;
 	}
 
 	.today-btn:hover {
-		background: var(--ess-sunken);
+		border-color: var(--ess-primary);
+		color: var(--ess-primary-text);
 	}
 
 	.legend {
 		display: flex;
-		gap: 1.25rem;
-		margin-bottom: 1rem;
+		gap: 18px;
+		margin-bottom: 14px;
 		flex-wrap: wrap;
 	}
 
 	.legend-item {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
-		font-size: 0.8rem;
+		gap: 7px;
+		font-size: 13px;
 		color: var(--ess-text-secondary);
 	}
 
 	.dot {
 		display: inline-block;
-		width: 0.55rem;
-		height: 0.55rem;
+		width: 9px;
+		height: 9px;
 		border-radius: var(--ess-radius-pill);
 		flex-shrink: 0;
 	}
@@ -432,119 +435,119 @@
 	.weekday-row {
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
-		margin-bottom: 0.4rem;
+		border: 1px solid var(--ess-border);
+		border-bottom: none;
+		border-radius: var(--ess-radius-sm) var(--ess-radius-sm) 0 0;
+		background: var(--ess-sunken);
 	}
 
 	.weekday {
 		text-align: center;
-		font-size: 0.75rem;
-		font-weight: 700;
+		padding: 9px 0;
+		font-size: 13px;
+		font-weight: 500;
 		color: var(--ess-text-secondary);
-		text-transform: uppercase;
 	}
 
+	/* Hairline grid: the border colour shows through 1px gaps. */
 	.month-grid {
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
-		gap: 0.35rem;
-	}
-
-	.day-cell {
-		aspect-ratio: 1 / 0.85;
-		min-height: 4.5rem;
-		border-radius: var(--ess-radius-sm);
-		border: 1px solid transparent;
-		background: var(--ess-sunken);
-		padding: 0.4rem;
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 0.25rem;
-		cursor: pointer;
-		text-align: left;
+		gap: 1px;
+		background: var(--ess-border);
+		border: 1px solid var(--ess-border);
+		border-radius: 0 0 var(--ess-radius-sm) var(--ess-radius-sm);
 		overflow: hidden;
 	}
 
+	.day-cell {
+		aspect-ratio: 1 / 0.8;
+		min-height: 4.5rem;
+		border: none;
+		background: var(--ess-surface);
+		padding: 8px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 4px;
+		cursor: pointer;
+		text-align: center;
+		overflow: hidden;
+		transition: background var(--ess-t-fast);
+	}
+
 	.day-cell:hover {
-		border-color: var(--ess-border-strong);
+		background: var(--ess-surface-hover);
 	}
 
 	.day-cell.out-of-month {
-		background: transparent;
-		opacity: 0.35;
+		background: var(--ess-sunken);
+		cursor: default;
 	}
 
 	/* A week off is a non-working day, so it recedes rather than competing with
 	   holidays and leave — the day number stays readable, the cell does not
 	   invite a click. Today keeps its own emphasis. */
-	/* Tinted rather than merely dimmed: --ess-surface is nearly the same as the
-	   cell's own background, so a week off was indistinguishable from a working
-	   day with nothing on it. */
 	.day-cell.is-week-off:not(.is-today) {
-		background: var(--ess-neutral-bg);
-		border-color: var(--ess-border-subtle);
-		box-shadow: inset 3px 0 0 var(--ess-neutral-bg);
+		background: var(--ess-sunken);
 	}
 
 	.day-cell.is-week-off:not(.is-today) .day-number {
-		color: var(--ess-neutral);
+		color: var(--ess-text-muted);
 	}
 
-	/* Slate, so it never competes with holiday (blue), approved (green) or
-	   pending (amber) leave. 7.3:1 light, 11.8:1 dark. */
 	.tag-weekoff {
 		background: var(--ess-neutral-bg);
 		color: var(--ess-neutral);
-		font-weight: 700;
 	}
 
 	.swatch {
 		display: inline-block;
-		width: 0.7rem;
-		height: 0.7rem;
+		width: 11px;
+		height: 11px;
 		border-radius: 3px;
 		flex-shrink: 0;
 	}
 
 	.swatch-weekoff {
-		background: var(--ess-neutral-bg);
-		border: 1px solid var(--ess-neutral);
+		background: var(--ess-sunken);
+		border: 1px solid var(--ess-border-strong);
 	}
 
 	.day-cell.is-today {
-		background: var(--ess-primary);
+		background: var(--ess-primary-soft);
 	}
 
 	.day-cell.is-today .day-number {
-		color: var(--ess-text-on-primary);
+		color: var(--ess-primary-text);
 	}
 
 	.day-cell.is-selected {
-		border-color: var(--ess-primary);
-		border-width: 2px;
+		box-shadow: inset 0 0 0 2px var(--ess-primary);
 	}
 
 	.day-number {
-		font-size: 0.85rem;
-		font-weight: 700;
+		font-size: 14px;
+		font-weight: 500;
 		color: var(--ess-text);
+		font-variant-numeric: tabular-nums;
 	}
 
 	/* Marks the tail of the opening month ("26 Jul") so the cycle boundary is
 	   obvious without a separate divider. */
 	.day-month {
-		font-size: 0.6rem;
-		font-weight: 600;
+		font-size: 10px;
+		font-weight: 500;
 		color: var(--ess-text-muted);
-		margin-left: 0.15rem;
+		margin-left: 3px;
 	}
 
 	.day-tag {
-		font-size: 0.65rem;
-		font-weight: 600;
-		padding: 0.1rem 0.35rem;
-		border-radius: 6px;
-		background: var(--ess-surface);
+		font-size: 11px;
+		font-weight: 500;
+		padding: 2px 7px;
+		border-radius: var(--ess-radius-xs);
+		background: var(--ess-sunken);
 		color: var(--ess-text-secondary);
 		max-width: 100%;
 		white-space: nowrap;
@@ -553,7 +556,7 @@
 	}
 
 	.tag-holiday {
-		background: var(--ess-info-bg);
+		background: var(--ess-primary-soft);
 		color: var(--ess-primary-text);
 	}
 
@@ -569,29 +572,35 @@
 
 	.day-dots {
 		display: flex;
-		gap: 0.2rem;
+		gap: 4px;
 	}
 
 	.day-detail {
-		margin-top: 1rem;
-		padding-top: 1rem;
-		border-top: 1px solid var(--ess-border);
+		margin-top: 16px;
+		padding-top: 14px;
+		border-top: 1px solid var(--ess-border-subtle);
 		display: flex;
 		flex-direction: column;
-		gap: 0.4rem;
+		gap: 6px;
+	}
+
+	.day-detail strong {
+		font-family: var(--ess-font-display);
+		font-size: 17px;
+		font-weight: 600;
 	}
 
 	.detail-row {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.85rem;
+		gap: 8px;
+		font-size: 14px;
 		color: var(--ess-text);
 	}
 
 	.detail-type {
 		margin-left: auto;
-		font-size: 0.7rem;
+		font-size: 12.5px;
 		text-transform: capitalize;
 		color: var(--ess-text-secondary);
 	}
@@ -607,85 +616,51 @@
 
 	/* Large / hero variant */
 	.calendar-box.large {
-		padding: 2rem 2.5rem 2.25rem;
+		padding: 24px 28px 26px;
 	}
 
 	.calendar-box.large .month-label {
-		font-size: 1.75rem;
-		min-width: 19rem;
-	}
-
-	.calendar-box.large .nav-btn {
-		width: 2.6rem;
-		height: 2.6rem;
-	}
-
-	.calendar-box.large .today-btn {
-		font-size: 0.95rem;
-		padding: 0.55rem 1.15rem;
+		font-size: 26px;
 	}
 
 	.calendar-box.large .legend {
-		gap: 1.75rem;
-		margin-bottom: 1.5rem;
+		gap: 22px;
+		margin-bottom: 18px;
 	}
 
-	.calendar-box.large .legend-item {
-		font-size: 0.9rem;
-	}
-
-	.calendar-box.large .dot {
-		width: 0.7rem;
-		height: 0.7rem;
-	}
-
-	.calendar-box.large .weekday {
-		font-size: 0.85rem;
-	}
-
-	.calendar-box.large .month-grid {
-		gap: 0.6rem;
-	}
-
-	.calendar-box.large .day-cell {
-		min-height: 8rem;
-		padding: 0.7rem;
-		gap: 0.4rem;
-		border-radius: var(--ess-radius-md);
+	.calendar-box.large .month-grid .day-cell {
+		min-height: 7.5rem;
+		aspect-ratio: auto;
+		padding: 10px;
+		align-items: flex-start;
+		text-align: left;
+		gap: 5px;
 	}
 
 	.calendar-box.large .day-number {
-		font-size: 1.15rem;
+		font-size: 15px;
 	}
 
 	.calendar-box.large .day-tag {
-		font-size: 0.75rem;
-		padding: 0.2rem 0.5rem;
-	}
-
-	.calendar-box.large .day-dots .dot {
-		width: 0.6rem;
-		height: 0.6rem;
+		font-size: 12px;
+		padding: 3px 8px;
 	}
 
 	.calendar-box.large .day-detail {
-		margin-top: 1.5rem;
-		padding-top: 1.5rem;
-	}
-
-	.calendar-box.large .detail-row {
-		font-size: 1rem;
+		margin-top: 20px;
+		padding-top: 18px;
 	}
 
 	@media (max-width: 900px) {
 		.calendar-box.large {
-			padding: 1.25rem 1.25rem 1.5rem;
+			padding: 18px;
 		}
-		.calendar-box.large .day-cell {
+		.calendar-box.large .month-grid .day-cell {
 			min-height: 4.5rem;
 		}
-		.calendar-box.large .month-label {
-			font-size: 1.3rem;
+		.calendar-box.large .month-label,
+		.month-label {
+			font-size: 18px;
 			min-width: auto;
 		}
 	}

@@ -4,7 +4,7 @@ import { customRoles, employeeProfiles, holidayCalendars, shiftGroups, teams, us
 import { and, eq } from 'drizzle-orm';
 import { hashPassword, type Role, type SessionUser } from '$lib/server/auth';
 import { logActivity } from '$lib/server/db/mongo';
-import { sendWelcomeEmail } from '$lib/server/mailer';
+import { queueLoginEmails } from '$lib/server/login-emails';
 import { hasCap, invalidateCapabilities } from '$lib/server/capabilities';
 import { CHIEF_PICK } from '$lib/chief';
 
@@ -50,8 +50,11 @@ export type CreateResult =
 			userId: string;
 			email: string;
 			tempPassword: string;
+			/** Always false now: the welcome email waits for an admin's approval. */
 			emailSent: boolean;
 			emailError: string | null;
+			/** Queued for approval in Admin Controls › People. */
+			emailQueued: boolean;
 	  };
 
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -60,7 +63,7 @@ export function generateTemporaryPassword(): string {
 	return randomBytes(9).toString('base64url');
 }
 
-export async function createLogin(actor: SessionUser, input: NewLogin): Promise<CreateResult> {
+export async function createLogin(actor: SessionUser, input: NewLogin, opts: { source?: 'single' | 'champ' } = {}): Promise<CreateResult> {
 	const fail = (message: string) => ({ success: false as const, message });
 	const email = input.email.trim().toLowerCase();
 	const fullName = input.fullName.trim();
@@ -169,13 +172,10 @@ export async function createLogin(actor: SessionUser, input: NewLogin): Promise<
 	});
 	invalidateCapabilities(created.id);
 
-	// The password stays in the response too: whoever adds a single joiner is
-	// often sitting with them, and mail can be slow or misconfigured.
-	const mail = await sendWelcomeEmail({
-		fullName: created.fullName,
-		username: created.email,
-		temporaryPassword: tempPassword
-	});
+	// The welcome email waits for an admin to approve it (src/lib/server/
+	// login-emails.ts). The password stays in the response: whoever adds a
+	// single joiner is often sitting with them.
+	await queueLoginEmails([created.id], { source: opts.source ?? 'single', requestedBy: actor.id });
 
 	await logActivity({
 		actorUserId: actor.id,
@@ -187,9 +187,7 @@ export async function createLogin(actor: SessionUser, input: NewLogin): Promise<
 			namedRole: customRoleId ? accessLabel : null,
 			teamId,
 			shiftGroupId: input.shiftGroupId,
-			welcomeEmail: mail.ok ? 'sent' : 'failed',
-			welcomeEmailId: mail.id ?? null,
-			welcomeEmailError: mail.ok ? null : (mail.error ?? null)
+			welcomeEmail: 'queued for approval'
 		}
 	});
 
@@ -198,7 +196,8 @@ export async function createLogin(actor: SessionUser, input: NewLogin): Promise<
 		userId: created.id,
 		tempPassword,
 		email,
-		emailSent: mail.ok,
-		emailError: mail.ok ? null : (mail.error ?? null)
+		emailSent: false,
+		emailError: null,
+		emailQueued: true
 	};
 }

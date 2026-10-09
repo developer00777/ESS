@@ -1,7 +1,9 @@
 <script lang="ts">
+	import List from '@lucide/svelte/icons/list';
+	import SquareKanban from '@lucide/svelte/icons/square-kanban';
+	import Plus from '@lucide/svelte/icons/plus';
 	import TaskBoard, { type BoardColumn } from '$lib/components/hub/TaskBoard.svelte';
 	import TaskRow from '$lib/components/hub/TaskRow.svelte';
-	import { hub } from '$lib/hub/client.svelte';
 	import { createTask, moveTask } from '$lib/hub/actions';
 	import { todayKey } from '$lib/hub/format';
 	import type { DropTarget } from '$lib/hub/drag';
@@ -18,7 +20,7 @@
 	});
 
 	const VIEW_KEY = 'essHubTaskView';
-	let view = $state<'board' | 'list'>('board');
+	let view = $state<'board' | 'list'>('list');
 	$effect(() => {
 		try {
 			const v = localStorage.getItem(VIEW_KEY);
@@ -36,12 +38,19 @@
 		}
 	}
 
+	/* Three filters, as the mockup's toolbar: what to show, status, due date. */
 	let filter = $state<'all' | 'meetings' | 'high' | 'approval'>('all');
-	const shown = $derived(
-		local.filter((t) => (filter === 'meetings' ? t.source?.kind === 'meeting' : filter === 'high' ? t.priority === 'high' : filter === 'approval' ? t.requestState === 'pending' : true))
-	);
+	let status = $state<'all' | TaskStatus>('all');
+	let due = $state<'all' | 'overdue' | 'today' | 'week' | 'later' | 'none'>('all');
 
 	const today = todayKey();
+	const shown = $derived(
+		local
+			.filter((t) => (filter === 'meetings' ? t.source?.kind === 'meeting' : filter === 'high' ? t.priority === 'high' : filter === 'approval' ? t.requestState === 'pending' : true))
+			.filter((t) => (status === 'all' ? true : t.status === status))
+			.filter((t) => (due === 'all' ? true : dueBucket(t.dueDate, today) === due))
+	);
+
 	const stats = $derived({
 		overdue: local.filter((t) => t.status !== 'done' && t.dueDate && t.dueDate < today).length,
 		today: local.filter((t) => t.status !== 'done' && t.dueDate === today).length,
@@ -114,153 +123,226 @@
 <svelte:head><title>Tasks · Champ Hub — Champ HR ESS Portal</title></svelte:head>
 
 <div class="page">
-	<header class="ess-page-head head">
-		<div>
-			<h1 class="ess-page-title">My tasks</h1>
-			<p class="ess-page-sub">Drag cards between columns, or focus one and press Alt + ← / →. Press N for a new task.</p>
+	<div class="ess-figures">
+		<div class="ess-figure">
+			<span class="ess-figure__dot" class:ess-figure__dot--bad={stats.overdue > 0} class:ess-figure__dot--neutral={stats.overdue === 0}></span>
+			<div><div class="ess-figure__value">{stats.overdue}</div><div class="ess-figure__label">Overdue</div></div>
 		</div>
-		<div class="tools">
+		<div class="ess-figure">
+			<span class="ess-figure__dot ess-figure__dot--warn"></span>
+			<div><div class="ess-figure__value">{stats.today}</div><div class="ess-figure__label">Due today</div></div>
+		</div>
+		<div class="ess-figure">
+			<span class="ess-figure__dot"></span>
+			<div><div class="ess-figure__value">{stats.progress}</div><div class="ess-figure__label">In progress</div></div>
+		</div>
+		<div class="ess-figure">
+			<span class="ess-figure__dot ess-figure__dot--ok"></span>
+			<div><div class="ess-figure__value">{stats.done}</div><div class="ess-figure__label">Done, last 2 weeks</div></div>
+		</div>
+	</div>
+
+	<section class="ess-card board-card" aria-labelledby="tasks-h">
+		<header class="toolbar">
+			<h2 id="tasks-h" class="ess-h2">My tasks</h2>
 			<div class="ess-segmented" role="group" aria-label="View">
-				<button type="button" aria-pressed={view === 'board'} onclick={() => setView('board')}>Board</button>
-				<button type="button" aria-pressed={view === 'list'} onclick={() => setView('list')}>List</button>
+				<button type="button" aria-pressed={view === 'list'} onclick={() => setView('list')}><List size={15} /> List</button>
+				<button type="button" aria-pressed={view === 'board'} onclick={() => setView('board')}><SquareKanban size={15} /> Board</button>
 			</div>
-		</div>
-	</header>
+			<div class="filters">
+				<label class="ess-sr-only" for="tf-show">Show</label>
+				<select id="tf-show" class="ess-select" bind:value={filter}>
+					<option value="all">Assigned to me</option>
+					<option value="approval">Waiting for approval</option>
+					<option value="meetings">From meetings</option>
+					<option value="high">High priority</option>
+				</select>
+				<label class="ess-sr-only" for="tf-status">Status</label>
+				<select id="tf-status" class="ess-select" bind:value={status}>
+					<option value="all">Status</option>
+					{#each TASK_STATUSES as s (s)}<option value={s}>{STATUS_LABEL[s]}</option>{/each}
+				</select>
+				<label class="ess-sr-only" for="tf-due">Due date</label>
+				<select id="tf-due" class="ess-select" bind:value={due}>
+					<option value="all">Due date</option>
+					<option value="overdue">Overdue</option>
+					<option value="today">Today</option>
+					<option value="week">This week</option>
+					<option value="later">Later</option>
+					<option value="none">No date</option>
+				</select>
+			</div>
+		</header>
 
-	<div class="stats">
-		<div class="stat" class:alert={stats.overdue > 0}><b>{stats.overdue}</b><span>Overdue</span></div>
-		<div class="stat"><b>{stats.today}</b><span>Due today</span></div>
-		<div class="stat"><b>{stats.progress}</b><span>In progress</span></div>
-		<div class="stat"><b>{stats.done}</b><span>Done, last 2 weeks</span></div>
-	</div>
+		<p class="hint ess-help">
+			{view === 'board' ? 'Drag cards between columns, or focus one and press Alt + ← / →.' : 'Tick a task off, change its status on the right, or open it to see everything.'} Press N for a new task.
+		</p>
 
-	<div class="filters" role="group" aria-label="Show">
-		{#each [['all', 'All'], ['approval', 'Waiting for approval'], ['meetings', 'From meetings'], ['high', 'High priority']] as [k, label] (k)}
-			<button type="button" class="f" aria-pressed={filter === k} onclick={() => (filter = k as typeof filter)}>{label}</button>
-		{/each}
-	</div>
-
-	{#if view === 'board'}
-		<TaskBoard {columns} {meId} ondrop={drop} onkeymove={keymove}>
-			{#snippet top(col)}
-				{#if col.zone === 'status:todo'}
-					<form class="quick" onsubmit={add} data-no-drag>
-						<input class="ess-input" bind:value={quick} placeholder="Add a task for yourself" aria-label="New task title" />
-					</form>
+		{#if view === 'board'}
+			<TaskBoard {columns} {meId} ondrop={drop} onkeymove={keymove}>
+				{#snippet top(col)}
+					{#if col.zone === 'status:todo'}
+						<form class="quick" onsubmit={add} data-no-drag>
+							<Plus size={15} />
+							<input class="quick-input" bind:value={quick} placeholder="Add a task for yourself" aria-label="New task title" />
+						</form>
+					{/if}
+				{/snippet}
+			</TaskBoard>
+		{:else}
+			<div class="list">
+				<form class="quick" onsubmit={add}>
+					<Plus size={15} />
+					<input class="quick-input" bind:value={quick} placeholder="Add a task for yourself" aria-label="New task title" />
+				</form>
+				{#each groups as g (g.k)}
+					<section class="grp" aria-label={g.label}>
+						<h3 class="grp-h">{g.label} <span class="n" class:bad={g.k === 'overdue'}>{g.tasks.length}</span></h3>
+						<div class="rows">
+							{#each g.tasks as task (task.id)}<TaskRow {task} />{/each}
+						</div>
+					</section>
+				{/each}
+				{#if doneList.length}
+					<section class="grp" aria-label="Done">
+						<h3 class="grp-h">Done <span class="n ok">{doneList.length}</span></h3>
+						<div class="rows">
+							{#each doneList as task (task.id)}<TaskRow {task} />{/each}
+						</div>
+					</section>
 				{/if}
-			{/snippet}
-		</TaskBoard>
-	{:else}
-		<div class="list">
-			<form class="quick" onsubmit={add}>
-				<input class="ess-input" bind:value={quick} placeholder="Add a task for yourself" aria-label="New task title" />
-			</form>
-			{#each groups as g (g.k)}
-				<section class="grp">
-					<h2 class="label">{g.label} <span>{g.tasks.length}</span></h2>
-					{#each g.tasks as task (task.id)}<TaskRow {task} />{/each}
-				</section>
-			{/each}
-			{#if doneList.length}
-				<section class="grp">
-					<h2 class="label">Done <span>{doneList.length}</span></h2>
-					{#each doneList as task (task.id)}<TaskRow {task} />{/each}
-				</section>
-			{/if}
-			{#if !groups.length && !doneList.length}<p class="empty">Nothing here. Add a task above, or they'll arrive from meetings and chats.</p>{/if}
-		</div>
-	{/if}
+				{#if !groups.length && !doneList.length}
+					<p class="empty">Nothing here. Add a task above, or they'll arrive from meetings and chats.</p>
+				{/if}
+			</div>
+		{/if}
+	</section>
 </div>
 
 <style>
 	.page {
 		display: grid;
-		gap: 16px;
+		gap: 20px;
 		min-width: 0;
 	}
-	.head {
-		margin-bottom: 0;
+	.board-card {
+		display: grid;
+		gap: 14px;
+		min-width: 0;
+	}
+	.toolbar {
+		display: flex;
+		align-items: center;
+		gap: 14px;
 		flex-wrap: wrap;
 	}
-	.stats {
-		display: grid;
-		grid-template-columns: repeat(4, minmax(0, 1fr));
-		gap: 10px;
-	}
-	.stat {
-		padding: 10px 14px;
-		border-radius: var(--ess-radius-md);
-		background: var(--ess-sunken);
-		border: 1px solid var(--ess-border-subtle);
-	}
-	.stat b {
-		display: block;
-		font-family: var(--ess-font-display);
-		font-size: 24px;
-		font-variant-numeric: tabular-nums;
-		line-height: 1.2;
-	}
-	.stat span {
-		font-size: 12px;
-		color: var(--ess-text-muted);
-	}
-	.stat.alert b {
-		color: var(--ess-danger);
+	.toolbar .ess-h2 {
+		margin-right: 6px;
 	}
 	.filters {
 		display: flex;
-		gap: 6px;
+		gap: 8px;
 		flex-wrap: wrap;
+		margin-left: auto;
 	}
-	.f {
-		border: 1px solid var(--ess-border);
-		background: transparent;
-		border-radius: 99px;
-		padding: 4px 12px;
-		font: inherit;
-		font-size: 12.5px;
-		color: var(--ess-text-secondary);
-		cursor: pointer;
-	}
-	.f[aria-pressed='true'] {
-		background: var(--ess-text);
-		color: var(--ess-canvas);
-		border-color: var(--ess-text);
-	}
-	.quick .ess-input {
-		padding: 7px 10px;
-		border-style: dashed;
+	.filters .ess-select {
+		width: auto;
+		padding-top: 7px;
+		padding-bottom: 7px;
 		font-size: 13px;
 	}
+	.hint {
+		margin: -6px 0 0;
+	}
+	.quick {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 0 12px;
+		height: 40px;
+		border: 1px dashed var(--ess-border-strong);
+		border-radius: var(--ess-radius-md);
+		color: var(--ess-text-muted);
+		background: var(--ess-surface);
+	}
+	.quick:focus-within {
+		border-style: solid;
+		border-color: var(--ess-primary);
+		box-shadow: 0 0 0 3px var(--ring);
+	}
+	.quick-input {
+		flex: 1;
+		min-width: 0;
+		border: 0;
+		background: transparent;
+		font: inherit;
+		font-size: 13.5px;
+		color: var(--ess-text);
+		outline: none;
+	}
+	.quick-input::placeholder {
+		color: var(--ess-text-muted);
+	}
 	.list {
-		max-width: 900px;
 		display: grid;
-		gap: 16px;
+		gap: 22px;
 	}
 	.grp {
 		display: grid;
-		gap: 6px;
+		gap: 4px;
 	}
-	.label {
+	.grp-h {
 		margin: 0;
-		font-size: 11px;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--ess-text-muted);
 		display: flex;
-		justify-content: space-between;
+		align-items: center;
+		gap: 10px;
+		padding-bottom: 10px;
+		border-bottom: 1px solid var(--ess-border);
+		font-family: var(--ess-font-display);
+		font-size: 19px;
+		font-weight: 600;
+		color: var(--ess-text);
+	}
+	.n {
+		min-width: 22px;
+		height: 22px;
+		padding: 0 7px;
+		border-radius: var(--ess-radius-xs);
+		display: inline-grid;
+		place-items: center;
+		font-family: var(--ess-font-sans);
+		font-size: 12.5px;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
+	}
+	.n.bad {
+		background: var(--ess-danger-bg);
+		color: var(--ess-danger);
+	}
+	.n.ok {
+		background: var(--ess-success-bg);
+		color: var(--ess-success);
+	}
+	.rows {
+		display: grid;
 	}
 	.empty {
-		padding: 18px;
+		margin: 0;
+		padding: 22px;
 		text-align: center;
 		color: var(--ess-text-muted);
 		border: 1.5px dashed var(--ess-border);
 		border-radius: var(--ess-radius-md);
 	}
 	@media (max-width: 720px) {
-		.stats {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
+		.filters {
+			margin-left: 0;
+			width: 100%;
+		}
+		.filters .ess-select {
+			flex: 1;
 		}
 	}
 </style>

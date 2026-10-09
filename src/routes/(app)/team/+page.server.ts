@@ -36,7 +36,8 @@ import { matchName } from '$lib/server/name-match';
 import { ensureLeaveAllocations } from '$lib/server/leave-accrual';
 import { currentRosterByUser, loadAssignableRosters } from '$lib/server/week-off';
 import { describeRoster, rotationSummary } from '$lib/week-off';
-import { sendWelcomeEmail, isMailerConfigured } from '$lib/server/mailer';
+import { isMailerConfigured } from '$lib/server/mailer';
+import { pendingCount as pendingLoginEmailCount, queueLoginEmails } from '$lib/server/login-emails';
 import { error } from '@sveltejs/kit';
 
 /**
@@ -161,7 +162,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		'people.create_login',
 		'people.reset_password',
 		'people.password_activity',
-		'people.bulk_import'
+		'people.bulk_import',
+		'people.send_logins'
 	]);
 	if (user.role === 'employee' && !peopleCaps) {
 		throw redirect(303, '/dashboard');
@@ -448,6 +450,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		namedRoles,
 		canCreateLogin: user.role === 'team_lead' || hasCap(user, 'people.create_login'),
 		canBulkImport: hasCap(user, 'people.bulk_import'),
+		canApproveLogins: hasCap(user, 'people.send_logins'),
+		pendingLoginEmails: hasCap(user, 'people.send_logins') ? await pendingLoginEmailCount() : 0,
 		canSeePasswordActivity: hasCap(user, 'people.password_activity'),
 		canDeletePeople: hasCap(user, 'people.delete'),
 		canAuthorRosters: hasCap(user, 'leave.week_off_rosters'),
@@ -719,7 +723,8 @@ export const actions: Actions = {
 		// Admin included, can say what it is. Carried only for the sends that
 		// actually failed, and only to the person who just ran the import.
 		const emailFailures: { email: string; error: string; temporaryPassword: string }[] = [];
-		let emailedCount = 0;
+		const emailedCount = 0;
+		const queuedUserIds: string[] = [];
 
 		for (const row of rows) {
 			if (row.status === 'skipped_existing') {
@@ -780,28 +785,9 @@ export const actions: Actions = {
 
 			await db.update(bulkImportRows).set({ status: 'created', createdUserId: createdUser.id }).where(eq(bulkImportRows.id, row.id));
 
-			// Hand over the credentials. Deliberately after the account and profile
-			// are committed and the row is marked created: the account is the system
-			// of record, and a Resend outage must not undo an import that otherwise
-			// succeeded. A failure here is collected and reported so HR knows which
-			// people still need their login passed on another way — re-running the
-			// import is not an option, since the row is now `created`.
-			const mail = await sendWelcomeEmail({
-				fullName: createdUser.fullName,
-				username: createdUser.email,
-				temporaryPassword,
-				to: redirectAllMailTo || undefined
-			});
-
-			if (mail.ok) {
-				emailedCount++;
-			} else {
-				emailFailures.push({
-					email: createdUser.email,
-					error: mail.error ?? 'Unknown error',
-					temporaryPassword
-				});
-			}
+			// The credentials email is not sent here: it is queued after the loop and
+			// waits for an admin's approval (src/lib/server/login-emails.ts).
+			queuedUserIds.push(createdUser.id);
 
 			await logActivity({
 				actorUserId: actor.id,
@@ -814,13 +800,12 @@ export const actions: Actions = {
 					email: createdUser.email,
 					importId,
 					role: row.role,
-					welcomeEmail: mail.ok ? 'sent' : 'failed',
-					welcomeEmailId: mail.id ?? null,
-					welcomeEmailError: mail.ok ? null : (mail.error ?? null),
+					welcomeEmail: 'queued for approval',
 					welcomeEmailRedirectedTo: redirectAllMailTo || null
 				}
 			});
 		}
+		const queuedCount = await queueLoginEmails(queuedUserIds, { source: 'bulk', requestedBy: actor.id, importId, sendTo: redirectAllMailTo || null });
 
 		for (const row of rows) {
 			if (row.status !== 'ready') continue;
@@ -896,6 +881,7 @@ export const actions: Actions = {
 				skippedCount,
 				backfilledCount,
 				emailedCount,
+				queuedCount,
 				// Listed rather than counted: the point of surfacing these is telling
 				// HR exactly whose login still needs delivering by hand.
 				emailFailures,
@@ -951,7 +937,8 @@ export const actions: Actions = {
 		const accounts = await db.select().from(users).where(inArray(users.id, createdUserIds));
 
 		let reissuedCount = 0;
-		let emailedCount = 0;
+		const emailedCount = 0;
+		const queuedUserIds: string[] = [];
 		// People who already signed in and chose their own password. Left untouched.
 		let alreadyOnboardedCount = 0;
 		let inactiveCount = 0;
@@ -982,31 +969,17 @@ export const actions: Actions = {
 
 			// An account whose login id isn't an address can't be mailed — and can't
 			// be signed in to either, which is usually why this button was pressed.
-			// Reported with its password rather than attempted, so the operator can
-			// correct the address on the roster and hand the login over meanwhile.
+			// Reported with its password so the operator can correct the address on
+			// the roster and hand the login over meanwhile. Everyone else's email is
+			// queued for an admin to approve.
 			const deliverTo = redirectAllMailTo || (looksLikeEmail(account.email) ? account.email : null);
-
-			const mail = deliverTo
-				? await sendWelcomeEmail({
-						fullName: account.fullName,
-						username: account.email,
-						temporaryPassword,
-						to: deliverTo
-					})
-				: {
-						ok: false as const,
-						error: `"${account.email}" is not an email address — correct it on the roster, then pass this password on directly`
-					};
-
-			if (mail.ok) {
-				emailedCount++;
-			} else {
+			if (deliverTo) queuedUserIds.push(account.id);
+			else
 				emailFailures.push({
 					email: account.email,
-					error: mail.error ?? 'Unknown error',
+					error: `"${account.email}" is not an email address — correct it on the roster, then pass this password on directly`,
 					temporaryPassword
 				});
-			}
 
 			await logActivity({
 				actorUserId: actor.id,
@@ -1016,13 +989,13 @@ export const actions: Actions = {
 				details: {
 					email: account.email,
 					importId,
-					welcomeEmail: mail.ok ? 'sent' : 'failed',
-					welcomeEmailId: mail.ok ? (mail.id ?? null) : null,
-					welcomeEmailError: mail.ok ? null : (mail.error ?? null),
+					welcomeEmail: deliverTo ? 'queued for approval' : 'not an email address',
 					welcomeEmailRedirectedTo: redirectAllMailTo || null
 				}
 			});
 		}
+
+		const queuedCount = await queueLoginEmails(queuedUserIds, { source: 'reissue', requestedBy: actor.id, importId, sendTo: redirectAllMailTo || null });
 
 		await logActivity({
 			actorUserId: actor.id,
@@ -1042,6 +1015,7 @@ export const actions: Actions = {
 			bulkImportReissued: {
 				reissuedCount,
 				emailedCount,
+				queuedCount,
 				alreadyOnboardedCount,
 				inactiveCount,
 				emailFailures,

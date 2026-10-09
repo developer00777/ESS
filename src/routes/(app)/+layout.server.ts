@@ -46,6 +46,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		hasProfilePicture: Boolean(picture),
 		profilePictureVersion: picture?.updatedAt?.getTime() ?? null,
 		adminIssueCount,
+		canAdmin: isAdmin,
 		announcementBadge,
 		chatBadge: { count: chatSidebar.badge, urgent: announcementBadge.urgent },
 		canUseChamp: true

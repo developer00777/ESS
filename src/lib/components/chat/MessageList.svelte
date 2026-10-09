@@ -219,7 +219,7 @@
 	.list {
 		flex: 1;
 		overflow-y: auto;
-		padding: 10px 0 6px;
+		padding: 12px 0 8px;
 		overscroll-behavior: contain;
 	}
 	.older {
@@ -228,41 +228,42 @@
 		border: 1px solid var(--ess-border);
 		background: var(--ess-surface);
 		border-radius: 99px;
-		padding: 4px 12px;
+		padding: 5px 14px;
 		font: inherit;
-		font-size: 12px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 		cursor: pointer;
+	}
+	.older:hover {
+		border-color: var(--ess-border-strong);
+		color: var(--ess-text);
 	}
 	.day {
 		display: flex;
 		justify-content: center;
-		margin: 12px 0 6px;
+		margin: 14px 0 8px;
 		position: relative;
 	}
 	.day::before {
 		content: '';
 		position: absolute;
-		left: 16px;
-		right: 16px;
+		left: 20px;
+		right: 20px;
 		top: 50%;
 		border-top: 1px solid var(--ess-border-subtle);
 	}
 	.day span {
 		position: relative;
-		font-size: 11px;
-		font-weight: 700;
-		color: var(--ess-text-muted);
-		padding: 2px 10px;
-		border: 1px solid var(--ess-border);
-		border-radius: 99px;
-		background: var(--ess-canvas);
+		font-size: 13px;
+		color: var(--ess-text-secondary);
+		padding: 0 14px;
+		background: var(--ess-surface);
 	}
 	.note {
 		margin: 40px 16px;
 		text-align: center;
 		color: var(--ess-text-muted);
-		font-size: 13px;
+		font-size: 13.5px;
 	}
 	.err {
 		color: var(--ess-danger);
@@ -277,19 +278,19 @@
 		gap: 5px;
 		border: 0;
 		border-radius: 99px;
-		padding: 5px 12px;
+		padding: 6px 14px;
 		background: var(--ess-primary);
 		color: var(--ess-text-on-primary);
 		font: inherit;
-		font-size: 12px;
-		font-weight: 700;
+		font-size: 12.5px;
+		font-weight: 600;
 		box-shadow: var(--ess-elev-2);
 		cursor: pointer;
 	}
 	.typing {
 		margin: 0;
 		min-height: 18px;
-		padding: 0 18px;
+		padding: 0 20px;
 		font-size: 12px;
 		color: var(--ess-text-muted);
 	}

@@ -100,7 +100,7 @@
 			{#if scope !== 'none'}<button type="button" role="tab" aria-selected={tab === 'channel'} onclick={() => switchTab('channel')}>New channel</button>{/if}
 			<button type="button" role="tab" aria-selected={tab === 'browse'} onclick={() => switchTab('browse')}>Browse channels</button>
 		</div>
-		<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={onclose} aria-label="Close"><X size={16} /></button>
+		<button type="button" class="ess-icon-btn" onclick={onclose} aria-label="Close"><X size={18} /></button>
 	</header>
 	<div class="body">
 		{#if err}<p class="err" role="alert">{err}</p>{/if}
@@ -173,7 +173,7 @@
 		position: fixed;
 		inset: 0;
 		z-index: 90;
-		background: rgba(4, 2, 12, 0.5);
+		background: rgba(27, 31, 59, 0.42);
 	}
 	.dialog {
 		position: fixed;
@@ -181,12 +181,12 @@
 		top: 50%;
 		left: 50%;
 		transform: translate(-50%, -50%);
-		width: min(520px, calc(100vw - 24px));
-		max-height: min(640px, calc(100vh - 40px));
+		width: min(540px, calc(100vw - 24px));
+		max-height: min(660px, calc(100vh - 40px));
 		display: flex;
 		flex-direction: column;
 		background: var(--ess-modal-bg);
-		border: 1px solid var(--ess-border-strong);
+		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-lg);
 		box-shadow: var(--ess-elev-4);
 		overflow: hidden;
@@ -196,7 +196,7 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 8px;
-		padding: 6px 10px 0;
+		padding: 8px 10px 0 12px;
 		border-bottom: 1px solid var(--ess-border);
 	}
 	.tabs {
@@ -207,36 +207,43 @@
 	.tabs button {
 		border: 0;
 		background: none;
-		padding: 10px;
+		padding: 12px 10px;
 		font: inherit;
-		font-size: 13px;
-		font-weight: 600;
+		font-size: 13.5px;
+		font-weight: 500;
 		color: var(--ess-text-secondary);
 		cursor: pointer;
 		border-bottom: 2px solid transparent;
+		margin-bottom: -1px;
 		white-space: nowrap;
 	}
-	.tabs button[aria-selected='true'] {
+	.tabs button:hover {
 		color: var(--ess-text);
+	}
+	.tabs button[aria-selected='true'] {
+		color: var(--ess-primary-text);
 		border-bottom-color: var(--ess-primary);
 	}
 	.body {
 		flex: 1;
 		overflow-y: auto;
-		padding: 14px;
+		padding: 16px;
 		display: grid;
-		gap: 10px;
+		gap: 12px;
 		align-content: start;
 	}
 	.fields {
 		display: grid;
-		gap: 10px;
+		gap: 12px;
 	}
 	.check {
 		display: flex;
 		gap: 8px;
 		align-items: center;
-		font-size: 13px;
+		font-size: 13.5px;
+	}
+	.check input {
+		accent-color: var(--ess-primary);
 	}
 	.people {
 		list-style: none;
@@ -249,14 +256,17 @@
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		padding: 6px 8px;
-		border-radius: 8px;
+		padding: 7px 10px;
+		border-radius: var(--ess-radius-sm);
 		cursor: pointer;
-		font-size: 13.5px;
+		font-size: 14px;
 	}
-	.people label:hover,
+	.people label:hover {
+		background: var(--ess-sunken);
+	}
 	.people label.on {
 		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
 	}
 	.people input {
 		accent-color: var(--ess-primary);
@@ -266,15 +276,18 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 10px;
-		padding: 8px 10px;
+		padding: 10px 12px;
 		border: 1px solid var(--ess-border);
-		border-radius: 10px;
+		border-radius: var(--ess-radius-md);
 	}
 	.chan span {
 		display: grid;
 	}
+	.chan strong {
+		font-weight: 500;
+	}
 	.chan small {
-		font-size: 12px;
+		font-size: 12.5px;
 		color: var(--ess-text-muted);
 	}
 	footer {
@@ -282,12 +295,13 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 10px;
-		padding: 10px 14px;
+		padding: 12px 16px;
 		border-top: 1px solid var(--ess-border);
+		background: var(--ess-sunken);
 	}
 	.note {
 		margin: 0;
-		font-size: 12.5px;
+		font-size: 13px;
 		color: var(--ess-text-muted);
 	}
 	.err {

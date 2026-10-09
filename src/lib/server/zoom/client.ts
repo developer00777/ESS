@@ -206,6 +206,34 @@ export async function recordStatus(patch: ZoomStatus) {
 
 /* ---------- scheduling from ESS ---------- */
 
+export type ZoomUserCheck = { exists: boolean; licensed: boolean };
+
+/**
+ * Whether `key` (a Zoom email or user id) is a user in the company Zoom
+ * account, and licensed. Only those are offered as hosts. Cached for a day,
+ * since licences rarely change and the schedule dialog asks on every open.
+ */
+export async function zoomUserCheck(key: string): Promise<ZoomUserCheck> {
+	const cacheKey = `zoom:user:${key.toLowerCase()}`;
+	try {
+		const hit = await kv().get(cacheKey);
+		if (hit) return JSON.parse(hit);
+	} catch {
+		/* no cache */
+	}
+	let result: ZoomUserCheck = { exists: false, licensed: false };
+	try {
+		const u = await get<{ type?: number; status?: string }>(`/users/${encodeURIComponent(key)}`);
+		result = { exists: u.status !== 'inactive', licensed: u.type === 2 && u.status !== 'inactive' };
+	} catch (err) {
+		// Anything but "no such user" (a Zoom outage, a missing scope) is not
+		// cached, so it is asked again next time.
+		if (!(err instanceof ZoomError && (err.status === 404 || err.code === 1001))) return result;
+	}
+	await kv().set(cacheKey, JSON.stringify(result), 'EX', 24 * 3600).catch(() => {});
+	return result;
+}
+
 export type CreatedMeeting = { id: number | string; uuid?: string; join_url: string; start_url?: string; start_time?: string; duration?: number };
 
 /**
@@ -214,14 +242,39 @@ export type CreatedMeeting = { id: number | string; uuid?: string; join_url: str
  * ZOOM_DEFAULT_HOST; either way ESS records the scheduler as the host. The
  * AI summary starts by itself so the minutes come back to ESS.
  */
-/** The company account that hosts when nobody else's Zoom account is set. */
-export function defaultZoomHost(): string | null {
-	return env.ZOOM_DEFAULT_HOST?.trim() || null;
+/**
+ * The company account that hosts when nobody else's Zoom account is picked:
+ * ZOOM_DEFAULT_HOST when set, otherwise found in the Zoom account itself —
+ * the licensed owner, else a licensed admin, else any licensed user. The
+ * lookup is cached for a day, so a missing variable never leaves scheduling
+ * without a host.
+ */
+export async function defaultZoomHost(): Promise<string | null> {
+	const set = env.ZOOM_DEFAULT_HOST?.trim();
+	if (set) return set;
+	if (!zoomConfigured()) return null;
+	try {
+		const hit = await kv().get('zoom:default-host');
+		if (hit) return hit;
+	} catch {
+		/* no cache */
+	}
+	try {
+		const r = await get<{ users?: { email: string; type?: number; role_id?: string; role_name?: string; status?: string }[] }>('/users?status=active&page_size=300');
+		const licensed = (r.users ?? []).filter((u) => u.type === 2 && u.email);
+		const rank = (u: (typeof licensed)[number]) => (u.role_id === '0' || /owner/i.test(u.role_name ?? '') ? 0 : u.role_id === '1' || /admin/i.test(u.role_name ?? '') ? 1 : 2);
+		const pick = licensed.sort((a, b) => rank(a) - rank(b))[0]?.email ?? null;
+		if (pick) await kv().set('zoom:default-host', pick, 'EX', 24 * 3600).catch(() => {});
+		return pick;
+	} catch (err) {
+		console.error('[zoom] could not find a default host:', err);
+		return null;
+	}
 }
 
 /**
  * Creates the call under the first of `hosts` (Zoom emails or Zoom user ids)
- * that Zoom accepts, falling back to ZOOM_DEFAULT_HOST last.
+ * that Zoom accepts, falling back to the company default host last.
  */
 export async function createZoomMeeting(input: { hosts: string[]; topic: string; startLocal: string; durationMin: number; agenda?: string | null }): Promise<CreatedMeeting & { hostedBy: string }> {
 	const body = {
@@ -238,7 +291,7 @@ export async function createZoomMeeting(input: { hosts: string[]; topic: string;
 			auto_start_meeting_summary: true
 		}
 	};
-	const hosts = [...input.hosts, defaultZoomHost()].filter((h, i, a): h is string => !!h && a.indexOf(h) === i);
+	const hosts = [...input.hosts, await defaultZoomHost()].filter((h, i, a): h is string => !!h && a.indexOf(h) === i);
 	let last: unknown = null;
 	for (const host of hosts) {
 		try {

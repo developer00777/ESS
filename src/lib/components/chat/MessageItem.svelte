@@ -77,12 +77,12 @@
 	}
 </script>
 
-<div class="msg" class:grouped class:private={message.privateToYou} class:champ={message.kind === 'champ'} id="m-{message.id}">
+<div class="msg" class:grouped class:mine class:private={message.privateToYou} class:champ={message.kind === 'champ'} id="m-{message.id}">
 	<div class="gutter">
 		{#if !grouped}
 			{#if message.author}
 				<span class="av-wrap">
-					<Avatar userId={message.author.id} fullName={message.author.fullName} size="sm" />
+					<Avatar userId={message.author.id} fullName={message.author.fullName} size="md" />
 					{#if status}<span class="dot" data-state={status.state} class:online={status.online}></span>{/if}
 				</span>
 			{:else}
@@ -211,18 +211,18 @@
 		position: relative;
 		display: grid;
 		grid-template-columns: 40px minmax(0, 1fr);
-		gap: 10px;
-		padding: 6px 16px 6px 12px;
+		gap: 12px;
+		padding: 6px 20px 6px 16px;
 	}
 	.msg.grouped {
 		padding-top: 1px;
 	}
 	.msg:hover,
 	.msg:focus-within {
-		background: var(--ess-surface-hover);
-	}
-	.msg.private {
 		background: var(--ess-sunken);
+	}
+	.msg.private .body {
+		border: 1px dashed var(--ess-border-strong);
 	}
 	.gutter {
 		display: flex;
@@ -235,12 +235,12 @@
 	}
 	.dot {
 		position: absolute;
-		right: -2px;
-		bottom: -2px;
-		width: 10px;
-		height: 10px;
+		right: -1px;
+		bottom: -1px;
+		width: 11px;
+		height: 11px;
 		border-radius: 50%;
-		border: 2px solid var(--ess-canvas);
+		border: 2px solid var(--ess-surface);
 		background: var(--ess-text-muted);
 	}
 	.dot[data-state='in'] {
@@ -251,34 +251,37 @@
 		background: var(--ess-warning);
 	}
 	.dot[data-state='night'] {
-		background: #8b74f2;
+		background: var(--ess-primary);
 	}
 	.dot[data-state='weekoff'],
 	.dot[data-state='off'],
 	.dot[data-state='left'] {
-		background: transparent;
+		background: var(--ess-surface);
 		box-shadow: inset 0 0 0 1.5px var(--ess-text-muted);
 	}
 	.bot {
-		width: 32px;
-		height: 32px;
+		width: 36px;
+		height: 36px;
 		border-radius: 50%;
 		display: grid;
 		place-items: center;
 		font-size: 10px;
-		font-weight: 800;
-		color: #fff;
-		background: linear-gradient(150deg, #4fd1a1, #2c9b7a);
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		color: var(--ess-success);
+		background: var(--ess-success-bg);
 	}
 	.bot.champ-bot {
 		font-size: 15px;
-		background: linear-gradient(150deg, #f0b35a, #e879a6);
+		color: var(--ess-primary-text);
+		background: var(--ess-primary-soft);
 	}
 	.t-hover {
 		font-size: 10.5px;
 		color: var(--ess-text-muted);
 		opacity: 0;
-		padding-top: 3px;
+		padding-top: 6px;
+		font-variant-numeric: tabular-nums;
 	}
 	.msg:hover .t-hover {
 		opacity: 1;
@@ -291,13 +294,15 @@
 		align-items: baseline;
 		flex-wrap: wrap;
 		gap: 4px 8px;
+		margin-bottom: 4px;
 	}
 	.hd strong {
-		font-size: 13.5px;
+		font-size: 14px;
+		font-weight: 600;
 	}
 	.tag {
-		font-size: 9.5px;
-		font-weight: 700;
+		font-size: 10px;
+		font-weight: 600;
 		letter-spacing: 0.06em;
 		padding: 0 5px;
 		border-radius: 4px;
@@ -305,7 +310,7 @@
 		color: var(--ess-text-muted);
 	}
 	.st {
-		font-size: 11px;
+		font-size: 11.5px;
 		color: var(--ess-text-muted);
 		max-width: 180px;
 		white-space: nowrap;
@@ -313,38 +318,56 @@
 		text-overflow: ellipsis;
 	}
 	.t {
-		font-size: 11px;
+		font-size: 12px;
 		color: var(--ess-text-muted);
+		font-variant-numeric: tabular-nums;
 	}
 	.pinned {
 		display: inline-flex;
 		align-items: center;
 		gap: 3px;
-		font-size: 11px;
+		font-size: 11.5px;
 		color: var(--ess-warning);
-		font-weight: 600;
+		font-weight: 500;
 	}
+	/* The message itself sits in a soft bubble; mine are pale lavender. */
 	.body {
+		display: inline-block;
+		max-width: min(100%, 720px);
+		padding: 10px 14px;
+		border-radius: 12px;
+		border-top-left-radius: 4px;
+		background: var(--ess-sunken);
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
 		line-height: 1.5;
+		font-size: 14.5px;
+		color: var(--ess-text);
+	}
+	.msg.mine .body {
+		background: var(--ess-primary-soft);
+	}
+	.msg.champ .body {
+		background: var(--ess-primary-softer);
+		border: 1px solid var(--ess-primary-soft);
 	}
 	.body :global(a) {
 		color: var(--ess-primary-text);
 	}
 	.body :global(code) {
 		font-family: var(--ess-font-mono);
-		font-size: 12px;
+		font-size: 12.5px;
 		padding: 1px 5px;
 		border-radius: 5px;
-		background: var(--ess-sunken);
+		background: var(--ess-surface);
+		border: 1px solid var(--ess-border);
 	}
 	.body :global(.mention) {
 		color: var(--ess-primary-text);
-		background: var(--ess-primary-soft);
+		background: var(--ess-surface);
 		border-radius: 4px;
 		padding: 0 3px;
-		font-weight: 600;
+		font-weight: 500;
 	}
 	.body :global(.mention-me) {
 		background: var(--ess-warning-bg);
@@ -386,23 +409,27 @@
 	.img img {
 		max-width: 100%;
 		max-height: 280px;
-		border-radius: 10px;
+		border-radius: var(--ess-radius-md);
 		border: 1px solid var(--ess-border);
 		display: block;
 	}
 	.file {
 		display: inline-flex;
 		align-items: center;
-		gap: 8px;
-		margin-top: 6px;
-		padding: 7px 10px;
+		gap: 10px;
+		margin-top: 8px;
+		padding: 10px 14px;
 		border: 1px solid var(--ess-border);
-		border-radius: 9px;
+		border-radius: var(--ess-radius-md);
 		background: var(--ess-surface);
 		color: var(--ess-text);
 		text-decoration: none;
-		font-size: 12.5px;
+		font-size: 13.5px;
+		font-weight: 500;
 		max-width: 100%;
+	}
+	.file :global(svg) {
+		color: var(--ess-primary-text);
 	}
 	.file span {
 		overflow: hidden;
@@ -411,28 +438,32 @@
 	}
 	.file small {
 		color: var(--ess-text-muted);
+		font-weight: 400;
 	}
 	.reacts {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 5px;
-		margin-top: 5px;
+		gap: 6px;
+		margin-top: 6px;
 	}
 	.re {
 		border: 1px solid var(--ess-border);
 		background: var(--ess-surface);
 		border-radius: 99px;
-		padding: 1px 8px;
-		font-size: 12px;
+		padding: 2px 10px;
+		font-size: 12.5px;
 		cursor: pointer;
 		color: var(--ess-text);
+	}
+	.re:hover {
+		border-color: var(--ess-border-strong);
 	}
 	.re.mine {
 		border-color: var(--ess-primary);
 		background: var(--ess-primary-soft);
 	}
 	.thread-link {
-		margin-top: 4px;
+		margin-top: 6px;
 		border: 0;
 		background: none;
 		padding: 0;
@@ -441,8 +472,8 @@
 		gap: 5px;
 		color: var(--ess-primary-text);
 		font: inherit;
-		font-size: 12.5px;
-		font-weight: 600;
+		font-size: 13px;
+		font-weight: 500;
 		cursor: pointer;
 	}
 	.row {
@@ -461,8 +492,12 @@
 	}
 	.poll {
 		display: grid;
-		gap: 5px;
+		gap: 6px;
 		max-width: 420px;
+		padding: 12px 14px;
+		border: 1px solid var(--ess-border);
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-surface);
 	}
 	.opt {
 		position: relative;
@@ -472,8 +507,8 @@
 		overflow: hidden;
 		border: 1px solid var(--ess-border);
 		background: var(--ess-surface);
-		border-radius: 9px;
-		padding: 7px 10px;
+		border-radius: var(--ess-radius-sm);
+		padding: 8px 12px;
 		font: inherit;
 		color: var(--ess-text);
 		cursor: pointer;
@@ -494,22 +529,22 @@
 	}
 	.n {
 		position: relative;
-		font-weight: 700;
+		font-weight: 600;
 		font-variant-numeric: tabular-nums;
 	}
 	.meta {
-		font-size: 11px;
+		font-size: 11.5px;
 		color: var(--ess-text-muted);
 	}
 	.actions {
 		position: absolute;
 		top: -12px;
-		right: 14px;
+		right: 18px;
 		display: none;
 		gap: 2px;
 		padding: 2px;
 		border: 1px solid var(--ess-border);
-		border-radius: 9px;
+		border-radius: var(--ess-radius-sm);
 		background: var(--ess-modal-bg);
 		box-shadow: var(--ess-elev-2);
 	}
@@ -530,7 +565,7 @@
 	}
 	.actions button:hover,
 	.actions button.on {
-		background: var(--ess-surface-hover);
+		background: var(--ess-primary-soft);
 		color: var(--ess-primary-text);
 	}
 	.picker {
@@ -541,9 +576,9 @@
 		gap: 2px;
 		padding: 4px;
 		border: 1px solid var(--ess-border);
-		border-radius: 9px;
+		border-radius: var(--ess-radius-sm);
 		background: var(--ess-modal-bg);
-		box-shadow: var(--ess-elev-2);
+		box-shadow: var(--ess-elev-3);
 		z-index: 3;
 	}
 	.picker button {

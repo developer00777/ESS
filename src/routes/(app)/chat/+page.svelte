@@ -264,16 +264,16 @@
 
 <style>
 	.chat {
-		--h: calc(100dvh - 2 * var(--ess-page-pad-y));
+		--h: calc(100dvh - 56px - var(--ess-page-pad-y) - var(--ess-space-10));
 		height: var(--h);
-		min-height: 480px;
+		min-height: min(480px, var(--h));
 		display: grid;
 		grid-template-columns: 280px minmax(0, 1fr);
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-lg);
 		overflow: hidden;
-		background: var(--ess-glass-bg);
-		box-shadow: var(--ess-glass-shadow);
+		background: var(--ess-surface);
+		box-shadow: var(--ess-elev-1);
 	}
 	.chat.with-panel {
 		grid-template-columns: 280px minmax(0, 1fr) 360px;
@@ -310,7 +310,7 @@
 	}
 	.title strong {
 		font-family: var(--ess-font-display);
-		font-size: 15.5px;
+		font-size: 20px;
 		font-weight: 600;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -367,7 +367,7 @@
 	}
 	@media (max-width: 720px) {
 		.chat {
-			--h: calc(100dvh - 40px);
+			--h: calc(100dvh - 56px - 20px - 32px);
 			grid-template-columns: minmax(0, 1fr);
 			border-radius: var(--ess-radius-md);
 		}
