@@ -701,6 +701,8 @@
 		top: 0;
 		z-index: 1;
 		background: var(--ess-glass-solid);
+		-webkit-backdrop-filter: blur(16px) saturate(160%);
+		backdrop-filter: blur(16px) saturate(160%);
 	}
 	.type-cell .ess-tile--sm {
 		width: 30px;

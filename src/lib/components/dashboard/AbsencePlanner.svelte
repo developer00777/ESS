@@ -549,7 +549,10 @@
 		top: 0;
 		z-index: 3;
 		height: 40px;
+		/* Frosted so rows scrolling under it blur rather than show through. */
 		background: var(--ess-glass-solid);
+		-webkit-backdrop-filter: blur(16px) saturate(160%);
+		backdrop-filter: blur(16px) saturate(160%);
 	}
 
 	.who {
@@ -563,7 +566,15 @@
 		min-width: 0;
 		height: 100%;
 		padding-right: 10px;
-		background: var(--ess-glass-solid);
+		background: transparent;
+	}
+	/* Narrow screens scroll the grid sideways under the names: frost them. */
+	@media (max-width: 1100px) {
+		.who {
+			background: var(--ess-glass-solid);
+			-webkit-backdrop-filter: blur(16px) saturate(160%);
+			backdrop-filter: blur(16px) saturate(160%);
+		}
 	}
 	.who-h {
 		font-size: 11.5px;
