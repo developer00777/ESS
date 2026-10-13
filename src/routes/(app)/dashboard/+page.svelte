@@ -1,5 +1,9 @@
 <script lang="ts">
-	import Overview from './Overview.svelte';
+	import { onMount } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
+	import Award from '@lucide/svelte/icons/award';
+	import Activity from '@lucide/svelte/icons/activity';
+	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import Calendar from '@lucide/svelte/icons/calendar';
 	import Clock from '@lucide/svelte/icons/clock';
 	import Video from '@lucide/svelte/icons/video';
@@ -35,6 +39,43 @@
 	const fmtNum = (n: number) => String(+n.toFixed(1));
 
 	const canApprove = $derived(data.user.role === 'team_lead' || data.user.role === 'super_admin');
+
+	/* Two views of the home page: Today (planner and panels) and Timeline &
+	   analytics (the day's timeline, what needs you, activity, request
+	   progress, this month's hours and what's coming up). */
+	let view = $state<'today' | 'insights'>('today');
+
+	// Keep the figures fresh while the page stays open (every 5 minutes, and
+	// when the tab comes back into view).
+	onMount(() => {
+		let busy = false;
+		async function refresh() {
+			if (document.visibilityState !== 'visible' || busy) return;
+			busy = true;
+			try {
+				await invalidateAll();
+			} catch {
+				/* keep the last figures */
+			} finally {
+				busy = false;
+			}
+		}
+		const timer = setInterval(refresh, 300000);
+		document.addEventListener('visibilitychange', refresh);
+		return () => {
+			clearInterval(timer);
+			document.removeEventListener('visibilitychange', refresh);
+		};
+	});
+
+	// This month's recorded hours per day, for the small bar chart.
+	const monthDays = $derived(
+		data.analytics.heatmap
+			.filter((c) => c.date.startsWith(data.analytics.today.slice(0, 7)))
+			.map((c) => ({ ...c, future: c.date > data.analytics.today }))
+	);
+	const maxHours = $derived(Math.max(9, ...monthDays.map((d) => d.hours)));
+	const upcomingMeetings = $derived(data.meetingsToday.filter((m) => m.state === 'upcoming'));
 
 	const OFFICE_TZ = 'Asia/Kolkata';
 	const now = new Date();
@@ -165,7 +206,11 @@
 		<div class="hello">
 			<h1>{greeting}, {firstName}</h1>
 		</div>
-		<div class="figures" role="group" aria-label="At a glance">
+		<div class="ess-tabs view-tabs" role="tablist" aria-label="Home views">
+			<button type="button" role="tab" class="ess-tab" aria-selected={view === 'today'} onclick={() => (view = 'today')}>Today</button>
+			<button type="button" role="tab" class="ess-tab" aria-selected={view === 'insights'} onclick={() => (view = 'insights')}>Timeline &amp; analytics</button>
+		</div>
+		<div class="figures" class:hide={view === 'insights'} role="group" aria-label="At a glance">
 			<a class="fig" href="/leave" title="{fmtNum(data.leaveAllocated)} days allocated this year">
 				<span class="v"><b>{fmtNum(data.leaveBalance)}</b><span>days</span></span>
 				<span class="k">Leave balance</span>
@@ -188,7 +233,8 @@
 		</div>
 	</header>
 
-	<AbsencePlanner planner={data.planner} />
+	{#if view === 'today'}
+		<AbsencePlanner planner={data.planner} />
 
 	<div class="lower">
 		<FutureEvents events={data.events} />
@@ -196,217 +242,231 @@
 		<OnboardingPanel people={data.planner.onboarding} mode={data.planner.onboardingMode} />
 		<ChampCard {firstName} champ={data.champ} />
 	</div>
+	{:else}
+		{@render insights()}
+	{/if}
 </div>
 
-<details class="workspace-details">
-<summary>Daily timeline, request progress and analytics</summary>
-<Overview {data} />
-<div class="ess-split today">
-	<div class="ess-stack">
-		<div class="ess-daystrip" aria-label="This week">
-			<a class="ess-daystrip__nav" href="/attendance" aria-label="Attendance calendar"><ChevronLeft size={16} /></a>
-			<div class="ess-daystrip__days">
-				{#each week as d (d.num)}
-					<span class="ess-day quiet" aria-current={d.isToday ? 'date' : undefined}>
-						<span>{d.label}</span>
-						<strong>{d.num}</strong>
-					</span>
-				{/each}
-			</div>
-			<a class="ess-daystrip__nav" href="/hub/meetings" aria-label="Meetings"><ChevronRight size={16} /></a>
+{#snippet insights()}
+	<div class="insights">
+		<div class="ess-figures ins-figs" role="group" aria-label="This month at a glance">
+			<a class="ess-figure" href="/attendance">
+				<span class="ess-tile ess-tile--sm ess-tile--ok"><Clock size={16} /></span>
+				<div><div class="ess-figure__value">{data.attendancePct}<small>%</small></div><div class="ess-figure__label">Attendance · {data.daysWithCheckIn} of {data.businessDaysSoFar} days</div></div>
+			</a>
+			<a class="ess-figure" href="/attendance">
+				<span class="ess-tile ess-tile--sm"><Activity size={16} /></span>
+				<div><div class="ess-figure__value">{data.analytics.recordedHours}<small> hrs</small></div><div class="ess-figure__label">Recorded · {data.analytics.completeDays} complete days</div></div>
+			</a>
+			<a class="ess-figure" href="/leave">
+				<span class="ess-tile ess-tile--sm"><Calendar size={16} /></span>
+				<div><div class="ess-figure__value">{fmtNum(data.leaveBalance)}<small> days</small></div><div class="ess-figure__label">Leave balance{data.leaveAllocated ? ` · of ${fmtNum(data.leaveAllocated)}` : ''}</div></div>
+			</a>
+			<a class="ess-figure" href="/leave">
+				<span class="ess-tile ess-tile--sm ess-tile--warn"><FileText size={16} /></span>
+				<div><div class="ess-figure__value">{data.pendingCount}</div><div class="ess-figure__label">Pending · {data.approvedThisMonth} approved this month</div></div>
+			</a>
+			<a class="ess-figure" href="/profile">
+				<span class="ess-tile ess-tile--sm"><Award size={16} /></span>
+				<div><div class="ess-figure__value tenure">{data.analytics.tenure ?? 'Not set'}</div><div class="ess-figure__label">{data.analytics.joiningDate ? `Tenure · joined ${data.analytics.joiningDate}` : 'Tenure · joining date not on file'}</div></div>
+			</a>
 		</div>
 
-		<section class="ess-card" aria-labelledby="tl-h">
-			<div class="ess-card-head">
-				<h2 id="tl-h" class="ess-h2">Today’s timeline</h2>
-				<a class="ess-link" href="/hub">View full day <ChevronRight size={14} /></a>
-			</div>
-			<ol class="timeline">
-				{#each timeline as e (e.key)}
-					<li class="tl" class:highlight={e.highlight} data-tone={e.tone}>
-						<span class="tl-time">{e.time}</span>
-						<span class="tl-dot" aria-hidden="true"></span>
-						<div class="tl-body">
-							<strong>{e.title}</strong>
-							<span>{e.detail}</span>
-						</div>
-						<div class="tl-end">
-							{#if e.badge}<span class="ess-badge ess-badge--{e.badge.tone}">{e.badge.label}</span>{/if}
-							{#if e.action}
-								<a class="ess-btn ess-btn--sm {e.action.primary ? 'ess-btn--primary' : 'ess-btn--secondary'}" href={e.action.href} target={e.action.newTab ? '_blank' : undefined} rel={e.action.newTab ? 'noopener' : undefined} data-sveltekit-reload={e.action.newTab ? true : undefined}>
-									{#if e.action.primary}<Video size={14} />{/if}{e.action.label}
-								</a>
-							{/if}
-						</div>
-					</li>
-				{/each}
-			</ol>
-		</section>
-
-		{#if canApprove}
-			<section class="ess-card" aria-labelledby="needs-h">
+		<div class="ins-grid">
+			<section class="ess-card ins-card" aria-labelledby="tl-h">
 				<div class="ess-card-head">
-					<h2 id="needs-h" class="ess-h2">Needs your attention</h2>
-					<a class="ess-link" href="/leave">View all {data.approvalQueue.length} <ChevronRight size={14} /></a>
-				</div>
-				<div class="ess-rows">
-					{#each data.approvalQueue as row (row.application.id)}
-						<div class="ess-row">
-							<Avatar userId={row.applicant.id} fullName={row.applicant.fullName} hasPicture={row.applicantHasPicture} size="md" />
-							<div class="ess-row__body">
-								<span class="ess-row__title">{row.applicant.fullName}</span>
-								<span class="ess-row__meta">{row.type.name} · {fmtRange(String(row.application.startDate).slice(0, 10), String(row.application.endDate).slice(0, 10))} · {Number(row.application.days)} day{Number(row.application.days) === 1 ? '' : 's'}</span>
-							</div>
-							<div class="ess-row__end">
-								<button class="ess-btn ess-btn--primary ess-btn--sm" onclick={() => decide(row.application.id, 'approve')}>Approve</button>
-								<button class="ess-btn ess-btn--outline ess-btn--sm" onclick={() => decide(row.application.id, 'reject')}>Reject</button>
-							</div>
-						</div>
-					{:else}
-						<p class="empty">No pending approvals right now.</p>
-					{/each}
-				</div>
-			</section>
-		{/if}
-
-		<section class="ess-card" aria-labelledby="act-h">
-			<div class="ess-card-head">
-				<h2 id="act-h" class="ess-h2">Recent activity</h2>
-				<a class="ess-link" href="/attendance">View all activity <ChevronRight size={14} /></a>
-			</div>
-			<div class="ess-rows">
-				{#each data.activity as a (a.key)}
-					{@const b = badge(a.status)}
-					<div class="ess-row activity">
-						<span class="when">{activityWhen(a.at)}</span>
-						<span class="ess-tile ess-tile--sm ess-tile--neutral">
-							{#if a.kind === 'checkin'}<Clock size={16} />{:else if a.kind === 'leave'}<Plane size={16} />{:else}<FileText size={16} />{/if}
-						</span>
-						<div class="ess-row__body">
-							<span class="ess-row__title">{a.title}</span>
-							<span class="ess-row__meta">{a.detail}</span>
-						</div>
-						<div class="ess-row__end"><span class="ess-badge ess-badge--{b.tone}">{b.label}</span></div>
-					</div>
-				{:else}
-					<p class="empty">Nothing yet. Your check-ins, leave requests and corrections appear here.</p>
-				{/each}
-			</div>
-		</section>
-	</div>
-
-	<aside class="ess-stack">
-		<section class="ess-card" aria-labelledby="hr-h">
-			<div class="ess-card-head">
-				<h2 id="hr-h" class="ess-h2">Your HR summary</h2>
-			</div>
-			<div class="summary">
-				<div class="summary-top">
-					<div>
-						<span class="s-label">Attendance</span>
-						<span class="s-value">{data.attendancePct}<small>%</small></span>
-						<span class="s-meta">This month · {data.daysWithCheckIn} of {data.businessDaysSoFar} days</span>
-					</div>
-					<div class="spark" aria-hidden="true">
-						{#each data.attendanceSpark as h, i (i)}
-							<span style="height:{Math.max(10, Math.min(100, h))}%"></span>
+					<h2 id="tl-h" class="ess-h2">Today’s timeline</h2>
+					<div class="week" aria-label="This week">
+						{#each week as d (d.num)}
+							<span class="wk" aria-current={d.isToday ? 'date' : undefined}><small>{d.label}</small>{d.num}</span>
 						{/each}
 					</div>
+					<a class="ess-link" href="/hub">Full day <ChevronRight size={14} /></a>
 				</div>
-				<div class="summary-grid">
-					<a href="/leave" class="s-cell">
-						<span class="s-head"><Calendar size={15} /> Leave balance</span>
-						<span class="s-value">{data.leaveBalance} <small>days</small></span>
-						<span class="s-meta">{data.leaveAllocated ? `out of ${data.leaveAllocated}` : `${data.leaveTypeCount} type${data.leaveTypeCount === 1 ? '' : 's'}`}</span>
-					</a>
-					<a href="/leave" class="s-cell">
-						<span class="s-head"><FileText size={15} /> Requests</span>
-						<span class="s-value">{data.pendingCount} <small>pending</small></span>
-						<span class="s-meta">{data.approvedThisMonth} approved this month</span>
-					</a>
+				<div class="ess-scroll ins-body">
+					<ol class="timeline">
+						{#each timeline as e (e.key)}
+							<li class="tl" class:highlight={e.highlight} data-tone={e.tone}>
+								<span class="tl-time">{e.time}</span>
+								<span class="tl-dot" aria-hidden="true"></span>
+								<div class="tl-body">
+									<strong>{e.title}</strong>
+									<span>{e.detail}</span>
+								</div>
+								<div class="tl-end">
+									{#if e.badge}<span class="ess-badge ess-badge--{e.badge.tone}">{e.badge.label}</span>{/if}
+									{#if e.action}
+										<a class="ess-btn ess-btn--sm {e.action.primary ? 'ess-btn--primary' : 'ess-btn--secondary'}" href={e.action.href} target={e.action.newTab ? '_blank' : undefined} rel={e.action.newTab ? 'noopener' : undefined} data-sveltekit-reload={e.action.newTab ? true : undefined}>
+											{#if e.action.primary}<Video size={14} />{/if}{e.action.label}
+										</a>
+									{/if}
+								</div>
+							</li>
+						{/each}
+					</ol>
 				</div>
-			</div>
-		</section>
-
-		<section class="ess-card" aria-labelledby="req-h">
-			<div class="ess-card-head">
-				<h2 id="req-h" class="ess-h2">Request progress</h2>
-				<a class="ess-link" href="/leave" aria-label="All requests"><ChevronRight size={16} /></a>
-			</div>
-			{#if data.latestRequest}
-				{@const r = data.latestRequest}
-				<div class="req">
-					<span class="ess-tile"><Plane size={20} strokeWidth={1.75} /></span>
-					<div class="req-body">
-						<strong>{r.typeName}</strong>
-						<span>{fmtRange(r.startDate, r.endDate)}</span>
-					</div>
-					<span class="ess-badge ess-badge--accent">{r.days} day{r.days === 1 ? '' : 's'}</span>
-				</div>
-				<ol class="ess-stepper">
-					{#each steps as s (s.label)}
-						<li class="ess-step" data-state={s.state}>
-							<span class="ess-step__dot">{#if s.state === 'done'}<Check size={12} strokeWidth={3} />{/if}</span>
-							<span class="ess-step__label">{s.label}</span>
-							<span class="ess-step__meta">{s.meta}</span>
-						</li>
-					{/each}
-				</ol>
-				{#if r.status === 'pending'}
-					<div class="ess-notice ess-notice--info">
-						<span class="ess-notice__icon"><Info size={15} /></span>
-						<div class="ess-notice__body"><strong>Your manager is reviewing your request.</strong>We’ll notify you as soon as there’s an update.</div>
-					</div>
-				{:else if r.status === 'escalated'}
-					<div class="ess-notice ess-notice--info">
-						<span class="ess-notice__icon"><Info size={15} /></span>
-						<div class="ess-notice__body"><strong>Your manager approved it; HR decides next.</strong>We’ll notify you as soon as there’s an update.</div>
-					</div>
-				{/if}
-			{:else}
-				<p class="empty">No leave requests yet. <a href="/leave/apply">Apply for leave</a> and track it here.</p>
-			{/if}
-		</section>
-
-		{#if data.upcomingHolidays.length > 0}
-			<section class="ess-card" aria-labelledby="hol-h">
-				<div class="ess-card-head">
-					<h2 id="hol-h" class="ess-h2">Coming up</h2>
-					<a class="ess-link" href="/policies">Holiday calendar <ChevronRight size={14} /></a>
-				</div>
-				<div class="ess-rows">
-					{#each data.upcomingHolidays as holiday (holiday.id)}
-						<div class="ess-row">
-							<span class="ess-date-tile"><strong>{new Date(holiday.date + 'T00:00:00').getDate()}</strong><small>{new Date(holiday.date + 'T00:00:00').toLocaleDateString('en-IN', { month: 'short' })}</small></span>
-							<div class="ess-row__body">
-								<span class="ess-row__title">{holiday.name}</span>
-								<span class="ess-row__meta">{fmtHolidayDate(holiday.date)}</span>
-							</div>
-							<span class="ess-badge ess-badge--{holiday.type.toLowerCase() === 'restricted' ? 'info' : 'accent'}">{holiday.type.toLowerCase()} holiday</span>
-						</div>
-					{/each}
-				</div>
+				<nav class="quick" aria-label="Quick actions">
+					<QuickActionRow icon={Calendar} label="Apply leave" href="/leave/apply" />
+					<QuickActionRow icon={Clock} label="My attendance" href="/attendance" />
+					<QuickActionRow icon={User} label="Update profile" href="/profile" />
+					<QuickActionRow icon={Megaphone} label="Company announcements" href="/chat?c=announcements" count={data.announcementBadge.count} urgent={data.announcementBadge.urgent} />
+					<QuickActionRow icon={Bell} label="HR notifications" href="/hub/c/ess" />
+					<QuickActionRow icon={BookOpen} label="Company policies" href="/policies" />
+					<QuickActionRow icon={Headset} label="HR contacts" href="/hr-contacts" />
+				</nav>
 			</section>
-		{/if}
 
-		<section class="ess-card" aria-labelledby="qa-h">
-			<div class="ess-card-head">
-				<h2 id="qa-h" class="ess-h2">Quick actions</h2>
-			</div>
-			<div class="action-list">
-				<QuickActionRow icon={Calendar} label="Apply leave" href="/leave/apply" />
-				<QuickActionRow icon={Clock} label="My attendance" href="/attendance" />
-				<QuickActionRow icon={User} label="Update profile" href="/profile" />
-				<QuickActionRow icon={Megaphone} label="Company announcements" href="/chat?c=announcements" count={data.announcementBadge.count} urgent={data.announcementBadge.urgent} />
-				<QuickActionRow icon={Bell} label="HR notifications" href="/hub/c/ess" />
-				<QuickActionRow icon={BookOpen} label="Company policies" href="/policies" />
-				<QuickActionRow icon={Headset} label="HR contacts" href="/hr-contacts" />
-			</div>
-		</section>
-	</aside>
-</div>
+			<div class="ins-col">
+				<section class="ess-card ins-card" aria-labelledby="needs-h">
+					<div class="ess-card-head">
+						<h2 id="needs-h" class="ess-h2">Needs your attention</h2>
+						<a class="ess-link" href="/leave">Leave <ChevronRight size={14} /></a>
+					</div>
+					<div class="ess-scroll ins-body ess-rows">
+						{#each data.missingCheckOuts.slice(0, 3) as item (item.date)}
+							<a class="ess-row" href={`/attendance?raise=${item.date}`}>
+								<span class="ess-tile ess-tile--sm ess-tile--warn"><Clock size={16} /></span>
+								<div class="ess-row__body"><span class="ess-row__title">Missing check-out</span><span class="ess-row__meta">{fmtDay(item.date)} · raise a correction</span></div>
+								<div class="ess-row__end"><span class="ess-badge ess-badge--pending">Review</span></div>
+							</a>
+						{/each}
+						{#if data.pendingCount > 0}
+							<a class="ess-row" href="/leave">
+								<span class="ess-tile ess-tile--sm"><FileText size={16} /></span>
+								<div class="ess-row__body"><span class="ess-row__title">Your leave requests</span><span class="ess-row__meta">{data.pendingCount} awaiting approval</span></div>
+								<div class="ess-row__end"><span class="ess-badge ess-badge--pending">Pending</span></div>
+							</a>
+						{/if}
+						{#if canApprove}
+							{#each data.approvalQueue as row (row.application.id)}
+								<div class="ess-row">
+									<Avatar userId={row.applicant.id} fullName={row.applicant.fullName} hasPicture={row.applicantHasPicture} size="md" />
+									<div class="ess-row__body">
+										<span class="ess-row__title">{row.applicant.fullName}</span>
+										<span class="ess-row__meta">{row.type.name} · {fmtRange(String(row.application.startDate).slice(0, 10), String(row.application.endDate).slice(0, 10))} · {Number(row.application.days)} day{Number(row.application.days) === 1 ? '' : 's'}</span>
+									</div>
+									<div class="ess-row__end">
+										<button class="ess-btn ess-btn--primary ess-btn--sm" onclick={() => decide(row.application.id, 'approve')}>Approve</button>
+										<button class="ess-btn ess-btn--outline ess-btn--sm" onclick={() => decide(row.application.id, 'reject')}>Reject</button>
+									</div>
+								</div>
+							{/each}
+						{/if}
+						{#if !data.missingCheckOuts.length && !data.pendingCount && !(canApprove && data.approvalQueue.length)}
+							<p class="empty ok"><CircleCheck size={16} /> You’re all caught up.</p>
+						{/if}
+					</div>
+				</section>
 
-</details>
+				<section class="ess-card ins-card" aria-labelledby="act-h">
+					<div class="ess-card-head">
+						<h2 id="act-h" class="ess-h2">Recent activity</h2>
+						<a class="ess-link" href="/attendance">All <ChevronRight size={14} /></a>
+					</div>
+					<div class="ess-scroll ins-body ess-rows">
+						{#each data.activity as a (a.key)}
+							{@const b = badge(a.status)}
+							<div class="ess-row activity">
+								<span class="when">{activityWhen(a.at)}</span>
+								<span class="ess-tile ess-tile--sm ess-tile--neutral">
+									{#if a.kind === 'checkin'}<Clock size={16} />{:else if a.kind === 'leave'}<Plane size={16} />{:else}<FileText size={16} />{/if}
+								</span>
+								<div class="ess-row__body">
+									<span class="ess-row__title">{a.title}</span>
+									<span class="ess-row__meta">{a.detail}</span>
+								</div>
+								<div class="ess-row__end"><span class="ess-badge ess-badge--{b.tone}">{b.label}</span></div>
+							</div>
+						{:else}
+							<p class="empty">Nothing yet. Your check-ins, leave requests and corrections appear here.</p>
+						{/each}
+					</div>
+				</section>
+			</div>
+
+			<div class="ins-col">
+				<section class="ess-card ins-card req-card" aria-labelledby="req-h">
+					<div class="ess-card-head">
+						<h2 id="req-h" class="ess-h2">Request progress</h2>
+						<a class="ess-link" href="/leave" aria-label="All requests"><ChevronRight size={16} /></a>
+					</div>
+					<div class="ess-scroll ins-body">
+						{#if data.latestRequest}
+							{@const r = data.latestRequest}
+							<div class="req">
+								<span class="ess-tile"><Plane size={20} strokeWidth={1.75} /></span>
+								<div class="req-body">
+									<strong>{r.typeName}</strong>
+									<span>{fmtRange(r.startDate, r.endDate)}</span>
+								</div>
+								<span class="ess-badge ess-badge--accent">{r.days} day{r.days === 1 ? '' : 's'}</span>
+							</div>
+							<ol class="ess-stepper">
+								{#each steps as s (s.label)}
+									<li class="ess-step" data-state={s.state}>
+										<span class="ess-step__dot">{#if s.state === 'done'}<Check size={12} strokeWidth={3} />{/if}</span>
+										<span class="ess-step__label">{s.label}</span>
+										<span class="ess-step__meta">{s.meta}</span>
+									</li>
+								{/each}
+							</ol>
+							{#if r.status === 'pending'}
+								<div class="ess-notice ess-notice--info">
+									<span class="ess-notice__icon"><Info size={15} /></span>
+									<div class="ess-notice__body"><strong>Your manager is reviewing your request.</strong>We’ll notify you as soon as there’s an update.</div>
+								</div>
+							{:else if r.status === 'escalated'}
+								<div class="ess-notice ess-notice--info">
+									<span class="ess-notice__icon"><Info size={15} /></span>
+									<div class="ess-notice__body"><strong>Your manager approved it; HR decides next.</strong>We’ll notify you as soon as there’s an update.</div>
+								</div>
+							{/if}
+						{:else}
+							<p class="empty">No leave requests yet. <a href="/leave/apply">Apply for leave</a> and track it here.</p>
+						{/if}
+					</div>
+				</section>
+
+				<section class="ess-card ins-card" aria-labelledby="month-h">
+					<div class="ess-card-head">
+						<h2 id="month-h" class="ess-h2">Hours this month</h2>
+						<span class="ess-caption">{data.analytics.recordedDays} days · {data.analytics.recordedHours} hrs</span>
+					</div>
+					<div class="bars" role="img" aria-label="Recorded hours per day this month: {data.analytics.recordedHours} hours over {data.analytics.recordedDays} days">
+						{#each monthDays as d (d.date)}
+							<span class="bar" class:future={d.future} class:open={d.recorded && !d.complete} style:--h="{Math.max(d.recorded ? 8 : 3, (d.hours / maxHours) * 100)}%" title="{d.label}: {d.future ? 'upcoming' : d.recorded ? (d.complete ? `${d.hours} hrs` : 'check-out missing') : 'no punch'}"></span>
+						{/each}
+					</div>
+					<div class="bar-axis"><span>1</span><span>{monthDays.length}</span></div>
+				</section>
+
+				<section class="ess-card ins-card" aria-labelledby="up-h">
+					<div class="ess-card-head">
+						<h2 id="up-h" class="ess-h2">Coming up</h2>
+						<a class="ess-link" href="/hub/meetings">Meetings <ChevronRight size={14} /></a>
+					</div>
+					<div class="ess-scroll ins-body ess-rows">
+						{#each upcomingMeetings as m (m.id)}
+							<a class="ess-row" href={meetingHref(m)}>
+								<span class="ess-tile ess-tile--sm"><Video size={16} /></span>
+								<div class="ess-row__body"><span class="ess-row__title">{m.topic}</span><span class="ess-row__meta">Today · {timeIst(m.startedAt)}</span></div>
+							</a>
+						{/each}
+						{#each data.upcomingHolidays as holiday (holiday.id)}
+							<a class="ess-row" href="/policies">
+								<span class="ess-date-tile"><strong>{new Date(holiday.date + 'T00:00:00').getDate()}</strong><small>{new Date(holiday.date + 'T00:00:00').toLocaleDateString('en-IN', { month: 'short' })}</small></span>
+								<div class="ess-row__body"><span class="ess-row__title">{holiday.name}</span><span class="ess-row__meta">{fmtHolidayDate(holiday.date)} · {holiday.type.toLowerCase()} holiday</span></div>
+							</a>
+						{/each}
+						{#if !upcomingMeetings.length && !data.upcomingHolidays.length}
+							<p class="empty">No meetings later today and no published holidays ahead.</p>
+						{/if}
+					</div>
+				</section>
+			</div>
+		</div>
+	</div>
+{/snippet}
 
 <style>
 	/* ---------- one-screen home ---------- */
@@ -417,12 +477,7 @@
 		/* Grows to fill the screen, never shrinks below what its cards need. */
 		:global(.ess-content > .home) { flex:1 0 auto; }
 		.home :global(.planner) { max-height:58vh; }
-		:global(.ess-content:has(.workspace-details[open]) > .home) { display:none; }
-		.workspace-details { flex:0 0 auto; }
-		.workspace-details[open] > summary { position:sticky; top:0; background:var(--ess-glass-solid); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); z-index:2; }
 	}
-	.workspace-details > summary { cursor: pointer; padding: 10px 2px 0; color: var(--ess-primary-text); font-weight: 500; font-size: 13px; }
-	.workspace-details[open] > summary { margin-bottom: 12px; padding-bottom: 8px; }
 
 	.home {
 		display: grid;
@@ -547,10 +602,6 @@
 		.lower {
 			gap: 12px;
 		}
-		.workspace-details > summary {
-			padding: 2px 2px 0;
-			font-size: 12px;
-		}
 	}
 
 	@media (max-width: 1100px) {
@@ -584,13 +635,7 @@
 			font-size: 24px;
 		}
 	}
-	.today {
-		--ess-aside-width: 400px;
-	}
 
-	.ess-day.quiet {
-		cursor: default;
-	}
 
 	.empty {
 		margin: 0;
@@ -696,83 +741,7 @@
 	}
 
 	/* ---------- HR summary ---------- */
-	.summary {
-		display: grid;
-		gap: 0;
-		border: 1px solid var(--ess-border);
-		border-radius: var(--ess-radius-md);
-		overflow: hidden;
-	}
-	.summary-top {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 16px;
-		padding: 16px 18px;
-		border-bottom: 1px solid var(--ess-border);
-	}
-	.summary-top > div:first-child {
-		display: grid;
-		gap: 2px;
-	}
 	.s-label,
-	.s-head {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		font-size: 13.5px;
-		color: var(--ess-text-secondary);
-	}
-	.s-value {
-		font-family: var(--ess-font-display);
-		font-size: 30px;
-		font-weight: 600;
-		line-height: 1.1;
-		color: var(--ess-text);
-		font-variant-numeric: tabular-nums;
-	}
-	.s-value small {
-		font-size: 16px;
-		font-weight: 500;
-		margin-left: 2px;
-	}
-	.s-meta {
-		font-size: 12.5px;
-		color: var(--ess-text-muted);
-	}
-	.spark {
-		display: flex;
-		align-items: flex-end;
-		gap: 4px;
-		height: 36px;
-		width: 110px;
-	}
-	.spark span {
-		flex: 1;
-		border-radius: 3px;
-		background: var(--ess-primary);
-		opacity: 0.7;
-	}
-	.summary-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-	}
-	.s-cell {
-		display: grid;
-		gap: 4px;
-		padding: 16px 18px;
-		color: inherit;
-		transition: background var(--ess-t-fast);
-	}
-	.s-cell:first-child {
-		border-right: 1px solid var(--ess-border);
-	}
-	.s-cell:hover {
-		background: var(--ess-sunken);
-	}
-	.s-cell .s-value {
-		font-size: 24px;
-	}
 
 	/* ---------- request progress ---------- */
 	.req {
@@ -802,12 +771,6 @@
 		margin-bottom: 16px;
 	}
 
-	.action-list {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-		margin: -6px -10px;
-	}
 
 	@media (max-width: 720px) {
 		.tl {
@@ -820,13 +783,6 @@
 			grid-column: 3;
 			justify-content: flex-start;
 			margin-top: 8px;
-		}
-		.summary-grid {
-			grid-template-columns: 1fr;
-		}
-		.s-cell:first-child {
-			border-right: none;
-			border-bottom: 1px solid var(--ess-border);
 		}
 	}
 
@@ -841,6 +797,229 @@
 		.hello h1 {
 			margin: 0;
 			white-space: nowrap;
+		}
+	}
+
+	/* ---------- header: view tabs ---------- */
+	.view-tabs {
+		flex: none;
+	}
+	.figures.hide .fig {
+		display: none;
+	}
+
+	/* ---------- Timeline & analytics ---------- */
+	.insights {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		min-height: 0;
+	}
+	.ins-figs {
+		flex: none;
+		grid-auto-columns: minmax(0, 1fr);
+	}
+	.ins-figs .ess-figure {
+		padding: 10px 14px;
+		gap: 10px;
+		color: inherit;
+		text-decoration: none;
+	}
+	.ins-figs .ess-figure:hover {
+		background: var(--ess-surface-hover);
+	}
+	.ins-figs .ess-figure__value {
+		font-size: 19px;
+	}
+	.ins-figs .ess-figure__value small {
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--ess-text-muted);
+	}
+	.ins-figs .ess-figure__value.tenure {
+		font-size: 15px;
+	}
+	.ins-figs .ess-figure__label {
+		font-size: 12px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.ins-figs .ess-figure > div {
+		min-width: 0;
+	}
+	.ins-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
+		gap: 14px;
+		min-height: 0;
+	}
+	.ins-col {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		min-width: 0;
+		min-height: 0;
+	}
+	.ins-card {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+		min-height: 0;
+	}
+	.ins-card > :global(.ess-card-head) {
+		flex: none;
+	}
+	.ins-body {
+		min-height: 0;
+	}
+	.ins-card .empty {
+		margin: 6px 0 0;
+	}
+	.ins-card .empty.ok {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+	/* The week, as small day pills in the timeline's header. */
+	.week {
+		display: flex;
+		gap: 3px;
+		margin-left: auto;
+	}
+	.wk {
+		display: grid;
+		justify-items: center;
+		min-width: 28px;
+		padding: 2px 4px;
+		border-radius: 8px;
+		font-size: 12px;
+		font-weight: 600;
+		line-height: 1.15;
+		color: var(--ess-text-secondary);
+		font-variant-numeric: tabular-nums;
+	}
+	.wk small {
+		font-size: 9.5px;
+		font-weight: 500;
+		color: var(--ess-text-muted);
+	}
+	.wk[aria-current='date'] {
+		background: var(--ess-primary);
+		color: var(--ess-text-on-primary);
+	}
+	.wk[aria-current='date'] small {
+		color: inherit;
+		opacity: 0.85;
+	}
+	/* Quick actions: a compact two-column list under the timeline. */
+	.quick {
+		flex: none;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0 12px;
+		margin-top: 8px;
+		padding-top: 8px;
+		border-top: 1px solid var(--ess-border-subtle);
+	}
+	.quick :global(.row) {
+		padding: 3px 6px;
+		gap: 8px;
+		font-size: 13px;
+	}
+	.quick :global(.ess-tile) {
+		width: 24px;
+		height: 24px;
+	}
+	.quick :global(.ess-tile svg) {
+		width: 14px;
+		height: 14px;
+	}
+	/* Hours this month: one slim bar per day. */
+	.bars {
+		flex: 1 1 auto;
+		min-height: 56px;
+		display: flex;
+		align-items: flex-end;
+		gap: 3px;
+	}
+	.bar {
+		flex: 1 1 0;
+		height: var(--h);
+		min-height: 3px;
+		border-radius: 3px 3px 1px 1px;
+		background: var(--ess-primary);
+		opacity: 0.85;
+	}
+	.bar.open {
+		background: var(--ess-warning);
+	}
+	.bar.future {
+		background: var(--ess-border);
+		opacity: 1;
+	}
+	.bar-axis {
+		display: flex;
+		justify-content: space-between;
+		margin-top: 4px;
+		font-size: 11px;
+		color: var(--ess-text-muted);
+	}
+
+	/* Desktop: the view fills the screen; long lists scroll in their card. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.home:has(> .insights) {
+			grid-template-rows: auto minmax(0, 1fr);
+		}
+		.insights {
+			height: 100%;
+		}
+		.ins-grid {
+			flex: 1 1 0%;
+		}
+		.ins-grid > .ins-card,
+		.ins-col > .ins-card {
+			flex: 1 1 0%;
+		}
+		.ins-col > .req-card {
+			flex: 0 1 auto;
+			max-height: 45%;
+		}
+		.ins-body {
+			flex: 1 1 0%;
+		}
+	}
+	@media (min-width: 721px) and (max-height: 760px) {
+		.insights,
+		.ins-grid,
+		.ins-col {
+			gap: 12px;
+		}
+		.ins-figs .ess-figure {
+			padding: 7px 12px;
+		}
+		.ins-figs .ess-figure__value {
+			font-size: 17px;
+		}
+	}
+	@media (max-width: 1100px) {
+		.ins-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.ins-grid > .ins-card {
+			grid-column: 1 / -1;
+		}
+		.ins-figs {
+			grid-auto-flow: row;
+			grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+		}
+	}
+	@media (max-width: 720px) {
+		.ins-grid {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.week {
+			display: none;
 		}
 	}
 </style>
