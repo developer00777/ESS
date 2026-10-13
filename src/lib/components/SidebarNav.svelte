@@ -43,6 +43,21 @@
 		chatBadge = { count: 0, urgent: false }
 	}: Props = $props();
 
+	/* Dock behaviour (desktop and tablet): the rail hides off the left edge
+	   and slides in when the pointer reaches the edge, or when it takes
+	   keyboard focus; it slides away shortly after the pointer leaves. */
+	let shown = $state(false);
+	let hideTimer: ReturnType<typeof setTimeout> | undefined;
+	function reveal() {
+		clearTimeout(hideTimer);
+		shown = true;
+	}
+	function hideSoon(delay = 450) {
+		clearTimeout(hideTimer);
+		hideTimer = setTimeout(() => (shown = false), delay);
+	}
+	$effect(() => () => clearTimeout(hideTimer));
+
 	type NavItem = { href: string; label: string; icon: typeof Calendar; soon?: boolean };
 
 	const items = $derived.by((): NavItem[] => [
@@ -62,7 +77,21 @@
 		href === '/dashboard' ? activePath === '/dashboard' || activePath === '/' : activePath === href || activePath.startsWith(href + '/');
 </script>
 
-<nav class="rail" aria-label="Main">
+<!-- The edge the pointer touches to bring the dock in; a faint handle
+     hints that it is there. -->
+<div class="dock-edge" aria-hidden="true" onpointerenter={reveal}><span class="dock-handle"></span></div>
+
+<nav
+	class="rail"
+	class:shown
+	aria-label="Main"
+	onpointerenter={reveal}
+	onpointerleave={() => hideSoon()}
+	onfocusin={reveal}
+	onfocusout={(e) => {
+		if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) hideSoon(0);
+	}}
+>
 	<div class="brand">
 		<a href="/dashboard" class="brand-link" aria-label="Champ HR, Today">
 			<span class="brand-mark" aria-hidden="true">
@@ -245,6 +274,56 @@
 	.nav-item:focus-visible::after {
 		opacity: 1;
 		transform: translateY(-50%) translateX(0);
+	}
+
+	/* ---------- dock: hidden until the pointer reaches the left edge ---------- */
+	.dock-edge {
+		display: none;
+	}
+	@media (min-width: 721px) {
+		.dock-edge {
+			display: block;
+			position: fixed;
+			left: 0;
+			top: 0;
+			bottom: 0;
+			width: 12px;
+			z-index: 39;
+		}
+		.dock-handle {
+			position: absolute;
+			left: 3px;
+			top: 50%;
+			width: 4px;
+			height: 44px;
+			margin-top: -22px;
+			border-radius: 4px;
+			background: var(--ess-text-muted);
+			opacity: 0.22;
+			transition: opacity 0.2s ease;
+		}
+		.dock-edge:hover .dock-handle {
+			opacity: 0.45;
+		}
+		.rail {
+			transform: translate(calc(-100% - var(--ess-rail-left) - 8px), -50%);
+			opacity: 0;
+			transition:
+				transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1),
+				opacity 0.2s ease;
+		}
+		.rail.shown {
+			transform: translateY(-50%);
+			opacity: 1;
+			box-shadow:
+				0 1px 2px rgba(20, 22, 40, 0.06),
+				0 24px 50px -16px rgba(20, 22, 40, 0.35);
+		}
+	}
+	@media (min-width: 721px) and (prefers-reduced-motion: reduce) {
+		.rail {
+			transition: opacity 0.15s ease;
+		}
 	}
 
 	/* Phones: an ordinary narrow rail down the left edge. */

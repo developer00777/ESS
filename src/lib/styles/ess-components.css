@@ -29,10 +29,17 @@ html {
 body {
 	font-family: var(--ess-font-sans);
 	font-size: var(--ess-fs-body);
-	line-height: 1.55;
+	line-height: 1.5;
 	color: var(--ess-text);
 	background: var(--ess-canvas);
+	/* macOS-style text: grayscale smoothing, optical sizes, SF's slightly
+	   tighter tracking. */
 	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
+	font-optical-sizing: auto;
+	font-kerning: normal;
+	letter-spacing: -0.008em;
 	transition:
 		background var(--ess-t),
 		color var(--ess-t);
@@ -219,7 +226,7 @@ textarea {
 	margin-bottom: 10px;
 }
 .ess-card-head .ess-h2 {
-	font-size: 15px;
+	font-size: 16px;
 }
 .ess-link {
 	display: inline-flex;
@@ -1780,6 +1787,22 @@ button.ess-row:hover {
 	}
 }
 
+/* Large displays: the whole interface scales up with the window, so a big
+   monitor shows the same layout larger instead of tiny text in a sea of
+   space. The height is divided by the zoom so it still fills the screen. */
+@media (min-width: 1800px) and (min-height: 900px) {
+	.ess-shell {
+		--ui-zoom: 1.15;
+		zoom: var(--ui-zoom);
+		height: calc((100dvh - 2 * var(--ess-shell-inset) * var(--ui-zoom)) / var(--ui-zoom));
+	}
+}
+@media (min-width: 2300px) and (min-height: 1150px) {
+	.ess-shell {
+		--ui-zoom: 1.3;
+	}
+}
+
 .ess-main {
 	position: relative;
 	flex: 1 1 0%;
@@ -1861,7 +1884,7 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 .ess-split {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) var(--ess-aside-width);
-	gap: 14px;
+	gap: 18px;
 	align-items: start;
 }
 .ess-split--wide {
@@ -1875,11 +1898,11 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 }
 .ess-stack {
 	display: grid;
-	gap: 14px;
+	gap: 18px;
 	align-content: start;
 }
 .ess-stack--tight {
-	gap: 10px;
+	gap: 12px;
 }
 
 /* ------------------------------------------------------------
@@ -1913,7 +1936,7 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 	}
 	.ess-tab {
 		padding: 5px 14px;
-		font-size: 13px;
+		font-size: 13.5px;
 	}
 	.ess-card {
 		--card-px: 14px;
@@ -1925,7 +1948,7 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 	}
 	.ess-split,
 	.ess-stack {
-		gap: 10px;
+		gap: 14px;
 	}
 	.ess-btn:not(.ess-btn--sm):not(.ess-btn--icon) {
 		height: 32px;
@@ -2150,16 +2173,18 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
    and an inner highlight. Pink Leave keeps its tint (.ess-pink-wash).
 ------------------------------------------------------------ */
 .ess-shell {
-	--glow-a: color-mix(in srgb, var(--ess-primary) 34%, transparent);
-	--glow-b: color-mix(in srgb, #8b5cf6 30%, transparent);
-	--glow-c: color-mix(in srgb, #ec4899 22%, transparent);
-	--glow-d: color-mix(in srgb, #06b6d4 24%, transparent);
-	--glass-fill: linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.36));
-	--glass-edge: rgba(255, 255, 255, 0.9);
+	/* Light: sleek and quiet — a soft grey workspace, crisp near-white
+	   cards with a hairline edge and a whisper of shadow, no colour glows.
+	   (Dark mode, below, keeps the lit glass.) */
+	--glow-a: transparent;
+	--glow-b: transparent;
+	--glow-c: transparent;
+	--glow-d: transparent;
+	--glass-fill: linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92));
+	--glass-edge: rgba(0, 0, 0, 0.07);
 	--glass-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.95),
-		inset 0 0 0 1px rgba(255, 255, 255, 0.25),
-		0 12px 32px -12px rgba(40, 46, 120, 0.3);
+		0 1px 1px rgba(0, 0, 0, 0.03),
+		0 6px 20px -10px rgba(0, 0, 0, 0.1);
 	background:
 		radial-gradient(42% 52% at 8% 12%, var(--glow-a), transparent 70%),
 		radial-gradient(38% 46% at 94% 8%, var(--glow-b), transparent 70%),
@@ -2230,7 +2255,7 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 .ess-shell .ess-card:hover,
 .ess-shell .ess-metric:hover,
 .ess-shell .ess-figures:hover {
-	--spot: color-mix(in srgb, var(--ess-primary) 24%, transparent);
+	--spot: color-mix(in srgb, var(--ess-primary) 9%, transparent);
 }
 [data-ess-theme='dark'] .ess-shell .ess-card:hover,
 [data-ess-theme='dark'] .ess-shell .ess-metric:hover,
@@ -2256,3 +2281,14 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 	-webkit-backdrop-filter: none;
 	backdrop-filter: none;
 }
+
+/* SF Symbols-like icon weight: default-weight icons draw a finer line;
+   icons given a deliberate weight keep it. */
+svg.lucide[stroke-width='2'] {
+	stroke-width: 1.65;
+}
+svg.lucide {
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+

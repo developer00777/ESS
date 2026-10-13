@@ -513,7 +513,7 @@
 	@media (min-width: 721px) and (max-height: 760px) {
 		.home {
 			grid-template-rows: auto minmax(0, max-content) minmax(0, 1fr);
-			gap: 8px;
+			gap: 12px;
 		}
 		.home :global(.planner) {
 			max-height: 44vh;
@@ -545,7 +545,7 @@
 			font-size: 11px;
 		}
 		.lower {
-			gap: 8px;
+			gap: 12px;
 		}
 		.workspace-details > summary {
 			padding: 2px 2px 0;

@@ -81,7 +81,7 @@
 		if (!cluster) return;
 		const el = cluster;
 		const root = document.documentElement;
-		const ro = new ResizeObserver(() => root.style.setProperty('--topbar-w', `${Math.ceil(el.getBoundingClientRect().width)}px`));
+		const ro = new ResizeObserver(() => root.style.setProperty("--topbar-w", `${el.offsetWidth}px`));
 		ro.observe(el);
 		return () => ro.disconnect();
 	});

@@ -26,11 +26,11 @@
 	color-scheme: light;
 
 	/* ---------- Accent ---------- */
-	--acc: #2f43e6; /* royal blue: buttons, active marks, links */
-	--acc2: #a8b2f6; /* periwinkle: second data series, soft marks */
-	--acc-soft: #a8b2f6;
-	--glow: rgba(47, 67, 230, 0.18);
-	--ring: rgba(47, 67, 230, 0.22);
+	--acc: #0071e3; /* Apple blue: buttons, active marks, links */
+	--acc2: #8fbdf5; /* second data series, soft marks */
+	--acc-soft: #8fbdf5;
+	--glow: rgba(0, 113, 227, 0.16);
+	--ring: rgba(0, 113, 227, 0.22);
 
 	/* ---------- Surface recipes (flat; names kept for old styles) ---------- */
 	--ess-glass-bg: rgba(255, 255, 255, 0.6);
@@ -85,24 +85,24 @@
 	   surface  → white cards and panels
 	   sunken   → faint inset areas inside a surface
 	   inverse  → the sidebar pane (light too, slightly warmer) */
-	--ess-backdrop: #e9eaee; /* behind the workspace */
-	--ess-shell-border: rgba(255, 255, 255, 0.85);
-	--ess-canvas: #f1f1f3; /* the workspace */
+	--ess-backdrop: #e8e8ed; /* behind the workspace */
+	--ess-shell-border: rgba(0, 0, 0, 0.06);
+	--ess-canvas: #f5f5f7; /* the workspace */
 	--ess-surface: #ffffff;
-	--ess-surface-hover: #f3f3f6;
-	--ess-sunken: #f2f2f5;
+	--ess-surface-hover: #f5f5f7;
+	--ess-sunken: #f5f5f7;
 	--ess-inverse: #ffffff;
 	--ess-inverse-raised: #ffffff;
 
-	--ess-border: #e6e6ea;
-	--ess-border-subtle: #eeeef1;
-	--ess-border-strong: #d3d3da;
+	--ess-border: #e3e3e8;
+	--ess-border-subtle: #ebebef;
+	--ess-border-strong: #d2d2d7;
 	--ess-border-inverse: #e6e6ea;
 
 	/* ---------- Semantic text ---------- */
-	--ess-text: #15171c;
-	--ess-text-secondary: #464951;
-	--ess-text-muted: #6b6e76; /* 4.9:1 on white */
+	--ess-text: #1d1d1f;
+	--ess-text-secondary: #424245;
+	--ess-text-muted: #6e6e73; /* 5.1:1 on white */
 	--ess-text-on-primary: #ffffff;
 	--ess-text-inverse: #15171c;
 	--ess-text-inverse-secondary: #464951;
@@ -115,14 +115,14 @@
 
 	/* ---------- Interactive ---------- */
 	--ess-primary: var(--acc);
-	--ess-primary-hover: #2537d4;
-	--ess-primary-press: #1d2cb4;
-	--ess-primary-soft: #e8ebfd; /* active nav, selected rows */
-	--ess-primary-softer: #f3f4fe;
-	--ess-primary-ring: rgba(47, 67, 230, 0.32);
+	--ess-primary-hover: #0077ed;
+	--ess-primary-press: #0062c4;
+	--ess-primary-soft: #e8f1fc; /* active nav, selected rows */
+	--ess-primary-softer: #f4f8fe;
+	--ess-primary-ring: rgba(0, 113, 227, 0.3);
 	--ess-focus-ring: 0 0 0 3px var(--ess-primary-ring);
-	--ess-primary-text: #2537d4; /* 7.6:1 on white */
-	--ess-primary-shadow: 0 8px 18px -8px rgba(47, 67, 230, 0.6);
+	--ess-primary-text: #0062c4; /* 5.6:1 on white */
+	--ess-primary-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 
 	/* ---------- Calendar fills (absence planner bars, legends) ---------- */
 	--ess-ev-blue: #1f3fb0;
@@ -184,27 +184,30 @@
 	--ess-space-14: 56px;
 
 	/* ---------- Type ---------- */
-	--ess-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
-	--ess-font-display: var(--ess-font-sans);
-	--ess-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+	/* San Francisco on Apple devices (built in); elsewhere Inter, the
+	   closest open match, tuned below to read like it. SF can't be served
+	   from the site — Apple licenses it for Apple platforms only. */
+	--ess-font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro', 'Inter', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
+	--ess-font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro', 'Inter', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
+	--ess-font-mono: 'SF Mono', ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, monospace;
 
 	--ess-fs-display: 56px; /* sign-in marquee */
 	--ess-fs-title: 22px; /* page title */
-	--ess-fs-h2: 15px; /* section heading */
+	--ess-fs-h2: 16px; /* section heading */
 	--ess-fs-h3: 15px; /* card heading */
 	--ess-fs-body-lg: 16px;
 	--ess-fs-body: 14px; /* dense UI default */
-	--ess-fs-caption: 12.5px;
+	--ess-fs-caption: 13px;
 	--ess-fs-eyebrow: 11px;
 	--ess-fs-stat: 20px; /* stat card value */
 
 	/* ---------- Layout ---------- */
-	/* The workspace floats on the backdrop with --ess-shell-inset around it;
-	   the icon pill sits at --ess-rail-left and overlaps its left edge, so
-	   the workspace's own left padding clears it. */
+	/* The workspace floats on the backdrop with --ess-shell-inset around it.
+	   The icon dock (SidebarNav) hides off the left edge and slides in over
+	   the workspace at --ess-rail-left, so no room is kept for it. */
 	--ess-shell-inset: 12px;
-	--ess-shell-inset-left: 40px;
-	--ess-shell-pad-left: 44px;
+	--ess-shell-inset-left: 12px;
+	--ess-shell-pad-left: 0px;
 	--ess-rail-left: 10px;
 	--ess-rail-width: 60px;
 	--ess-rail-width-collapsed: 60px;

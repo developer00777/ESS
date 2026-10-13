@@ -77,8 +77,10 @@
 	}
 	.bar-title {
 		margin: 0;
-		font-size: 19px;
+		font-size: 21px;
 		line-height: 1.2;
+		font-weight: 650;
+		letter-spacing: -0.022em;
 		white-space: nowrap;
 	}
 	.bar-tabs {
@@ -120,7 +122,7 @@
 			margin-bottom: 8px;
 		}
 		.bar-title {
-			font-size: 17px;
+			font-size: 19px;
 		}
 	}
 	/* Narrow screens: name and actions on a line, the tabs below in full. */
