@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
 	import Calendar from '@lucide/svelte/icons/calendar';
 	import Layers from '@lucide/svelte/icons/layers';
@@ -104,12 +105,7 @@
 	<title>Apply for leave — Champ HR</title>
 </svelte:head>
 
-<a href="/leave" class="back"><ArrowLeft size={18} /> Back to Leave</a>
-
-<header class="head">
-	<h1 class="ess-page-title">Plan your time away.</h1>
-	<p class="ess-page-sub">Submit a leave request and we’ll take care of the rest.</p>
-</header>
+<PageHeader crumb={[{ label: 'Leave', href: '/leave' }, 'Apply for leave']} title="Plan your time away." sub="Submit a leave request and we’ll take care of the rest." />
 
 <div class="ess-split ess-fill apply">
 	<div class="fill-col">
@@ -302,27 +298,6 @@
 </div>
 
 <style>
-	.back {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		font-size: 13px;
-		color: var(--ess-text-secondary);
-		margin-bottom: 6px;
-		align-self: flex-start;
-	}
-	.back:hover {
-		color: var(--ess-text);
-	}
-	.head {
-		display: grid;
-		gap: 2px;
-		margin-bottom: 12px;
-	}
-	.head .ess-page-sub {
-		margin-top: 0;
-	}
-
 	.apply {
 		--ess-aside-width: 400px;
 	}

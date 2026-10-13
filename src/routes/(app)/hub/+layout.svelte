@@ -93,7 +93,7 @@
 	{#if head && !ownHeader}
 		<PageHeader crumb={['Champ Hub']} title={head.title} sub={head.sub} compact>
 			{#snippet actions()}
-				<button type="button" class="search" onclick={() => (hub.paletteOpen = true)}>
+				<button type="button" class="search" onclick={() => (hub.paletteOpen = true)} aria-label="Search or ask Champ">
 					<Search size={16} />
 					<span>Search or ask Champ…</span>
 					<kbd class="ess-kbd">Ctrl K</kbd>
@@ -102,18 +102,25 @@
 					<Plus size={17} /> <span>New task</span>
 				</button>
 			{/snippet}
+			{#snippet tabs()}{@render hubTabs()}{/snippet}
 		</PageHeader>
+	{:else}
+		<!-- A page with its own header (a conversation, a meeting): the tabs
+		     keep their own row, clear of the top-bar cluster. -->
+		<div class="own-tabs">{@render hubTabs()}</div>
 	{/if}
 
-	<nav class="ess-tabs tabs" aria-label="Champ Hub">
-		{#each tabs as t (t.href)}
-			<a href={t.href} class="ess-tab" aria-current={t.on ? 'page' : undefined}>
-				<t.icon size={17} strokeWidth={1.75} />
-				{t.label}
-				{#if t.count > 0}<span class="ess-count" aria-label="{t.count} waiting">{t.count > 99 ? '99+' : t.count}</span>{/if}
-			</a>
-		{/each}
-	</nav>
+	{#snippet hubTabs()}
+		<nav class="ess-tabs tabs" aria-label="Champ Hub">
+			{#each tabs as t (t.href)}
+				<a href={t.href} class="ess-tab" aria-current={t.on ? 'page' : undefined}>
+					<t.icon size={17} strokeWidth={1.75} />
+					{t.label}
+					{#if t.count > 0}<span class="ess-count" aria-label="{t.count} waiting">{t.count > 99 ? '99+' : t.count}</span>{/if}
+				</a>
+			{/each}
+		</nav>
+	{/snippet}
 
 	<div class="page">
 		{@render children()}
@@ -288,6 +295,36 @@
 	@media (prefers-reduced-motion: reduce) {
 		:global(.hub-drag-ghost) {
 			transform: none;
+		}
+	}
+
+	@media (min-width: 1101px) {
+		.own-tabs {
+			padding-right: calc(var(--topbar-w, 380px) + 14px);
+			min-height: 38px;
+			display: flex;
+			align-items: center;
+		}
+	}
+	/* The header row is shared with the top-bar cluster: the palette button
+	   shows just its icon until there's room for its label. */
+	/* Desktop: the top bar's search opens this same palette, so the page
+	   row doesn't repeat it. */
+	@media (min-width: 1101px) {
+		.search {
+			display: none !important;
+		}
+	}
+	@media (max-width: 1500px) {
+		.search {
+			min-width: 0;
+			width: 36px;
+			padding: 0;
+			justify-content: center;
+		}
+		.search > span,
+		.search > :global(kbd) {
+			display: none;
 		}
 	}
 </style>

@@ -73,6 +73,18 @@
 	});
 
 	let menuOpen = $state(false);
+
+	/* On desktop the cluster floats over the top-right of the page and
+	   each page's header row leaves room for it: publish its width. */
+	let cluster = $state<HTMLElement | null>(null);
+	$effect(() => {
+		if (!cluster) return;
+		const el = cluster;
+		const root = document.documentElement;
+		const ro = new ResizeObserver(() => root.style.setProperty('--topbar-w', `${Math.ceil(el.getBoundingClientRect().width)}px`));
+		ro.observe(el);
+		return () => ro.disconnect();
+	});
 	let theme = $state<'light' | 'dark'>('light');
 
 	$effect(() => {
@@ -118,7 +130,7 @@
 		{/each}
 	</nav>
 
-	<div class="right">
+	<div class="right" bind:this={cluster}>
 		<button type="button" class="search" onclick={openSearch} aria-label="Search or ask Champ" title="Search (Ctrl K)">
 			<Search size={15} strokeWidth={2} />
 			<span class="search-label">Search here</span>
@@ -449,11 +461,46 @@
 
 	/* Narrower laptops: the rail carries the sections. */
 	/* Short laptop screens (e.g. 1280×720 at 150% scaling): a slimmer bar. */
-	@media (min-width: 721px) and (max-height: 760px) {
+	/* Desktop: the date and section links give way (the sidebar has the
+	   sections) and the cluster floats at the top right, beside the page's
+	   own header row. */
+	@media (min-width: 1101px) {
+		.topbar {
+			position: absolute;
+			top: var(--bar-top, 14px);
+			right: var(--ess-page-pad-x);
+			z-index: 25;
+			min-height: 0;
+			padding: 0;
+		}
+		.today,
+		.links {
+			display: none;
+		}
+		.right {
+			gap: 8px;
+		}
+	}
+	@media (min-width: 1101px) and (max-width: 1500px) {
+		.search {
+			width: 38px;
+			padding: 0;
+			justify-content: center;
+			background: var(--ess-surface);
+			border-color: var(--ess-border-subtle);
+			color: var(--ess-text-secondary);
+		}
+		.search-label {
+			display: none;
+		}
+	}
+	@media (min-width: 721px) and (max-width: 1100px) and (max-height: 760px) {
 		.topbar {
 			min-height: 50px;
 			padding: 8px var(--ess-page-pad-x) 2px;
 		}
+	}
+	@media (min-width: 721px) and (max-height: 760px) {
 		.search,
 		.add {
 			height: 32px;

@@ -39,7 +39,7 @@
 	};
 
 	const can = (key: string) => (data.adminCaps as string[]).includes(key);
-	const tabs = $derived(visibleAdminTabs(data.adminCaps));
+	const sectionTabs = $derived(visibleAdminTabs(data.adminCaps));
 	const current = $derived(adminTabForPath(page.url.pathname));
 	const severities = $derived(tabSeverities(data.adminIssues));
 	const strip = $derived(current ? data.adminStrips[current.id] : undefined);
@@ -55,7 +55,7 @@
 	type Jump = { label: string; kind: 'Section' | 'Action'; href: string };
 
 	const jumps = $derived.by((): Jump[] => [
-		...tabs.map((t) => ({ label: t.label, kind: 'Section' as const, href: t.href })),
+		...sectionTabs.map((t) => ({ label: t.label, kind: 'Section' as const, href: t.href })),
 		...(can('people.create_login') ? [{ label: 'Create a login', kind: 'Action' as const, href: '/admin/people?create=1' }] : []),
 		...(can('announcements.post') ? [{ label: 'Post an announcement', kind: 'Action' as const, href: '/chat?c=announcements&compose=1' }] : []),
 		...(can('people.directory') ? [{ label: 'Week-off rosters', kind: 'Action' as const, href: '/admin/people?view=weekoff' }] : []),
@@ -163,42 +163,43 @@
 <svelte:window onkeydown={onWindowKey} />
 
 <PageHeader
-	crumb={current && current.id !== 'overview' ? [{ label: 'Admin Controls', href: '/admin' }, current.label] : ['Admin Controls']}
+	crumb={['Admin Controls']}
 	title={current?.heading ?? 'Admin Controls'}
 	sub={current?.blurb}
 	compact
 >
 	{#snippet actions()}
-		<button type="button" class="ess-btn ess-btn--secondary jump-btn" onclick={openJump}>
+		<button type="button" class="ess-btn ess-btn--secondary jump-btn" onclick={openJump} aria-label="Jump to a section or task" title="Jump to… (Ctrl K)">
 			<Search size={15} />
-			Jump to…
+			<span class="jump-label">Jump to…</span>
 			<kbd class="ess-kbd">Ctrl K</kbd>
 		</button>
 	{/snippet}
+	{#snippet tabs()}
+		<nav class="admin-tabs" aria-label="Admin sections" class:fade-l={canLeft} class:fade-r={canRight}>
+			<button type="button" class="tab-arrow left" hidden={!canLeft} onclick={() => scrollTabs(-1)} aria-label="Scroll sections left" tabindex="-1"><ChevronLeft size={16} /></button>
+			<div class="ess-tabs ess-tabs--line tab-row" bind:this={tabBar} onscroll={measureTabs}>
+				{#each sectionTabs as tab, i (tab.id)}
+					{@const Icon = ICONS[tab.id]}
+					{@const sev = severities[tab.id]}
+					{#if i > 0 && sectionTabs[i - 1].group !== tab.group}
+						<span class="group-sep" aria-hidden="true"></span>
+					{/if}
+					<a href={tab.href} class="ess-tab tab" aria-current={current?.id === tab.id ? 'page' : undefined} title={sev ? tabHint(tab.id) : undefined}>
+						<Icon size={16} strokeWidth={1.75} />
+						{tab.label}
+						{#if sev && sev !== 'info'}
+							<span class="dot" data-sev={sev}>
+								<span class="ess-sr-only">— needs attention</span>
+							</span>
+						{/if}
+					</a>
+				{/each}
+			</div>
+			<button type="button" class="tab-arrow right" hidden={!canRight} onclick={() => scrollTabs(1)} aria-label="Scroll sections right" tabindex="-1"><ChevronRight size={16} /></button>
+		</nav>
+	{/snippet}
 </PageHeader>
-
-<nav class="admin-tabs" aria-label="Admin sections" class:fade-l={canLeft} class:fade-r={canRight}>
-	<button type="button" class="tab-arrow left" hidden={!canLeft} onclick={() => scrollTabs(-1)} aria-label="Scroll sections left" tabindex="-1"><ChevronLeft size={16} /></button>
-	<div class="ess-tabs ess-tabs--line tab-row" bind:this={tabBar} onscroll={measureTabs}>
-		{#each tabs as tab, i (tab.id)}
-			{@const Icon = ICONS[tab.id]}
-			{@const sev = severities[tab.id]}
-			{#if i > 0 && tabs[i - 1].group !== tab.group}
-				<span class="group-sep" aria-hidden="true"></span>
-			{/if}
-			<a href={tab.href} class="ess-tab tab" aria-current={current?.id === tab.id ? 'page' : undefined} title={sev ? tabHint(tab.id) : undefined}>
-				<Icon size={16} strokeWidth={1.75} />
-				{tab.label}
-				{#if sev && sev !== 'info'}
-					<span class="dot" data-sev={sev}>
-						<span class="ess-sr-only">— needs attention</span>
-					</span>
-				{/if}
-			</a>
-		{/each}
-	</div>
-	<button type="button" class="tab-arrow right" hidden={!canRight} onclick={() => scrollTabs(1)} aria-label="Scroll sections right" tabindex="-1"><ChevronRight size={16} /></button>
-</nav>
 
 <div class="admin-body ess-fill">
 	{#if strip && strip.length > 0}
@@ -242,21 +243,17 @@
 		gap: 8px;
 	}
 
-	.admin-tabs {
-		position: sticky;
-		top: 0;
-		z-index: 30;
-		margin: 0 calc(-1 * var(--ess-page-pad-x));
-		padding: 0 var(--ess-page-pad-x);
-		background: color-mix(in oklab, var(--ess-canvas) 45%, transparent);
-		backdrop-filter: blur(14px) saturate(160%);
-		-webkit-backdrop-filter: blur(14px) saturate(160%);
-	}
-
+	/* The section tabs sit in the page's header row and scroll sideways
+	   in the room it leaves them. */
 	.admin-tabs {
 		display: flex;
 		align-items: center;
 		gap: 4px;
+		min-width: 0;
+		width: 100%;
+	}
+	:global(.ess-page-head:has(nav.admin-tabs) .bar-tabs) {
+		flex: 1 1 0%;
 	}
 	.tab-row {
 		flex: 1 1 auto;
@@ -480,25 +477,6 @@
 	   summary strip give back as much height as they can, so the page below
 	   keeps room for its cards. */
 	@media (min-width: 1101px) and (max-height: 800px) {
-		/* Title and its one-line blurb share a row under the crumb. */
-		:global(.ess-page-head:has(+ nav.admin-tabs)) {
-			margin-bottom: 4px;
-			align-items: center;
-		}
-		:global(.ess-page-head:has(+ nav.admin-tabs) > .ess-page-head__text) {
-			display: flex;
-			flex-wrap: wrap;
-			align-items: baseline;
-			column-gap: 14px;
-			row-gap: 1px;
-		}
-		:global(.ess-page-head:has(+ nav.admin-tabs) .ess-crumb) {
-			flex-basis: 100%;
-		}
-		:global(.ess-page-head:has(+ nav.admin-tabs) .ess-page-sub) {
-			flex: 1 1 260px;
-			min-width: 0;
-		}
 		.tab {
 			padding-top: 6px;
 			padding-bottom: 6px;
@@ -548,10 +526,19 @@
 	}
 
 	@media (max-width: 720px) {
-		.admin-tabs {
-			margin: 0 -16px;
-			padding: 0 16px;
+		.jump-btn kbd {
+			display: none;
 		}
+	}
+
+	/* The header row is shared with the top-bar cluster: Jump to shows its
+	   icon only until there's room for the label. */
+	@media (min-width: 1101px) and (max-width: 1500px) {
+		.jump-btn.jump-btn {
+			width: 36px;
+			padding: 0;
+		}
+		.jump-label,
 		.jump-btn kbd {
 			display: none;
 		}

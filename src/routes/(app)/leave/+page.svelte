@@ -210,20 +210,21 @@
 			Apply leave
 		</a>
 	{/snippet}
+	{#snippet tabs()}
+		<div class="ess-tabs page-tabs" role="tablist">
+			<button type="button" class="ess-tab" role="tab" aria-selected={tab === 'mine'} onclick={() => (tab = 'mine')}>My leave</button>
+			<button type="button" class="ess-tab" role="tab" aria-selected={tab === 'calendar'} onclick={() => (tab = 'calendar')}>
+				{canSeeNames ? 'Team calendar' : 'Calendar'}
+			</button>
+			{#if canApprove}
+				<button type="button" class="ess-tab" role="tab" aria-selected={tab === 'approvals'} onclick={() => (tab = 'approvals')}>
+					Approvals
+					{#if data.approvalQueue.length > 0}<span class="ess-count">{data.approvalQueue.length}</span>{/if}
+				</button>
+			{/if}
+		</div>
+	{/snippet}
 </PageHeader>
-
-<div class="ess-tabs page-tabs" role="tablist">
-	<button type="button" class="ess-tab" role="tab" aria-selected={tab === 'mine'} onclick={() => (tab = 'mine')}>My leave</button>
-	<button type="button" class="ess-tab" role="tab" aria-selected={tab === 'calendar'} onclick={() => (tab = 'calendar')}>
-		{canSeeNames ? 'Team calendar' : 'Calendar'}
-	</button>
-	{#if canApprove}
-		<button type="button" class="ess-tab" role="tab" aria-selected={tab === 'approvals'} onclick={() => (tab = 'approvals')}>
-			Approvals
-			{#if data.approvalQueue.length > 0}<span class="ess-count">{data.approvalQueue.length}</span>{/if}
-		</button>
-	{/if}
-</div>
 
 {#if tab === 'mine'}
 	<div class="ess-split ess-fill fill-split">

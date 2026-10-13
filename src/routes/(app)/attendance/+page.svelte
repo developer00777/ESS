@@ -91,19 +91,21 @@
 	<title>Attendance — Champ HR ESS Portal</title>
 </svelte:head>
 
-<PageHeader crumb={['Attendance']} title="Attendance, made clear." sub="Track your attendance, view your records and raise corrections when needed." compact />
+<PageHeader crumb={['Attendance']} title="Attendance, made clear." sub="Track your attendance, view your records and raise corrections when needed." compact>
+	{#snippet tabs()}
+		<div class="ess-tabs tabs" role="tablist" aria-label="Attendance views">
+			<button type="button" role="tab" class="ess-tab" aria-selected={view === 'calendar'} onclick={() => (view = 'calendar')}><CalendarDays size={16} strokeWidth={1.75} /> Calendar</button>
+			<button type="button" role="tab" class="ess-tab" aria-selected={view === 'records'} onclick={() => (view = 'records')}><BarChart3 size={16} strokeWidth={1.75} /> Records</button>
+			{#if reviewCount > 0}
+				<button type="button" role="tab" class="ess-tab" aria-selected={view === 'review'} onclick={() => (view = 'review')}><Inbox size={16} strokeWidth={1.75} /> To review <span class="ess-count">{reviewCount}</span></button>
+			{/if}
+		</div>
+	{/snippet}
+</PageHeader>
 
-<!-- The month's figures sit beside the tabs, so the calendar below gets the
-     height for every week of the cycle. -->
+<!-- The month's figures, as a slim strip above the calendar. -->
+{#if view === 'calendar'}
 <div class="topbar">
-	<div class="ess-tabs tabs" role="tablist" aria-label="Attendance views">
-		<button type="button" role="tab" class="ess-tab" aria-selected={view === 'calendar'} onclick={() => (view = 'calendar')}><CalendarDays size={16} strokeWidth={1.75} /> Calendar</button>
-		<button type="button" role="tab" class="ess-tab" aria-selected={view === 'records'} onclick={() => (view = 'records')}><BarChart3 size={16} strokeWidth={1.75} /> Records</button>
-		{#if reviewCount > 0}
-			<button type="button" role="tab" class="ess-tab" aria-selected={view === 'review'} onclick={() => (view = 'review')}><Inbox size={16} strokeWidth={1.75} /> To review <span class="ess-count">{reviewCount}</span></button>
-		{/if}
-	</div>
-	{#if view === 'calendar'}
 		<div class="metrics">
 			<!--
 				Read-only. Attendance is recorded by the biometric terminals and ProHance,
@@ -140,8 +142,8 @@
 				</div>
 			</div>
 		</div>
-	{/if}
 </div>
+{/if}
 
 <div class="ess-split ess-fill layout">
 	<div class="fill-col main-col">

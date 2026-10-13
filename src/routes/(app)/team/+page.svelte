@@ -528,6 +528,7 @@
 				</button>
 			{/if}
 		{/snippet}
+		{#snippet tabs()}{@render viewTabs()}{/snippet}
 	</PageHeader>
 {/if}
 
@@ -537,14 +538,17 @@
 	switch shows one at a time; the choice is kept in the URL (?view=) so a
 	refresh or a shared link lands on the same part.
 -->
-<div class="ess-tabs view-tabs" role="tablist" aria-label="Show">
-	{#each views as v (v.id)}
-		<button type="button" role="tab" class="ess-tab" aria-selected={view === v.id} onclick={() => setView(v.id)}>
-			{v.label}
-			{#if v.count}<span class="ess-count">{v.count}</span>{/if}
-		</button>
-	{/each}
-</div>
+{#snippet viewTabs()}
+	<div class="ess-tabs view-tabs" role="tablist" aria-label="Show">
+		{#each views as v (v.id)}
+			<button type="button" role="tab" class="ess-tab" aria-selected={view === v.id} onclick={() => setView(v.id)}>
+				{v.label}
+				{#if v.count}<span class="ess-count">{v.count}</span>{/if}
+			</button>
+		{/each}
+	</div>
+{/snippet}
+{#if embedded}{@render viewTabs()}{/if}
 
 <!-- ============================== PEOPLE ============================== -->
 {#if view === 'roster'}

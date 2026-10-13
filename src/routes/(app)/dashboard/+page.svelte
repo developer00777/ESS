@@ -163,7 +163,6 @@
 <div class="home">
 	<header class="top">
 		<div class="hello">
-			<span class="eyebrow">Overview</span>
 			<h1>{greeting}, {firstName}</h1>
 		</div>
 		<div class="figures" role="group" aria-label="At a glance">
@@ -436,7 +435,7 @@
 
 	.top {
 		display: flex;
-		align-items: flex-end;
+		align-items: center;
 		justify-content: space-between;
 		flex-wrap: wrap;
 		gap: 10px 24px;
@@ -828,6 +827,20 @@
 		.s-cell:first-child {
 			border-right: none;
 			border-bottom: 1px solid var(--ess-border);
+		}
+	}
+
+	/* Desktop: the greeting row shares its line with the floating top-bar
+	   cluster on the right. */
+	@media (min-width: 1101px) {
+		.top {
+			flex-wrap: nowrap;
+			min-height: 38px;
+			padding-right: calc(var(--topbar-w, 380px) + 14px);
+		}
+		.hello h1 {
+			margin: 0;
+			white-space: nowrap;
 		}
 	}
 </style>

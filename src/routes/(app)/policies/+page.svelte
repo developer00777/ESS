@@ -70,22 +70,22 @@
 	<title>Policies — Champ HR</title>
 </svelte:head>
 
-<PageHeader crumb={['Policies', crumbTab]} title="Answers for your workday." sub="Find leave rules, company policies and holiday information." compact />
-
-<div class="toolbar">
-	<div class="ess-tabs" role="tablist" aria-label="Policy sections">
-		{#each TABS as t (t.id)}
-			<button type="button" role="tab" class="ess-tab" aria-selected={tab === t.id} onclick={() => (tab = t.id)}>
-				<t.icon size={17} strokeWidth={1.75} />
-				{t.label}
-			</button>
-		{/each}
-	</div>
+<PageHeader crumb={['Policies', crumbTab]} title="Answers for your workday." sub="Find leave rules, company policies and holiday information." compact>
+	{#snippet tabs()}
+		<div class="ess-tabs" role="tablist" aria-label="Policy sections">
+			{#each TABS as t (t.id)}
+				<button type="button" role="tab" class="ess-tab" aria-selected={tab === t.id} onclick={() => (tab = t.id)}>
+					<t.icon size={17} strokeWidth={1.75} />
+					{t.label}
+				</button>
+			{/each}
+		</div>
+	{/snippet}
 	<div class="ess-search search">
 		<Search size={17} />
 		<input class="ess-input" type="search" placeholder="Search policies, e.g. leave, comp-off, dress code…" bind:value={q} aria-label="Search policies" />
 	</div>
-</div>
+</PageHeader>
 
 <div class="ess-split ess-fill layout">
 	<div class="main">
