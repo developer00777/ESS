@@ -21,15 +21,6 @@
 		hub.start();
 		started = true;
 	});
-	// Which area of the portal this is; light mode gives each its own accent.
-	const section = $derived.by(() => {
-		const p = page.url.pathname;
-		for (const s of ['hub', 'leave', 'attendance', 'policies', 'team', 'admin', 'profile', 'hr-contacts', 'payroll']) {
-			if (p === `/${s}` || p.startsWith(`/${s}/`)) return s;
-		}
-		return 'home';
-	});
-
 	// Cards glow under the mouse pointer (visual only).
 	$effect(() => cardSpotlight());
 
@@ -45,7 +36,7 @@
 	);
 </script>
 
-<div class="ess-shell" data-section={section}>
+<div class="ess-shell">
 	<SidebarNav
 		activePath={page.url.pathname}
 		role={data.user.role}
