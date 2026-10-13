@@ -134,6 +134,12 @@ function deviceUtcOffset(): string {
 	return /^[+-]\d{2}:\d{2}$/.test(raw) ? raw : DEFAULT_DEVICE_UTC_OFFSET;
 }
 
+/** The device zone as minutes east of UTC (+05:30 → 330), for building shifts. */
+export function deviceUtcOffsetMinutes(): number {
+	const [, sign, h, m] = /^([+-])(\d{2}):(\d{2})$/.exec(deviceUtcOffset())!;
+	return (sign === '-' ? -1 : 1) * (Number(h) * 60 + Number(m));
+}
+
 /**
  * ZKTeco/EasyTime punch_state convention: 0 = check-in, 1 = check-out.
  * Some deployments emit text ("Check In"/"Check Out") or 4/5 for overtime

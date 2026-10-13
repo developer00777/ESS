@@ -12,6 +12,7 @@ import { istMinutes } from '$lib/chat/rules';
  *   celebrations   every 30 min   posts once a day, from 9 am IST
  *   retention      every 6 h      deletes messages older than six months
  *   zoom           every 30 min   summaries whose webhook never arrived (Champ Hub)
+ *   shift alerts   every 5 min    punch-out reminder at 9h, missed punch at 9h 30m
  */
 export function startChatScheduler() {
 	const g = globalThis as { __chatScheduler?: boolean };
@@ -39,6 +40,15 @@ export function startChatScheduler() {
 	});
 	setTimeout(zoom, 90_000);
 	setInterval(zoom, 30 * 60_000);
+	// Punch-out reminder at 9h and missed-punch alert at 9h 30m, for anyone
+	// checked in with the portal closed (an open portal shows its own pop-up).
+	setInterval(
+		safe('shift alerts', async () => {
+			const { sendShiftAlerts } = await import('$lib/server/shift-alerts');
+			await sendShiftAlerts();
+		}),
+		5 * 60_000
+	);
 	const retention = safe('retention', () => applyRetention());
 	setTimeout(retention, 60_000);
 	setInterval(retention, 6 * 3_600_000);

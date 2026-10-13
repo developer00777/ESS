@@ -3,6 +3,7 @@
 	import SidebarNav from '$lib/components/SidebarNav.svelte';
 	import TopBar from '$lib/components/TopBar.svelte';
 	import ApprovalPopup from '$lib/components/hub/ApprovalPopup.svelte';
+	import ShiftReminder from '$lib/components/ShiftReminder.svelte';
 	import { chat } from '$lib/chat/client.svelte';
 	import { hub } from '$lib/hub/client.svelte';
 	import { cardSpotlight } from '$lib/ui/spotlight';
@@ -70,3 +71,5 @@
 
 <!-- Leads: tasks waiting for approval pop up on whatever page they are on. -->
 <ApprovalPopup />
+<!-- Checked in: punch-out reminder at 9h, missed-punch prompt at 9h 30m. -->
+<ShiftReminder />

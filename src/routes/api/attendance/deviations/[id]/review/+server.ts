@@ -7,6 +7,8 @@ import { and, eq } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { canReviewStage, isSingleStageFor } from '$lib/server/approval-chain';
 import { notifyNewRequest, notifyDecision } from '$lib/server/chat/cards';
+import { deviceUtcOffsetMinutes } from '$lib/server/easytime-import';
+import { loadShiftsFor } from '$lib/server/shifts';
 
 /**
  * SOP §2–§4: HR (or the Reporting Manager) decides an attendance correction.
@@ -107,13 +109,29 @@ export const POST: RequestHandler = async (event) => {
 			.where(and(eq(attendance.userId, deviation.userId), eq(attendance.date, deviation.date)))
 			.limit(1);
 
-		// The employee gives wall-clock 'HH:MM' for the day in question; combine the
-		// two into a timestamp the same way a manual punch would be stored.
-		const stamp = (hhmm: string | null) =>
-			hhmm ? new Date(`${deviation.date}T${hhmm}:00`) : null;
+		// The employee gives office wall-clock 'HH:MM' for the shift that day. It is
+		// read in the devices' zone, not the server's: on a UTC host the bare
+		// string landed 5h 30m late.
+		const offset = deviceUtcOffsetMinutes();
+		const stamp = (hhmm: string | null, dayOffset = 0) => {
+			if (!hhmm) return null;
+			const day = new Date(`${deviation.date}T00:00:00Z`);
+			day.setUTCDate(day.getUTCDate() + dayOffset);
+			return new Date(Date.parse(`${day.toISOString().slice(0, 10)}T${hhmm}:00Z`) - offset * 60_000);
+		};
 
+		// The shift credited to that day (built from every punch), so a claimed
+		// check-out is measured against the shift's real check-in rather than the
+		// calendar day's first punch, which may be last night's check-out.
+		const [shift] = await loadShiftsFor(deviation.userId, deviation.date, deviation.date);
 		const checkInAt = stamp(deviation.claimedCheckIn) ?? existing?.checkInAt ?? null;
-		const checkOutAt = stamp(deviation.claimedCheckOut) ?? existing?.checkOutAt ?? null;
+		let checkOutAt = stamp(deviation.claimedCheckOut) ?? existing?.checkOutAt ?? null;
+		// A claimed check-out at or before the check-in ends a shift that ran
+		// past midnight: it is the next morning's time.
+		const shiftStart = stamp(deviation.claimedCheckIn) ?? shift?.checkInAt ?? null;
+		if (deviation.claimedCheckOut && shiftStart && checkOutAt && checkOutAt <= shiftStart) {
+			checkOutAt = stamp(deviation.claimedCheckOut, 1);
+		}
 
 		if (existing) {
 			await db

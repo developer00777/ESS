@@ -23,6 +23,7 @@ import { summaryOf } from '$lib/announcements';
 import { hasCap } from '$lib/server/capabilities';
 import { champConfigured } from '$lib/server/champ/chat';
 import { loadPlanner } from './planner.server';
+import { loadShiftsFor, officeToday } from '$lib/server/shifts';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -54,20 +55,27 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const now = new Date();
 	const monthStart = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
-	const today = dateKey(now);
+	// The office's day (IST): on a UTC host the server's own date lags until 05:30.
+	const today = officeToday(now);
+	const weekAgo = new Date(now.getTime() - 7 * 86_400_000);
 
-	const attendanceRows = await db
-		.select()
-		.from(attendance)
-		.where(and(eq(attendance.userId, user.id), gte(attendance.date, monthStart)));
+	// Attendance by shift, not by calendar-day row: a shift that ends after
+	// midnight is one day present, its check-out is not "missing", and the next
+	// morning is not a second day.
+	const shiftFrom = dateKey(weekAgo) < monthStart ? dateKey(weekAgo) : monthStart;
+	const [attendanceRows, recentShifts] = await Promise.all([
+		db.select().from(attendance).where(and(eq(attendance.userId, user.id), gte(attendance.date, monthStart))),
+		loadShiftsFor(user.id, shiftFrom, today, now)
+	]);
+	const monthShifts = recentShifts.filter((s) => s.date >= monthStart);
 
-	const daysWithCheckIn = attendanceRows.filter((r) => r.checkInAt).length;
+	const daysWithCheckIn = monthShifts.length;
 	const businessDaysSoFar = now.getDate();
 	const attendancePct = businessDaysSoFar > 0 ? Math.round((daysWithCheckIn / businessDaysSoFar) * 100) : 0;
 
 	// Sparkline over the last 7 days: full bar on a day with a check-in, a low
 	// stub otherwise. Real data — the KPI card never shows a decorative trend.
-	const attendanceByDate = new Set(attendanceRows.filter((r) => r.checkInAt).map((r) => dateKey(r.date)));
+	const attendanceByDate = new Set(recentShifts.map((s) => s.date));
 	const attendanceSpark: number[] = [];
 	for (let i = 6; i >= 0; i--) {
 		const d = new Date();
@@ -77,16 +85,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const leaveTypeCount = allocations.length;
 
-	// Today's own punch, for the first entry on the timeline.
-	const todayRow = attendanceRows.find((r) => dateKey(r.date) === today) ?? null;
+	// Today's own shift (or one still running from last evening), for the first
+	// entry on the timeline.
+	const todayShift = recentShifts.find((s) => s.date === today) ?? recentShifts.find((s) => s.inProgress) ?? null;
+	const todaySource = attendanceRows.find((r) => dateKey(r.date) === (todayShift?.date ?? today))?.source ?? 'biometric';
+	const todayRow = todayShift?.checkInAt ? { checkInAt: todayShift.checkInAt, checkOutAt: todayShift.checkOutAt, source: todaySource } : null;
 
-	// Recent days with a check-in but no check-out, which the person may want to
-	// correct. A day already raised as a correction is not nagged about again.
-	const weekAgo = new Date(now.getTime() - 7 * 86_400_000);
-	const recentRows = await db
-		.select({ date: attendance.date, checkInAt: attendance.checkInAt, checkOutAt: attendance.checkOutAt })
-		.from(attendance)
-		.where(and(eq(attendance.userId, user.id), gte(attendance.date, dateKey(weekAgo)), lt(attendance.date, today)));
 	const myDeviations = await db
 		.select({ id: attendanceDeviations.id, date: attendanceDeviations.date, reason: attendanceDeviations.reason, status: attendanceDeviations.status, createdAt: attendanceDeviations.createdAt })
 		.from(attendanceDeviations)
@@ -94,9 +98,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.orderBy(desc(attendanceDeviations.createdAt))
 		.limit(5);
 	const raisedDates = new Set(myDeviations.map((d) => dateKey(d.date)));
-	const missingCheckOuts = recentRows
-		.filter((r) => r.checkInAt && !r.checkOutAt && !raisedDates.has(dateKey(r.date)))
-		.map((r) => ({ date: dateKey(r.date), checkInAt: r.checkInAt }))
+	// Recent shifts whose check-out never came within the 9h 30m grace period,
+	// which the person may want to correct. A day already raised as a
+	// correction is not nagged about again.
+	const missingCheckOuts = recentShifts
+		.filter((s) => s.date >= dateKey(weekAgo) && s.anomaly === 'missing-check-out' && !raisedDates.has(s.date))
+		.map((s) => ({ date: s.date, checkInAt: s.checkInAt }))
 		.sort((a, b) => b.date.localeCompare(a.date));
 
 	// The person's own recent leave requests: the newest drives "Request
@@ -259,11 +266,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const analyticsToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 	const window = attendanceWindow(analyticsToday);
-	const [profileRows, punchRows] = await Promise.all([
+	// Hours per day come from shifts (every punch, credited to the day the
+	// shift started), so a shift past midnight is one day's hours, not a
+	// 23-hour day after it. A lone check-out still marks the day recorded.
+	const [profileRows, shiftRows] = await Promise.all([
 		db.select({ dateOfJoining: employeeProfiles.dateOfJoining, designation: employeeProfiles.designation }).from(employeeProfiles).where(eq(employeeProfiles.userId, user.id)).limit(1),
-		db.select({ date: attendance.date, checkInAt: attendance.checkInAt, checkOutAt: attendance.checkOutAt }).from(attendance).where(and(eq(attendance.userId, user.id), gte(attendance.date, window.start), lt(attendance.date, new Date(Date.parse(analyticsToday + 'T00:00:00Z') + 86400000).toISOString().slice(0, 10))))
+		loadShiftsFor(user.id, window.start, analyticsToday)
 	]);
-	const heatmap = buildAttendanceHeatmap(analyticsToday, punchRows.map(r => ({ ...r, date: dateKey(r.date) })));
+	const heatmap = buildAttendanceHeatmap(analyticsToday, shiftRows.map(s => ({ date: s.date, checkInAt: s.checkInAt ?? s.checkOutAt, checkOutAt: s.checkInAt ? s.checkOutAt : null })));
 	const monthCells = heatmap.filter(c => c.date.startsWith(analyticsToday.slice(0, 7)) && c.date <= analyticsToday);
 	return {
 		analytics: {

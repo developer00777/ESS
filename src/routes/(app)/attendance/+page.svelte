@@ -66,11 +66,13 @@
 		}
 	});
 
-	const recordsByDate = $derived(new Map(data.records.map((r) => [r.date, r])));
+	// The shift credited to a day, so a night shift's check-out after midnight
+	// shows against the day the shift started.
+	const shiftsByDate = $derived(new Map(data.shifts.map((s) => [s.date, s])));
 	function recordFor(date: string) {
-		const r = recordsByDate.get(date);
-		if (!r) return null;
-		return { checkIn: r.checkInAt ? formatTime(r.checkInAt) : null, checkOut: r.checkOutAt ? formatTime(r.checkOutAt) : null };
+		const s = shiftsByDate.get(date);
+		if (!s) return null;
+		return { checkIn: s.checkInAt ? formatTime(s.checkInAt) : null, checkOut: s.checkOutAt ? formatTime(s.checkOutAt) : null };
 	}
 
 	const DEVIATION_STATUS: Record<string, { label: string; tone: string; dot: string }> = {

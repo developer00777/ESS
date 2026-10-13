@@ -1,205 +1,361 @@
 /**
- * Shift pairing and worked hours.
+ * Shifts and worked hours, built from punches.
  *
- * A night shift starts on one calendar day and ends on the next, so its two
- * punches arrive as two attendance rows. Subtracting them per-row gives
- * nonsense (a check-in with no check-out, then a check-out with no check-in),
- * which is why the pairing happens here rather than in the calendar.
+ * The attendance table keeps one check-in and one check-out per calendar day,
+ * which cannot describe a shift that runs past midnight: the 00:07 check-out
+ * of last night's shift becomes today's "check-in", today's real check-in is
+ * overwritten, and the day reads 00:07 → 23:34 = 23h 27m. So shifts are built
+ * here from every punch instead, and each shift is credited to the day it
+ * started — whatever shift the person works.
+ *
+ *   1. Punches within two minutes of each other are one punch (double taps).
+ *   2. A shift starts at a check-in and takes every punch up to the longest a
+ *      shift can run: the person's shift length plus overtime slack. A late
+ *      logout is overtime on the same shift, never a new day.
+ *   3. The person's shift window — from their office timings, or learnt from
+ *      their own complete shifts when HR has none on file — decides which day
+ *      a shift belongs to, and whether a lone punch near the shift's end is a
+ *      check-out whose check-in was missed rather than a new check-in.
+ *   4. A check-in with no check-out is "in progress" for CHECKOUT_GRACE_MINUTES
+ *      and a missed check-out after that.
  */
 
 /** Standard full shift. Days shorter than this are flagged, never rewritten. */
 export const STANDARD_SHIFT_MINUTES = 9 * 60;
 
+/** After this long checked in, the person is reminded to punch out. */
+export const CHECKOUT_REMINDER_MINUTES = 9 * 60;
+
+/** Grace after check-in before a missing check-out counts as a missed punch. */
+export const CHECKOUT_GRACE_MINUTES = 9 * 60 + 30;
+
 /**
- * Longest gap that still counts as one shift when the employee has no shift
- * window on file. Chosen to cover a 9-hour shift plus a long break or a late
- * logout, while refusing to pair two genuinely separate days: an 18:00 check-in
- * and a 09:00 check-out the next morning is 15 hours and stays unpaired.
+ * Longest a shift may run when the person has no shift window on file: a
+ * 9-hour shift plus five hours of overtime. An 18:00 check-in and a 09:00
+ * check-out the next morning is 15 hours and is two separate punches.
  */
-export const MAX_PAIR_GAP_MINUTES = 14 * 60;
+export const MAX_SHIFT_SPAN_MINUTES = 14 * 60;
+
+/** Overtime allowed past the person's own shift length before a punch is a new day. */
+const OVERTIME_SLACK_MINUTES = 5 * 60;
+
+/** Punches this close together are the same punch. */
+const DOUBLE_TAP_MINUTES = 2;
+
+/** How near the shift's end (and nearer than its start) a lone punch must be to read as a check-out. */
+const END_MATCH_MINUTES = 3 * 60;
+
+/** Office hours are kept in IST; the devices report IST wall-clock time. */
+export const IST_OFFSET_MINUTES = 330;
 
 export interface ShiftDay {
-	/** 'YYYY-MM-DD' — the day the shift is credited to (its start date). */
+	/** 'YYYY-MM-DD' — the day the shift is credited to: the day it started. */
 	date: string;
 	checkInAt: Date | null;
 	checkOutAt: Date | null;
-	/** Minutes worked once the shift is paired across midnight, if computable. */
+	/** Minutes from check-in to check-out, if both are known. */
 	workedMinutes: number | null;
-	/** True when a check-out from the following day completed this shift. */
+	/** Minutes worked beyond STANDARD_SHIFT_MINUTES. */
+	overtimeMinutes: number;
+	/** True when the check-out fell on a later calendar day than the shift's date. */
 	crossesMidnight: boolean;
 	/**
-	 * The date whose row was absorbed into this shift, when it crossed midnight.
-	 * Stated explicitly so the UI never has to re-derive a calendar date from a
-	 * timestamp — that conversion is timezone-dependent.
+	 * The calendar day the check-out fell on, when the shift crossed midnight.
+	 * Stated explicitly so the UI never re-derives a date from a timestamp.
 	 */
 	absorbedDate: string | null;
 	/** True when worked time is known and falls short of a standard shift. */
 	isShort: boolean;
+	/** Checked in, no check-out yet, still inside CHECKOUT_GRACE_MINUTES. */
+	inProgress: boolean;
+	/** Punches that made up the shift. */
+	punchCount: number;
 	/**
-	 * Set when a check-out couldn't be attributed to any check-in — e.g. a gap
-	 * beyond MAX_PAIR_GAP_MINUTES, or a missing punch. Surfaced rather than
-	 * silently absorbed, because it means the record needs a human.
+	 * Set when the record needs a human: a check-in whose check-out never came
+	 * within the grace period, or a check-out whose check-in is missing.
 	 */
-	anomaly:
-		| 'missing-check-out'
-		| 'orphan-check-out'
-		| 'gap-too-long'
-		| 'check-out-before-check-in'
-		| null;
+	anomaly: 'missing-check-out' | 'orphan-check-out' | null;
 }
 
-export interface AttendanceRowInput {
-	date: string;
-	checkInAt: string | Date | null;
-	checkOutAt: string | Date | null;
+export interface PunchInput {
+	at: Date | string;
+	/** Known direction (portal corrections, devices that report it); null when unknown. */
+	direction?: 'in' | 'out' | null;
 }
 
-const toDate = (v: string | Date | null): Date | null => {
-	if (!v) return null;
-	const d = v instanceof Date ? v : new Date(v);
-	return Number.isNaN(d.getTime()) ? null : d;
-};
+/** A shift as minutes of the IST day: start 14:00 → 840, length 9h30 → 570. */
+export interface ShiftWindow {
+	startMinutes: number;
+	lengthMinutes: number;
+}
 
-const minutesBetween = (from: Date, to: Date) =>
-	Math.round((to.getTime() - from.getTime()) / 60_000);
+export interface BuildShiftsOptions {
+	/** The person's shift from their office timings; learnt from their punches when absent. */
+	window?: ShiftWindow | null;
+	/** "Now", for deciding whether an open shift is still within its grace period. */
+	now?: Date;
+	offsetMinutes?: number;
+}
 
-const nextDay = (date: string): string => {
-	const [y, m, d] = date.split('-').map(Number);
-	const nd = new Date(Date.UTC(y, m - 1, d + 1));
-	return nd.toISOString().slice(0, 10);
-};
+type Punch = { at: Date; direction: 'in' | 'out' | null };
 
-/**
- * Pairs attendance rows into shifts and computes worked minutes.
- *
- * A row whose check-out is missing borrows the next day's check-out when that
- * day has no check-in of its own — the signature of a shift that ran past
- * midnight. The borrowed row is then consumed, so a night shift is reported
- * once against its start date instead of twice.
- *
- * `maxGapMinutes` bounds how far a check-out can sit from its check-in. Pass
- * the employee's own shift length plus some slack when it is known; the default
- * covers staff with no shift window on file.
- */
-export function pairShifts(
-	rows: AttendanceRowInput[],
-	maxGapMinutes: number = MAX_PAIR_GAP_MINUTES
-): ShiftDay[] {
-	const byDate = new Map<string, AttendanceRowInput>();
-	for (const r of rows) byDate.set(r.date.slice(0, 10), r);
+const pad = (n: number) => String(n).padStart(2, '0');
 
-	const dates = [...byDate.keys()].sort();
-	const consumed = new Set<string>();
-	const out: ShiftDay[] = [];
+/** The office calendar day of an instant. */
+export function officeDateKey(at: Date, offsetMinutes = IST_OFFSET_MINUTES): string {
+	const d = new Date(at.getTime() + offsetMinutes * 60_000);
+	return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+}
 
-	for (const date of dates) {
-		if (consumed.has(date)) continue;
-		const row = byDate.get(date)!;
-		const checkIn = toDate(row.checkInAt);
-		let checkOut = toDate(row.checkOutAt);
-		let crossesMidnight = false;
-		let absorbedDate: string | null = null;
-		let anomaly: ShiftDay['anomaly'] = null;
+/** Minutes past office midnight of an instant. */
+function officeMinutes(at: Date, offsetMinutes: number): number {
+	const d = new Date(at.getTime() + offsetMinutes * 60_000);
+	return d.getUTCHours() * 60 + d.getUTCMinutes();
+}
 
-		// A check-out with no check-in that wasn't claimed by the previous day's
-		// shift is an orphan — a missed punch-in, not a night shift.
-		if (!checkIn && checkOut) {
-			out.push({
-				date,
-				checkInAt: null,
-				checkOutAt: checkOut,
-				workedMinutes: null,
-				crossesMidnight: false,
-				absorbedDate: null,
-				isShort: false,
-				anomaly: 'orphan-check-out'
-			});
+/** Office midnight that begins a 'YYYY-MM-DD', as an instant. */
+function officeMidnight(dateKey: string, offsetMinutes: number): number {
+	return Date.parse(`${dateKey}T00:00:00Z`) - offsetMinutes * 60_000;
+}
+
+function addDays(dateKey: string, days: number): string {
+	const d = new Date(`${dateKey}T00:00:00Z`);
+	d.setUTCDate(d.getUTCDate() + days);
+	return d.toISOString().slice(0, 10);
+}
+
+/** Distance between two minute-of-day values around the clock. */
+function clockDistance(a: number, b: number): number {
+	const d = Math.abs(a - b) % 1440;
+	return Math.min(d, 1440 - d);
+}
+
+const minutesBetween = (from: Date, to: Date) => Math.round((to.getTime() - from.getTime()) / 60_000);
+
+function normalise(punches: PunchInput[]): Punch[] {
+	const list = punches
+		.map((p) => ({ at: p.at instanceof Date ? p.at : new Date(p.at), direction: p.direction ?? null }))
+		.filter((p) => !Number.isNaN(p.at.getTime()))
+		.sort((a, b) => a.at.getTime() - b.at.getTime());
+	const out: Punch[] = [];
+	for (const p of list) {
+		const prev = out[out.length - 1];
+		if (prev && p.at.getTime() - prev.at.getTime() <= DOUBLE_TAP_MINUTES * 60_000) {
+			// The same punch reported twice (or a double tap): keep the first
+			// instant, and whichever copy knows its direction.
+			prev.direction ??= p.direction;
 			continue;
 		}
-
-		// A check-out earlier than this row's own check-in belongs to the previous
-		// day's shift, not this one — the device filed both punches under the date
-		// each occurred on. Back-to-back night shifts always look like this.
-		if (checkIn && checkOut && checkOut < checkIn) {
-			checkOut = null;
-		}
-
-		if (checkIn && !checkOut) {
-			// Look to the next day for the other half of an overnight shift. The
-			// next day may also hold its own check-in (the following night shift);
-			// what matters is that its check-out precedes that check-in, which marks
-			// it as this shift's ending rather than that shift's.
-			const following = byDate.get(nextDay(date));
-			const followingIn = toDate(following?.checkInAt ?? null);
-			const followingOut = toDate(following?.checkOutAt ?? null);
-			const outBelongsToUs =
-				followingOut !== null && (followingIn === null || followingOut < followingIn);
-
-			if (followingOut && outBelongsToUs) {
-				const gap = minutesBetween(checkIn, followingOut);
-				if (gap > 0 && gap <= maxGapMinutes) {
-					checkOut = followingOut;
-					crossesMidnight = true;
-					absorbedDate = nextDay(date);
-					// Only consume the next day outright when it holds nothing else.
-					// A day that also starts its own shift must still be reported.
-					if (!followingIn) consumed.add(absorbedDate);
-				} else {
-					anomaly = 'gap-too-long';
-				}
-			} else {
-				anomaly = 'missing-check-out';
-			}
-		}
-
-		let workedMinutes: number | null = null;
-		if (checkIn && checkOut) {
-			const span = minutesBetween(checkIn, checkOut);
-			if (span < 0) {
-				// Both punches were filed against the same date but the out precedes
-				// the in — a device/clock fault. Reporting 0h would read as a real
-				// zero-hour day, so the time is withheld and the row flagged.
-				anomaly = 'check-out-before-check-in';
-			} else {
-				workedMinutes = span;
-			}
-		}
-
-		out.push({
-			date,
-			checkInAt: checkIn,
-			checkOutAt: checkOut,
-			workedMinutes,
-			crossesMidnight,
-			absorbedDate,
-			isShort: workedMinutes !== null && workedMinutes < STANDARD_SHIFT_MINUTES,
-			anomaly
-		});
+		out.push({ ...p });
 	}
-
 	return out;
 }
 
 /**
- * Parses an office-timings string into a shift length in minutes.
+ * Learns someone's shift from their own complete shifts — the usual start
+ * time (averaged around the clock, so 23:50 and 00:10 average to midnight) and
+ * the usual length. Needs at least two shifts to go on.
+ */
+function inferWindow(punches: Punch[], offsetMinutes: number): ShiftWindow | null {
+	const starts: number[] = [];
+	const lengths: number[] = [];
+	let i = 0;
+	while (i < punches.length) {
+		const start = punches[i];
+		let j = i + 1;
+		while (j < punches.length && minutesBetween(start.at, punches[j].at) <= MAX_SHIFT_SPAN_MINUTES) j++;
+		const span = minutesBetween(start.at, punches[j - 1].at);
+		if (j - i >= 2 && span >= 4 * 60) {
+			starts.push(officeMinutes(start.at, offsetMinutes));
+			lengths.push(span);
+		}
+		i = j;
+	}
+	if (starts.length < 2) return null;
+	const angle = (m: number) => (m / 1440) * 2 * Math.PI;
+	const x = starts.reduce((s, m) => s + Math.cos(angle(m)), 0);
+	const y = starts.reduce((s, m) => s + Math.sin(angle(m)), 0);
+	const mean = Math.round(((Math.atan2(y, x) / (2 * Math.PI)) * 1440 + 1440) % 1440);
+	const sorted = [...lengths].sort((a, b) => a - b);
+	const median = sorted[Math.floor(sorted.length / 2)];
+	return { startMinutes: mean, lengthMinutes: Math.min(Math.max(median, 6 * 60), 12 * 60) };
+}
+
+/** The day whose shift start lies nearest an instant (a late or early arrival still belongs to it). */
+function creditDate(at: Date, window: ShiftWindow | null, offsetMinutes: number): string {
+	const day = officeDateKey(at, offsetMinutes);
+	if (!window) return day;
+	let best = day;
+	let bestGap = Infinity;
+	for (const candidate of [addDays(day, -1), day, addDays(day, 1)]) {
+		const start = officeMidnight(candidate, offsetMinutes) + window.startMinutes * 60_000;
+		const gap = Math.abs(at.getTime() - start);
+		if (gap < bestGap) {
+			bestGap = gap;
+			best = candidate;
+		}
+	}
+	return best;
+}
+
+/** True for a lone punch that reads as the end of a shift rather than the start of one. */
+function looksLikeCheckOut(p: Punch, window: ShiftWindow | null, offsetMinutes: number): boolean {
+	if (p.direction) return p.direction === 'out';
+	if (!window) return false;
+	const m = officeMinutes(p.at, offsetMinutes);
+	const toEnd = clockDistance(m, (window.startMinutes + window.lengthMinutes) % 1440);
+	const toStart = clockDistance(m, window.startMinutes);
+	return toEnd <= END_MATCH_MINUTES && toEnd < toStart;
+}
+
+/**
+ * Builds shifts from punches. Pass punches from a day or two either side of
+ * the range being shown, so shifts that cross the range's edges come out whole.
+ */
+export function buildShifts(input: PunchInput[], options: BuildShiftsOptions = {}): ShiftDay[] {
+	const offset = options.offsetMinutes ?? IST_OFFSET_MINUTES;
+	const now = options.now ?? new Date();
+	const punches = normalise(input);
+	if (punches.length === 0) return [];
+
+	const window = options.window ?? inferWindow(punches, offset);
+	const maxSpan = window
+		? Math.min(Math.max(window.lengthMinutes + OVERTIME_SLACK_MINUTES, 12 * 60), 16 * 60)
+		: MAX_SHIFT_SPAN_MINUTES;
+
+	const shifts: ShiftDay[] = [];
+	let i = 0;
+	while (i < punches.length) {
+		const first = punches[i];
+
+		// A check-out whose check-in was never recorded: it ends a shift, so it
+		// must not start one and swallow the next day's check-in.
+		if (looksLikeCheckOut(first, window, offset)) {
+			const startGuess = new Date(first.at.getTime() - (window?.lengthMinutes ?? STANDARD_SHIFT_MINUTES) * 60_000);
+			const date = creditDate(startGuess, window, offset);
+			const outDay = officeDateKey(first.at, offset);
+			shifts.push({
+				date,
+				checkInAt: null,
+				checkOutAt: first.at,
+				workedMinutes: null,
+				overtimeMinutes: 0,
+				crossesMidnight: outDay !== date,
+				absorbedDate: outDay !== date ? outDay : null,
+				isShort: false,
+				inProgress: false,
+				punchCount: 1,
+				anomaly: 'orphan-check-out'
+			});
+			i++;
+			continue;
+		}
+
+		let j = i + 1;
+		while (j < punches.length && minutesBetween(first.at, punches[j].at) <= maxSpan) {
+			// A punch the device marks as a check-in, after a long gap, is the
+			// next shift starting early — not part of this one.
+			const prev = punches[j - 1];
+			if (punches[j].direction === 'in' && prev.direction === 'out') break;
+			j++;
+		}
+		const members = punches.slice(i, j);
+		const last = members[members.length - 1];
+		const open = members.length === 1 || last.direction === 'in';
+		const date = creditDate(first.at, window, offset);
+
+		if (open) {
+			const inProgress = minutesBetween(first.at, now) < CHECKOUT_GRACE_MINUTES;
+			shifts.push({
+				date,
+				checkInAt: first.at,
+				checkOutAt: null,
+				workedMinutes: null,
+				overtimeMinutes: 0,
+				crossesMidnight: false,
+				absorbedDate: null,
+				isShort: false,
+				inProgress,
+				punchCount: members.length,
+				anomaly: inProgress ? null : 'missing-check-out'
+			});
+		} else {
+			const worked = minutesBetween(first.at, last.at);
+			const outDay = officeDateKey(last.at, offset);
+			shifts.push({
+				date,
+				checkInAt: first.at,
+				checkOutAt: last.at,
+				workedMinutes: worked,
+				overtimeMinutes: Math.max(0, worked - STANDARD_SHIFT_MINUTES),
+				crossesMidnight: outDay !== date,
+				absorbedDate: outDay !== date ? outDay : null,
+				isShort: worked < STANDARD_SHIFT_MINUTES,
+				inProgress: false,
+				punchCount: members.length,
+				anomaly: null
+			});
+		}
+		i = j;
+	}
+
+	return mergeSameDay(shifts);
+}
+
+/**
+ * Two shifts credited to one day (a split shift, or a lone check-out next to a
+ * complete shift) become one entry: earliest in, latest out, worked time summed.
+ */
+function mergeSameDay(shifts: ShiftDay[]): ShiftDay[] {
+	const byDate = new Map<string, ShiftDay>();
+	for (const s of shifts) {
+		const prev = byDate.get(s.date);
+		if (!prev) {
+			byDate.set(s.date, s);
+			continue;
+		}
+		const checkInAt = [prev.checkInAt, s.checkInAt].filter((d): d is Date => !!d).sort((a, b) => +a - +b)[0] ?? null;
+		const checkOutAt = [prev.checkOutAt, s.checkOutAt].filter((d): d is Date => !!d).sort((a, b) => +b - +a)[0] ?? null;
+		const worked = prev.workedMinutes === null && s.workedMinutes === null ? null : (prev.workedMinutes ?? 0) + (s.workedMinutes ?? 0);
+		const later = +(s.checkOutAt ?? s.checkInAt ?? 0) >= +(prev.checkOutAt ?? prev.checkInAt ?? 0) ? s : prev;
+		byDate.set(s.date, {
+			date: s.date,
+			checkInAt,
+			checkOutAt,
+			workedMinutes: worked,
+			overtimeMinutes: worked === null ? 0 : Math.max(0, worked - STANDARD_SHIFT_MINUTES),
+			crossesMidnight: later.crossesMidnight,
+			absorbedDate: later.absorbedDate,
+			isShort: worked !== null && worked < STANDARD_SHIFT_MINUTES,
+			inProgress: prev.inProgress || s.inProgress,
+			punchCount: prev.punchCount + s.punchCount,
+			// A complete shift that day outweighs a stray punch beside it.
+			anomaly: worked !== null ? null : (prev.anomaly ?? s.anomaly)
+		});
+	}
+	return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Reads an office-timings string as a shift window.
  *
  * The HR tracker writes these freehand — "06:00 PM to 03:30 AM", "10.00-7.00",
  * "6PM-3 AM" — so the parser is deliberately tolerant. Returns null when the
- * value can't be read, which makes the caller fall back to the default gap.
+ * value can't be read, and the window is then learnt from the punches.
  *
- * Note: several rows read "06:00 PM to 03:30 PM", which is 21.5 hours and
- * plainly a typo for AM. An end time that produces an implausibly long shift
- * is therefore re-read as the following morning.
+ * Several rows read "06:00 PM to 03:30 PM", which is 21.5 hours and plainly a
+ * typo for AM, so an implausibly long shift is re-read as ending 12 hours
+ * earlier — which is also how "10.00-7.00" comes out as 10:00 to 19:00.
  */
-export function parseShiftMinutes(officeTimings: string | null | undefined): number | null {
+export function parseShiftWindow(officeTimings: string | null | undefined): ShiftWindow | null {
 	const raw = (officeTimings ?? '').trim();
 	if (!raw) return null;
 
-	// Two clock values separated by "to", "-", or an en dash.
+	// Two clock values separated by "to", "-", or a dash.
 	const parts = raw.split(/\s*(?:to|–|—|-)\s*/i).filter(Boolean);
 	if (parts.length < 2) return null;
 
-	const parseClock = (s: string): { minutes: number; hadMeridiem: boolean } | null => {
+	const parseClock = (s: string): number | null => {
 		const meridiem = /pm/i.test(s) ? 'pm' : /am/i.test(s) ? 'am' : null;
 		const digits = s.replace(/[^0-9.:]/g, '');
 		if (!digits) return null;
@@ -209,27 +365,39 @@ export function parseShiftMinutes(officeTimings: string | null | undefined): num
 		if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour > 23 || minute > 59) return null;
 		if (meridiem === 'pm' && hour < 12) hour += 12;
 		if (meridiem === 'am' && hour === 12) hour = 0;
-		return { minutes: hour * 60 + minute, hadMeridiem: meridiem !== null };
+		return hour * 60 + minute;
 	};
 
 	const start = parseClock(parts[0]);
 	const end = parseClock(parts[1]);
-	if (!start || !end) return null;
+	if (start === null || end === null) return null;
 
-	let span = end.minutes - start.minutes;
+	let span = end - start;
 	// End before start means the shift runs past midnight.
 	if (span <= 0) span += 1440;
 	// A "shift" over 16 hours is a mis-written meridiem, not a real one.
 	if (span > 16 * 60) span -= 12 * 60;
 	if (span <= 0 || span > 16 * 60) return null;
-	return span;
+	return { startMinutes: start, lengthMinutes: span };
+}
+
+/** Shift length in minutes from an office-timings string, or null when unreadable. */
+export function parseShiftMinutes(officeTimings: string | null | undefined): number | null {
+	return parseShiftWindow(officeTimings)?.lengthMinutes ?? null;
 }
 
 /**
- * The pairing gap to allow for one employee: their own shift length plus three
- * hours of slack for late logouts, or the default when no timings are on file.
+ * The shift someone is in right now with no check-out yet, if any — what the
+ * check-out reminder and missed-punch prompt are about. Only a shift started
+ * within the last day counts.
  */
-export function gapForShift(officeTimings: string | null | undefined): number {
-	const shift = parseShiftMinutes(officeTimings);
-	return shift === null ? MAX_PAIR_GAP_MINUTES : Math.min(shift + 180, MAX_PAIR_GAP_MINUTES);
+export function openShift(shifts: ShiftDay[], now = new Date()): ShiftDay | null {
+	for (let k = shifts.length - 1; k >= 0; k--) {
+		const s = shifts[k];
+		if (!s.checkInAt) continue;
+		if (s.checkOutAt) return null;
+		const elapsed = minutesBetween(s.checkInAt, now);
+		return elapsed >= 0 && elapsed < 24 * 60 ? s : null;
+	}
+	return null;
 }
