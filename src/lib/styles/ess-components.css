@@ -164,10 +164,12 @@ textarea {
 ------------------------------------------------------------ */
 
 .ess-card {
+	/* Side padding, exposed so edge-to-edge tables can bleed exactly. */
+	--card-px: var(--ess-space-4);
 	background: var(--ess-surface);
 	border: 1px solid var(--ess-border-subtle);
 	border-radius: var(--ess-radius-md);
-	padding: var(--ess-space-4);
+	padding: var(--ess-space-4) var(--card-px);
 	box-shadow: var(--ess-elev-1);
 }
 
@@ -1932,7 +1934,8 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 		font-size: 13px;
 	}
 	.ess-card {
-		padding: 12px 14px;
+		--card-px: 14px;
+		padding: 12px var(--card-px);
 	}
 	.ess-card-head {
 		margin-bottom: 8px;

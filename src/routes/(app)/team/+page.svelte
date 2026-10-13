@@ -1846,7 +1846,7 @@
 	   scrolls sideways on a narrow screen. */
 	.table-wrap {
 		position: relative;
-		margin: 0 calc(-1 * var(--ess-space-4));
+		margin: 0 calc(-1 * var(--card-px, var(--ess-space-4)));
 		overflow-x: auto;
 		overscroll-behavior-x: contain;
 	}
@@ -1856,11 +1856,11 @@
 	}
 	.table-wrap .ess-table th:first-child,
 	.table-wrap .ess-table td:first-child {
-		padding-left: var(--ess-space-4);
+		padding-left: var(--card-px, var(--ess-space-4));
 	}
 	.table-wrap .ess-table th:last-child,
 	.table-wrap .ess-table td:last-child {
-		padding-right: var(--ess-space-4);
+		padding-right: var(--card-px, var(--ess-space-4));
 	}
 	/* The header stays put while a long list scrolls inside the card. */
 	.table-wrap .ess-table thead th {
@@ -2135,6 +2135,20 @@
 	}
 	.grid {
 		min-width: 760px;
+	}
+	/* Desktop: the People and weekly roster tables fit their card exactly,
+	   so neither shows a sideways scrollbar. Narrower screens keep the
+	   minimum width and scroll inside the card. */
+	@media (min-width: 1101px) {
+		.roster,
+		.grid {
+			min-width: 0;
+		}
+		.table-wrap .ess-table th:not(:first-child):not(:last-child),
+		.table-wrap .ess-table td:not(:first-child):not(:last-child) {
+			padding-left: 8px;
+			padding-right: 8px;
+		}
 	}
 	.day-head span {
 		display: block;

@@ -229,6 +229,10 @@
 		})
 	);
 
+	/* Records list the days that have happened, today first: a new row
+	   appears as each day arrives, and future days aren't listed. */
+	const recordDays = $derived(dayCells.filter((c) => c.key <= todayKey).reverse());
+
 	const gridDays = $derived.by(() => {
 		const cells: Cell[] = [];
 		if (dayCells.length === 0) return cells;
@@ -606,7 +610,7 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each dayCells as cell (cell.key)}
+					{#each recordDays as cell (cell.key)}
 						{@const d = dayInfo(cell.key)}
 						{@const status = statusFor(cell.key)}
 						{@const s = fmtShort(cell.key)}
@@ -639,6 +643,8 @@
 								{/if}
 							</td>
 						</tr>
+					{:else}
+						<tr class="empty-row"><td colspan="7">This cycle hasn't started yet. Days appear here as they pass.</td></tr>
 					{/each}
 				</tbody>
 			</table>
@@ -1255,6 +1261,12 @@
 	}
 	.muted {
 		color: var(--ess-text-muted);
+	}
+	.records .empty-row td {
+		padding: 18px 10px;
+		text-align: center;
+		color: var(--ess-text-muted);
+		cursor: default;
 	}
 
 	/* ---------- day detail ---------- */
