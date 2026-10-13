@@ -180,7 +180,7 @@
 	<title>{champOpen ? 'Champ' : active ? nameOf(active.id) : 'Chat'} · Champ Hub — Champ HR ESS Portal</title>
 </svelte:head>
 
-<div class="conv ess-card" class:with-panel={!!panel}>
+<div class="conv ess-card hub-fill" class:with-panel={!!panel}>
 	<div class="side-col">
 		<ChatSidebar
 			{channels}
@@ -346,8 +346,8 @@
 		display: flex;
 		align-items: center;
 		gap: 12px;
-		padding: 12px 14px 12px 20px;
-		min-height: 72px;
+		padding: 10px 14px 10px 18px;
+		min-height: 60px;
 		border-bottom: 1px solid var(--ess-border);
 	}
 	.back {
@@ -374,7 +374,7 @@
 	}
 	.title h2 {
 		font-family: var(--ess-font-display);
-		font-size: 24px;
+		font-size: 20px;
 		font-weight: 600;
 		line-height: 1.15;
 		overflow: hidden;
@@ -394,10 +394,11 @@
 	}
 	.ann {
 		flex: 1;
+		min-height: 0;
 		overflow-y: auto;
-		padding: 18px 20px 40px;
+		padding: 14px 16px 16px;
 		display: grid;
-		gap: 18px;
+		gap: 14px;
 		align-content: start;
 	}
 	.champ-view {
@@ -414,6 +415,14 @@
 		text-align: center;
 		color: var(--ess-text-muted);
 		padding: 24px;
+	}
+	/* Desktop: the hub layout stretches this card to the bottom of the
+	   workspace, so the fixed height above gives way to the fill. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.conv {
+			height: auto;
+			min-height: 0;
+		}
 	}
 	@media (max-width: 1240px) {
 		.conv,

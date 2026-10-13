@@ -1,6 +1,9 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
-import { getProfilePicture } from '$lib/server/db/mongo';
+import { getProfilePicture, getUsersWithProfilePicture } from '$lib/server/db/mongo';
+import { db } from '$lib/server/db/postgres';
+import { users } from '$lib/server/db/schema';
+import { and, eq, ne, or, asc, sql } from 'drizzle-orm';
 import { loadAdminFacts } from '$lib/server/admin-health';
 import { deriveAdminIssues } from '$lib/admin-issues';
 import { canOpenAdmin } from '$lib/capabilities';
@@ -35,6 +38,24 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		sidebarFor(locals.user).catch(() => ({ badge: 0 }))
 	]);
 
+	// The top bar's team faces: whoever shares the person's team, or their
+	// direct reports when they have no team. Names and pictures only, as the
+	// Team page already shows them. Employees see none.
+	let teamPeek: { people: { id: string; fullName: string; hasPicture: boolean }[]; total: number } | null = null;
+	if (role !== 'employee') {
+		const where = and(
+			eq(users.isActive, true),
+			ne(users.id, locals.user.id),
+			or(locals.user.teamId ? eq(users.teamId, locals.user.teamId) : sql`false`, eq(users.reportsTo, locals.user.id))
+		);
+		const [rows, [{ n }]] = await Promise.all([
+			db.select({ id: users.id, fullName: users.fullName }).from(users).where(where).orderBy(asc(users.fullName)).limit(4),
+			db.select({ n: sql<number>`count(*)::int` }).from(users).where(where)
+		]);
+		const pics = await getUsersWithProfilePicture(rows.map((r) => r.id));
+		teamPeek = { people: rows.map((r) => ({ ...r, hasPicture: pics.has(r.id) })), total: n };
+	}
+
 	const adminIssueCount = adminFacts
 		? deriveAdminIssues(adminFacts, caps, new Date()).filter(
 				(i) => i.severity !== 'info'
@@ -49,6 +70,10 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		canAdmin: isAdmin,
 		announcementBadge,
 		chatBadge: { count: chatSidebar.badge, urgent: announcementBadge.urgent },
-		canUseChamp: true
+		canUseChamp: true,
+		teamPeek,
+		// Add employee opens the create-login form wherever this person
+		// creates logins; the form's action checks the privilege again.
+		addEmployeeHref: caps.includes('people.create_login') ? (isAdmin ? '/admin/people?create=1' : '/team?create=1') : null
 	};
 };

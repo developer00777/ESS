@@ -43,7 +43,7 @@
 <form
 	method="POST"
 	action="?/save"
-	class="ess-stack"
+	class="ess-stack ess-fill chat-form"
 	use:enhance={() => {
 		saving = true;
 		return async ({ update }) => {
@@ -52,7 +52,7 @@
 		};
 	}}
 >
-	<div class="ess-split">
+	<div class="ess-split chat-split">
 		<div class="ess-stack">
 			<section class="ess-card">
 				<div class="ess-card-head">
@@ -61,7 +61,7 @@
 				<p class="ess-caption">
 					Select who employees are allowed to start one-to-one conversations with. Team Leads, HR, Super Admins and any named role with <strong>Message anyone</strong> can always message anyone.
 				</p>
-				<div class="opts">
+				<div class="opts opts--grid">
 					{#each DM_OPTIONS as o (o.key)}
 						{@const implied = o.key !== 'everyone' && draft.dm.everyone}
 						<label class="opt" class:implied>
@@ -85,7 +85,7 @@
 					<h2 class="ess-h2">Who can start group chats</h2>
 				</div>
 				<p class="ess-caption">Group chats are small private conversations of up to 20 people. Members still have to be people the starter may message.</p>
-				<div class="opts">
+				<div class="opts opts--grid">
 					<label class="opt toggle-row">
 						<span class="opt-body">
 							<strong>Employees</strong>
@@ -107,11 +107,12 @@
 		</div>
 
 		<aside class="ess-stack">
-			<section class="ess-card preview">
+			<section class="ess-card ess-fill-card preview">
 				<div class="ess-card-head">
 					<h2 class="ess-h2">Effective access preview</h2>
 				</div>
 				<p class="ess-caption">Based on the current settings, before you save.</p>
+				<div class="ess-scroll preview-scroll">
 				<div class="viewer">
 					<span class="ess-tile"><User size={20} strokeWidth={1.75} /></span>
 					<span>
@@ -152,22 +153,22 @@
 						</li>
 					</ul>
 				</div>
+				</div>
 			</section>
+			<div class="ess-card bar">
+				<div class="bar-actions">
+					<button class="ess-btn ess-btn--primary" disabled={saving}><Save size={16} /> {saving ? 'Saving…' : 'Save changes'}</button>
+					<button type="button" class="ess-btn ess-btn--secondary" onclick={reset} disabled={saving}><RotateCcw size={16} /> Reset to default</button>
+				</div>
+				<div class="bar-note">
+					<span class="ess-tile ess-tile--sm ess-tile--round"><Info size={15} /></span>
+					<span>
+						<strong>Role permissions are always respected.</strong>
+						<small>Conversations that already exist stay open. Every change is recorded in the activity log.</small>
+					</span>
+				</div>
+			</div>
 		</aside>
-	</div>
-
-	<div class="ess-card bar">
-		<div class="bar-actions">
-			<button class="ess-btn ess-btn--primary" disabled={saving}><Save size={16} /> {saving ? 'Saving…' : 'Save changes'}</button>
-			<button type="button" class="ess-btn ess-btn--secondary" onclick={reset} disabled={saving}><RotateCcw size={16} /> Reset to default</button>
-		</div>
-		<div class="bar-note">
-			<span class="ess-tile ess-tile--sm ess-tile--round"><Info size={15} /></span>
-			<span>
-				<strong>Role permissions are always respected.</strong>
-				<small>Conversations that already exist stay open. Every change is recorded in the activity log.</small>
-			</span>
-		</div>
 	</div>
 </form>
 
@@ -175,16 +176,16 @@
 	.opts {
 		display: grid;
 		gap: 0;
-		margin-top: 14px;
+		margin-top: 10px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
 		overflow: hidden;
 	}
 	.opt {
 		display: flex;
-		gap: 14px;
+		gap: 12px;
 		align-items: flex-start;
-		padding: 14px 16px;
+		padding: 9px 14px;
 		border-bottom: 1px solid var(--ess-border-subtle);
 		background: var(--ess-surface);
 		cursor: pointer;
@@ -214,11 +215,11 @@
 		min-width: 0;
 	}
 	.opt-body strong {
-		font-size: 14.5px;
+		font-size: 13.5px;
 		font-weight: 500;
 	}
 	.opt-body small {
-		font-size: 13px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 	}
 	.toggle-row {
@@ -258,44 +259,56 @@
 	/* ---------- preview ---------- */
 	.preview {
 		display: grid;
-		gap: 12px;
+		gap: 10px;
+	}
+	.preview .ess-card-head {
+		margin-bottom: 0;
+	}
+	.preview-scroll {
+		display: grid;
+		align-content: start;
+		gap: 10px;
 	}
 	.viewer {
 		display: flex;
 		align-items: center;
 		gap: 12px;
-		padding: 14px;
+		padding: 8px 12px;
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-primary-softer);
 	}
 	.viewer span:last-child {
 		display: grid;
 	}
+	.viewer .ess-tile {
+		width: 34px;
+		height: 34px;
+	}
 	.viewer strong {
 		font-family: var(--ess-font-display);
-		font-size: 17px;
+		font-size: 15px;
 		font-weight: 600;
 	}
 	.viewer small {
-		font-size: 13px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 	}
 	.panel {
-		padding: 14px;
+		padding: 10px 12px;
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-success-bg);
 	}
 	.panel h3 {
 		font-size: 14px;
 		font-weight: 600;
-		margin-bottom: 10px;
+		margin-bottom: 8px;
 	}
 	.panel ul {
 		list-style: none;
 		margin: 0;
 		padding: 0;
 		display: grid;
-		gap: 10px;
+		gap: 6px;
 	}
 	.panel li {
 		display: flex;
@@ -324,7 +337,7 @@
 		color: var(--ess-text-muted);
 	}
 	.sum {
-		margin-top: 12px;
+		margin-top: 8px;
 		font-size: 13px;
 		color: var(--ess-text-secondary);
 	}
@@ -335,8 +348,8 @@
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
-		gap: 14px;
-		padding: 16px 20px;
+		gap: 12px;
+		padding: 10px 16px;
 	}
 	.bar-actions {
 		display: flex;
@@ -356,5 +369,97 @@
 	.bar-note strong {
 		color: var(--ess-text);
 		font-weight: 500;
+	}
+
+	/* Two-up option grids: thin lines between the cells. */
+	@media (min-width: 900px) {
+		.opts--grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 1px;
+			background: var(--ess-border-subtle);
+		}
+		.opts--grid .opt {
+			border-bottom: none;
+		}
+		.opts--grid .opt:last-child:nth-child(odd) {
+			grid-column: 1 / -1;
+		}
+	}
+
+	/* Fill layout: the settings and the preview end on the save bar, which
+	   sits on the workspace's bottom edge; the preview scrolls inside. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.chat-form {
+			overflow: hidden;
+		}
+		.chat-form > .chat-split {
+			flex: 1 1 0px;
+			min-height: 0;
+		}
+		.chat-split > aside {
+			overflow: hidden;
+		}
+		.chat-split > aside > .bar {
+			flex: none;
+			padding: 12px 14px;
+		}
+		.chat-split > aside > .preview {
+			flex: 1 1 0px;
+			min-height: 0;
+		}
+		.preview-scroll {
+			margin-right: -6px;
+			padding-right: 6px;
+		}
+	}
+
+	/* Short desktop screens (a 1280x580 browser): slimmer option rows and
+	   switches so both settings cards fit above the bottom edge. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
+		.opts {
+			margin-top: 8px;
+		}
+		.opt {
+			gap: 10px;
+			padding: 6px 12px;
+		}
+		.box {
+			margin-top: 2px;
+			width: 16px;
+			height: 16px;
+		}
+		.opt-body {
+			gap: 1px;
+		}
+		.opt-body strong {
+			font-size: 13px;
+			line-height: 1.3;
+		}
+		.opt-body small {
+			font-size: 12px;
+			line-height: 1.3;
+		}
+		.switch {
+			width: 40px;
+			height: 22px;
+		}
+		.switch::after {
+			width: 16px;
+			height: 16px;
+		}
+		.switch.on::after {
+			transform: translateX(18px);
+		}
+		.viewer {
+			padding: 6px 10px;
+		}
+		.viewer .ess-tile {
+			width: 30px;
+			height: 30px;
+		}
+		.chat-split > aside > .bar {
+			padding: 10px 14px;
+			gap: 10px;
+		}
 	}
 </style>

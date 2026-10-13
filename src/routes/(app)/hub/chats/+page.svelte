@@ -130,7 +130,7 @@
 
 <svelte:head><title>Chats · Champ Hub — Champ HR ESS Portal</title></svelte:head>
 
-<div class="chats ess-card" class:has-preview={!!preview}>
+<div class="chats ess-card hub-fill" class:has-preview={!!preview}>
 	<section class="inbox" aria-label="Conversations">
 		<div class="inbox-head">
 			<h2 class="ess-h2">Conversations</h2>
@@ -138,7 +138,7 @@
 				<button type="button" class="ess-icon-btn" onclick={() => (find = { mode: 'search', q: '' })} aria-label="Search messages" title="Search messages"><Search size={17} /></button>
 				<button type="button" class="ess-icon-btn" onclick={() => (find = { mode: 'saved', q: '' })} aria-label="Saved messages" title="Saved messages"><Bookmark size={17} /></button>
 				<button type="button" class="ess-icon-btn" onclick={() => (prefsOpen = true)} aria-label="Chat settings" title="Chat settings"><Settings size={17} /></button>
-				<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={() => (newOpen = true)}><Plus size={15} /> <span class="new-label">New conversation</span></button>
+				<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={() => (newOpen = true)} title="New conversation"><Plus size={15} /> <span class="new-label">New conversation</span></button>
 			</div>
 		</div>
 
@@ -253,8 +253,15 @@
 		height: max(520px, var(--h));
 		padding: 0;
 		display: grid;
-		grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
+		grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
 		overflow: hidden;
+	}
+	/* Desktop: the hub layout stretches this card to the bottom edge. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.chats {
+			height: auto;
+			min-height: 0;
+		}
 	}
 	.inbox {
 		display: flex;
@@ -267,10 +274,10 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 8px;
-		padding: 18px 18px 12px;
+		padding: 12px 14px 8px;
 	}
 	.inbox-head .ess-h2 {
-		font-size: 22px;
+		font-size: 18px;
 	}
 	.tools {
 		display: flex;
@@ -281,25 +288,29 @@
 		margin-left: 6px;
 	}
 	.inbox .ess-search {
-		padding: 0 18px;
+		padding: 0 14px;
 	}
-	.inbox .ess-search > svg {
-		left: 31px;
+	.inbox .ess-search > :global(svg) {
+		left: 26px;
+	}
+	.inbox .ess-search .ess-input {
+		padding-top: 7px;
+		padding-bottom: 7px;
 	}
 	.filters {
 		display: flex;
-		gap: 6px;
+		gap: 5px;
 		flex-wrap: wrap;
-		padding: 12px 18px 10px;
+		padding: 8px 14px 8px;
 		border-bottom: 1px solid var(--ess-border-subtle);
 	}
 	.f {
 		border: 1px solid var(--ess-border);
 		background: var(--ess-surface);
 		border-radius: var(--ess-radius-sm);
-		padding: 5px 12px;
+		padding: 3px 9px;
 		font: inherit;
-		font-size: 13px;
+		font-size: 12.5px;
 		font-weight: 500;
 		color: var(--ess-text-secondary);
 		cursor: pointer;
@@ -313,6 +324,22 @@
 		border-color: var(--ess-primary-soft);
 		color: var(--ess-primary-text);
 	}
+	/* Short laptop screens: keep the six filters on one line. */
+	@media (min-width: 721px) and (max-height: 760px) {
+		.filters {
+			flex-wrap: nowrap;
+			gap: 4px;
+			padding: 6px 14px;
+			overflow-x: auto;
+			scrollbar-width: none;
+		}
+		.f {
+			flex: none;
+			padding: 2px 6px;
+			font-size: 12px;
+			white-space: nowrap;
+		}
+	}
 	.list {
 		flex: 1;
 		min-height: 0;
@@ -323,8 +350,8 @@
 		position: relative;
 		display: flex;
 		align-items: center;
-		gap: 14px;
-		padding: 14px 18px;
+		gap: 12px;
+		padding: 9px 14px;
 		border-bottom: 1px solid var(--ess-border-subtle);
 		color: var(--ess-text);
 		transition: background var(--ess-t-fast);
@@ -348,8 +375,8 @@
 		flex: none;
 		display: grid;
 		place-items: center;
-		width: 44px;
-		height: 44px;
+		width: 38px;
+		height: 38px;
 	}
 	.b {
 		flex: 1;
@@ -358,7 +385,7 @@
 		min-width: 0;
 	}
 	.b strong {
-		font-size: 15px;
+		font-size: 14px;
 		font-weight: 500;
 		white-space: nowrap;
 		overflow: hidden;
@@ -368,7 +395,7 @@
 		font-weight: 600;
 	}
 	.b small {
-		font-size: 13px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 		white-space: nowrap;
 		overflow: hidden;
@@ -425,7 +452,7 @@
 	}
 	.empty {
 		margin: 0;
-		padding: 28px 18px;
+		padding: 20px 14px;
 		text-align: center;
 		color: var(--ess-text-muted);
 		font-size: 13.5px;
@@ -441,8 +468,8 @@
 	.p-head {
 		display: flex;
 		align-items: center;
-		gap: 14px;
-		padding: 14px 20px;
+		gap: 12px;
+		padding: 10px 16px;
 		border-bottom: 1px solid var(--ess-border);
 	}
 	.p-title {
@@ -452,7 +479,7 @@
 	}
 	.p-title h3 {
 		font-family: var(--ess-font-display);
-		font-size: 22px;
+		font-size: 18px;
 		font-weight: 600;
 		line-height: 1.2;
 		white-space: nowrap;
@@ -478,7 +505,7 @@
 	}
 	.p-empty strong {
 		font-family: var(--ess-font-display);
-		font-size: 20px;
+		font-size: 17px;
 		font-weight: 600;
 		color: var(--ess-text);
 	}
@@ -489,6 +516,18 @@
 		margin-top: 8px;
 	}
 
+	/* The button keeps its name for screen readers; the words show when
+	   there is room for them. */
+	@media (max-width: 1499px) {
+		.new-label {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+			clip: rect(0 0 0 0);
+			white-space: nowrap;
+		}
+	}
 	@media (max-width: 999px) {
 		.chats {
 			grid-template-columns: minmax(0, 1fr);

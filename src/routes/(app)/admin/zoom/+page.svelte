@@ -51,12 +51,12 @@
 	<p class="ess-alert ess-alert--success" role="status">{form.message}</p>
 {/if}
 
-<div class="ess-split">
+<div class="ess-split ess-fill zoom-page">
 	<div class="ess-stack">
 		<!-- ---------- connection ---------- -->
 		<section class="ess-card connection">
 			<div class="conn-head">
-				<span class="ess-tile ess-tile--lg"><Video size={26} strokeWidth={1.75} /></span>
+				<span class="ess-tile conn-tile"><Video size={22} strokeWidth={1.75} /></span>
 				<div class="conn-title">
 					<h2 class="ess-h2">Zoom</h2>
 					<p class="ess-caption">Video meetings for your team.</p>
@@ -131,7 +131,7 @@
 		</section>
 
 		<!-- ---------- host mapping ---------- -->
-		<section class="ess-card">
+		<section class="ess-card ess-fill-card hosts-card">
 			<div class="ess-card-head">
 				<div>
 					<h2 class="ess-h2">Host mapping</h2>
@@ -145,7 +145,7 @@
 				When someone schedules a meeting they pick which account hosts it: their own, a lead above them, or the company account. A person's account is their work email unless a different Zoom email or user ID is set here.
 			</p>
 			{#if data.links.length}
-				<div class="ess-table-shell table-gap">
+				<div class="ess-table-shell table-gap ess-scroll">
 					<table class="ess-table">
 						<thead><tr><th>Employee</th><th>Zoom account</th><th>Status</th><th></th></tr></thead>
 						<tbody>
@@ -172,8 +172,8 @@
 					</table>
 				</div>
 			{:else}
-				<div class="ess-empty">
-					<span class="ess-empty__icon"><Video size={22} /></span>
+				<div class="ess-empty empty">
+					<span class="ess-empty__icon"><Video size={20} /></span>
 					<p class="ess-empty__title">No hosts mapped yet.</p>
 					<p class="ess-caption">People host from their work email until you set a different Zoom account here.</p>
 				</div>
@@ -181,7 +181,7 @@
 		</section>
 
 		<!-- ---------- unmatched names ---------- -->
-		<section class="ess-card">
+		<section class="ess-card ess-fill-card unmatched-card">
 			<div class="ess-card-head">
 				<div>
 					<h2 class="ess-h2">Unmatched meeting names</h2>
@@ -189,7 +189,7 @@
 				</div>
 			</div>
 			{#if data.unmatched.length}
-				<div class="ess-table-shell table-gap">
+				<div class="ess-table-shell table-gap ess-scroll">
 					<table class="ess-table">
 						<thead><tr><th>Zoom name or email</th><th class="ess-num">Seen in</th><th>Link to</th><th></th></tr></thead>
 						<tbody>
@@ -221,7 +221,7 @@
 
 	<aside class="ess-stack">
 		<!-- ---------- map a host ---------- -->
-		<section class="ess-card">
+		<section class="ess-card map-card">
 			<div class="ess-card-head">
 				<h2 class="ess-h2">Match participant names</h2>
 			</div>
@@ -247,6 +247,7 @@
 		</section>
 
 		<section class="ess-card about">
+			<div class="about-body">
 			<h3 class="ess-h3">About this integration</h3>
 			<p class="ess-caption">One Server-to-Server OAuth app on the company Zoom account. Meetings scheduled in Champ Hub are created in Zoom, and when a call ends its AI summary comes back as minutes to review.</p>
 			<ul class="about-list">
@@ -258,20 +259,28 @@
 				<span class="ess-notice__icon"><Info size={15} /></span>
 				<span class="ess-notice__body"><strong>Summaries are checked every few hours.</strong>Press "Check Zoom now" to fetch the last three days straight away.</span>
 			</div>
+			</div>
 		</section>
 	</aside>
 </div>
 
 <style>
+	.zoom-page {
+		--ess-aside-width: 340px;
+	}
 	.connection {
 		display: grid;
-		gap: 18px;
+		gap: 12px;
 	}
 	.conn-head {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 16px;
+		gap: 12px;
+	}
+	.conn-tile {
+		width: 40px;
+		height: 40px;
 	}
 	.conn-title {
 		display: grid;
@@ -306,26 +315,26 @@
 	}
 	.fact {
 		display: grid;
-		gap: 2px;
-		padding: 16px 20px 0 0;
+		gap: 1px;
+		padding: 10px 16px 0 0;
 		border-right: 1px solid var(--ess-border-subtle);
 	}
 	.fact + .fact {
-		padding-left: 20px;
+		padding-left: 16px;
 	}
 	.fact:last-child {
 		border-right: none;
 	}
 	.fact strong {
-		font-size: 15px;
+		font-size: 14px;
 		font-weight: 500;
 		overflow-wrap: anywhere;
 	}
 
 	.setup {
 		display: grid;
-		gap: 12px;
-		padding-top: 16px;
+		gap: 10px;
+		padding-top: 12px;
 		border-top: 1px solid var(--ess-border-subtle);
 	}
 	.vars {
@@ -339,8 +348,8 @@
 		margin: 0;
 		padding-left: 20px;
 		display: grid;
-		gap: 6px;
-		font-size: 13.5px;
+		gap: 4px;
+		font-size: 13px;
 		color: var(--ess-text-secondary);
 	}
 	.url {
@@ -361,7 +370,19 @@
 	}
 
 	.table-gap {
-		margin-top: 14px;
+		margin-top: 10px;
+	}
+	.empty {
+		padding: 14px 16px;
+		gap: 4px;
+	}
+	.empty .ess-empty__icon {
+		width: 34px;
+		height: 34px;
+		margin-bottom: 0;
+	}
+	.empty .ess-empty__title {
+		font-size: 14.5px;
 	}
 	.who {
 		display: flex;
@@ -393,29 +414,211 @@
 
 	.map-form {
 		display: grid;
-		gap: 14px;
-		margin-top: 14px;
+		gap: 10px;
+		margin-top: 10px;
 	}
 	.map-actions {
 		display: flex;
 		gap: 8px;
 	}
-	.about {
+	.about-body {
 		display: grid;
-		gap: 12px;
+		gap: 10px;
+		align-content: start;
 	}
 	.about-list {
 		list-style: none;
 		margin: 0;
 		padding: 0;
 		display: grid;
+		gap: 6px;
+		font-size: 13px;
+	}
+	.about-list .ess-tile {
+		width: 30px;
+		height: 30px;
+	}
+	.about .ess-notice {
+		padding: 9px 12px;
 		gap: 10px;
-		font-size: 13.5px;
+		font-size: 12.5px;
+	}
+
+	/* Desktop fill: the two tables and the about panel scroll inside their
+	   cards; the connection setup scrolls in its own box when opened. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.zoom-page .connection,
+		.zoom-page .map-card {
+			flex: 0 0 auto;
+		}
+		.zoom-page .hosts-card {
+			flex: 3 1 0%;
+			min-height: 150px;
+		}
+		.zoom-page .unmatched-card {
+			flex: 1.6 1 0%;
+			min-height: 100px;
+		}
+		.hosts-card .empty {
+			flex: 1 1 0%;
+			min-height: 0;
+			overflow: auto;
+			justify-content: safe center;
+			padding: 6px 16px;
+		}
+		.empty > :global(*) {
+			flex-shrink: 0;
+		}
+		.setup {
+			max-height: 38vh;
+			overflow: auto;
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+		}
+		.zoom-page .about {
+			flex: 1 1 0%;
+			min-height: 120px;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+		}
+		.about-body {
+			flex: 1 1 0%;
+			min-height: 0;
+			overflow: auto;
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+		}
+		.zoom-page .ess-table-shell th {
+			position: sticky;
+			top: 0;
+			z-index: 1;
+		}
 	}
 	.about-list li {
 		display: flex;
 		align-items: center;
 		gap: 10px;
+	}
+
+	/* Short desktop screens: the connection header sits on one row, the
+	   facts and empty state lie flat, and the forms tighten, so both
+	   columns end on the same line without scrolling. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 820px) {
+		.connection {
+			gap: 6px;
+		}
+		.conn-head {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr) auto auto;
+			gap: 8px;
+		}
+		.conn-tile {
+			width: 34px;
+			height: 34px;
+		}
+		.conn-state {
+			margin-left: 0;
+			gap: 2px;
+			justify-items: end;
+			text-align: right;
+		}
+		.conn-state .ess-caption,
+		.conn-title .ess-caption {
+			font-size: 12px;
+		}
+		.conn-actions {
+			flex-wrap: nowrap;
+		}
+		.conn-actions .ess-btn {
+			height: 30px;
+			padding: 0 10px;
+			font-size: 13px;
+		}
+		.fact {
+			padding-top: 5px;
+			gap: 0;
+		}
+		.fact .ess-caption {
+			font-size: 12px;
+			line-height: 1.35;
+		}
+		.fact strong {
+			font-size: 13.5px;
+		}
+		.zoom-page .ess-card-head > div {
+			display: flex;
+			align-items: baseline;
+			flex-wrap: wrap;
+			gap: 0 10px;
+		}
+		.zoom-page .ess-card-head {
+			margin-bottom: 6px;
+		}
+		.zoom-page .ess-card-head .ess-caption {
+			font-size: 12px;
+			line-height: 1.35;
+		}
+		.hosts-card .ess-card-head .ess-btn {
+			height: 28px;
+			padding: 0 12px;
+			font-size: 13px;
+		}
+		.hosts-card > .ess-help {
+			font-size: 12px;
+			line-height: 1.35;
+		}
+		/* Natural heights first, so a short card is never cut while the
+		   other has room to spare; longer tables then share what's left. */
+		.zoom-page .hosts-card {
+			flex-basis: auto;
+			min-height: 120px;
+		}
+		.zoom-page .unmatched-card {
+			flex-basis: auto;
+			min-height: 80px;
+		}
+		.hosts-card .empty {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr);
+			justify-items: start;
+			align-content: safe center;
+			column-gap: 12px;
+			row-gap: 0;
+			gap: 0 12px;
+			text-align: left;
+			padding: 2px 4px;
+		}
+		.empty .ess-empty__icon {
+			grid-row: span 2;
+			width: 30px;
+			height: 30px;
+		}
+		.empty .ess-empty__title {
+			font-size: 13.5px;
+			margin: 0;
+		}
+		.empty .ess-caption {
+			font-size: 12px;
+			margin: 0;
+		}
+		.table-gap {
+			margin-top: 8px;
+		}
+		.map-form {
+			gap: 8px;
+			margin-top: 6px;
+		}
+		.map-card .ess-help {
+			font-size: 12px;
+			line-height: 1.35;
+		}
+		.zoom-page .about {
+			min-height: 90px;
+		}
+		.about-body {
+			gap: 8px;
+		}
 	}
 
 	@media (max-width: 720px) {

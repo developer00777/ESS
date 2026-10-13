@@ -87,11 +87,11 @@
 	</div>
 </div>
 
-<div class="ess-split layout">
+<div class="ess-split ess-fill layout">
 	<div class="main">
 		<!-- ===== Holiday calendar ===== -->
 		{#if tab === 'holidays'}
-			<section class="ess-card doc">
+			<section class="ess-card ess-fill-card doc holidays-doc">
 				{#if !data.hasShiftAssignment}
 					<div class="ess-notice">
 						<span class="ess-notice__icon"><AlertTriangle size={16} /></span>
@@ -113,7 +113,7 @@
 							<div class="doc-meta"><span>Published</span><strong>{publishedOn}</strong></div>
 						{/if}
 					</div>
-					<div class="ess-rows">
+					<div class="ess-rows ess-scroll holiday-list">
 						{#each shownHolidays as h (h.id)}
 							{@const t = tile(h.date)}
 							<div class="ess-row holiday" class:past={h.date < todayIso}>
@@ -133,11 +133,11 @@
 
 		<!-- ===== Leave policy ===== -->
 		{:else if tab === 'leave'}
-			<div class="docs">
-				<nav class="ess-card list" aria-label="Policy documents">
+			<div class="docs docs--leave">
+				<nav class="ess-card list list--chips" aria-label="Policy documents">
 					<h3 class="ess-h2 list-h">Policy documents</h3>
 					{#each shownLeave as lt (lt.id)}
-						<button type="button" class="doc-link" aria-current={leave?.id === lt.id ? 'true' : undefined} onclick={() => (leaveId = lt.id)}>
+						<button type="button" class="doc-link" class:ess-pink-wash={!!lt.monthlyQuotaDays} aria-current={leave?.id === lt.id ? 'true' : undefined} onclick={() => (leaveId = lt.id)}>
 							<span class="ess-tile ess-tile--sm"><FileText size={16} /></span>
 							<span class="ess-row__body">
 								<span class="ess-row__title">{lt.name}</span>
@@ -151,7 +151,7 @@
 				</nav>
 
 				{#if leave}
-					<article class="ess-card doc">
+					<article class="ess-card doc" class:ess-pink-wash={!!leave.monthlyQuotaDays}>
 						<div class="doc-head">
 							<div>
 								<span class="ess-eyebrow">Leave policy{#if leave.code} · {leave.code}{/if}</span>
@@ -159,13 +159,14 @@
 								<p class="doc-sub">{entitlement(leave)}.</p>
 							</div>
 						</div>
-						<dl class="ess-kv rules">
-							<dt>Entitlement</dt><dd>{entitlement(leave)}</dd>
-							{#if Number(leave.carryForwardCap) > 0}<dt>Carry-forward cap</dt><dd>{leave.carryForwardCap} days</dd>{/if}
-							{#if leave.monthlyUsageCap}<dt>Monthly usage cap</dt><dd>{Number(leave.monthlyUsageCap)} days in a calendar month</dd>{/if}
-							<dt>Encashment</dt><dd>{leave.encashmentEligible ? 'Eligible' : 'Not eligible'}</dd>
-							{#if leave.eligibility}<dt>Eligibility</dt><dd class="cap">{leave.eligibility.replace(/_/g, ' ')}</dd>{/if}
-							<dt>Documentation</dt><dd>{leave.requiresDocumentation ? `Required${leave.documentationNote ? `: ${leave.documentationNote}` : ''}` : 'Not required'}</dd>
+						<!-- Each rule is a small fact tile, several to a row. -->
+						<dl class="facts">
+							<div class="fact"><dt>Entitlement</dt><dd>{entitlement(leave)}</dd></div>
+							{#if Number(leave.carryForwardCap) > 0}<div class="fact"><dt>Carry-forward cap</dt><dd>{leave.carryForwardCap} days</dd></div>{/if}
+							{#if leave.monthlyUsageCap}<div class="fact"><dt>Monthly usage cap</dt><dd>{Number(leave.monthlyUsageCap)} days in a calendar month</dd></div>{/if}
+							<div class="fact"><dt>Encashment</dt><dd>{leave.encashmentEligible ? 'Eligible' : 'Not eligible'}</dd></div>
+							{#if leave.eligibility}<div class="fact"><dt>Eligibility</dt><dd class="cap">{leave.eligibility.replace(/_/g, ' ')}</dd></div>{/if}
+							<div class="fact"><dt>Documentation</dt><dd>{leave.requiresDocumentation ? `Required${leave.documentationNote ? `: ${leave.documentationNote}` : ''}` : 'Not required'}</dd></div>
 						</dl>
 						<div class="ess-notice ess-notice--info">
 							<span class="ess-notice__icon"><Info size={16} /></span>
@@ -180,7 +181,7 @@
 
 		<!-- ===== Workplace policies ===== -->
 		{:else}
-			<div class="docs">
+			<div class="docs docs--workplace">
 				<nav class="ess-card list" aria-label="Workplace policies">
 					<h3 class="ess-h2 list-h">Policy documents</h3>
 					{#each shownWorkplace as p (p.id)}
@@ -207,8 +208,8 @@
 							</div>
 						</div>
 						<ol class="rule-list">
-							{#each workplace.rules as rule (rule)}
-								<li>{rule}</li>
+							{#each workplace.rules as rule, i (rule)}
+								<li><span class="rule-n" aria-hidden="true">{i + 1}</span><span>{rule}</span></li>
 							{/each}
 						</ol>
 					</article>
@@ -217,15 +218,15 @@
 		{/if}
 	</div>
 
-	<aside class="ess-stack">
-		<section class="ess-card">
+	<aside class="fill-col">
+		<section class="ess-card ess-fill-card grow">
 			<div class="ess-card-head">
 				<h3 class="ess-h2">Upcoming holidays</h3>
 				{#if tab !== 'holidays' && allHolidays.length}
 					<button type="button" class="ess-link link-btn" onclick={() => (tab = 'holidays')}>View calendar <ChevronRight size={14} /></button>
 				{/if}
 			</div>
-			<div class="ess-rows">
+			<div class="ess-rows ess-scroll upcoming-list">
 				{#each upcoming as h (h.id)}
 					{@const t = tile(h.date)}
 					<div class="ess-row">
@@ -236,7 +237,8 @@
 						</span>
 					</div>
 				{:else}
-					<p class="empty">
+					<p class="empty fill-empty">
+						<span class="empty-icon" aria-hidden="true"><Umbrella size={18} strokeWidth={1.75} /></span>
 						{#if !data.hasShiftAssignment}Your holiday calendar appears once HR sets your shift group.{:else if !data.resolvedCalendar}No holiday calendar has been published yet.{:else}No more holidays this year.{/if}
 					</p>
 				{/each}
@@ -246,7 +248,7 @@
 		<section class="ess-card">
 			<h3 class="ess-h2 aside-h">Related</h3>
 			<div class="ess-rows">
-				<a class="ess-row" href="/leave/apply">
+				<a class="ess-row apply-row" href="/leave/apply">
 					<span class="ess-tile ess-tile--sm"><FileText size={16} /></span>
 					<span class="ess-row__body"><span class="ess-row__title">Apply for leave</span><span class="ess-row__meta">Uses the balances from this policy</span></span>
 					<ChevronRight size={16} class="chev" />
@@ -266,44 +268,59 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 16px;
+		gap: 12px;
 		flex-wrap: wrap;
-		margin-bottom: 20px;
+		margin-bottom: 12px;
 	}
 	.search {
 		flex: 1;
-		max-width: 420px;
+		max-width: 400px;
 		min-width: 240px;
+	}
+	.search .ess-input {
+		height: 36px;
+		font-size: 13.5px;
 	}
 
 	.layout {
-		--ess-aside-width: 340px;
+		--ess-aside-width: 320px;
 	}
 	.main {
 		min-width: 0;
 	}
 
+	/* ---------- fit-to-screen layout ----------
+	   The document column and the aside both reach the bottom of the
+	   workspace; long holiday lists, policy lists and rule lists scroll
+	   inside their own card. */
+	.fill-col {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		min-width: 0;
+	}
+
 	.docs {
 		display: grid;
-		grid-template-columns: 280px minmax(0, 1fr);
-		gap: 16px;
+		grid-template-columns: 260px minmax(0, 1fr);
+		gap: 12px;
 		align-items: start;
 	}
 	.list {
-		padding: 16px 12px;
+		padding: 12px 10px;
 		display: grid;
 		gap: 2px;
 	}
 	.list-h {
-		font-size: 19px;
-		padding: 2px 8px 12px;
+		font-size: 15px;
+		padding: 2px 8px 8px;
 	}
 	.doc-link {
 		display: flex;
 		align-items: center;
-		gap: 12px;
+		gap: 10px;
 		width: 100%;
-		padding: 12px 10px;
+		padding: 7px 8px;
 		border: none;
 		border-radius: var(--ess-radius-md);
 		background: transparent;
@@ -313,13 +330,24 @@
 		cursor: pointer;
 		transition: background var(--ess-t-fast);
 	}
+	.doc-link .ess-tile--sm {
+		width: 30px;
+		height: 30px;
+	}
+	.doc-link .ess-row__title {
+		font-size: 13.5px;
+	}
+	.doc-link .ess-row__meta {
+		font-size: 12px;
+	}
 	.doc-link:hover {
 		background: var(--ess-sunken);
 	}
 	.doc-link[aria-current='true'] {
 		background: var(--ess-primary-soft);
 	}
-	.doc-link .ess-row__meta {
+	.doc-link .ess-row__meta,
+	.doc-link .ess-row__title {
 		white-space: normal;
 	}
 	:global(.doc-link .chev),
@@ -331,35 +359,39 @@
 
 	.doc {
 		display: grid;
-		gap: 20px;
-		padding: 24px 28px;
+		gap: 14px;
+		align-content: start;
+		padding: 16px 20px;
+	}
+	.holidays-doc {
+		gap: 10px;
 	}
 	.doc-head {
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: 16px;
-		padding-bottom: 18px;
+		padding-bottom: 12px;
 		border-bottom: 1px solid var(--ess-border);
 	}
 	.doc-title {
 		font-family: var(--ess-font-display);
-		font-size: 36px;
+		font-size: 21px;
 		font-weight: 600;
-		line-height: 1.1;
-		margin-top: 6px;
+		line-height: 1.15;
+		margin-top: 4px;
 		color: var(--ess-text);
 	}
 	.doc-sub {
-		margin-top: 6px;
-		font-size: 15px;
+		margin-top: 4px;
+		font-size: 13.5px;
 		color: var(--ess-text-secondary);
-		max-width: 60ch;
+		max-width: 70ch;
 	}
 	.doc-meta {
 		display: grid;
 		text-align: right;
-		font-size: 13px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 		flex: none;
 	}
@@ -367,25 +399,154 @@
 		color: var(--ess-text);
 		font-weight: 500;
 	}
-	.rules {
-		grid-template-columns: 200px 1fr;
-		row-gap: 12px;
-	}
 	.cap {
 		text-transform: capitalize;
 	}
-	.rule-list {
+
+	/* Leave policy: the few leave types sit as chips in one strip above the
+	   document instead of a tall, mostly empty side list. */
+	.docs--leave {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.list--chips {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 6px;
+		padding: 7px 10px;
+	}
+	.list--chips .list-h {
+		padding: 0 8px 0 4px;
+		margin-right: 4px;
+	}
+	.list--chips .doc-link {
+		width: auto;
+		padding: 5px 10px 5px 6px;
+		border: 1px solid var(--ess-border);
+		gap: 8px;
+	}
+	.list--chips .doc-link[aria-current='true'] {
+		border-color: transparent;
+	}
+	.list--chips .doc-link .ess-tile--sm {
+		width: 26px;
+		height: 26px;
+	}
+	.list--chips .doc-link .ess-row__body {
+		display: flex;
+		flex-direction: row;
+		align-items: baseline;
+		gap: 8px;
+	}
+	.list--chips :global(.chev) {
+		display: none;
+	}
+	.list--chips .empty {
+		padding: 4px;
+	}
+
+	.facts {
 		margin: 0;
-		padding-left: 22px;
 		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 		gap: 10px;
-		font-size: 15px;
-		line-height: 1.6;
+	}
+	.fact {
+		padding: 9px 13px;
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-sunken);
+		display: grid;
+		gap: 3px;
+		align-content: start;
+	}
+	.fact dt {
+		margin: 0;
+		font-size: 12px;
+		color: var(--ess-text-secondary);
+	}
+	.fact dd {
+		margin: 0;
+		font-size: 14px;
+		font-weight: 600;
 		color: var(--ess-text);
 	}
-	.rule-list li::marker {
+
+	/* Workplace rules: numbered rows, each in its own soft panel. */
+	.rule-list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		display: grid;
+		gap: 8px;
+		font-size: 14px;
+		line-height: 1.5;
+		color: var(--ess-text);
+	}
+	.rule-list li {
+		display: flex;
+		align-items: flex-start;
+		gap: 12px;
+		padding: 9px 14px 9px 10px;
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-sunken);
+	}
+	.rule-n {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 22px;
+		height: 22px;
+		border-radius: var(--ess-radius-pill);
+		background: var(--ess-primary-soft);
 		color: var(--ess-primary-text);
+		font-size: 12px;
 		font-weight: 600;
+	}
+	.empty-icon {
+		display: grid;
+		place-items: center;
+		width: 38px;
+		height: 38px;
+		margin: 0 auto 8px;
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
+	}
+
+	/* Holiday rows, two to a line on a wide screen. */
+	.holiday-list {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+		align-content: start;
+		column-gap: 20px;
+	}
+	.holiday-list .ess-row,
+	.upcoming-list .ess-row {
+		padding: 7px 0;
+		gap: 12px;
+	}
+	.holiday-list .ess-row:last-child {
+		border-bottom: 1px solid var(--ess-border-subtle);
+	}
+	.holiday-list .ess-date-tile,
+	.upcoming-list .ess-date-tile {
+		width: 44px;
+		padding: 4px 0;
+	}
+	.holiday-list .ess-date-tile strong,
+	.upcoming-list .ess-date-tile strong {
+		font-size: 16px;
+	}
+	.holiday-list .ess-row__title,
+	.upcoming-list .ess-row__title {
+		font-size: 13.5px;
+	}
+	.holiday-list .ess-row__meta,
+	.upcoming-list .ess-row__meta {
+		font-size: 12px;
+	}
+	.holiday-list > .empty {
+		grid-column: 1 / -1;
 	}
 
 	.holiday.past {
@@ -393,13 +554,26 @@
 	}
 
 	.empty {
-		padding: 14px 4px;
-		font-size: 13.5px;
+		padding: 10px 4px;
+		font-size: 13px;
 		color: var(--ess-text-muted);
 	}
 	.aside-h {
-		font-size: 19px;
-		margin-bottom: 10px;
+		font-size: 15px;
+		margin-bottom: 6px;
+	}
+	.fill-col .ess-row .ess-tile--sm {
+		width: 30px;
+		height: 30px;
+	}
+	.fill-col a.ess-row {
+		padding: 8px 0;
+	}
+	.fill-col a.ess-row .ess-row__title {
+		font-size: 13.5px;
+	}
+	.fill-col a.ess-row .ess-row__meta {
+		font-size: 12px;
 	}
 	.link-btn {
 		border: none;
@@ -413,15 +587,181 @@
 		.docs {
 			grid-template-columns: 1fr;
 		}
-		.rules {
-			grid-template-columns: 1fr;
-			row-gap: 4px;
+		.doc-title {
+			font-size: 19px;
 		}
-		.rules dd {
-			margin-bottom: 8px;
+	}
+	@media (max-width: 560px) {
+		.holiday-list {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.facts {
+			grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+		}
+		.search {
+			min-width: 0;
+			max-width: none;
+			flex-basis: 100%;
+		}
+	}
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.layout {
+			grid-template-rows: minmax(0, 1fr);
+		}
+		.main {
+			display: flex;
+			flex-direction: column;
+			min-height: 0;
+		}
+		.main > * {
+			flex: 1 1 0%;
+			min-height: 0;
+		}
+		.docs {
+			grid-template-rows: minmax(0, 1fr);
+			align-items: stretch;
+		}
+		.docs > .list,
+		.docs > .doc {
+			min-height: 0;
+			overflow: auto;
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+		}
+		.docs > .list {
+			align-content: start;
+		}
+		.docs--leave {
+			grid-template-rows: auto minmax(0, 1fr);
+		}
+		/* Eleven long titles: a denser list, the rule count beside the
+		   title instead of under it. */
+		.docs--workplace {
+			grid-template-columns: 280px minmax(0, 1fr);
+		}
+		.docs--workplace .list {
+			padding: 10px 8px;
+			gap: 1px;
+		}
+		.docs--workplace .list-h {
+			padding: 0 8px 6px;
+		}
+		.docs--workplace .doc-link {
+			padding: 5px 8px;
+			gap: 9px;
+		}
+		.docs--workplace .doc-link .ess-tile--sm {
+			width: 26px;
+			height: 26px;
+			font-size: 13px;
+		}
+		.docs--workplace .doc-link .ess-row__body {
+			display: flex;
+			align-items: baseline;
+			gap: 8px;
+		}
+		.docs--workplace .doc-link .ess-row__title {
+			flex: 1 1 auto;
+			line-height: 1.3;
+		}
+		.docs--workplace .doc-link .ess-row__meta {
+			flex: none;
+			font-size: 11.5px;
+			color: var(--ess-text-muted);
+		}
+		.docs--workplace .list :global(.chev) {
+			display: none;
+		}
+		.docs--leave > .list--chips {
+			overflow: visible;
+		}
+		.fill-col {
+			min-height: 0;
+		}
+		.fill-col > .grow {
+			flex: 1 1 0%;
+			min-height: 120px;
+		}
+		.fill-col > :not(.grow) {
+			flex: none;
+		}
+		.upcoming-list {
+			display: flex;
+			flex-direction: column;
+		}
+		.upcoming-list > .fill-empty {
+			margin: auto 0;
+			text-align: center;
+		}
+		/* A lone notice (no shift group / no calendar) sits in the middle
+		   of the card rather than at the top of an empty one. */
+		.holidays-doc:has(> .ess-notice:only-child) {
+			align-content: center;
+			justify-content: center;
+		}
+		.holidays-doc > .ess-notice:only-child {
+			max-width: 560px;
+		}
+	}
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
+		.doc {
+			gap: 10px;
+			padding: 12px 16px;
+		}
+		.doc-head {
+			padding-bottom: 8px;
 		}
 		.doc-title {
-			font-size: 28px;
+			font-size: 18px;
+		}
+		.doc-sub {
+			font-size: 13px;
+		}
+		.doc .ess-notice {
+			padding: 9px 12px;
+			font-size: 13px;
+		}
+		.rule-list {
+			gap: 6px;
+			font-size: 13.5px;
+			line-height: 1.45;
+		}
+		.rule-list li {
+			padding: 7px 12px 7px 9px;
+		}
+	}
+
+	/* "Apply for leave" under Related reads as the page's blue button. */
+	.apply-row {
+		margin-bottom: 4px;
+		border-radius: 12px;
+		background: linear-gradient(180deg, color-mix(in srgb, var(--ess-primary) 78%, #fff), var(--ess-primary) 55%, color-mix(in srgb, var(--ess-primary) 88%, #000));
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.3),
+			0 8px 20px -8px color-mix(in srgb, var(--ess-primary) 85%, transparent);
+		transition:
+			filter var(--ess-t-fast),
+			transform var(--ess-t-fast);
+	}
+	.apply-row:hover {
+		filter: brightness(1.07);
+		transform: translateY(-1px);
+	}
+	.apply-row :global(.ess-row__title),
+	.apply-row :global(.ess-row__meta),
+	.apply-row :global(.chev) {
+		color: #fff;
+	}
+	.apply-row :global(.ess-row__meta) {
+		opacity: 0.85;
+	}
+	.apply-row :global(.ess-tile) {
+		background: rgba(255, 255, 255, 0.2);
+		color: #fff;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.apply-row:hover {
+			transform: none;
 		}
 	}
 </style>

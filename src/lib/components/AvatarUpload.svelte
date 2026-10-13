@@ -12,9 +12,11 @@
 		pictureVersion?: number | null;
 		/** Just the picture and its camera button, no name or buttons beside it. */
 		compact?: boolean;
+		/** Picture size; `lg` is the smaller one used in dense headers. */
+		size?: 'lg' | 'xl';
 	}
 
-	let { userId, fullName, hasPicture, pictureVersion, compact = false }: Props = $props();
+	let { userId, fullName, hasPicture, pictureVersion, compact = false, size = 'xl' }: Props = $props();
 
 	let busy = $state(false);
 	let errorMsg = $state('');
@@ -109,8 +111,8 @@
 </script>
 
 <div class="avatar-upload" class:compact>
-	<div class="avatar-frame" class:busy>
-		<Avatar {userId} {fullName} hasPicture={shows} size="xl" {version} />
+	<div class="avatar-frame" class:busy class:small={size === 'lg'}>
+		<Avatar {userId} {fullName} hasPicture={shows} {size} {version} />
 		<button
 			type="button"
 			class="change-btn"
@@ -119,11 +121,11 @@
 			aria-label={shows ? 'Change profile picture' : 'Add profile picture'}
 			title={shows ? 'Change profile picture' : 'Add profile picture'}
 		>
-			<Camera size={15} />
+			<Camera size={size === 'lg' ? 12 : 15} />
 		</button>
 		{#if shows && compact}
 			<button type="button" class="remove-btn" onclick={removePicture} disabled={busy} aria-label="Remove profile picture" title="Remove profile picture">
-				<Trash2 size={13} />
+				<Trash2 size={size === 'lg' ? 11 : 13} />
 			</button>
 		{/if}
 	</div>
@@ -208,6 +210,20 @@
 		color: var(--ess-text-muted);
 		border-color: var(--ess-border);
 	}
+	/* The smaller picture keeps its buttons in proportion. */
+	.small .change-btn {
+		width: 24px;
+		height: 24px;
+		right: -4px;
+		bottom: -4px;
+	}
+	.small .remove-btn {
+		width: 22px;
+		height: 22px;
+		left: -4px;
+		bottom: -4px;
+	}
+
 	.remove-btn:hover:not(:disabled) {
 		color: var(--ess-danger);
 		border-color: var(--ess-danger);

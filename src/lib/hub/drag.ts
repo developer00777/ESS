@@ -89,11 +89,20 @@ export function dragBoard(node: HTMLElement, options: Options) {
 		target = { zone: zone.dataset.zone!, beforeId: before?.dataset.card ?? null, afterId: after?.dataset.card ?? null };
 	}
 
-	function autoScroll(x: number) {
+	function autoScroll(x: number, y: number) {
 		const scroller = node.querySelector<HTMLElement>('[data-scroll]') ?? node;
 		const r = scroller.getBoundingClientRect();
 		if (x < r.left + 40) scroller.scrollLeft -= 14;
 		else if (x > r.right - 40) scroller.scrollLeft += 14;
+		// Columns scroll on their own when the board fits the screen: near the
+		// top or bottom edge of the column under the pointer, scroll it too.
+		const zone = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('[data-zone]');
+		if (!zone || !node.contains(zone)) return;
+		const list = zone.querySelector<HTMLElement>('[data-zone-list]') ?? zone;
+		if (list.scrollHeight <= list.clientHeight) return;
+		const lr = list.getBoundingClientRect();
+		if (y < lr.top + 40) list.scrollTop -= 12;
+		else if (y > lr.bottom - 40) list.scrollTop += 12;
 	}
 
 	function down(e: PointerEvent) {
@@ -121,7 +130,7 @@ export function dragBoard(node: HTMLElement, options: Options) {
 		e.preventDefault();
 		if (ghost) Object.assign(ghost.style, { left: `${e.clientX - offset.x}px`, top: `${e.clientY - offset.y}px` });
 		locate(e.clientX, e.clientY);
-		autoScroll(e.clientX);
+		autoScroll(e.clientX, e.clientY);
 	}
 
 	function up() {

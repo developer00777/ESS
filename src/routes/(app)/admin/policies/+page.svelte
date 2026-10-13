@@ -277,6 +277,7 @@
 	</button>
 </nav>
 
+<div class="ess-fill pol-body">
 <section class="ess-card publish" aria-labelledby="pub-h">
 	<div class="pub-head">
 		<div>
@@ -497,7 +498,7 @@
 
 <!-- ---------- currently published ---------- -->
 {#if kind === 'holiday_calendar'}
-	<section class="ess-card" aria-labelledby="cur-h">
+	<section class="ess-card current" aria-labelledby="cur-h">
 		<div class="ess-card-head">
 			<div>
 				<h2 class="ess-h2" id="cur-h">Currently published holiday calendars</h2>
@@ -507,7 +508,7 @@
 		{#if data.publishedCalendars.length === 0}
 			<p class="ess-help">No holiday calendar published yet.</p>
 		{:else}
-			<div class="ess-table-shell">
+			<div class="ess-table-shell current-table">
 				<table class="ess-table">
 					<thead>
 						<tr>
@@ -542,7 +543,7 @@
 		{/if}
 	</section>
 {:else}
-	<section class="ess-card" aria-labelledby="curl-h">
+	<section class="ess-card current" aria-labelledby="curl-h">
 		<div class="ess-card-head">
 			<div>
 				<h2 class="ess-h2" id="curl-h">Currently published policies</h2>
@@ -552,7 +553,7 @@
 		{#if data.leaveTypes.length === 0}
 			<p class="ess-help">No leave policy published yet.</p>
 		{:else}
-			<div class="ess-table-shell">
+			<div class="ess-table-shell current-table">
 				<table class="ess-table">
 					<thead>
 						<tr>
@@ -619,19 +620,25 @@
 		{/if}
 	</section>
 {/if}
+</div>
 
 <style>
 	.kinds {
-		margin-bottom: 20px;
+		margin-bottom: 0;
+	}
+	.pol-body {
+		display: grid;
+		gap: 14px;
+		min-width: 0;
 	}
 
 	.pub-head {
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
-		gap: 24px;
+		gap: 16px;
 		flex-wrap: wrap;
-		margin-bottom: 18px;
+		margin-bottom: 10px;
 	}
 	.steps {
 		min-width: 420px;
@@ -641,33 +648,36 @@
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		margin-bottom: 12px;
+		margin-bottom: 10px;
 	}
 	.ess-notice {
-		margin-bottom: 14px;
+		margin-bottom: 10px;
+		padding: 9px 12px;
+		gap: 10px;
+		font-size: 13px;
 	}
 
 	.pub-grid {
 		display: grid;
 		grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-		gap: 20px;
+		gap: 14px;
 		align-items: start;
 	}
 	.doc,
 	.fields {
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
-		padding: 18px;
+		padding: 12px 14px;
 		display: grid;
-		gap: 14px;
+		gap: 10px;
 		align-content: start;
 		min-width: 0;
 	}
 	.file-row {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		padding: 12px 14px;
+		gap: 10px;
+		padding: 8px 10px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
 	}
@@ -714,8 +724,8 @@
 	.file-drop {
 		display: grid;
 		justify-items: center;
-		gap: 8px;
-		padding: 36px 20px;
+		gap: 6px;
+		padding: 18px 16px;
 		border: 1px dashed var(--ess-border-strong);
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-sunken);
@@ -727,7 +737,7 @@
 		border-color: var(--ess-primary);
 	}
 	.file-drop strong {
-		font-size: 15px;
+		font-size: 14px;
 		font-weight: 500;
 	}
 	.file-drop > span:not(.ess-tile):not(.ess-btn) {
@@ -746,7 +756,7 @@
 	.lt-grid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: 14px;
+		gap: 10px 12px;
 	}
 	.eff {
 		max-width: 260px;
@@ -763,7 +773,7 @@
 	.group-label {
 		flex: 1;
 		font-family: var(--ess-font-display);
-		font-size: 18px;
+		font-size: 15px;
 		font-weight: 600;
 		border: none;
 		border-bottom: 1px dashed transparent;
@@ -799,8 +809,8 @@
 	}
 	.lt-block {
 		display: grid;
-		gap: 12px;
-		padding: 14px;
+		gap: 10px;
+		padding: 12px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
 	}
@@ -821,15 +831,15 @@
 	.waiting {
 		display: grid;
 		justify-items: center;
-		gap: 8px;
-		padding: 48px 24px;
+		gap: 6px;
+		padding: 20px 16px;
 		text-align: center;
 		color: var(--ess-text-secondary);
-		font-size: 13.5px;
+		font-size: 13px;
 	}
 	.waiting strong {
 		color: var(--ess-text);
-		font-size: 15px;
+		font-size: 14px;
 	}
 	.waiting span:not(.ess-tile) {
 		max-width: 40ch;
@@ -858,6 +868,195 @@
 	.danger:hover:not(:disabled) {
 		background: var(--ess-danger-bg);
 		color: var(--ess-danger);
+	}
+
+	/* Desktop fill: the publish card takes the height left over and its two
+	   panes scroll on their own; the published list keeps its natural height
+	   up to a cap and scrolls inside after that. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.pol-body {
+			display: flex;
+			flex-direction: column;
+		}
+		.publish {
+			flex: 1 1 0%;
+			min-height: 230px;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+		}
+		.pub-grid {
+			flex: 1 1 0%;
+			min-height: 0;
+			align-items: stretch;
+		}
+		.doc,
+		.fields {
+			min-height: 0;
+			overflow: auto;
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+		}
+		.doc {
+			display: flex;
+			flex-direction: column;
+		}
+		.doc > :global(*) {
+			flex-shrink: 0;
+		}
+		.doc .doc-preview {
+			flex: 1 1 0%;
+			min-height: 180px;
+			max-height: none;
+		}
+		.doc-preview iframe {
+			height: 100%;
+		}
+		.doc-preview img {
+			height: 100%;
+			max-height: none;
+		}
+		.doc,
+		.fields {
+			padding: 10px 12px;
+			gap: 8px;
+		}
+		.doc .file-drop {
+			flex: 1 1 auto;
+			padding: 10px 14px;
+			grid-template-columns: auto minmax(0, 1fr);
+			justify-items: start;
+			align-content: center;
+			column-gap: 14px;
+			text-align: left;
+		}
+		.file-drop .ess-tile {
+			grid-row: span 3;
+			align-self: center;
+		}
+		.file-drop > :global(*:not(.ess-tile)) {
+			grid-column: 2;
+		}
+		.fields:has(> .waiting) {
+			align-content: center;
+		}
+		.fields .waiting {
+			min-height: 100%;
+			align-content: center;
+			padding: 8px 12px;
+		}
+		.current {
+			flex: 0 1 auto;
+			min-height: 96px;
+			max-height: 42%;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+		}
+		.current-table {
+			flex: 1 1 auto;
+			min-height: 0;
+			overflow: auto;
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+		}
+		.current-table th {
+			position: sticky;
+			top: 0;
+			z-index: 1;
+		}
+	}
+
+	/* Short desktop screens (laptops at 150% scaling): the stepper sits on
+	   one line, headings share a line with their captions and the empty
+	   states lie flat, so both cards fit without scrolling. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
+		.pol-body {
+			gap: 10px;
+		}
+		.kinds :global(.ess-tab) {
+			padding-top: 4px;
+			padding-bottom: 4px;
+		}
+		.publish {
+			min-height: 170px;
+		}
+		.pub-head {
+			margin-bottom: 8px;
+			align-items: center;
+		}
+		.pub-head .ess-caption,
+		.current .ess-caption {
+			font-size: 12px;
+		}
+		.steps .ess-step {
+			display: flex;
+			align-items: center;
+			gap: 0;
+		}
+		.steps .ess-step__label {
+			position: relative;
+			z-index: 1;
+			padding: 0 10px 0 6px;
+			background: var(--ess-surface);
+			font-size: 13px;
+			white-space: nowrap;
+		}
+		.pub-grid {
+			gap: 10px;
+		}
+		.doc,
+		.fields {
+			padding: 8px 12px;
+			gap: 6px;
+		}
+		.doc .ess-h3 {
+			font-size: 14px;
+		}
+		.doc .doc-preview {
+			min-height: 110px;
+		}
+		.doc .file-drop {
+			grid-template-columns: auto minmax(0, 1fr) auto;
+			padding: 8px 12px;
+			row-gap: 2px;
+		}
+		.file-drop .ess-tile {
+			grid-row: span 2;
+		}
+		.file-drop > :global(.ess-btn) {
+			grid-column: 3;
+			grid-row: 1 / span 2;
+			align-self: center;
+		}
+		.file-drop > span:not(.ess-tile):not(.ess-btn) {
+			font-size: 12.5px;
+			max-width: 48ch;
+		}
+		.fields .waiting {
+			grid-template-columns: auto minmax(0, 1fr);
+			justify-items: start;
+			column-gap: 12px;
+			row-gap: 2px;
+			text-align: left;
+		}
+		.waiting .ess-tile {
+			grid-row: span 2;
+			align-self: center;
+		}
+		.waiting span:not(.ess-tile) {
+			font-size: 12.5px;
+			max-width: 52ch;
+		}
+		.current {
+			min-height: 0;
+		}
+		.current .ess-card-head > div {
+			display: flex;
+			align-items: baseline;
+			flex-wrap: wrap;
+			gap: 2px 10px;
+		}
 	}
 
 	@media (max-width: 1100px) {

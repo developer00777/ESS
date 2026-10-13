@@ -134,12 +134,13 @@
 	<title>Appearance — Champ HR ESS Portal</title>
 </svelte:head>
 
+<div class="ess-fill tweaks">
 <div class="ess-split ess-split--wide layout">
-	<section class="ess-card">
+	<section class="ess-card ess-fill-card settings-card">
 		<div class="ess-card-head">
 			<h2 class="ess-h2">Interface style</h2>
 		</div>
-		<div class="settings">
+		<div class="settings ess-scroll">
 			{#each TWEAKS as tweak (tweak.key)}
 				{@const Icon = tweak.icon}
 				<div class="setting">
@@ -204,40 +205,40 @@
 	</aside>
 </div>
 
-<section class="ess-card summary">
-	<div class="ess-card-head">
-		<div>
-			<h2 class="ess-h2">Current selection summary</h2>
-			<p class="ess-caption">
-				{changed.length === 0 ? 'Everything is at its shipped default. These settings apply to this browser only.' : `${changed.length} setting${changed.length === 1 ? '' : 's'} changed from default, in this browser only.`}
-			</p>
-		</div>
-		<div class="summary-actions">
-			<button type="button" class="ess-btn ess-btn--secondary" onclick={resetAll}><RotateCcw size={15} /> Reset defaults</button>
-			<button type="button" class="ess-btn ess-btn--primary" onclick={copySummary}>
-				{#if copied}<Check size={15} /> Copied{:else}<Copy size={15} /> Copy summary{/if}
-			</button>
-		</div>
-	</div>
-	<div class="summary-grid">
-		{#each TWEAKS as t (t.key)}
-			{@const Icon = t.icon}
-			<div class="sum" class:changed={current[t.key] != null}>
-				<span class="setting-icon sm"><Icon size={16} strokeWidth={1.75} /></span>
-				<span><small>{t.label}</small><strong>{optionLabel(t)}</strong></span>
+	<section class="ess-card summary">
+		<div class="ess-card-head">
+			<div>
+				<h2 class="ess-h2">Current selection summary</h2>
+				<p class="ess-caption">
+					{changed.length === 0 ? 'Everything is at its shipped default. These settings apply to this browser only.' : `${changed.length} setting${changed.length === 1 ? '' : 's'} changed from default, in this browser only.`}
+				</p>
+			<p class="ess-help">Visit any page (Today, Leave, Team) with these applied to judge them in context — the settings follow you around the app.</p>
 			</div>
-		{/each}
-	</div>
-	<p class="ess-help">Visit any page (Today, Leave, Team) with these applied to judge them in context — the settings follow you around the app.</p>
-</section>
+			<div class="summary-actions">
+				<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" onclick={resetAll}><RotateCcw size={15} /> Reset defaults</button>
+				<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={copySummary}>
+					{#if copied}<Check size={15} /> Copied{:else}<Copy size={15} /> Copy summary{/if}
+				</button>
+			</div>
+		</div>
+		<div class="summary-grid">
+			{#each TWEAKS as t (t.key)}
+				{@const Icon = t.icon}
+				<div class="sum" class:changed={current[t.key] != null}>
+					<span class="setting-icon sm"><Icon size={16} strokeWidth={1.75} /></span>
+					<span><small>{t.label}</small><strong>{optionLabel(t)}</strong></span>
+				</div>
+			{/each}
+		</div>
+	</section>
+</div>
 
 <style>
 	.layout {
-		margin-bottom: 20px;
 		align-items: stretch;
 	}
 	.layout {
-		--ess-aside-width: minmax(380px, 1.1fr);
+		--ess-aside-width: minmax(380px, 0.95fr);
 	}
 
 	/* ---------- settings ---------- */
@@ -246,10 +247,10 @@
 	}
 	.setting {
 		display: grid;
-		grid-template-columns: 40px minmax(0, 1fr) auto;
+		grid-template-columns: 28px minmax(0, 1fr) auto;
 		align-items: center;
-		gap: 14px;
-		padding: 16px 0;
+		gap: 10px;
+		padding: 5px 0;
 		border-bottom: 1px solid var(--ess-border-subtle);
 	}
 	.setting:last-child {
@@ -258,45 +259,47 @@
 	.setting-icon {
 		display: grid;
 		place-items: center;
-		width: 40px;
-		height: 40px;
+		width: 28px;
+		height: 28px;
 		color: var(--ess-text);
 	}
 	.setting-icon.sm {
-		width: 32px;
-		height: 32px;
+		width: 22px;
+		height: 22px;
 	}
 	.setting-text {
 		display: grid;
-		gap: 2px;
+		gap: 1px;
+		min-width: 0;
 	}
 	.setting-text strong {
-		font-size: 15px;
+		font-size: 13.5px;
 		font-weight: 500;
 	}
 	.setting-text small {
-		font-size: 13px;
+		font-size: 12px;
+		line-height: 1.35;
 		color: var(--ess-text-secondary);
 	}
 	.choices {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 8px;
+		gap: 6px;
 		justify-content: flex-end;
 	}
 	.choice {
 		display: inline-flex;
 		align-items: center;
-		gap: 10px;
-		min-width: 120px;
-		height: 42px;
-		padding: 0 16px;
+		gap: 7px;
+		min-width: 0;
+		height: 30px;
+		padding: 0 11px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-surface);
 		color: var(--ess-text-secondary);
 		font: inherit;
-		font-size: 14px;
+		font-size: 13px;
 		font-weight: 500;
 		cursor: pointer;
 		transition:
@@ -314,8 +317,8 @@
 		color: var(--ess-primary-text);
 	}
 	.radio {
-		width: 14px;
-		height: 14px;
+		width: 12px;
+		height: 12px;
 		border-radius: 50%;
 		border: 1.5px solid var(--ess-border-strong);
 		background: var(--ess-surface);
@@ -625,15 +628,15 @@
 	}
 	.summary-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-		gap: 10px;
-		margin-top: 6px;
+		grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+		gap: 6px;
+		margin-top: 2px;
 	}
 	.sum {
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		padding: 10px 12px;
+		gap: 8px;
+		padding: 6px 8px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-surface);
@@ -647,15 +650,130 @@
 		line-height: 1.25;
 	}
 	.sum small {
-		font-size: 12px;
+		font-size: 11px;
 		color: var(--ess-text-muted);
 	}
 	.sum strong {
-		font-size: 14px;
+		font-size: 13px;
 		font-weight: 600;
 	}
+	.tweaks {
+		display: grid;
+		gap: 14px;
+		min-width: 0;
+	}
 	.summary .ess-help {
-		margin-top: 14px;
+		margin-top: 2px;
+	}
+	.summary .ess-card-head {
+		align-items: flex-start;
+		flex-wrap: wrap;
+	}
+
+	/* Desktop fill: settings and the summary share the left column, the live
+	   preview takes the full height on the right; nothing scrolls the page. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.tweaks {
+			display: flex;
+			flex-direction: column;
+		}
+		.layout {
+			flex: 1 1 0%;
+			min-height: 0;
+		}
+		.layout .settings-card {
+			min-height: 0;
+		}
+		.summary {
+			flex: 0 0 auto;
+		}
+		.summary {
+			padding-top: 12px;
+			padding-bottom: 12px;
+		}
+		.summary .ess-card-head {
+			margin-bottom: 8px;
+		}
+		.summary-grid {
+			grid-template-columns: repeat(7, minmax(0, 1fr));
+		}
+		.sum {
+			padding: 4px 8px;
+			gap: 6px;
+			min-width: 0;
+		}
+		.sum > span:last-child {
+			min-width: 0;
+			line-height: 1.15;
+		}
+		.sum small {
+			font-size: 11px;
+		}
+		.p-main {
+			padding: 12px 14px 10px;
+			gap: 10px;
+		}
+		.preview-card {
+			min-height: 0;
+			overflow: hidden;
+		}
+		.preview {
+			min-height: 0;
+		}
+	}
+
+	/* Short desktop screens: slimmer setting rows, and the summary heading
+	   shares a line with its caption, so more of the settings list shows. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
+		.setting {
+			padding: 3px 0;
+		}
+		.setting-text {
+			gap: 0;
+		}
+		.setting-text strong {
+			font-size: 13px;
+		}
+		.setting-text small {
+			font-size: 11.5px;
+			line-height: 1.3;
+		}
+		.choices {
+			gap: 5px;
+		}
+		.choice {
+			height: 27px;
+			padding: 0 10px;
+			font-size: 12.5px;
+		}
+		.summary {
+			padding-top: 10px;
+			padding-bottom: 10px;
+		}
+		.summary .ess-card-head {
+			align-items: center;
+			flex-wrap: nowrap;
+			margin-bottom: 6px;
+		}
+		.summary-actions {
+			flex: none;
+		}
+		.summary .ess-card-head > div:first-child {
+			flex: 1 1 0%;
+			min-width: 0;
+			display: flex;
+			align-items: baseline;
+			flex-wrap: wrap;
+			gap: 0 10px;
+		}
+		.summary .ess-card-head .ess-caption {
+			font-size: 12px;
+		}
+		.summary .ess-help {
+			flex-basis: 100%;
+			margin-top: 0;
+			font-size: 12px;
+		}
 	}
 
 	@media (max-width: 860px) {

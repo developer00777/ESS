@@ -186,8 +186,8 @@
 
 <!-- Title and description come from the Admin Controls layout (src/lib/admin-tabs.ts). -->
 
-<div class="ess-split page">
-	<div class="ess-stack">
+<div class="ess-split page ess-fill">
+	<div class="ess-stack main-col">
 		<!-- ---------- device feed ---------- -->
 		<section class="ess-card feed" aria-labelledby="feed-h">
 			<div class="ess-card-head">
@@ -264,7 +264,7 @@
 		</section>
 
 		<!-- ---------- manual upload ---------- -->
-		<section class="ess-card" aria-labelledby="upload-h">
+		<section class="ess-card upload-card" aria-labelledby="upload-h">
 			<UploadSteps steps={['Upload', 'Review', 'Apply']} hints={['Choose the device report', 'Check and match records', 'Import to attendance']} current={step} />
 
 			<form class="upload-form" onsubmit={handleCheck}>
@@ -347,7 +347,7 @@
 						</div>
 					</div>
 
-					<div class="ess-table-shell">
+					<div class="ess-table-shell preview-shell">
 						<table class="ess-table">
 							<thead>
 								<tr>
@@ -420,14 +420,14 @@
 		</section>
 
 		<!-- ---------- recent uploads ---------- -->
-		<section class="ess-card" aria-labelledby="recent-h">
+		<section class="ess-card ess-fill-card recent-card" aria-labelledby="recent-h">
 			<div class="ess-card-head">
 				<h2 class="ess-h2" id="recent-h">Recent uploads</h2>
 			</div>
 			{#if data.recentUploads.length === 0}
 				<p class="ess-help">No biometric report has been uploaded by hand yet.</p>
 			{:else}
-				<div class="ess-table-shell">
+				<div class="ess-table-shell ess-scroll recent-shell">
 					<table class="ess-table">
 						<thead>
 							<tr>
@@ -530,6 +530,18 @@
 
 	.feed .ess-figure {
 		align-items: center;
+		gap: 10px;
+		padding: 10px 14px;
+	}
+	.feed .ess-figure .ess-tile {
+		width: 34px;
+		height: 34px;
+	}
+	.feed .ess-figure__value {
+		font-size: 20px;
+	}
+	.feed .ess-figure__label {
+		font-size: 12.5px;
 	}
 	.feed .ess-figures {
 		margin-bottom: 12px;
@@ -558,8 +570,8 @@
 		min-width: 280px;
 		display: flex;
 		align-items: center;
-		gap: 14px;
-		padding: 12px 14px;
+		gap: 12px;
+		padding: 8px 12px;
 		border: 1px dashed var(--ess-border-strong);
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-sunken);
@@ -582,8 +594,12 @@
 		display: grid;
 		min-width: 0;
 	}
+	.file-drop .ess-tile {
+		width: 36px;
+		height: 36px;
+	}
 	.file-text strong {
-		font-size: 14.5px;
+		font-size: 14px;
 		font-weight: 500;
 		white-space: nowrap;
 		overflow: hidden;
@@ -595,16 +611,25 @@
 	}
 
 	.options {
-		margin-top: 14px;
+		margin-top: 10px;
 		display: grid;
-		gap: 6px;
+		gap: 4px 16px;
+	}
+	@media (min-width: 900px) {
+		.options {
+			grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+			align-items: end;
+		}
+		.options .ess-help {
+			padding-bottom: 8px;
+		}
 	}
 	.date-fallback {
 		max-width: 420px;
 	}
 
 	.formats {
-		margin-top: 12px;
+		margin-top: 8px;
 		font-size: 13px;
 		color: var(--ess-text-secondary);
 	}
@@ -640,8 +665,8 @@
 	}
 
 	.preview {
-		margin-top: 18px;
-		padding-top: 18px;
+		margin-top: 12px;
+		padding-top: 12px;
 		border-top: 1px solid var(--ess-border);
 		display: grid;
 		gap: 12px;
@@ -747,25 +772,25 @@
 		grid-template-columns: 1fr 1fr;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
-		margin-bottom: 14px;
+		margin-bottom: 10px;
 	}
 	.sum {
 		display: grid;
 		gap: 2px;
-		padding: 16px;
+		padding: 10px 12px;
 	}
 	.sum + .sum {
 		border-left: 1px solid var(--ess-border);
 	}
 	.sum strong {
 		font-family: var(--ess-font-display);
-		font-size: 30px;
+		font-size: 24px;
 		font-weight: 600;
 		line-height: 1.05;
 		font-variant-numeric: tabular-nums;
 	}
 	.sum span {
-		font-size: 14px;
+		font-size: 13px;
 		font-weight: 500;
 	}
 	.sum small {
@@ -773,7 +798,7 @@
 		color: var(--ess-text-muted);
 	}
 	.effects {
-		margin-bottom: 14px;
+		margin-bottom: 10px;
 		font-size: 13.5px;
 	}
 	.apply {
@@ -795,7 +820,7 @@
 		grid-template-columns: 12px auto 1fr auto;
 		align-items: center;
 		gap: 10px;
-		padding: 8px 0;
+		padding: 6px 0;
 		border-bottom: 1px solid var(--ess-border-subtle);
 		font-size: 13px;
 	}
@@ -815,6 +840,43 @@
 			position: static;
 		}
 	}
+
+	/* Fill layout: both columns end on the workspace's bottom edge. The
+	   upload history scrolls inside its card; a long preview scrolls inside
+	   its table. If a preview is open the left column scrolls as a whole. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.aside {
+			position: static;
+		}
+		.main-col > :not(.recent-card) {
+			flex-shrink: 0;
+		}
+		.main-col > .recent-card {
+			flex: 1 1 0px;
+			min-height: 120px;
+		}
+		.main-col .ess-table th {
+			position: sticky;
+			top: 0;
+			z-index: 1;
+			padding: 8px 14px;
+		}
+		.main-col .ess-table td {
+			padding: 8px 14px;
+		}
+		.preview-shell {
+			max-height: 420px;
+			overflow: auto;
+			scrollbar-width: thin;
+		}
+		.preview-shell .ess-table-foot {
+			position: sticky;
+			bottom: 0;
+			background: var(--ess-glass-solid);
+			-webkit-backdrop-filter: blur(16px) saturate(160%);
+			backdrop-filter: blur(16px) saturate(160%);
+		}
+	}
 	@media (max-width: 720px) {
 		.summary {
 			grid-template-columns: 1fr;
@@ -822,6 +884,67 @@
 		.sum + .sum {
 			border-left: none;
 			border-top: 1px solid var(--ess-border);
+		}
+	}
+
+	/* Short desktop screens (a 1280x580 browser): the feed note sits beside
+	   its title, the upload controls tighten and the date fallback puts its
+	   label beside the input, so the upload history keeps a visible card. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
+		.feed:has(> .ess-card-head + .ess-help:last-child) {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: baseline;
+			column-gap: 14px;
+		}
+		.feed > .ess-card-head:has(+ .ess-help:last-child) {
+			margin-bottom: 0;
+		}
+		.feed > .ess-card-head + .ess-help:last-child {
+			margin: 0;
+		}
+		.upload-card :global(.steps) {
+			margin-bottom: 8px;
+		}
+		.upload-form {
+			gap: 10px;
+		}
+		.file-drop {
+			padding: 5px 10px;
+			gap: 10px;
+		}
+		.file-drop .ess-tile {
+			width: 30px;
+			height: 30px;
+		}
+		.file-text span {
+			font-size: 12px;
+		}
+		.options {
+			margin-top: 8px;
+			align-items: center;
+		}
+		.options .ess-help {
+			padding-bottom: 0;
+		}
+		.date-fallback {
+			flex-direction: row;
+			align-items: center;
+			gap: 10px;
+		}
+		.date-fallback .ess-label {
+			flex: 1 1 0;
+			font-size: 12.5px;
+			line-height: 1.3;
+		}
+		.date-fallback .ess-input {
+			flex: 0 0 150px;
+		}
+		.formats {
+			margin-top: 6px;
+		}
+		.main-col > .recent-card {
+			min-height: 90px;
 		}
 	}
 </style>

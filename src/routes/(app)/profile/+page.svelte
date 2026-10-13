@@ -143,6 +143,7 @@
 />
 
 <form
+	class="ess-fill profile-form"
 	method="POST"
 	action="?/updateSelfService"
 	use:enhance={({ cancel }) => {
@@ -168,51 +169,51 @@
 	}}
 >
 	{#if saveError}<p class="ess-error" role="alert">{saveError}</p>{/if}
-	<!-- Identity header -->
-	<section class="ess-card identity">
-		<div class="identity-main">
-			<AvatarUpload userId={data.userRow.id} fullName={data.userRow.fullName} hasPicture={data.hasProfilePicture} pictureVersion={data.profilePictureVersion} compact />
-			<div class="identity-text">
-				<h2 class="name">{data.userRow.fullName}</h2>
-				{#if p?.designation}<p class="designation">{p.designation}</p>{/if}
-				{#if p?.employeeCode}<p class="code">{p.employeeCode}</p>{/if}
-			</div>
-		</div>
-		<div class="identity-facts">
-			<div class="fact">
-				<UserRound size={18} strokeWidth={1.75} />
-				<div>
-					<span class="fact-label">Manager</span>
-					<span class="fact-value">
-						{#if data.managers?.direct}
-							<span class="manager">{data.managers.direct.display}</span>
-							{#if data.managers.direct.unlinked}<span class="unlinked">not in system</span>{/if}
-						{:else}—{/if}
-					</span>
-				</div>
-			</div>
-			<div class="fact">
-				<Building size={18} strokeWidth={1.75} />
-				<div>
-					<span class="fact-label">Location</span>
-					<span class="fact-value">{location ?? '—'}</span>
-				</div>
-			</div>
-		</div>
-		<div class="identity-actions">
-			{#if editing}
-				<button type="button" class="ess-btn ess-btn--secondary" onclick={cancel} disabled={saving}>Cancel</button>
-				<button type="submit" class="ess-btn ess-btn--primary" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
-			{:else}
-				<button type="button" class="ess-btn ess-btn--primary" onclick={startEditing}>
-					<PenLine size={16} /> Edit details
-				</button>
-			{/if}
-		</div>
-	</section>
 
 	<div class="ess-split layout">
 		<div class="main">
+			<!-- Identity header: sits above the tabs so the aside can run the full height. -->
+			<section class="ess-card identity">
+				<div class="identity-main">
+					<AvatarUpload userId={data.userRow.id} fullName={data.userRow.fullName} hasPicture={data.hasProfilePicture} pictureVersion={data.profilePictureVersion} compact size="lg" />
+					<div class="identity-text">
+						<h2 class="name">{data.userRow.fullName}</h2>
+						{#if p?.designation}<p class="designation">{p.designation}</p>{/if}
+						{#if p?.employeeCode}<p class="code">{p.employeeCode}</p>{/if}
+					</div>
+				</div>
+				<div class="identity-facts">
+					<div class="fact">
+						<UserRound size={16} strokeWidth={1.75} />
+						<div>
+							<span class="fact-label">Manager</span>
+							<span class="fact-value">
+								{#if data.managers?.direct}
+									<span class="manager">{data.managers.direct.display}</span>
+									{#if data.managers.direct.unlinked}<span class="unlinked">not in system</span>{/if}
+								{:else}—{/if}
+							</span>
+						</div>
+					</div>
+					<div class="fact">
+						<Building size={16} strokeWidth={1.75} />
+						<div>
+							<span class="fact-label">Location</span>
+							<span class="fact-value">{location ?? '—'}</span>
+						</div>
+					</div>
+				</div>
+				<div class="identity-actions">
+					{#if editing}
+						<button type="button" class="ess-btn ess-btn--secondary" onclick={cancel} disabled={saving}>Cancel</button>
+						<button type="submit" class="ess-btn ess-btn--primary" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
+					{:else}
+						<button type="button" class="ess-btn ess-btn--primary" onclick={startEditing}>
+							<PenLine size={16} /> Edit details
+						</button>
+					{/if}
+				</div>
+			</section>
 			<div class="ess-tabs tabs" role="tablist" aria-label="Profile sections">
 				{#each TABS as t (t.id)}
 					<button type="button" role="tab" class="ess-tab" aria-selected={tab === t.id} onclick={() => (tab = t.id)}>{t.label}</button>
@@ -244,7 +245,7 @@
 						<div class="ess-field">
 							<label class="ess-label" for="pf-address">Current address</label>
 							{#if editing}
-								<textarea id="pf-address" class="ess-textarea" name="address" rows="3" bind:value={address}></textarea>
+								<textarea id="pf-address" class="ess-textarea" name="address" rows="2" bind:value={address}></textarea>
 							{:else}
 								<p class="value value--multi"><MapPin size={16} /> {p?.address || 'No address on file'}</p>
 							{/if}
@@ -252,7 +253,7 @@
 						<div class="ess-field">
 							<label class="ess-label" for="pf-paddress">Permanent address</label>
 							{#if editing}
-								<textarea id="pf-paddress" class="ess-textarea" name="permanentAddress" rows="3" bind:value={permanentAddress}></textarea>
+								<textarea id="pf-paddress" class="ess-textarea" name="permanentAddress" rows="2" bind:value={permanentAddress}></textarea>
 							{:else}
 								<p class="value value--multi"><MapPin size={16} /> {p?.permanentAddress || p?.address || 'No address on file'}</p>
 							{/if}
@@ -269,6 +270,8 @@
 					{/if}
 				</ProfileCard>
 
+				<!-- Employment summary and security side by side, so the tab fits. -->
+				<div class="pair">
 				<ProfileCard icon={Briefcase} title="Employment information" note="Maintained by HR.">
 					<div class="kv-cols">
 						<dl class="ess-kv">
@@ -302,6 +305,7 @@
 						<span class="ess-btn ess-btn--soft ess-btn--sm">Change password <ChevronRight size={14} /></span>
 					</a>
 				</ProfileCard>
+				</div>
 			</div>
 
 			<!-- ===== Employment ===== -->
@@ -348,6 +352,7 @@
 
 			<!-- ===== Bank & IDs ===== -->
 			<div class="panel ess-stack" hidden={tab !== 'bank'} role="tabpanel">
+				<div class="pair pair--even">
 				<ProfileCard icon={Banknote} title="Bank details" note="Your salary will be credited to this account.">
 					<div class="form-rows">
 						<label class="form-row">
@@ -385,6 +390,7 @@
 						</label>
 					</div>
 				</ProfileCard>
+				</div>
 			</div>
 
 			<!-- ===== Family ===== -->
@@ -434,12 +440,12 @@
 							<div class="ess-field"><label class="ess-label" for="pf-exp">Total experience</label><input id="pf-exp" class="ess-input" name="totalExperience" bind:value={totalExperience} /></div>
 						</div>
 					{:else}
-						<dl class="ess-kv">
-							<dt>Under graduate</dt><dd>{p?.underGraduate || '—'}</dd>
-							<dt>Graduate</dt><dd>{p?.graduate || '—'}</dd>
-							<dt>Masters</dt><dd>{p?.masters || '—'}</dd>
-							<dt>Diploma / others</dt><dd>{p?.diplomaOthers || '—'}</dd>
-							<dt>Total experience</dt><dd>{p?.totalExperience || '—'}</dd>
+						<dl class="fields edu">
+							<div class="ess-field"><dt class="ess-label">Under graduate</dt><dd class="value">{p?.underGraduate || '—'}</dd></div>
+							<div class="ess-field"><dt class="ess-label">Graduate</dt><dd class="value">{p?.graduate || '—'}</dd></div>
+							<div class="ess-field"><dt class="ess-label">Masters</dt><dd class="value">{p?.masters || '—'}</dd></div>
+							<div class="ess-field"><dt class="ess-label">Diploma / others</dt><dd class="value">{p?.diplomaOthers || '—'}</dd></div>
+							<div class="ess-field"><dt class="ess-label">Total experience</dt><dd class="value">{p?.totalExperience || '—'}</dd></div>
 						</dl>
 						{#if quals.length === 0}<p class="muted">No qualifications added yet.</p>{/if}
 					{/if}
@@ -450,21 +456,21 @@
 		<!-- ===== Aside ===== -->
 		<aside class="ess-stack aside">
 			{#if tab === 'bank'}
-				<section class="ess-card">
+				<section class="ess-card grow-card">
 					<h3 class="ess-h2 aside-h">Visibility &amp; updates</h3>
 					<div class="privacy">
-						<span class="ess-tile ess-tile--lg ess-tile--round"><Lock size={24} strokeWidth={1.75} /></span>
+						<span class="ess-tile ess-tile--round"><Lock size={20} strokeWidth={1.75} /></span>
 						<strong>Only you and authorised HR can view these details.</strong>
 						<p>Your bank and identity information is kept confidential and is accessible only to you and the designated HR team for legitimate work purposes.</p>
 					</div>
 					{#if lastUpdated}
 						<div class="aside-row">
-							<Clock size={18} strokeWidth={1.75} />
+							<Clock size={16} strokeWidth={1.75} />
 							<div><span class="fact-label">Last updated</span><span class="fact-value">{lastUpdated}</span></div>
 						</div>
 					{/if}
 					<div class="aside-row">
-						<Info size={18} strokeWidth={1.75} />
+						<Info size={16} strokeWidth={1.75} />
 						<p class="aside-note">To update any of these details, choose <strong>Edit details</strong> and save the changes.</p>
 					</div>
 				</section>
@@ -484,7 +490,7 @@
 									<button type="button" class="check-row" onclick={() => (tab = s.id)}>
 										<span class="check" class:done={s.done}>{#if s.done}<Check size={12} strokeWidth={3} />{/if}</span>
 										<span>{s.label}</span>
-										{#if !s.done}<ChevronRight size={16} class="chev" />{/if}
+										{#if !s.done}<ChevronRight size={14} class="chev" />{/if}
 									</button>
 								</li>
 							{/each}
@@ -492,7 +498,7 @@
 					</div>
 				</section>
 
-				<section class="ess-card">
+				<section class="ess-card grow-card">
 					<h3 class="ess-h2 aside-h">Emergency contact</h3>
 					<div class="form-rows form-rows--narrow">
 						<label class="form-row">
@@ -526,50 +532,50 @@
 	.identity {
 		display: flex;
 		align-items: center;
-		gap: 28px;
-		padding: 22px 24px;
-		margin-bottom: 20px;
+		gap: 20px;
+		padding: 12px 16px;
 		flex-wrap: wrap;
 	}
 	.identity-main {
 		display: flex;
 		align-items: center;
-		gap: 22px;
+		gap: 14px;
 		min-width: 0;
 	}
 	.identity-text {
 		display: grid;
-		gap: 2px;
+		gap: 1px;
 		min-width: 0;
 	}
 	.name {
 		font-family: var(--ess-font-display);
-		font-size: 30px;
+		font-size: 20px;
 		font-weight: 600;
-		line-height: 1.1;
+		line-height: 1.15;
 		color: var(--ess-text);
 	}
 	.designation {
-		font-size: 16px;
+		font-size: 13.5px;
 		color: var(--ess-text-secondary);
 	}
 	.code {
 		font-family: var(--ess-font-mono);
-		font-size: 13px;
+		font-size: 12px;
 		letter-spacing: 0.03em;
 		color: var(--ess-text-muted);
 	}
 	.identity-facts {
-		display: grid;
-		gap: 12px;
-		padding-left: 28px;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px 28px;
+		padding-left: 20px;
 		border-left: 1px solid var(--ess-border);
 	}
 	.fact,
 	.aside-row {
 		display: flex;
 		align-items: flex-start;
-		gap: 12px;
+		gap: 8px;
 		color: var(--ess-text-muted);
 	}
 	.fact > div,
@@ -578,79 +584,105 @@
 		gap: 1px;
 	}
 	.fact-label {
-		font-size: 12.5px;
+		font-size: 12px;
 		color: var(--ess-text-muted);
 	}
 	.fact-value {
-		font-size: 14.5px;
+		font-size: 13.5px;
 		font-weight: 500;
 		color: var(--ess-text);
 	}
 	.identity-actions {
 		margin-left: auto;
 		display: flex;
-		gap: 10px;
+		gap: 8px;
 		flex: none;
 	}
 
 	/* ---------- layout ---------- */
 	.layout {
-		--ess-aside-width: 420px;
+		--ess-aside-width: 340px;
 	}
 	.main {
 		display: grid;
-		gap: 20px;
+		gap: 10px;
 		align-content: start;
 	}
 	.tabs {
 		align-self: flex-start;
 	}
+	.panel {
+		gap: 10px;
+	}
 	.panel[hidden] {
 		display: none;
+	}
+	.aside {
+		gap: 10px;
 	}
 
 	/* ---------- fields ---------- */
 	.fields {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 16px 24px;
+		gap: 10px 16px;
+	}
+	.fields .ess-field {
+		gap: 4px;
+	}
+	.fields .ess-label {
+		font-size: 12.5px;
+	}
+	.fields .ess-help {
+		font-size: 11.5px;
 	}
 	.value {
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		min-height: 42px;
-		padding: 9px 12px;
+		gap: 8px;
+		min-height: 34px;
+		padding: 6px 10px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-sm);
 		background: var(--ess-sunken);
-		font-size: 14px;
+		font-size: 13.5px;
 		color: var(--ess-text);
 		overflow-wrap: anywhere;
 	}
 	.value--multi {
 		align-items: flex-start;
-		min-height: 70px;
 		white-space: pre-line;
 	}
 	.value :global(svg) {
 		flex: none;
+		width: 15px;
+		height: 15px;
 		color: var(--ess-text-muted);
 		margin-top: 1px;
 	}
+	.edu {
+		margin: 0;
+	}
+	.edu dd {
+		margin: 0;
+	}
 	.extra {
-		padding-top: 12px;
+		padding-top: 8px;
 		border-top: 1px solid var(--ess-border-subtle);
+	}
+	.ess-kv {
+		margin: 0;
+		align-content: start;
+		font-size: 13.5px;
+		row-gap: 6px;
 	}
 	.kv-cols {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 10px 32px;
-	}
-	.kv-cols .ess-kv {
-		row-gap: 12px;
+		gap: 6px 24px;
 	}
 	.plain {
+		font-size: 13.5px;
 		color: var(--ess-text-secondary);
 	}
 	.mono {
@@ -677,50 +709,82 @@
 		white-space: nowrap;
 	}
 	.muted {
-		font-size: 13px;
+		font-size: 12.5px;
 		color: var(--ess-text-muted);
 	}
 
 	/* Label on the left, value box on the right (Bank & IDs, emergency contact). */
 	.form-rows {
 		display: grid;
-		gap: 12px;
+		gap: 6px;
 	}
 	.form-row {
 		display: grid;
-		grid-template-columns: 200px minmax(0, 1fr);
+		grid-template-columns: 160px minmax(0, 1fr);
 		align-items: center;
-		gap: 16px;
-		font-size: 14px;
+		gap: 12px;
+		font-size: 13.5px;
 		color: var(--ess-text-secondary);
 	}
 	.form-rows--narrow .form-row {
-		grid-template-columns: 110px minmax(0, 1fr);
+		grid-template-columns: 96px minmax(0, 1fr);
 	}
 	.ro {
 		display: flex;
 		align-items: center;
-		min-height: 42px;
-		padding: 9px 14px;
+		min-height: 32px;
+		padding: 5px 12px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-sm);
 		background: var(--ess-sunken);
 		color: var(--ess-text);
-		font-size: 14.5px;
+		font-size: 13.5px;
 		letter-spacing: 0.02em;
 	}
 
+	.pair {
+		display: grid;
+		grid-template-columns: minmax(0, 5fr) minmax(0, 2fr);
+		gap: 10px;
+	}
+	.pair--even {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.pair--even .form-row {
+		grid-template-columns: 124px minmax(0, 1fr);
+	}
+	.pair .kv-cols {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+		column-gap: 16px;
+	}
+	.pair .ess-kv {
+		column-gap: 16px;
+	}
+	.pair .security-row :global(.ess-row__meta) {
+		white-space: normal;
+	}
 	.security-row {
 		display: flex;
 		align-items: center;
-		gap: 14px;
+		flex-wrap: wrap;
+		gap: 10px 12px;
 		color: var(--ess-text);
+	}
+	.pair .security-row .ess-row__body {
+		flex: 1 1 140px;
+	}
+	.security-row .ess-tile {
+		width: 30px;
+		height: 30px;
 	}
 
 	/* ---------- aside ---------- */
+	.aside .ess-card {
+		padding: 14px 16px;
+	}
 	.aside-h {
-		font-size: 20px;
-		margin-bottom: 14px;
+		font-size: 16px;
+		margin-bottom: 8px;
 	}
 	.completion-head {
 		display: flex;
@@ -729,41 +793,41 @@
 	}
 	.pct {
 		font-family: var(--ess-font-display);
-		font-size: 24px;
+		font-size: 20px;
 		font-weight: 600;
 	}
 	.completion-head + .ess-meter {
-		margin-bottom: 8px;
+		margin-bottom: 6px;
 	}
 	.checklist {
-		margin-top: 16px;
-		padding: 16px 18px;
+		margin-top: 8px;
+		padding: 8px 12px;
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-primary-softer);
 	}
 	.checklist strong {
 		font-family: var(--ess-font-display);
-		font-size: 17px;
+		font-size: 14px;
 		font-weight: 600;
 	}
 	.checklist ul {
 		list-style: none;
-		margin: 10px 0 0;
+		margin: 6px 0 0;
 		padding: 0;
 		display: grid;
-		gap: 4px;
+		gap: 0;
 	}
 	.check-row {
 		display: flex;
 		align-items: center;
-		gap: 12px;
+		gap: 10px;
 		width: 100%;
-		padding: 6px 4px;
+		padding: 3px 4px;
 		border: none;
 		border-radius: var(--ess-radius-sm);
 		background: transparent;
 		font: inherit;
-		font-size: 14px;
+		font-size: 13px;
 		color: var(--ess-text);
 		text-align: left;
 		cursor: pointer;
@@ -779,8 +843,8 @@
 		flex: none;
 		display: grid;
 		place-items: center;
-		width: 22px;
-		height: 22px;
+		width: 18px;
+		height: 18px;
 		border-radius: 50%;
 		border: 2px solid var(--ess-border-strong);
 		background: var(--ess-surface);
@@ -795,23 +859,23 @@
 		display: grid;
 		justify-items: center;
 		text-align: center;
-		gap: 10px;
-		padding: 8px 0 18px;
+		gap: 6px;
+		padding: 4px 0 12px;
 		border-bottom: 1px solid var(--ess-border-subtle);
-		margin-bottom: 14px;
+		margin-bottom: 6px;
 	}
 	.privacy strong {
 		font-family: var(--ess-font-display);
-		font-size: 19px;
+		font-size: 15px;
 		font-weight: 600;
 		line-height: 1.25;
 	}
 	.privacy p {
-		font-size: 14px;
+		font-size: 13px;
 		color: var(--ess-text-secondary);
 	}
 	.aside-row {
-		padding: 10px 0;
+		padding: 8px 0;
 		border-bottom: 1px solid var(--ess-border-subtle);
 	}
 	.aside-row:last-child {
@@ -819,7 +883,7 @@
 		padding-bottom: 0;
 	}
 	.aside-note {
-		font-size: 13.5px;
+		font-size: 13px;
 		color: var(--ess-text-secondary);
 	}
 	.aside-note strong {
@@ -829,7 +893,265 @@
 	.footer-actions {
 		display: flex;
 		justify-content: flex-end;
-		gap: 10px;
+		gap: 8px;
+	}
+
+	/* ---------- fit the screen (desktop) ----------
+	   The form is the page's .ess-fill block: the identity bar keeps its
+	   height, the tabs and aside take the rest, and a tab whose cards are
+	   taller than that scrolls inside its own panel. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.profile-form {
+			display: flex;
+			flex-direction: column;
+		}
+		.profile-form > :not(.layout) {
+			flex: none;
+		}
+		.layout {
+			flex: 1 1 0%;
+			min-height: 0;
+			grid-template-rows: minmax(0, 1fr);
+		}
+		.main {
+			display: flex;
+			flex-direction: column;
+			min-height: 0;
+		}
+		.identity,
+		.tabs {
+			flex: none;
+		}
+		/* A few px of padding so the scroll box does not clip card shadows. */
+		.panel,
+		.aside {
+			flex: 1 1 0%;
+			padding: 1px 3px 3px;
+			margin: -1px -3px -3px;
+		}
+		.aside > .footer-actions {
+			flex: none;
+		}
+		.aside > .grow-card {
+			flex: 1 0 auto;
+		}
+	}
+
+	@media (min-width: 1101px) {
+		/* Personal tab: employment summary gets the room, security stays slim. */
+		.pair:not(.pair--even) {
+			grid-template-columns: minmax(0, 2.3fr) minmax(0, 1fr);
+		}
+		.pair .kv-cols {
+			grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
+			column-gap: 14px;
+		}
+		.pair .ess-kv {
+			column-gap: 12px;
+		}
+		.pair .security-row {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr);
+			gap: 4px 10px;
+		}
+		.pair .security-row .ess-tile {
+			width: 26px;
+			height: 26px;
+			grid-row: 1;
+		}
+		.pair .security-row .ess-row__body {
+			display: contents;
+		}
+		.pair .security-row :global(.ess-row__title) {
+			grid-column: 2;
+			grid-row: 1;
+			align-self: center;
+		}
+		.pair .security-row :global(.ess-row__meta) {
+			grid-column: 1 / -1;
+			font-size: 12px;
+		}
+		.pair .security-row > .ess-btn {
+			grid-column: 1 / -1;
+			justify-self: start;
+		}
+	}
+
+	/* ---------- short laptop screens (e.g. 1280x580) ----------
+	   A slim identity strip, label + hint on one line, tighter boxes — so
+	   each tab and the aside fit without scrolling inside. */
+	@media (min-width: 1101px) and (max-height: 760px) {
+		.identity {
+			padding: 8px 14px;
+			gap: 16px;
+		}
+		.identity :global(.avatar--lg) {
+			width: 42px;
+			height: 42px;
+			font-size: 15px;
+		}
+		.identity :global(.avatar-frame.small .change-btn) {
+			width: 20px;
+			height: 20px;
+			right: -3px;
+			bottom: -3px;
+		}
+		.identity :global(.avatar-frame.small .remove-btn) {
+			width: 20px;
+			height: 20px;
+			left: -3px;
+			bottom: -3px;
+		}
+		.identity :global(.avatar-frame.small svg) {
+			width: 11px;
+			height: 11px;
+		}
+		.identity-main {
+			gap: 12px;
+		}
+		.name {
+			font-size: 17px;
+		}
+		.designation {
+			font-size: 12.5px;
+		}
+		.code {
+			font-size: 11px;
+		}
+		.identity-facts {
+			padding-left: 16px;
+			gap: 4px 24px;
+		}
+		.fact-label {
+			font-size: 11.5px;
+		}
+		.fact-value {
+			font-size: 13px;
+		}
+		.main,
+		.panel,
+		.aside {
+			gap: 8px;
+		}
+
+		/* Field label on the left, its hint on the right, value below. */
+		.fields {
+			gap: 6px 14px;
+		}
+		.fields .ess-field {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr);
+			align-items: baseline;
+			column-gap: 10px;
+			row-gap: 3px;
+		}
+		.fields .ess-field > :global(*) {
+			grid-column: 1 / -1;
+		}
+		.fields .ess-field > .ess-label {
+			grid-column: 1;
+			grid-row: 1;
+		}
+		.fields .ess-field > .ess-help {
+			grid-column: 2;
+			grid-row: 1;
+			justify-self: end;
+			text-align: right;
+			min-width: 0;
+		}
+		.value {
+			min-height: 29px;
+			padding: 3px 10px;
+			font-size: 13px;
+		}
+		.ess-kv {
+			font-size: 13px;
+			row-gap: 4px;
+		}
+		.extra {
+			padding-top: 6px;
+		}
+		.form-rows {
+			gap: 5px;
+		}
+		.form-row {
+			font-size: 13px;
+		}
+		.ro {
+			min-height: 30px;
+			padding: 4px 10px;
+			font-size: 13px;
+		}
+
+		/* Bank & IDs: label above its value, so long labels never wrap. */
+		.pair--even .form-row {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 3px;
+			font-size: 12.5px;
+		}
+		.pair--even .form-rows {
+			gap: 8px;
+		}
+		.grow-card {
+			display: flex;
+			flex-direction: column;
+		}
+		.grow-card > .privacy {
+			flex: 1 1 auto;
+			align-content: center;
+		}
+
+		/* Save / Cancel already sit in the identity strip, which never scrolls. */
+		.aside > .footer-actions {
+			display: none;
+		}
+
+		/* aside */
+		.aside .ess-card {
+			padding: 10px 14px;
+		}
+		.aside-h {
+			font-size: 15px;
+			margin-bottom: 6px;
+		}
+		.pct {
+			font-size: 18px;
+		}
+		.completion-head + .ess-meter {
+			margin-bottom: 4px;
+		}
+		.checklist {
+			margin-top: 6px;
+			padding: 6px 10px;
+		}
+		.checklist strong {
+			font-size: 13px;
+		}
+		.checklist ul {
+			margin-top: 3px;
+		}
+		.check-row {
+			padding: 2px 4px;
+			font-size: 12.5px;
+		}
+		.check {
+			width: 16px;
+			height: 16px;
+		}
+		.privacy {
+			gap: 4px;
+			padding: 0 0 8px;
+		}
+		.privacy strong {
+			font-size: 14px;
+		}
+		.privacy p,
+		.aside-note {
+			font-size: 12.5px;
+		}
+		.aside-row {
+			padding: 6px 0;
+		}
 	}
 
 	@media (max-width: 900px) {
@@ -845,19 +1167,24 @@
 			width: 100%;
 		}
 		.fields,
-		.kv-cols {
+		.kv-cols,
+		.pair {
 			grid-template-columns: 1fr;
 		}
 		.form-row {
 			grid-template-columns: 1fr;
-			gap: 6px;
+			gap: 4px;
 		}
 		.tabs {
 			align-self: stretch;
 		}
+		/* Tabs share the row but never squeeze their labels; the strip
+		   scrolls sideways on its own when they do not fit. */
 		.tabs .ess-tab {
 			min-width: 0;
-			flex: 1;
+			flex: 1 0 auto;
+			padding-left: 12px;
+			padding-right: 12px;
 		}
 	}
 </style>

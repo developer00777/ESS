@@ -15,11 +15,24 @@
 	import Info from '@lucide/svelte/icons/info';
 	import Check from '@lucide/svelte/icons/check';
 	import Avatar from '$lib/components/Avatar.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
+	import AbsencePlanner from '$lib/components/dashboard/AbsencePlanner.svelte';
+	import AttendanceHeatmap from '$lib/components/dashboard/AttendanceHeatmap.svelte';
+	import FutureEvents from '$lib/components/dashboard/FutureEvents.svelte';
+	import OnboardingPanel from '$lib/components/dashboard/OnboardingPanel.svelte';
+	import ChampCard from '$lib/components/dashboard/ChampCard.svelte';
 	import QuickActionRow from '$lib/components/QuickActionRow.svelte';
 	import { timeIst } from '$lib/hub/format';
 
 	let { data } = $props();
+
+	const firstName = $derived(data.user.fullName.split(' ')[0]);
+	// Time of day comes from the viewer's clock, after hydration.
+	let greeting = $state('Welcome back');
+	$effect(() => {
+		const h = new Date().getHours();
+		greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+	});
+	const fmtNum = (n: number) => String(+n.toFixed(1));
 
 	const canApprove = $derived(data.user.role === 'team_lead' || data.user.role === 'super_admin');
 
@@ -143,16 +156,52 @@
 	<title>Today — Champ HR ESS Portal</title>
 </svelte:head>
 
-<PageHeader crumb={['Home', 'Employee workspace']} title="Your workday, at a glance" sub={todayLine}>
-	{#snippet actions()}
-		<a href="/leave/apply" class="ess-btn ess-btn--primary"><Calendar size={17} /> Apply leave</a>
-	{/snippet}
-</PageHeader>
+<!-- Laptop-sized, one screen: the title row with the figures people check
+     most, the absence planner across the width, and three panels beneath.
+     The day's timeline, request progress and analytics sit in the drawer
+     below. -->
+<div class="home">
+	<header class="top">
+		<div class="hello">
+			<span class="eyebrow">Overview</span>
+			<h1>{greeting}, {firstName}</h1>
+		</div>
+		<div class="figures" role="group" aria-label="At a glance">
+			<a class="fig" href="/leave" title="{fmtNum(data.leaveAllocated)} days allocated this year">
+				<span class="v"><b>{fmtNum(data.leaveBalance)}</b><span>days</span></span>
+				<span class="k">Leave balance</span>
+			</a>
+			<a class="fig" href="/attendance" title="{data.daysWithCheckIn} of {data.businessDaysSoFar} days with a check-in">
+				<span class="v"><b>{data.attendancePct}</b><span>%</span></span>
+				<span class="k">Attendance</span>
+			</a>
+			<a class="fig" href="/leave">
+				<span class="v"><b>{data.pendingCount}</b></span>
+				<span class="k">Pending leave</span>
+			</a>
+			{#if data.toApprove > 0 || canApprove}
+				<a class="fig" class:attn={data.toApprove > 0} href="/leave?tab=approvals">
+					<span class="v"><b>{data.toApprove}</b></span>
+					<span class="k">To approve</span>
+				</a>
+			{/if}
+			<a href="/leave/apply" class="ess-btn ess-btn--primary apply"><Calendar size={16} /> Apply leave</a>
+		</div>
+	</header>
 
-<Overview {data} />
+	<AbsencePlanner planner={data.planner} />
+
+	<div class="lower">
+		<FutureEvents events={data.events} />
+		<AttendanceHeatmap analytics={data.analytics} missingCheckOuts={data.missingCheckOuts.length} />
+		<OnboardingPanel people={data.planner.onboarding} mode={data.planner.onboardingMode} />
+		<ChampCard {firstName} champ={data.champ} />
+	</div>
+</div>
 
 <details class="workspace-details">
-<summary>Daily timeline, request progress and more</summary>
+<summary>Daily timeline, request progress and analytics</summary>
+<Overview {data} />
 <div class="ess-split today">
 	<div class="ess-stack">
 		<div class="ess-daystrip" aria-label="This week">
@@ -361,18 +410,181 @@
 </details>
 
 <style>
-	:global(.ess-content:has(.overview)) { display:flex; flex-direction:column; overflow:hidden; gap:0; }
-	:global(.ess-content:has(.overview) > .ess-page-head) { flex-shrink:0; }
-	:global(.ess-content:has(.overview) > .overview) { flex:1; min-height:0; }
-	:global(.ess-content:has(.workspace-details[open]) > .overview) { display:none; }
-	.workspace-details { flex:0 1 auto; min-height:0; max-height:100%; overflow:auto; overscroll-behavior:contain; }
-	.workspace-details > summary { position:sticky; top:0; background:var(--ess-canvas); z-index:2; }
-	:global(.ess-content:has(.overview)) { padding-top:12px; padding-bottom:12px; }
-	:global(.ess-content:has(.overview) .ess-page-head) { margin-bottom:12px; }
-	:global(.ess-content:has(.overview) .ess-page-title) { font-size:clamp(24px,2.2vw,34px); }
-	.workspace-details { margin-top: 6px; }
-	.workspace-details > summary { cursor: pointer; padding: 12px 0; color: var(--ess-primary-text); font-weight: 500; }
-	.workspace-details[open] > summary { margin-bottom: 12px; }
+	/* ---------- one-screen home ---------- */
+	@media (min-width: 721px) and (min-height: 480px) {
+		/* Fills the screen; if the panels truly can't fit, the page scrolls
+		   rather than cutting them off. */
+		:global(.ess-content:has(> .home)) { display:flex; flex-direction:column; overflow:auto; padding-bottom:12px; }
+		/* Grows to fill the screen, never shrinks below what its cards need. */
+		:global(.ess-content > .home) { flex:1 0 auto; }
+		.home :global(.planner) { max-height:58vh; }
+		:global(.ess-content:has(.workspace-details[open]) > .home) { display:none; }
+		.workspace-details { flex:0 0 auto; }
+		.workspace-details[open] > summary { position:sticky; top:0; background:var(--ess-glass-solid); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); z-index:2; }
+	}
+	.workspace-details > summary { cursor: pointer; padding: 10px 2px 0; color: var(--ess-primary-text); font-weight: 500; font-size: 13px; }
+	.workspace-details[open] > summary { margin-bottom: 12px; padding-bottom: 8px; }
+
+	.home {
+		display: grid;
+		/* The planner takes the height its rows need, scrolling inside once
+		   it runs out of room; the panels below take the rest. */
+		grid-template-rows: auto minmax(220px, max-content) minmax(250px, 1fr);
+		gap: 14px;
+		min-height: 0;
+	}
+
+	.top {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 10px 24px;
+		padding: 0 2px;
+	}
+	.eyebrow {
+		font-size: 13px;
+		color: var(--ess-text-muted);
+	}
+	.hello h1 {
+		margin: 2px 0 0;
+		font-size: 30px;
+		font-weight: 700;
+		letter-spacing: -0.03em;
+		line-height: 1.1;
+	}
+	.figures {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+	.fig {
+		display: flex;
+		flex-direction: column;
+		min-width: 92px;
+		padding: 6px 14px;
+		border-radius: 14px;
+		color: var(--ess-text);
+		transition: background var(--ess-t-fast);
+	}
+	.fig:hover {
+		background: var(--ess-surface);
+		color: var(--ess-text);
+	}
+	.fig .v {
+		display: flex;
+		align-items: baseline;
+		gap: 3px;
+	}
+	.fig b {
+		font-size: 20px;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		font-variant-numeric: tabular-nums;
+	}
+	.fig .v span {
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--ess-text-secondary);
+	}
+	.fig .k {
+		font-size: 12px;
+		color: var(--ess-text-muted);
+	}
+	.fig.attn b {
+		color: var(--ess-primary-text);
+	}
+	.apply {
+		margin-left: 10px;
+		border-radius: 12px;
+	}
+
+	.lower {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
+		gap: 14px;
+		min-height: 0;
+	}
+	.lower > :global(*) {
+		height: 100%;
+	}
+
+	/* Short laptop screens (about 1280×580): slimmer title row, the planner
+	   capped so the panels keep their room, the drawer link tighter. */
+	@media (min-width: 721px) and (max-height: 760px) {
+		.home {
+			grid-template-rows: auto minmax(0, max-content) minmax(0, 1fr);
+			gap: 8px;
+		}
+		.home :global(.planner) {
+			max-height: 44vh;
+		}
+		/* Shorter still (a bookmarks bar, a smaller window): the page holds
+		   its height and each panel scrolls inside rather than the page. */
+		:global(.ess-content > .home) {
+			flex: 1 1 auto;
+			min-height: 0;
+		}
+		.lower > :global(*) {
+			overflow-y: auto;
+			scrollbar-width: thin;
+		}
+		.eyebrow {
+			font-size: 11.5px;
+		}
+		.hello h1 {
+			font-size: 22px;
+		}
+		.fig {
+			min-width: 80px;
+			padding: 3px 12px;
+		}
+		.fig b {
+			font-size: 17px;
+		}
+		.fig .k {
+			font-size: 11px;
+		}
+		.lower {
+			gap: 8px;
+		}
+		.workspace-details > summary {
+			padding: 2px 2px 0;
+			font-size: 12px;
+		}
+	}
+
+	@media (max-width: 1100px) {
+		.home {
+			grid-template-rows: auto auto auto;
+		}
+		.lower {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.lower > :global(*) {
+			height: auto;
+		}
+	}
+	@media (max-width: 720px), (max-height: 479px) {
+		.home {
+			grid-template-rows: auto;
+		}
+		.home :global(.planner) {
+			max-height: 70vh;
+		}
+		.lower {
+			grid-template-columns: 1fr;
+		}
+		.lower > :global(*) {
+			min-height: 230px;
+		}
+		.figures {
+			flex-wrap: wrap;
+		}
+		.hello h1 {
+			font-size: 24px;
+		}
+	}
 	.today {
 		--ess-aside-width: 400px;
 	}

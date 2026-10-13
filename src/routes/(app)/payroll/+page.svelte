@@ -7,9 +7,9 @@
 	<title>Payroll — Champ HR</title>
 </svelte:head>
 
-<PageHeader crumb={['Payroll']} title="Your payslips, when they’re ready." sub="Payroll is not available in the portal yet." />
+<PageHeader crumb={['Payroll']} title="Your payslips, when they’re ready." sub="Payroll is not available in the portal yet." compact />
 
-<section class="empty ess-card">
+<section class="empty ess-card ess-fill">
 	<div class="art" aria-hidden="true">
 		<span class="doc"><FileText size={36} strokeWidth={1.5} /></span>
 		<svg class="line" viewBox="0 0 320 60">
@@ -28,42 +28,45 @@
 </section>
 
 <style>
+	/* One card that fills the workspace with its message centred, so the
+	   page ends where the screen does. */
 	.empty {
-		max-width: 720px;
-		margin: 24px auto 0;
-		padding: 56px 40px;
+		padding: 32px 24px;
 		display: grid;
 		justify-items: center;
+		align-content: center;
 		text-align: center;
-		gap: 12px;
+		gap: 10px;
 	}
 	.art {
 		display: grid;
 		justify-items: center;
-		gap: 10px;
-		margin-bottom: 12px;
+		gap: 8px;
+		margin-bottom: 6px;
 	}
 	.doc {
 		display: grid;
 		place-items: center;
-		width: 80px;
-		height: 80px;
-		border-radius: 20px;
+		width: 64px;
+		height: 64px;
+		border-radius: 16px;
 		background: var(--ess-primary-soft);
 		color: var(--ess-primary-text);
 	}
 	.line {
-		width: 320px;
+		width: 260px;
 		max-width: 100%;
 	}
 	p {
 		max-width: 46ch;
 		color: var(--ess-text-secondary);
-		font-size: 15px;
+		font-size: 14px;
 	}
 	.actions {
 		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
 		gap: 10px;
-		margin-top: 12px;
+		margin-top: 8px;
 	}
 </style>

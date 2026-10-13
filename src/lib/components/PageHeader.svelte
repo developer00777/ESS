@@ -46,7 +46,7 @@
 
 <style>
 	.compact {
-		margin-bottom: var(--ess-space-4);
+		margin-bottom: var(--ess-space-2);
 	}
 	@media (max-width: 720px) {
 		.ess-page-head__text {

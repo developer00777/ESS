@@ -99,8 +99,8 @@
 	<p class="ess-alert ess-alert--success" role="status">{form.message}</p>
 {/if}
 
-<div class="ess-split">
-	<div class="ess-stack">
+<div class="ess-split ess-fill ac">
+	<div class="ess-stack main-col">
 		{#if tab === 'roles'}
 			{#if editing}
 				<form
@@ -181,7 +181,7 @@
 				</form>
 			{/if}
 
-			<section class="ess-card">
+			<section class="ess-card builtin-card">
 				<div class="ess-card-head">
 					<h2 class="ess-h2">Built-in roles</h2>
 					<span class="ess-badge ess-badge--neutral">Protected</span>
@@ -205,7 +205,7 @@
 				</div>
 			</section>
 
-			<section class="ess-card">
+			<section class="ess-card ess-fill-card named-card-wrap">
 				<div class="ess-card-head">
 					<h2 class="ess-h2">Named roles</h2>
 					<span class="ess-caption">{data.namedRoles.length} {data.namedRoles.length === 1 ? 'role' : 'roles'}</span>
@@ -221,7 +221,7 @@
 						{#if data.canManage}<p class="ess-caption">Create one to bundle privileges for a job such as IT Support.</p>{/if}
 					</div>
 				{:else}
-					<div class="named">
+					<div class="named ess-scroll">
 						{#each data.namedRoles as r (r.id)}
 							<article class="named-card" class:selected={isSelected({ kind: 'named', id: r.id })}>
 								<button type="button" class="named-pick" onclick={() => (selection = { kind: 'named', id: r.id })}>
@@ -290,14 +290,14 @@
 				</p>
 			</section>
 		{:else if tab === 'matrix'}
-			<section class="ess-card matrix-card">
+			<section class="ess-card ess-fill-card matrix-card">
 				<div class="ess-card-head">
 					<h2 class="ess-h2">Role permissions matrix</h2>
 				</div>
 				<p class="ess-caption">
 					Compare what each role can do. Worked out from the same privilege list the portal checks, so this table cannot drift from what people can actually do. Select a column to see the role's details.
 				</p>
-				<div class="ess-table-shell matrix-shell">
+				<div class="ess-table-shell matrix-shell ess-scroll">
 					<table class="ess-table matrix">
 						<thead>
 							<tr>
@@ -347,7 +347,7 @@
 				</div>
 			</section>
 		{:else}
-			<section class="ess-card">
+			<section class="ess-card ess-fill-card teams-card">
 				<div class="ess-card-head">
 					<h2 class="ess-h2">Team privileges</h2>
 				</div>
@@ -355,7 +355,7 @@
 					<Info size={16} />
 					<span>These flags are set when a team is created. Read-only here.</span>
 				</div>
-				<div class="ess-table-shell teams-shell">
+				<div class="ess-table-shell teams-shell ess-scroll">
 					<table class="ess-table">
 						<thead>
 							<tr>
@@ -384,7 +384,7 @@
 	</div>
 
 	<aside class="ess-stack">
-		<section class="ess-card role-detail">
+		<section class="ess-card ess-fill-card role-detail">
 			<div class="ess-card-head">
 				<h2 class="ess-h2">{selectedName}</h2>
 				{#if selection.kind === 'builtin'}
@@ -395,6 +395,7 @@
 			</div>
 			<p class="ess-caption">{selectedBlurb}{#if selectedNamed} Starts as {BASE_ROLE_LABEL[selectedNamed.baseRole]}.{/if}</p>
 
+			<div class="ess-scroll detail-scroll">
 			<h3 class="ess-h3 sub">Key capabilities <span class="ess-caption">({selectedCaps.length})</span></h3>
 			<ul class="caps">
 				{#each CAPABILITIES.filter((c) => selectedCaps.includes(c.key)) as c (c.key)}
@@ -420,6 +421,7 @@
 					<p class="ess-caption">and {selectedPeople.length - 6} more</p>
 				{/if}
 			</div>
+			</div>
 
 			{#if selectedNamed && data.canManage}
 				<button type="button" class="ess-btn ess-btn--outline edit-btn" onclick={() => edit(selectedNamed!)}><Pencil size={15} /> Edit role</button>
@@ -438,11 +440,20 @@
 		justify-content: space-between;
 		gap: 12px;
 	}
+	.top .ess-tabs {
+		max-width: 100%;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+	.top .ess-tab {
+		flex-shrink: 0;
+		white-space: nowrap;
+	}
 	.builtins {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
 		gap: 10px;
-		margin-top: 14px;
+		margin-top: 10px;
 	}
 	.role-card,
 	.named-pick {
@@ -450,7 +461,7 @@
 		gap: 12px;
 		align-items: flex-start;
 		width: 100%;
-		padding: 14px;
+		padding: 10px 12px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-surface);
@@ -477,11 +488,12 @@
 		min-width: 0;
 	}
 	.role-card__body strong {
-		font-size: 15px;
+		font-size: 14px;
 		font-weight: 600;
 	}
 	.role-card__body small {
-		font-size: 13px;
+		font-size: 12.5px;
+		line-height: 1.35;
 		color: var(--ess-text-secondary);
 	}
 	.role-card__meta {
@@ -489,15 +501,16 @@
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 8px;
-		margin-top: 6px;
-		font-size: 12.5px;
+		margin-top: 4px;
+		font-size: 12px;
 		color: var(--ess-text-muted);
 	}
 
 	.named {
 		display: grid;
+		align-content: start;
 		gap: 12px;
-		margin-top: 14px;
+		margin-top: 10px;
 	}
 	.named-card {
 		display: grid;
@@ -555,7 +568,7 @@
 		max-width: 320px;
 	}
 	.foot {
-		margin-top: 14px;
+		margin-top: 10px;
 	}
 
 	/* ---------- editor ---------- */
@@ -633,7 +646,18 @@
 	/* ---------- matrix ---------- */
 	.matrix-shell,
 	.teams-shell {
-		margin-top: 14px;
+		margin-top: 10px;
+	}
+	.matrix th,
+	.teams-shell th {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		padding: 8px 12px;
+	}
+	.matrix td,
+	.teams-shell td {
+		padding: 7px 12px;
 	}
 	.matrix th {
 		vertical-align: bottom;
@@ -652,14 +676,14 @@
 	.col-pick {
 		display: grid;
 		justify-items: center;
-		gap: 6px;
+		gap: 4px;
 		width: 100%;
-		padding: 6px 4px;
+		padding: 2px 4px;
 		border: 0;
 		background: transparent;
 		color: var(--ess-text);
 		font: inherit;
-		font-size: 13.5px;
+		font-size: 13px;
 		font-weight: 500;
 		cursor: pointer;
 	}
@@ -674,8 +698,8 @@
 		text-transform: uppercase;
 		color: var(--ess-text-muted);
 		background: var(--ess-sunken);
-		padding-top: 8px;
-		padding-bottom: 8px;
+		padding-top: 6px;
+		padding-bottom: 6px;
 	}
 	.cap-label {
 		font-weight: 500;
@@ -690,8 +714,8 @@
 	.no {
 		display: inline-grid;
 		place-items: center;
-		width: 22px;
-		height: 22px;
+		width: 20px;
+		height: 20px;
 		border-radius: 50%;
 	}
 	.yes {
@@ -705,8 +729,8 @@
 
 	/* ---------- aside ---------- */
 	.sub {
-		margin: 18px 0 8px;
-		padding-top: 14px;
+		margin: 12px 0 6px;
+		padding-top: 10px;
 		border-top: 1px solid var(--ess-border-subtle);
 	}
 	.caps {
@@ -714,8 +738,8 @@
 		margin: 0;
 		padding: 0;
 		display: grid;
-		gap: 8px;
-		font-size: 14px;
+		gap: 5px;
+		font-size: 13px;
 	}
 	.caps li {
 		display: flex;
@@ -734,10 +758,139 @@
 		color: var(--ess-text-secondary);
 	}
 	.person {
-		padding: 8px 0;
+		padding: 6px 0;
 	}
 	.edit-btn {
 		width: 100%;
-		margin-top: 18px;
+		margin-top: 12px;
+		flex: none;
+	}
+
+	/* Fill layout: both columns end on the workspace's bottom edge. The
+	   named roles, the matrix, the teams table and the role's capability list
+	   scroll inside their cards. While the role editor is open the left column
+	   scrolls as a whole. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.ac .builtins {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+		.ac .builtins .role-card {
+			gap: 8px;
+			padding: 8px 10px;
+		}
+		.ac .builtins .ess-tile {
+			width: 28px;
+			height: 28px;
+		}
+		.ac .named {
+			grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+			align-items: start;
+		}
+		.ac .main-col > :not(.ess-fill-card) {
+			flex-shrink: 0;
+		}
+		.ac .main-col > .ess-fill-card {
+			flex: 1 1 0px;
+			min-height: 220px;
+		}
+		.ac .main-col:has(> .editor) > .ess-fill-card {
+			flex: 0 0 auto;
+			overflow: visible;
+		}
+		.ac .main-col:has(> .editor) .named {
+			overflow: visible;
+		}
+		.ac .role-detail {
+			flex: 1 1 0px;
+			min-height: 0;
+		}
+		.detail-scroll {
+			margin-right: -6px;
+			padding-right: 6px;
+		}
+		.detail-scroll > .sub:first-child {
+			margin-top: 10px;
+		}
+	}
+
+	/* Short desktop screens (a 1280x580 browser): each built-in role card
+	   puts its icon beside the name and lets the blurb use the full card
+	   width, so the four cards are about half as tall and the named roles
+	   keep room below them. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
+		/* Title, caption and badge share the card's first row. */
+		.ac .builtin-card {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr) auto;
+			align-items: center;
+			column-gap: 14px;
+		}
+		.ac .builtin-card > .ess-card-head {
+			display: contents;
+		}
+		.ac .builtin-card > .ess-card-head > .ess-badge {
+			grid-column: 3;
+			grid-row: 1;
+		}
+		.ac .builtin-card > .ess-caption {
+			grid-column: 2;
+			grid-row: 1;
+			font-size: 12px;
+			line-height: 1.3;
+		}
+		.ac .builtins {
+			grid-column: 1 / -1;
+			margin-top: 8px;
+			gap: 8px;
+		}
+		.ac .builtins .role-card {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr);
+			grid-template-rows: auto 1fr auto;
+			align-items: center;
+			column-gap: 8px;
+			row-gap: 3px;
+			padding: 7px 10px;
+		}
+		/* The selected role's full blurb is in the panel on the right. */
+		.ac .builtins .role-card small {
+			display: -webkit-box;
+			-webkit-box-orient: vertical;
+			-webkit-line-clamp: 2;
+			line-clamp: 2;
+			overflow: hidden;
+			align-self: start;
+		}
+		.ac .builtins .role-card .role-card__body {
+			display: contents;
+		}
+		.ac .builtins .role-card small,
+		.ac .builtins .role-card .role-card__meta {
+			grid-column: 1 / -1;
+		}
+		.ac .builtins .role-card small {
+			font-size: 12px;
+			line-height: 1.3;
+		}
+		.ac .builtins .role-card .role-card__meta {
+			margin-top: 1px;
+		}
+		.ac .builtins .ess-tile {
+			width: 24px;
+			height: 24px;
+		}
+		.ac .main-col > .ess-fill-card {
+			min-height: 150px;
+		}
+		.ac .named {
+			gap: 10px;
+			margin-top: 8px;
+		}
+		.ac .named-pick {
+			padding: 8px 10px;
+		}
+		.ac .foot {
+			margin-top: 8px;
+		}
 	}
 </style>

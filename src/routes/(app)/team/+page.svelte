@@ -634,8 +634,8 @@
 		{/key}
 	{/if}
 
-	<div class="ess-split people-split">
-		<section class="ess-card directory">
+	<div class="ess-split ess-split--narrow people-split ess-fill">
+		<section class="ess-card directory ess-fill-card">
 			<div class="ess-card-head">
 				<div>
 					<h2 class="ess-h2">{embedded ? 'Employee directory' : 'People'}</h2>
@@ -649,7 +649,7 @@
 				{/if}
 			</div>
 
-			<div class="table-wrap">
+			<div class="table-wrap ess-scroll">
 				<table class="ess-table roster">
 					<thead>
 						<tr>
@@ -673,7 +673,7 @@
 										<Avatar userId={person.id} fullName={person.fullName} hasPicture={person.hasPicture} size="md" />
 										<span class="name-text">
 											<strong>{person.fullName}</strong>
-											<small>
+											<small title={person.email}>
 												{#if person.employeeCode}<span class="code-cell">{person.employeeCode}</span>{:else}<span class="missing" title="No employee code — biometric attendance can't be matched">No code</span>{/if}
 												<span class="ess-dot-sep"></span>{person.email}
 											</small>
@@ -880,15 +880,17 @@
 				<div class="ess-card person-panel">
 					<div class="person-top">
 						<Avatar userId={selected.id} fullName={selected.fullName} hasPicture={selected.hasPicture} size="lg" />
+						<div class="person-id">
+							<div class="person-name">
+								<h2 class="ess-h2">{selected.fullName}</h2>
+								<span class="ess-badge ess-badge--{BADGE[selected.status]}">{statusLabel[selected.status]}</span>
+							</div>
+							<p class="ess-caption">
+								{#if selected.employeeCode}{selected.employeeCode}<span class="ess-dot-sep"></span>{/if}{selected.email}
+							</p>
+						</div>
 						<button type="button" class="ess-icon-btn" onclick={() => (selectedId = null)} aria-label="Close"><X size={18} /></button>
 					</div>
-					<div class="person-name">
-						<h2 class="ess-h2">{selected.fullName}</h2>
-						<span class="ess-badge ess-badge--{BADGE[selected.status]}">{statusLabel[selected.status]}</span>
-					</div>
-					<p class="ess-caption">
-						{#if selected.employeeCode}{selected.employeeCode}<span class="ess-dot-sep"></span>{/if}{selected.email}
-					</p>
 
 					<dl class="facts">
 						{#if data.isSuperAdmin}
@@ -983,9 +985,9 @@
 		<p class="ess-alert ess-alert--danger">{rosterError}</p>
 	{/if}
 
-	<div class="ess-split weekoff-split">
+	<div class="ess-split weekoff-split ess-fill">
 		<div class="ess-stack">
-			<section class="ess-card">
+			<section class="ess-card ess-fill-card grid-card">
 				<div class="ess-card-head">
 					<div>
 						<h2 class="ess-h2">Team weekly roster</h2>
@@ -999,7 +1001,7 @@
 						{/each}
 					</select>
 				</div>
-				<div class="table-wrap">
+				<div class="table-wrap ess-scroll">
 					<table class="ess-table grid">
 						<thead>
 							<tr>
@@ -1038,7 +1040,7 @@
 				</div>
 			</section>
 
-			<section class="ess-card">
+			<section class="ess-card ess-fill-card templates-card">
 				<div class="ess-card-head">
 					<div>
 						<h2 class="ess-h2">Schedule templates</h2>
@@ -1064,7 +1066,7 @@
 					{/if}
 				</div>
 				{#if data.weekOffRosters.length > 0}
-					<div class="templates">
+					<div class="templates ess-scroll">
 						{#each data.weekOffRosters as roster (roster.id)}
 							<div class="template" class:is-editing={editingRosterId === roster.id}>
 								<div class="template-main">
@@ -1746,14 +1748,29 @@
 
 <style>
 	.view-tabs {
-		margin-bottom: 20px;
+		margin-bottom: 12px;
 	}
 
 	.figures {
-		margin-bottom: 16px;
+		margin-bottom: 12px;
 	}
 	.figures .ess-figure {
-		padding: 16px 20px;
+		gap: 10px;
+		padding: 8px 16px;
+	}
+	.figures .ess-figure__value {
+		font-size: 20px;
+	}
+	.figures .ess-figure__label {
+		font-size: 12.5px;
+	}
+	.figures .ess-tile {
+		width: 30px;
+		height: 30px;
+	}
+	.figures .ess-figure__dot {
+		width: 10px;
+		height: 10px;
 	}
 
 	.toolbar {
@@ -1761,7 +1778,7 @@
 		align-items: center;
 		gap: 10px;
 		flex-wrap: wrap;
-		margin-bottom: 16px;
+		margin-bottom: 12px;
 	}
 	.toolbar-card {
 		display: flex;
@@ -1788,7 +1805,7 @@
 	}
 
 	.ess-alert {
-		margin-bottom: 14px;
+		margin-bottom: 12px;
 	}
 	.ess-alert.notice {
 		display: flex;
@@ -1803,7 +1820,7 @@
 		font-size: 13px;
 	}
 	.ess-notice {
-		margin-bottom: 14px;
+		margin-bottom: 12px;
 	}
 	.ess-notice__icon {
 		font-weight: 700;
@@ -1823,21 +1840,51 @@
 
 	/* ---------- tables ---------- */
 
+	/* Bleeds to the card's edges (the card pads by --ess-space-4). Positioned
+	   so the visually-hidden "Actions" header is contained by it — otherwise
+	   that absolute span sits past the table's right edge and the whole page
+	   scrolls sideways on a narrow screen. */
 	.table-wrap {
-		margin: 0 calc(-1 * var(--ess-space-5));
+		position: relative;
+		margin: 0 calc(-1 * var(--card-px, var(--ess-space-4)));
 		overflow-x: auto;
 		overscroll-behavior-x: contain;
 	}
+	.table-wrap .ess-table th,
+	.table-wrap .ess-table td {
+		padding: 8px 12px;
+	}
 	.table-wrap .ess-table th:first-child,
 	.table-wrap .ess-table td:first-child {
-		padding-left: var(--ess-space-5);
+		padding-left: var(--card-px, var(--ess-space-4));
 	}
 	.table-wrap .ess-table th:last-child,
 	.table-wrap .ess-table td:last-child {
-		padding-right: var(--ess-space-5);
+		padding-right: var(--card-px, var(--ess-space-4));
 	}
+	/* The header stays put while a long list scrolls inside the card. */
+	.table-wrap .ess-table thead th {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+	}
+	/* Fits beside the side panel on a laptop: the text columns may wrap and a
+	   long email is cut short (the side panel shows it in full); only a
+	   narrower screen scrolls the table sideways, inside its card. */
 	.roster {
-		min-width: 1040px;
+		min-width: 760px;
+	}
+	.roster .muted-cell,
+	.roster .muted-cell .sub {
+		white-space: normal;
+		min-width: 72px;
+	}
+	.roster .name-cell {
+		max-width: 250px;
+	}
+	.roster .name-text small {
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.person-row {
 		cursor: pointer;
@@ -1845,7 +1892,7 @@
 	.name-cell {
 		display: flex;
 		align-items: center;
-		gap: 12px;
+		gap: 10px;
 		min-width: 0;
 	}
 	.name-text {
@@ -1860,7 +1907,7 @@
 	.name-text small,
 	.sub {
 		display: block;
-		font-size: 12.5px;
+		font-size: 12px;
 		color: var(--ess-text-muted);
 		white-space: nowrap;
 	}
@@ -1939,9 +1986,10 @@
 	.placeholder {
 		display: grid;
 		justify-items: center;
+		align-content: center;
 		text-align: center;
 		gap: 8px;
-		padding: 36px 24px;
+		padding: 24px 20px;
 	}
 	.placeholder strong {
 		font-size: 15px;
@@ -1956,30 +2004,44 @@
 
 	.person-top {
 		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
+		align-items: center;
+		gap: 12px;
+	}
+	.person-id {
+		flex: 1;
+		min-width: 0;
+		overflow-wrap: anywhere;
+	}
+	.person-top .ess-icon-btn {
+		align-self: flex-start;
 	}
 	.person-name {
 		display: flex;
 		align-items: center;
-		gap: 10px;
+		gap: 6px 8px;
 		flex-wrap: wrap;
-		margin-top: 14px;
+	}
+	/* Side-panel headers keep their close button beside the title. */
+	.side .ess-card-head {
+		flex-wrap: nowrap;
 	}
 	.person-name .ess-h2 {
-		font-size: 24px;
+		font-size: 18px;
 	}
+	/* Two columns of facts keep the panel short enough to sit beside the list. */
 	.facts {
 		display: grid;
-		gap: 14px;
-		margin: 18px 0;
-		padding: 18px 0;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 10px 12px;
+		margin: 10px 0;
+		padding: 10px 0;
 		border-top: 1px solid var(--ess-border-subtle);
 		border-bottom: 1px solid var(--ess-border-subtle);
 	}
 	.facts > div {
 		display: flex;
-		gap: 12px;
+		gap: 8px;
+		min-width: 0;
 	}
 	.facts dt {
 		margin: 0;
@@ -1989,25 +2051,28 @@
 	.facts dd {
 		margin: 0;
 		display: grid;
-		line-height: 1.35;
+		min-width: 0;
+		line-height: 1.3;
+		font-size: 13.5px;
+		overflow-wrap: anywhere;
 	}
 	.facts dd span {
-		font-size: 13px;
+		font-size: 12px;
 		color: var(--ess-text-secondary);
 	}
 	.facts dd strong {
 		font-weight: 500;
 	}
 	.facts dd small {
-		font-size: 12.5px;
+		font-size: 12px;
 		color: var(--ess-text-muted);
 	}
 	.wide {
 		width: 100%;
 	}
 	.today-card {
-		margin-top: 14px;
-		padding: 14px 16px;
+		margin-top: 10px;
+		padding: 10px 12px;
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-primary-softer);
 	}
@@ -2029,13 +2094,13 @@
 		color: var(--ess-text-secondary);
 	}
 	.person-panel .ess-notice {
-		margin: 14px 0 0;
+		margin: 10px 0 0;
 	}
 	.btn-row {
 		display: flex;
 		gap: 8px;
 		flex-wrap: wrap;
-		margin-top: 14px;
+		margin-top: 10px;
 	}
 	.btn-row.end {
 		justify-content: flex-end;
@@ -2044,7 +2109,8 @@
 	.create-panel,
 	.editor {
 		display: grid;
-		gap: 14px;
+		gap: 10px;
+		align-content: start;
 	}
 	.create-panel .ess-card-head,
 	.editor .ess-card-head {
@@ -2070,6 +2136,20 @@
 	.grid {
 		min-width: 760px;
 	}
+	/* Desktop: the People and weekly roster tables fit their card exactly,
+	   so neither shows a sideways scrollbar. Narrower screens keep the
+	   minimum width and scroll inside the card. */
+	@media (min-width: 1101px) {
+		.roster,
+		.grid {
+			min-width: 0;
+		}
+		.table-wrap .ess-table th:not(:first-child):not(:last-child),
+		.table-wrap .ess-table td:not(:first-child):not(:last-child) {
+			padding-left: 8px;
+			padding-right: 8px;
+		}
+	}
 	.day-head span {
 		display: block;
 		color: var(--ess-text);
@@ -2084,12 +2164,12 @@
 	.mark {
 		display: inline-flex;
 		align-items: center;
-		gap: 7px;
-		padding: 5px 12px;
+		gap: 6px;
+		padding: 3px 10px;
 		border-radius: var(--ess-radius-sm);
 		background: var(--ess-sunken);
 		color: var(--ess-text-secondary);
-		font-size: 13px;
+		font-size: 12.5px;
 	}
 	.mark::before,
 	.mark-dot {
@@ -2111,8 +2191,8 @@
 	.legend {
 		display: flex;
 		gap: 20px;
-		margin-top: 14px;
-		padding-top: 12px;
+		margin-top: 10px;
+		padding-top: 8px;
 		border-top: 1px solid var(--ess-border-subtle);
 		font-size: 13px;
 		color: var(--ess-text-secondary);
@@ -2133,17 +2213,24 @@
 		display: block;
 	}
 
+	.templates-card .ess-empty {
+		padding: 16px;
+	}
+	.templates-card .ess-empty__title {
+		font-size: 16px;
+	}
 	.templates {
 		display: grid;
-		gap: 10px;
+		gap: 8px;
+		align-content: start;
 	}
 	.template {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 14px;
+		gap: 12px;
 		flex-wrap: wrap;
-		padding: 14px 16px;
+		padding: 10px 12px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
 	}
@@ -2491,6 +2578,163 @@
 		margin-bottom: 12px;
 	}
 
+	/* ---------- fit the screen (desktop) ----------
+	   The People and Week-off splits are the page's .ess-fill block: the list
+	   cards and the side panel end on the same line at the bottom of the
+	   workspace, and a long list scrolls inside its card. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.people-split,
+		.weekoff-split {
+			grid-template-rows: minmax(0, 1fr);
+		}
+		/* The side column already fills the height, so it no longer sticks. */
+		.side {
+			position: static;
+			gap: 10px;
+		}
+		.directory .table-wrap,
+		.grid-card .table-wrap {
+			margin-bottom: calc(-1 * var(--card-py, var(--ess-space-4)));
+		}
+		/* Week-off: the roster grid and the templates share the column, each
+		   scrolling inside its own card when it is long. */
+		.weekoff-split > .ess-stack {
+			gap: 10px;
+			overflow: hidden;
+		}
+		.weekoff-split .ess-stack > .grid-card,
+		.weekoff-split .ess-stack > .templates-card {
+			flex: 1 1 auto;
+			min-height: 150px;
+		}
+		.weekoff-split .templates-card > .ess-empty {
+			flex: 1 1 auto;
+			justify-content: center;
+		}
+		.weekoff-split .side > .placeholder {
+			flex: 1 0 auto;
+		}
+		.weekoff-split .side > .legend-card {
+			flex: none;
+		}
+	}
+	/* Short laptop screens (1280x580 up to 1366x768): tighter person panel and week-off
+	   cards so the roster keeps at least one full row on show. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
+		.person-panel {
+			padding: 8px 14px 10px;
+		}
+		.person-top {
+			gap: 10px;
+		}
+		.person-top :global(.avatar--lg) {
+			width: 36px;
+			height: 36px;
+			font-size: 15px;
+		}
+		.person-name .ess-h2 {
+			font-size: 16px;
+		}
+		.person-top .ess-caption {
+			font-size: 12px;
+		}
+		.facts {
+			gap: 3px 10px;
+			margin: 5px 0;
+			padding: 5px 0;
+		}
+		.facts dd {
+			font-size: 13px;
+			line-height: 1.15;
+		}
+		.facts dd span,
+		.facts dd small {
+			font-size: 11.5px;
+		}
+		.person-panel .wide {
+			height: 28px;
+		}
+		.today-card {
+			display: flex;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 2px 10px;
+			margin-top: 5px;
+			padding: 3px 10px;
+		}
+		.today-head {
+			margin-bottom: 0;
+			gap: 8px;
+		}
+		.today-card p {
+			font-size: 12px;
+		}
+		.person-panel .ess-notice {
+			margin-top: 8px;
+		}
+		.person-panel .btn-row {
+			margin-top: 8px;
+		}
+		.placeholder {
+			padding: 14px 16px;
+			gap: 6px;
+		}
+		.placeholder .ess-tile--lg {
+			width: 44px;
+			height: 44px;
+		}
+		.placeholder .ess-btn {
+			margin-top: 2px;
+		}
+		.legend.col {
+			gap: 6px;
+			margin: 6px 0;
+		}
+
+		/* week-off */
+		.weekoff-split .ess-stack > .grid-card {
+			min-height: 192px;
+		}
+		.weekoff-split .ess-stack > .templates-card {
+			min-height: 120px;
+		}
+		.day-head span {
+			display: inline;
+		}
+		.day-head small {
+			margin-left: 4px;
+		}
+		.grid-card .ess-card-head,
+		.templates-card .ess-card-head {
+			flex-wrap: nowrap;
+			margin-bottom: 6px;
+		}
+		.templates-card .ess-card-head > .ess-btn {
+			flex: none;
+		}
+		.legend {
+			margin-top: 6px;
+			padding-top: 6px;
+			font-size: 12.5px;
+		}
+		.templates-card .ess-empty {
+			padding: 4px 16px 8px;
+			gap: 4px;
+			font-size: 12.5px;
+		}
+		.templates-card .ess-empty__icon {
+			width: 36px;
+			height: 36px;
+			margin-bottom: 0;
+		}
+		.templates-card .ess-empty__title {
+			font-size: 14.5px;
+		}
+		.editor,
+		.create-panel {
+			gap: 8px;
+		}
+	}
 	@media (max-width: 1100px) {
 		.side {
 			position: static;
@@ -2514,6 +2758,88 @@
 		.view-tabs .ess-tab {
 			min-width: 0;
 			flex: 1;
+		}
+	}
+
+	/* Short laptop screens (1280x580 up to 1366x768): Bulk import and
+	   Password activity fit without their columns scrolling. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
+		.bulk-steps {
+			margin-bottom: 0;
+		}
+		.bulk-steps :global(.ess-step) {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		.bulk-steps :global(.ess-step:not(:last-child)::before) {
+			display: none;
+		}
+		.bulk-steps :global(.ess-step__dot) {
+			width: 20px;
+			height: 20px;
+		}
+		.bulk-steps :global(.ess-step__label) {
+			font-size: 13px;
+		}
+		.bulk-steps :global(.ess-step__meta) {
+			display: none;
+		}
+		.bulk-split {
+			grid-template-columns: minmax(0, 1fr) 420px;
+		}
+		.bulk-split .ess-card-head {
+			flex-wrap: nowrap;
+			align-items: flex-start;
+		}
+		.bulk-split .side {
+			gap: 8px;
+		}
+		.next-steps {
+			padding-top: 6px;
+		}
+		.bulk-split .side .card-title {
+			margin-bottom: 4px;
+		}
+		.queue-hint {
+			gap: 8px;
+			padding: 8px 10px;
+		}
+		.queue-figure {
+			margin: 2px 0;
+		}
+		.next-steps strong {
+			font-size: 12.5px;
+			margin-bottom: 4px;
+		}
+		.queue-hint :global(.ess-tile) {
+			display: none;
+		}
+		.queue-hint .ess-caption {
+			font-size: 12px;
+		}
+		.queue-figure {
+			padding: 4px 0;
+			align-items: center;
+		}
+		.queue-figure > div {
+			display: flex;
+			align-items: baseline;
+			gap: 6px;
+		}
+		.queue-figure :global(.ess-figure__value) {
+			font-size: 18px;
+		}
+		.next-steps ol {
+			gap: 3px;
+		}
+		.next-steps li {
+			font-size: 12px;
+		}
+		.next-steps li span {
+			width: 16px;
+			height: 16px;
+			font-size: 10px;
 		}
 	}
 </style>

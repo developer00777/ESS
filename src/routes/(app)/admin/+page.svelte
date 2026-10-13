@@ -92,8 +92,8 @@
 	<title>Admin Controls — Champ HR</title>
 </svelte:head>
 
-<div class="ess-split overview">
-	<div class="ess-stack">
+<div class="ess-split overview ess-fill">
+	<div class="ess-stack main-col">
 		<section class="ess-card" aria-labelledby="ops-title">
 			<div class="ess-card-head">
 				<h2 class="ess-h2" id="ops-title">Operations overview</h2>
@@ -101,25 +101,25 @@
 			<div class="figures">
 				<a class="figure" href="#attention">
 					<span class="ess-tile" class:ess-tile--bad={openIssues > 0} class:ess-tile--ok={openIssues === 0}>
-						{#if openIssues > 0}<TriangleAlert size={20} strokeWidth={1.75} />{:else}<CircleCheck size={20} strokeWidth={1.75} />{/if}
+						{#if openIssues > 0}<TriangleAlert size={18} strokeWidth={1.75} />{:else}<CircleCheck size={18} strokeWidth={1.75} />{/if}
 					</span>
 					<span class="fig-text"><strong>{openIssues}</strong><span>Open {openIssues === 1 ? 'issue' : 'issues'}</span></span>
 					<ChevronRight size={16} class="chev" />
 				</a>
 				<a class="figure" href={can('attendance.biometric_upload') ? '/admin/biometric' : '/admin/people?view=bulk'}>
-					<span class="ess-tile"><FileText size={20} strokeWidth={1.75} /></span>
+					<span class="ess-tile"><FileText size={18} strokeWidth={1.75} /></span>
 					<span class="fig-text"><strong>{importsToReview}</strong><span>Imports to review</span></span>
 					<ChevronRight size={16} class="chev" />
 				</a>
 				<a class="figure" href={can('people.directory') ? '/admin/people' : '/team'}>
-					<span class="ess-tile ess-tile--ok"><Users size={20} strokeWidth={1.75} /></span>
+					<span class="ess-tile ess-tile--ok"><Users size={18} strokeWidth={1.75} /></span>
 					<span class="fig-text"><strong>{activePeople}</strong><span>Active people</span></span>
 					<ChevronRight size={16} class="chev" />
 				</a>
 			</div>
 		</section>
 
-		<section class="ess-card" aria-labelledby="attention-title" id="attention">
+		<section class="ess-card ess-fill-card grow-card" aria-labelledby="attention-title" id="attention">
 			<div class="ess-card-head">
 				<h2 class="ess-h2" id="attention-title">Needs attention</h2>
 				{#if hiddenCount > 0}
@@ -138,14 +138,14 @@
 					</div>
 				</div>
 			{:else}
-				<ul class="ess-rows list">
+				<ul class="ess-rows list ess-scroll">
 					{#each listed as issue (issue.id)}
 						{@const isHidden = hidden.includes(issue.id)}
 						{@const Icon = iconFor(issue)}
 						{@const n = countOf(issue)}
 						<li class="ess-row item" class:is-hidden={isHidden}>
 							<span class="ess-tile" class:ess-tile--bad={issue.severity === 'bad'} class:ess-tile--warn={issue.severity === 'warn'} class:ess-tile--info={issue.severity === 'info'}>
-								<Icon size={20} strokeWidth={1.75} />
+								<Icon size={18} strokeWidth={1.75} />
 							</span>
 							<div class="ess-row__body">
 								<span class="ess-row__title">{issue.title}</span>
@@ -169,14 +169,14 @@
 		</section>
 
 		{#if data.recentActivity.length > 0}
-			<section class="ess-card" aria-labelledby="activity-title">
+			<section class="ess-card ess-fill-card grow-card" aria-labelledby="activity-title">
 				<div class="ess-card-head">
 					<h2 class="ess-h2" id="activity-title">Recent admin activity</h2>
 					{#if can('people.password_activity')}
 						<a class="ess-link" href="/admin/people?view=passwords">Password activity <ChevronRight size={14} /></a>
 					{/if}
 				</div>
-				<ol class="activity">
+				<ol class="activity ess-scroll">
 					{#each data.recentActivity as a (a.id)}
 						<li class="act">
 							<span class="when"><span>{fmtDay(a.at)}</span><span class="t">{fmtTime(a.at)}</span></span>
@@ -197,15 +197,15 @@
 	</div>
 
 	<aside class="ess-stack ess-stack--tight">
-		<section class="ess-card" aria-labelledby="tasks-title">
+		<section class="ess-card ess-fill-card tasks-card" aria-labelledby="tasks-title">
 			<div class="ess-card-head">
 				<h2 class="ess-h2" id="tasks-title">Start a task</h2>
 			</div>
-			<div class="task-list">
+			<div class="task-list ess-scroll">
 				{#each tasks as task (task.href)}
 					{@const Icon = task.icon}
 					<a class="task" href={task.href}>
-						<span class="ess-tile ess-tile--lg"><Icon size={22} strokeWidth={1.75} /></span>
+						<span class="ess-tile task-tile"><Icon size={18} strokeWidth={1.75} /></span>
 						<span class="task-text">
 							<strong>{task.label}</strong>
 							<span>{task.sub}</span>
@@ -228,8 +228,8 @@
 	.figure {
 		display: flex;
 		align-items: center;
-		gap: 14px;
-		padding: 16px;
+		gap: 12px;
+		padding: 10px 12px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
 		color: var(--ess-text);
@@ -239,8 +239,8 @@
 		border-color: var(--ess-border-strong);
 	}
 	.figure .ess-tile {
-		width: 52px;
-		height: 52px;
+		width: 38px;
+		height: 38px;
 		border-radius: 50%;
 	}
 	.fig-text {
@@ -249,13 +249,13 @@
 	}
 	.fig-text strong {
 		font-family: var(--ess-font-display);
-		font-size: 30px;
+		font-size: 22px;
 		font-weight: 600;
 		line-height: 1.05;
 		font-variant-numeric: tabular-nums;
 	}
 	.fig-text span {
-		font-size: 13.5px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 	}
 	.figure :global(.chev),
@@ -277,6 +277,15 @@
 		list-style: none;
 		margin: 0;
 		padding: 0;
+	}
+	.item {
+		padding-top: 9px;
+		padding-bottom: 9px;
+	}
+	.item > .ess-tile {
+		width: 36px;
+		height: 36px;
+		border-radius: var(--ess-radius-sm);
 	}
 	.item.is-hidden {
 		opacity: 0.5;
@@ -302,9 +311,9 @@
 		position: relative;
 		display: grid;
 		grid-template-columns: 96px 20px minmax(0, 1fr) auto;
-		gap: 14px;
+		gap: 12px;
 		align-items: start;
-		padding: 12px 0;
+		padding: 8px 0;
 		border-bottom: 1px solid var(--ess-border-subtle);
 	}
 	.act:last-child {
@@ -374,13 +383,14 @@
 
 	.task-list {
 		display: grid;
-		gap: 10px;
+		align-content: start;
+		gap: 8px;
 	}
 	.task {
 		display: flex;
 		align-items: center;
-		gap: 14px;
-		padding: 14px 16px;
+		gap: 12px;
+		padding: 9px 12px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-surface);
@@ -399,17 +409,116 @@
 		gap: 2px;
 		min-width: 0;
 	}
+	.task-tile {
+		width: 36px;
+		height: 36px;
+		border-radius: var(--ess-radius-sm);
+	}
 	.task-text strong {
-		font-size: 15px;
+		font-size: 14px;
 		font-weight: 600;
 	}
 	.task-text span {
-		font-size: 13px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
-		line-height: 1.4;
+		line-height: 1.35;
 	}
 	.hint {
-		margin-top: 14px;
+		margin-top: 10px;
+		flex: none;
+	}
+
+	/* Fill layout: the columns end on the workspace's bottom edge; the issue
+	   list, the activity log and the task list scroll inside their cards. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.overview .main-col {
+			overflow: hidden;
+		}
+		.overview .main-col > .grow-card {
+			flex: 0 1 auto;
+			min-height: 150px;
+		}
+		.overview .main-col > .grow-card:last-child {
+			flex-grow: 1;
+		}
+		.overview .ess-scroll {
+			margin-right: -6px;
+			padding-right: 6px;
+		}
+		.overview .main-col > :first-child {
+			flex-shrink: 0;
+		}
+		.overview aside > .tasks-card {
+			flex: 1 1 0px;
+			min-height: 0;
+		}
+	}
+
+	/* Short desktop screens (a 1280x580 browser): slimmer figures and task
+	   rows so all five tasks show without scrolling, and the two lists share
+	   the rest of the main column. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
+		/* A wider task column keeps most task descriptions on one line. */
+		.overview {
+			--ess-aside-width: 440px;
+		}
+		.figures {
+			gap: 10px;
+		}
+		.figure {
+			padding: 6px 10px;
+			gap: 10px;
+		}
+		.figure .ess-tile {
+			width: 32px;
+			height: 32px;
+		}
+		.fig-text strong {
+			font-size: 19px;
+		}
+		.fig-text span {
+			font-size: 12px;
+		}
+		.overview .main-col > .grow-card {
+			min-height: 120px;
+		}
+		.item {
+			padding-top: 7px;
+			padding-bottom: 7px;
+		}
+		.item > .ess-tile {
+			width: 32px;
+			height: 32px;
+		}
+		.act {
+			padding: 6px 0;
+		}
+		.task-list {
+			gap: 6px;
+		}
+		.task {
+			padding: 6px 10px;
+			gap: 10px;
+		}
+		.task-tile {
+			width: 32px;
+			height: 32px;
+		}
+		.task-text {
+			gap: 1px;
+		}
+		.task-text strong {
+			font-size: 13.5px;
+			line-height: 1.25;
+		}
+		.task-text span {
+			font-size: 12px;
+			line-height: 1.3;
+		}
+		/* The Jump to… button above already shows the shortcut. */
+		.hint {
+			display: none;
+		}
 	}
 
 	@media (max-width: 960px) {

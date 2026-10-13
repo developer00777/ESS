@@ -74,7 +74,7 @@
 
 {#snippet personCard(node: OrgNode)}
 	<button type="button" class="node" class:selected={selectedId === node.person.id} onclick={() => select(node)}>
-		<Avatar userId={node.person.id} fullName={node.person.fullName} size="lg" />
+		<Avatar userId={node.person.id} fullName={node.person.fullName} size="md" />
 		<span class="node-body">
 			<span class="node-name">{node.person.fullName}</span>
 			<span class="node-role">{roleLabel(node.person.role)}</span>
@@ -108,9 +108,9 @@
 	</li>
 {/snippet}
 
-<div class="ess-split">
+<div class="ess-split ess-fill org">
 	<div class="ess-stack">
-		<section class="ess-card chart-card">
+		<section class="ess-card ess-fill-card chart-card">
 			<div class="ess-card-head">
 				<h2 class="ess-h2">Organisation chart</h2>
 				<span class="ess-caption">{stats.total} active {stats.total === 1 ? 'person' : 'people'}</span>
@@ -139,7 +139,7 @@
 					<p class="ess-empty__title">No active people to chart yet.</p>
 				</div>
 			{:else if filtering}
-				<div class="results">
+				<div class="results ess-scroll">
 					{#each matches as n (n.person.id)}
 						{@render personCard(n)}
 					{:else}
@@ -147,7 +147,7 @@
 					{/each}
 				</div>
 			{:else}
-				<div class="canvas">
+				<div class="canvas ess-scroll">
 					<div class="tree-wrap" style="transform: scale({zoom})">
 						<!--
 							Chief heads the chart as a position, not a person: there is no
@@ -198,7 +198,7 @@
 	</div>
 
 	<aside class="ess-stack">
-		<section class="ess-card">
+		<section class="ess-card checks-card">
 			<div class="ess-card-head">
 				<h2 class="ess-h2">Reporting checks</h2>
 			</div>
@@ -232,10 +232,11 @@
 			</div>
 		</section>
 
-		<section class="ess-card">
+		<section class="ess-card ess-fill-card detail-card">
 			<div class="ess-card-head">
 				<h2 class="ess-h2">Employee details</h2>
 			</div>
+			<div class="detail-body ess-scroll">
 			{#if selected}
 				{@const p = selected.person}
 				{@const parent = parentOf.get(p.id)}
@@ -287,14 +288,18 @@
 			{:else}
 				<p class="ess-caption">Select a person in the chart to see who they report to and who reports to them.</p>
 			{/if}
+			</div>
 		</section>
 	</aside>
 </div>
 
 <style>
+	.org {
+		--ess-aside-width: 320px;
+	}
 	.chart-card {
 		display: grid;
-		gap: 14px;
+		gap: 10px;
 	}
 	.toolbar {
 		display: flex;
@@ -325,7 +330,7 @@
 
 	.canvas {
 		overflow: auto;
-		padding: 12px 8px 20px;
+		padding: 10px 8px 16px;
 		border-top: 1px solid var(--ess-border-subtle);
 	}
 	.tree-wrap {
@@ -441,9 +446,9 @@
 	.node {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		width: 240px;
-		padding: 14px;
+		gap: 10px;
+		width: 216px;
+		padding: 9px 10px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-surface);
@@ -476,7 +481,7 @@
 	}
 	.node-name {
 		font-family: var(--ess-font-display);
-		font-size: 17px;
+		font-size: 14.5px;
 		font-weight: 600;
 		line-height: 1.2;
 		white-space: nowrap;
@@ -484,16 +489,16 @@
 		text-overflow: ellipsis;
 	}
 	.node-role {
-		font-size: 13px;
+		font-size: 12px;
 		color: var(--ess-text-secondary);
 	}
 	.node-meta {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0 4px;
-		font-size: 11.5px;
+		font-size: 11px;
 		color: var(--ess-text-muted);
-		margin-top: 4px;
+		margin-top: 2px;
 	}
 	.node-meta > span + span::before {
 		content: '·';
@@ -515,34 +520,103 @@
 	}
 
 	.checks {
-		margin-top: 8px;
+		margin-top: 4px;
+	}
+	.checks .ess-row {
+		gap: 10px;
+		padding: 8px 0;
+	}
+	.checks .ess-tile {
+		width: 30px;
+		height: 30px;
+	}
+	.checks .ess-row__meta {
+		white-space: normal;
 	}
 	.detail-head {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		margin-bottom: 14px;
+		gap: 10px;
+		margin-bottom: 10px;
 	}
 	.detail-head div {
 		display: grid;
 	}
 	.detail-name {
 		font-family: var(--ess-font-display);
-		font-size: 20px;
+		font-size: 16px;
 		font-weight: 600;
 		line-height: 1.2;
 	}
 	.sub {
-		margin: 16px 0 6px;
-		padding-top: 12px;
+		margin: 12px 0 4px;
+		padding-top: 10px;
 		border-top: 1px solid var(--ess-border-subtle);
 	}
 	.person {
-		padding: 8px 0;
+		padding: 6px 0;
 		cursor: pointer;
 	}
 	.person :global(.chev) {
 		color: var(--ess-text-muted);
+	}
+
+	/* Desktop fill: the chart pans and scrolls inside its card; the details
+	   card takes the rest of the aside and scrolls on its own. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.org .chart-card {
+			display: flex;
+			flex: 1 1 0%;
+		}
+		.org .checks-card {
+			flex: 0 0 auto;
+		}
+		.org .detail-card {
+			flex: 1 1 0%;
+			min-height: 160px;
+		}
+		.results {
+			align-content: start;
+		}
+	}
+
+	/* Short desktop screens: a slightly wider, tighter aside so the checks
+	   fit in fewer lines and the details card keeps room below them. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
+		.org {
+			--ess-aside-width: 340px;
+		}
+		.checks-card > .ess-caption {
+			font-size: 12px;
+		}
+		.checks {
+			margin-top: 2px;
+		}
+		.checks .ess-row {
+			padding-top: 5px;
+			padding-bottom: 5px;
+		}
+		.checks .ess-tile {
+			width: 28px;
+			height: 28px;
+		}
+		.checks .ess-row__meta {
+			font-size: 12px;
+			line-height: 1.35;
+		}
+		.org .detail-card {
+			min-height: 120px;
+		}
+		.detail-head {
+			margin-bottom: 6px;
+		}
+		.sub {
+			margin: 8px 0 2px;
+			padding-top: 8px;
+		}
+		.person {
+			padding: 4px 0;
+		}
 	}
 
 	@media (max-width: 720px) {

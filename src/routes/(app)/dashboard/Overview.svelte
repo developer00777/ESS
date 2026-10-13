@@ -9,11 +9,9 @@
 	import FileText from '@lucide/svelte/icons/file-text';
 	import Users from '@lucide/svelte/icons/users';
 	let { data }: { data: PageData } = $props();
-	let selected = $state<string | null>(null);
 	let panel = $state<'attendance' | 'actions' | 'upcoming'>('attendance');
 	let moreMetrics = $state(false);
 	let refreshError = $state(false);
-	const selectedCell = $derived(data.analytics.heatmap.find(c => c.date === selected));
 	const metrics = $derived([
 		{ label: 'Attendance', value: String(data.analytics.recordedDays), unit: 'days', detail: 'Recorded this month', icon: Clock, href: '/attendance', tone: 'green' },
 		{ label: 'Leave balance', value: String(data.leaveBalance), unit: 'days', detail: data.leaveAllocated + ' days allocated', icon: Calendar, href: '/leave', tone: 'violet' },
@@ -57,7 +55,7 @@
 	</div>
 	<button class="metric-switch" type="button" onclick={() => moreMetrics = !moreMetrics}>{moreMetrics ? 'Attendance & leave ←' : 'Tenure & hours →'}</button>
 	<div class="panel-switch" aria-label="Dashboard panels">
-		<button type="button" aria-pressed={panel === 'attendance'} onclick={() => panel = 'attendance'}>Attendance & heatmap</button>
+		<button type="button" aria-pressed={panel === 'attendance'} onclick={() => panel = 'attendance'}>Attendance</button>
 		<button type="button" aria-pressed={panel === 'actions'} onclick={() => panel = 'actions'}>Attention & quick links</button>
 		<button type="button" aria-pressed={panel === 'upcoming'} onclick={() => panel = 'upcoming'}>Upcoming</button>
 	</div>
@@ -76,11 +74,6 @@
 					<text {x} y={y - 12} text-anchor="middle">{d.total}</text><text {x} y="199" text-anchor="middle">{d.label}</text>
 				{/each}
 			</svg>
-			<header class="month-head"><div><h3>Attendance heatmap</h3><p>13 weeks · recorded time between punches</p></div><span class="heat-legend">Less <i data-level="0"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i> More</span></header>
-			<div class="heat-wrap"><div class="weekdays" aria-hidden="true">{#each ['M','T','W','T','F','S','S'] as day}<span>{day}</span>{/each}</div><div class="heatmap" aria-label="Attendance heatmap, Monday through Sunday, oldest week first">
-			{#each data.analytics.heatmap as cell}<button type="button" data-level={cell.level} class:selected={selected === cell.date} onclick={() => selected = cell.date} aria-pressed={selected === cell.date} aria-label={cell.label + ': ' + (cell.level === -1 ? 'Future' : !cell.recorded ? 'No punch recorded' : !cell.complete ? 'Check-out missing' : cell.hours + ' recorded hours')} title={cell.label + ': ' + (cell.level === -1 ? 'Future' : !cell.recorded ? 'No punch recorded' : !cell.complete ? 'Check-out missing' : cell.hours + ' hours')}></button>{/each}
-			</div></div>
-			<p class="heat-detail" aria-live="polite">{#if selectedCell}{selectedCell.label}: {selectedCell.level === -1 ? 'Future date' : !selectedCell.recorded ? 'No punch recorded' : !selectedCell.complete ? 'Check-in recorded; check-out missing' : selectedCell.hours + ' recorded hours'}{:else}Select a day for details. Amber = missing check-out; outline = future.{/if}</p>
 		</section>
 		<div class="side">
 			<section class="card"><header><h2>Needs your attention</h2><a href="/leave">View all</a></header>
@@ -116,11 +109,9 @@
 	.grid {display:grid;grid-template-columns:minmax(0,1.7fr) minmax(300px,1fr);gap:18px;align-items:start;}
 	header {display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
 	h2 {font-family:var(--ess-font-sans);font-size:20px;font-weight:600;letter-spacing:-.4px;}
-	h3 {font-size:14px;font-weight:600;}
 	header a {font-size:13px;}
 	svg {display:block;width:100%;height:auto;max-height:260px;color:var(--ess-primary);}
 	svg text {font-size:11px;fill:var(--ess-text-secondary);}
-	.month-head {margin-top:16px;}
 	.side {display:grid;gap:16px;min-width:0;}
 	.attention,.quick a,.events a {display:flex;gap:12px;align-items:center;border:1px solid var(--ess-border);border-radius:10px;padding:12px;color:var(--ess-text);min-width:0;}
 	.attention {margin-top:10px;flex-wrap:wrap;}
@@ -157,32 +148,16 @@
 	header {margin-bottom:10px;gap:8px;} h2 {font-size:17px;} p {font-size:12px;}
 	svg {max-height:170px;}
 	.chart polyline {stroke-dasharray:1000;stroke-dashoffset:1000;animation:draw 1.2s ease forwards;}
-	.month-head {margin-top:8px;}
-	.heat-wrap {display:flex;gap:8px;}
-	.weekdays {display:grid;grid-template-rows:repeat(7,1fr);font-size:9px;color:var(--ess-text-muted);width:12px;}
-	.weekdays span {display:flex;align-items:center;}
-	.heatmap {display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,15px);grid-template-columns:repeat(13,minmax(0,1fr));gap:4px;flex:1;min-width:0;}
-	.heatmap button,.heat-legend i {border:1px solid var(--ess-border);background:var(--ess-sunken);border-radius:3px;min-width:0;padding:0;}
-	.heatmap button {cursor:pointer;transition:transform .15s,filter .15s;}
-	.heatmap button:hover,.heatmap button.selected {transform:scale(1.12);outline:2px solid var(--ess-primary);outline-offset:1px;z-index:1;}
-	.heatmap [data-level='-1'] {background:transparent;border-style:dashed;}
-	.heatmap [data-level='1'] {background:var(--ess-warning-bg);border-color:var(--ess-warning);}
-	.heatmap [data-level='2'],.heat-legend [data-level='2'] {background:#c4eadd;border-color:#9ed2bf;}
-	.heatmap [data-level='3'],.heat-legend [data-level='3'] {background:#6fc7a7;border-color:#6fc7a7;}
-	.heatmap [data-level='4'],.heat-legend [data-level='4'] {background:#29976f;border-color:#29976f;}
-	.heat-legend {display:flex;align-items:center;gap:4px;font-size:10px;color:var(--ess-text-muted);}
-	.heat-legend i {width:10px;height:10px;}
-	.heat-detail {font-size:10px;min-height:16px;margin-top:6px;}
 	.side {gap:12px;grid-template-columns:1fr;}.quick {grid-template-columns:repeat(2,minmax(0,1fr));}
 	.attention {padding:9px;margin-top:8px;gap:8px;}.attention .orb {width:32px;height:32px;}
 	.quick a {padding:8px;}.quick p {font-size:10px;}.quick b {font-size:12px;}
 	.events a {padding:9px;}.events .orb {width:34px;height:34px;}
 	@keyframes card-enter {from {opacity:0;transform:translateY(8px);} to {opacity:1;transform:none;}}
 	@keyframes draw {to {stroke-dashoffset:0;}}
-	@media(min-width:1100px) and (max-height:850px) { .card {padding:12px;}.metric {padding:10px 12px 14px;} svg {max-height:112px;}.heatmap {grid-template-rows:repeat(7,12px);gap:3px;}.overview {gap:10px;}h2 {font-size:16px;} }
+	@media(min-width:1100px) and (max-height:850px) { .card {padding:12px;}.metric {padding:10px 12px 14px;} svg {max-height:112px;}.overview {gap:10px;}h2 {font-size:16px;} }
 	@media(max-width:1099px) {.metrics {grid-template-columns:repeat(3,minmax(0,1fr));}.grid {grid-template-columns:1fr;}.side {grid-template-columns:repeat(2,minmax(0,1fr));}.quick {grid-template-columns:1fr;}}
 	@media(max-width:650px) {.metrics {grid-template-columns:repeat(2,minmax(0,1fr));}.side {grid-template-columns:1fr;}.metric {padding:12px;}.metric strong {font-size:26px;}.metric strong.tenure {font-size:19px;}.live > span:last-child {margin-left:0;}}
-	@media(prefers-reduced-motion:reduce) {.metric,.chart polyline {animation:none;}.chart polyline {stroke-dashoffset:0;}.metric,.heatmap button {transition:none;}.metric:hover,.heatmap button:hover {transform:none;}}
+	@media(prefers-reduced-motion:reduce) {.metric,.chart polyline {animation:none;}.chart polyline {stroke-dashoffset:0;}.metric {transition:none;}.metric:hover {transform:none;}}
 
 	/* Fixed composition: summaries have a budget; graphics use the remaining space. */
 	.overview {display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:12px;min-height:0;}
@@ -193,9 +168,6 @@
 	.chart {min-height:0;display:flex;flex-direction:column;overflow:visible;}
 	.chart > header {flex:none;}
 	.chart > svg {flex:1 1 0%;min-height:0;height:100%;max-height:none;width:100%;}
-	.heat-wrap {flex:.65 1 0%;min-height:0;}
-	.heatmap {grid-template-rows:repeat(7,minmax(0,1fr));min-height:0;}
-	.heat-detail {flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 	.side {min-height:0;grid-template-rows:minmax(0,1fr) minmax(0,1fr);align-content:stretch;}
 	.side > .card {min-height:0;display:flex;flex-direction:column;}
 	.side header {flex:none;}
@@ -210,7 +182,7 @@
 	.panel-switch button,.metric-switch {border:1px solid var(--ess-border);border-radius:7px;background:var(--ess-surface);color:var(--ess-primary-text);padding:5px 8px;font:inherit;font-size:11px;cursor:pointer;}
 	.panel-switch button[aria-pressed='true'] {background:var(--ess-primary-soft);border-color:var(--ess-primary);}
 	@media(min-width:1100px) and (max-height:800px) {
-		.overview {gap:8px;}.metric {padding:8px 12px 12px;}.metric strong {font-size:25px;}.metric strong.tenure {font-size:19px;min-height:32px;}.metric-top {font-size:11px;}.card {padding:10px 12px;}.chart header p {font-size:10px;}.side h2 {font-size:15px;}.attention .orb {width:26px;height:26px;}.quick p {display:none;}.month-head {margin-top:4px;margin-bottom:6px;}.heatmap {gap:3px;}.upcoming header {margin-bottom:4px;}.events .orb {width:28px;height:28px;}
+		.overview {gap:8px;}.metric {padding:8px 12px 12px;}.metric strong {font-size:25px;}.metric strong.tenure {font-size:19px;min-height:32px;}.metric-top {font-size:11px;}.card {padding:10px 12px;}.chart header p {font-size:10px;}.side h2 {font-size:15px;}.attention .orb {width:26px;height:26px;}.quick p {display:none;}.upcoming header {margin-bottom:4px;}.events .orb {width:28px;height:28px;}
 	}
 	@media(max-width:1099px), (max-height:600px) {
 		.overview {grid-template-rows:auto auto auto minmax(0,1fr);gap:8px;}
@@ -229,5 +201,5 @@
 		.quick {grid-template-columns:repeat(2,minmax(0,1fr));}
 		.metric strong {font-size:22px;}.metric strong.tenure {font-size:18px;}.metric .orb {display:none;}.metric p {font-size:10px;}.metric-top {font-size:11px;}
 	}
-	@media(max-width:500px) {.metric {padding:8px;}.metric p {display:none;}.metric strong {font-size:20px;}.metric small {font-size:10px;}.panel-switch button {font-size:10px;padding:5px;}.heat-legend {display:none;}.chart header p {font-size:10px;}.chart header a {font-size:11px;}.chart h2 {font-size:15px;}}
+	@media(max-width:500px) {.metric {padding:8px;}.metric p {display:none;}.metric strong {font-size:20px;}.metric small {font-size:10px;}.panel-switch button {font-size:10px;padding:5px;}.chart header p {font-size:10px;}.chart header a {font-size:11px;}.chart h2 {font-size:15px;}}
 </style>

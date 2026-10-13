@@ -274,7 +274,16 @@
 	.balance {
 		display: flex;
 		align-items: center;
-		gap: 14px;
+		gap: 12px;
+	}
+	.balance .ess-tile {
+		width: 36px;
+		height: 36px;
+	}
+	.balance .ess-btn {
+		height: 32px;
+		padding: 0 12px;
+		font-size: 13px;
 	}
 	.balance-body {
 		flex: 1;
@@ -284,20 +293,21 @@
 	}
 	.balance-body strong {
 		font-family: var(--ess-font-display);
-		font-size: 26px;
+		font-size: 20px;
 		font-weight: 600;
 		line-height: 1.1;
+		white-space: nowrap;
 	}
 	.balance-body span {
-		font-size: 13px;
+		font-size: 12px;
 		color: var(--ess-text-secondary);
 	}
 
 	.claim-form {
 		display: grid;
-		gap: 12px;
-		margin-top: 16px;
-		padding: 14px 16px;
+		gap: 10px;
+		margin-top: 12px;
+		padding: 12px 14px;
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-sunken);
 	}
@@ -337,11 +347,11 @@
 	}
 
 	.credits {
-		margin-top: 12px;
+		margin-top: 10px;
 		border-top: 1px solid var(--ess-border);
 	}
 	.credit {
-		padding: 11px 0;
+		padding: 7px 0;
 	}
 	.hrs {
 		font-weight: 400;
@@ -366,5 +376,66 @@
 		padding: 6px 0 0;
 		cursor: pointer;
 		font: inherit;
+	}
+
+	/* Short laptop screens: a slimmer balance row so the attendance aside fits. */
+	/* The title sits beside the icon, above the balance, with the request
+	   button on the right: one band instead of a heading row plus a row. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
+		.comp-off {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr) auto;
+			column-gap: 8px;
+			align-items: center;
+		}
+		.comp-off > :global(*) {
+			grid-column: 1 / -1;
+		}
+		.comp-off .ess-card-head {
+			grid-column: 2;
+			grid-row: 1;
+			margin-bottom: 0;
+			white-space: nowrap;
+		}
+		.comp-off .ess-card-head .ess-h2 {
+			font-size: 13.5px;
+		}
+		.comp-off .info {
+			margin-left: 4px;
+		}
+		.comp-off .balance {
+			display: contents;
+		}
+		.balance .ess-tile {
+			grid-column: 1;
+			grid-row: 1 / span 2;
+		}
+		.balance-body {
+			grid-column: 2 / -1;
+			grid-row: 2;
+			display: flex;
+			flex-wrap: wrap;
+			align-items: baseline;
+			column-gap: 8px;
+		}
+		.balance > .ess-btn {
+			grid-column: 3;
+			grid-row: 1;
+		}
+		.balance .ess-tile {
+			width: 28px;
+			height: 28px;
+		}
+		.balance-body strong {
+			font-size: 17px;
+		}
+		.balance-body span {
+			font-size: 11.5px;
+		}
+		.balance .ess-btn {
+			height: 28px;
+			padding: 0 10px;
+			font-size: 12.5px;
+		}
 	}
 </style>

@@ -14,6 +14,8 @@
 	import MessagesSquare from '@lucide/svelte/icons/messages-square';
 	import Video from '@lucide/svelte/icons/video';
 	import Search from '@lucide/svelte/icons/search';
+	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import { adminTabForPath, visibleAdminTabs, type AdminTabId } from '$lib/admin-tabs';
 	import { tabSeverities } from '$lib/admin-issues';
 	import { lockPageScroll } from '$lib/scroll-lock';
@@ -119,11 +121,42 @@
 
 	$effect(() => () => unlockScroll?.());
 
-	/* Keep the active tab in view when the bar scrolls sideways on a phone. */
+	/* The tab bar scrolls sideways: keep the active tab in view, show the
+	   arrows and edge fades only on the side that has more tabs, and let
+	   a mouse wheel over the bar scroll it sideways. */
 	let tabBar = $state<HTMLElement | null>(null);
+	let canLeft = $state(false);
+	let canRight = $state(false);
+	function measureTabs() {
+		if (!tabBar) return;
+		canLeft = tabBar.scrollLeft > 2;
+		canRight = tabBar.scrollLeft + tabBar.clientWidth < tabBar.scrollWidth - 2;
+	}
+	function scrollTabs(dir: -1 | 1) {
+		tabBar?.scrollBy({ left: dir * Math.max(160, (tabBar.clientWidth ?? 0) * 0.6), behavior: 'smooth' });
+	}
+	function wheelTabs(e: WheelEvent) {
+		if (!tabBar || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+		if (tabBar.scrollWidth <= tabBar.clientWidth) return;
+		e.preventDefault();
+		tabBar.scrollLeft += e.deltaY;
+	}
 	$effect(() => {
 		void current?.id;
 		tabBar?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+		measureTabs();
+	});
+	$effect(() => {
+		if (!tabBar) return;
+		const bar = tabBar;
+		const ro = new ResizeObserver(measureTabs);
+		ro.observe(bar);
+		// Not passive: a vertical wheel over the bar scrolls it sideways.
+		bar.addEventListener('wheel', wheelTabs, { passive: false });
+		return () => {
+			ro.disconnect();
+			bar.removeEventListener('wheel', wheelTabs);
+		};
 	});
 </script>
 
@@ -144,8 +177,9 @@
 	{/snippet}
 </PageHeader>
 
-<nav class="admin-tabs" aria-label="Admin sections">
-	<div class="ess-tabs ess-tabs--line tab-row" bind:this={tabBar}>
+<nav class="admin-tabs" aria-label="Admin sections" class:fade-l={canLeft} class:fade-r={canRight}>
+	<button type="button" class="tab-arrow left" hidden={!canLeft} onclick={() => scrollTabs(-1)} aria-label="Scroll sections left" tabindex="-1"><ChevronLeft size={16} /></button>
+	<div class="ess-tabs ess-tabs--line tab-row" bind:this={tabBar} onscroll={measureTabs}>
 		{#each tabs as tab, i (tab.id)}
 			{@const Icon = ICONS[tab.id]}
 			{@const sev = severities[tab.id]}
@@ -163,9 +197,10 @@
 			</a>
 		{/each}
 	</div>
+	<button type="button" class="tab-arrow right" hidden={!canRight} onclick={() => scrollTabs(1)} aria-label="Scroll sections right" tabindex="-1"><ChevronRight size={16} /></button>
 </nav>
 
-<div class="admin-body">
+<div class="admin-body ess-fill">
 	{#if strip && strip.length > 0}
 		<SummaryStrip items={strip} />
 	{/if}
@@ -213,15 +248,56 @@
 		z-index: 30;
 		margin: 0 calc(-1 * var(--ess-page-pad-x));
 		padding: 0 var(--ess-page-pad-x);
-		background: color-mix(in oklab, var(--ess-canvas) 90%, transparent);
-		backdrop-filter: blur(10px);
-		-webkit-backdrop-filter: blur(10px);
+		background: color-mix(in oklab, var(--ess-canvas) 45%, transparent);
+		backdrop-filter: blur(14px) saturate(160%);
+		-webkit-backdrop-filter: blur(14px) saturate(160%);
 	}
 
+	.admin-tabs {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
 	.tab-row {
+		flex: 1 1 auto;
+		min-width: 0;
 		width: 100%;
 		overflow-x: auto;
+		scroll-behavior: smooth;
 		scrollbar-width: none;
+	}
+	/* Edge fades on the side(s) with more tabs to scroll to. */
+	.fade-l .tab-row {
+		-webkit-mask-image: linear-gradient(to right, transparent, #000 36px);
+		mask-image: linear-gradient(to right, transparent, #000 36px);
+	}
+	.fade-r .tab-row {
+		-webkit-mask-image: linear-gradient(to left, transparent, #000 36px);
+		mask-image: linear-gradient(to left, transparent, #000 36px);
+	}
+	.fade-l.fade-r .tab-row {
+		-webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+		mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+	}
+	.tab-arrow {
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		border: 1px solid var(--ess-border-subtle);
+		background: var(--ess-surface);
+		color: var(--ess-text-secondary);
+		box-shadow: 0 1px 3px rgba(20, 22, 40, 0.08);
+		cursor: pointer;
+	}
+	.tab-arrow:hover {
+		color: var(--ess-primary-text);
+		border-color: var(--ess-primary-soft);
+	}
+	.tab-arrow[hidden] {
+		display: none;
 	}
 	.tab-row::-webkit-scrollbar {
 		display: none;
@@ -235,8 +311,10 @@
 	}
 
 	.tab {
-		padding: 12px 14px;
-		font-size: 13.5px;
+		flex-shrink: 0;
+		white-space: nowrap;
+		padding: 9px 14px;
+		font-size: 13px;
 	}
 	.tab :global(svg) {
 		flex-shrink: 0;
@@ -257,9 +335,63 @@
 
 	.admin-body {
 		display: grid;
-		gap: var(--ess-space-5);
-		padding-top: var(--ess-space-5);
+		gap: 14px;
+		padding-top: 14px;
 		min-width: 0;
+	}
+
+	/* The summary strip sits above every admin page: keep it a slim band. */
+	.admin-body > :global(.ess-figures > .ess-figure) {
+		padding: 10px 16px;
+		gap: 10px;
+	}
+	/* Value on the left, label and detail stacked beside it. */
+	.admin-body > :global(.ess-figures > .ess-figure > div) {
+		grid-template-columns: auto minmax(0, 1fr);
+		column-gap: 10px;
+		align-items: start;
+	}
+	.admin-body > :global(.ess-figures) :global(.ess-figure__value) {
+		grid-row: 1 / span 2;
+		font-size: 20px;
+		line-height: 1;
+	}
+	.admin-body > :global(.ess-figures) :global(.ess-figure__label),
+	.admin-body > :global(.ess-figures) :global(.ess-figure__value ~ span) {
+		grid-column: 2;
+		line-height: 1.3;
+	}
+	.admin-body > :global(.ess-figures) :global(.ess-figure__label) {
+		font-size: 12.5px;
+	}
+	.admin-body > :global(.ess-figures) :global(.ess-figure__dot) {
+		width: 10px;
+		height: 10px;
+		margin-top: 6px;
+		align-self: flex-start;
+	}
+
+	/* Fill layout (desktop). The body is the .ess-fill child of .ess-content,
+	   so it stretches to the bottom of the workspace as a column. A page opts
+	   in by putting .ess-fill on its own top block: that block takes the
+	   height left under the summary strip, and the page never scrolls.
+	   A page that does not opt in keeps its natural height and the workspace
+	   scrolls as before. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.admin-body {
+			display: flex;
+			flex-direction: column;
+		}
+		.admin-body > :global(*) {
+			flex-shrink: 0;
+		}
+		.admin-body > :global(.ess-fill) {
+			flex: 1 1 0px;
+			min-height: 0;
+		}
+		:global(.ess-content) > .admin-body:not(:has(> :global(.ess-fill))) {
+			flex: 1 0 auto;
+		}
 	}
 
 	/* The pages were written as standalone screens and each sets its own top
@@ -341,6 +473,78 @@
 		padding: 10px 12px;
 		color: var(--ess-text-muted);
 		font-size: var(--ess-fs-caption);
+	}
+
+
+	/* Short desktop screens (a 1280x580 browser): the header, tabs and
+	   summary strip give back as much height as they can, so the page below
+	   keeps room for its cards. */
+	@media (min-width: 1101px) and (max-height: 800px) {
+		/* Title and its one-line blurb share a row under the crumb. */
+		:global(.ess-page-head:has(+ nav.admin-tabs)) {
+			margin-bottom: 4px;
+			align-items: center;
+		}
+		:global(.ess-page-head:has(+ nav.admin-tabs) > .ess-page-head__text) {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: baseline;
+			column-gap: 14px;
+			row-gap: 1px;
+		}
+		:global(.ess-page-head:has(+ nav.admin-tabs) .ess-crumb) {
+			flex-basis: 100%;
+		}
+		:global(.ess-page-head:has(+ nav.admin-tabs) .ess-page-sub) {
+			flex: 1 1 260px;
+			min-width: 0;
+		}
+		.tab {
+			padding-top: 6px;
+			padding-bottom: 6px;
+			font-size: 12.5px;
+		}
+		.group-sep {
+			margin-top: 7px;
+			margin-bottom: 7px;
+		}
+		.admin-body {
+			gap: 10px;
+			padding-top: 10px;
+		}
+		/* The strip becomes a slim band: each cell is the value beside
+		   two single lines (label, detail). */
+		.admin-body > :global(.ess-figures > .ess-figure) {
+			align-items: center;
+			padding: 6px 14px;
+			gap: 9px;
+		}
+		.admin-body > :global(.ess-figures > .ess-figure > div) {
+			align-items: center;
+			row-gap: 0;
+		}
+		.admin-body > :global(.ess-figures) :global(.ess-figure__value) {
+			font-size: 18px;
+		}
+		.admin-body > :global(.ess-figures) :global(.ess-figure__label),
+		.admin-body > :global(.ess-figures) :global(.ess-figure__value ~ span) {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			line-height: 1.25;
+		}
+		.admin-body > :global(.ess-figures) :global(.ess-figure__label) {
+			font-size: 12px;
+		}
+		.admin-body > :global(.ess-figures) :global(.ess-figure__label ~ span) {
+			font-size: 11.5px;
+		}
+		.admin-body > :global(.ess-figures) :global(.ess-figure__dot) {
+			width: 9px;
+			height: 9px;
+			margin-top: 0;
+			align-self: center;
+		}
 	}
 
 	@media (max-width: 720px) {
