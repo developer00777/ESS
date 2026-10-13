@@ -5,6 +5,7 @@
 	import ApprovalPopup from '$lib/components/hub/ApprovalPopup.svelte';
 	import { chat } from '$lib/chat/client.svelte';
 	import { hub } from '$lib/hub/client.svelte';
+	import { cardSpotlight } from '$lib/ui/spotlight';
 
 	let { data, children } = $props();
 
@@ -20,6 +21,9 @@
 		hub.start();
 		started = true;
 	});
+	// Cards glow under the mouse pointer (visual only).
+	$effect(() => cardSpotlight());
+
 	const chatBadge = $derived({
 		count: (started ? chat.badge : data.chatBadge.count) + hub.counts.work,
 		urgent: (started ? chat.channels.some((c) => c.kind === 'announcements' && c.mentions > 0) : data.chatBadge.urgent) || hub.counts.urgent
