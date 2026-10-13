@@ -2176,11 +2176,13 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 	/* Light: sleek and quiet — a soft grey workspace, crisp near-white
 	   cards with a hairline edge and a whisper of shadow, no colour glows.
 	   (Dark mode, below, keeps the lit glass.) */
-	--glow-a: transparent;
-	--glow-b: transparent;
-	--glow-c: transparent;
-	--glow-d: transparent;
-	--glass-fill: linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92));
+	/* The same colour glows as dark mode (blue, violet, pink, cyan) behind
+	   the glass; cards are a touch more see-through so they read through. */
+	--glow-a: color-mix(in srgb, var(--ess-primary) 30%, transparent);
+	--glow-b: color-mix(in srgb, #8b5cf6 26%, transparent);
+	--glow-c: color-mix(in srgb, #ec4899 16%, transparent);
+	--glow-d: color-mix(in srgb, #06b6d4 16%, transparent);
+	--glass-fill: linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8));
 	--glass-edge: rgba(0, 0, 0, 0.07);
 	--glass-shadow:
 		0 1px 1px rgba(0, 0, 0, 0.03),

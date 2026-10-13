@@ -229,8 +229,8 @@
 					<span class="k">To approve</span>
 				</a>
 			{/if}
-			<a href="/leave/apply" class="ess-btn ess-btn--primary apply"><Calendar size={16} /> Apply leave</a>
 		</div>
+		<a href="/leave/apply" class="ess-btn ess-btn--primary apply"><Calendar size={16} /> Apply leave</a>
 	</header>
 
 	{#if view === 'today'}
@@ -804,8 +804,8 @@
 	.view-tabs {
 		flex: none;
 	}
-	.figures.hide .fig {
-		display: none;
+	.figures.hide {
+		visibility: hidden;
 	}
 
 	/* ---------- Timeline & analytics ---------- */
@@ -1020,6 +1020,38 @@
 		}
 		.week {
 			display: none;
+		}
+	}
+
+	/* The header row never widens the page; on narrower desktops the four
+	   quick figures give way to the tabs (the same numbers are in Timeline &
+	   analytics and the My attendance panel). */
+	.home {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.home > .top {
+		min-width: 0;
+	}
+	/* Desktop: the figures take the room left in the row and show as many
+	   as fit on one line; the rest wrap onto a hidden second line. */
+	@media (min-width: 1101px) {
+		.top .figures {
+			flex: 1 1 auto;
+			min-width: 0;
+			flex-wrap: wrap;
+			justify-content: flex-end;
+			height: 58px;
+			overflow: hidden;
+			align-content: flex-start;
+			align-items: center;
+		}
+	}
+	@media (min-width: 1101px) and (max-height: 760px) {
+		.top .figures {
+			height: 46px;
+		}
+		.top .apply {
+			flex: none;
 		}
 	}
 </style>
