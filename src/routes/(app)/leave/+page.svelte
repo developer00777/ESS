@@ -205,7 +205,7 @@
 	compact
 >
 	{#snippet actions()}
-		<a href="/leave/apply" class="ess-btn ess-btn--primary">
+		<a href="/leave/apply" class="ess-btn ess-btn--primary ess-btn--cta">
 			<Calendar size={17} strokeWidth={1.75} />
 			Apply leave
 		</a>
@@ -244,7 +244,7 @@
 						</div>
 					{/each}
 					{#each data.monthlyBalances as row (row.typeId)}
-						<div class="ess-metric">
+						<div class="ess-metric ess-pink-wash">
 							<span class="ess-tile ess-tile--pink"><Heart size={20} strokeWidth={1.75} /></span>
 							<div class="ess-metric__body">
 								<span class="ess-metric__label">{row.name}</span>

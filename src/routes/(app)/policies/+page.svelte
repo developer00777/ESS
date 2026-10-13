@@ -137,7 +137,7 @@
 				<nav class="ess-card list list--chips" aria-label="Policy documents">
 					<h3 class="ess-h2 list-h">Policy documents</h3>
 					{#each shownLeave as lt (lt.id)}
-						<button type="button" class="doc-link" aria-current={leave?.id === lt.id ? 'true' : undefined} onclick={() => (leaveId = lt.id)}>
+						<button type="button" class="doc-link" class:ess-pink-wash={!!lt.monthlyQuotaDays} aria-current={leave?.id === lt.id ? 'true' : undefined} onclick={() => (leaveId = lt.id)}>
 							<span class="ess-tile ess-tile--sm"><FileText size={16} /></span>
 							<span class="ess-row__body">
 								<span class="ess-row__title">{lt.name}</span>
@@ -151,7 +151,7 @@
 				</nav>
 
 				{#if leave}
-					<article class="ess-card doc">
+					<article class="ess-card doc" class:ess-pink-wash={!!leave.monthlyQuotaDays}>
 						<div class="doc-head">
 							<div>
 								<span class="ess-eyebrow">Leave policy{#if leave.code} · {leave.code}{/if}</span>

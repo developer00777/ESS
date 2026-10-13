@@ -289,6 +289,41 @@ button.ess-link {
 .ess-btn--primary:hover:not(:disabled) {
 	background: var(--ess-primary-hover);
 }
+/* The page's main call to action (Apply leave): the primary button with a
+   soft halo so it reads first on a busy page. */
+.ess-btn--cta {
+	font-weight: 600;
+	background: linear-gradient(135deg, var(--ess-primary), color-mix(in srgb, var(--ess-primary) 72%, #8b5cf6));
+	box-shadow:
+		0 0 0 3px color-mix(in srgb, var(--ess-primary) 16%, transparent),
+		0 8px 20px -8px color-mix(in srgb, var(--ess-primary) 75%, transparent);
+	transition:
+		transform var(--ess-t-fast),
+		box-shadow var(--ess-t-fast),
+		filter var(--ess-t-fast);
+}
+.ess-btn--cta:hover:not(:disabled) {
+	background: linear-gradient(135deg, var(--ess-primary), color-mix(in srgb, var(--ess-primary) 72%, #8b5cf6));
+	filter: brightness(1.06);
+	transform: translateY(-1px);
+	box-shadow:
+		0 0 0 4px color-mix(in srgb, var(--ess-primary) 22%, transparent),
+		0 12px 24px -8px color-mix(in srgb, var(--ess-primary) 80%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+	.ess-btn--cta:hover:not(:disabled) {
+		transform: none;
+	}
+}
+
+/* A very light pink wash for Pink Leave (monthly-quota leave) cards. */
+.ess-pink-wash,
+.ess-card.ess-pink-wash,
+.ess-metric.ess-pink-wash {
+	background: color-mix(in srgb, var(--ess-pink-bg) 22%, var(--ess-surface));
+	border-color: color-mix(in srgb, var(--ess-pink) 8%, var(--ess-border-subtle));
+}
+
 .ess-btn--primary:active:not(:disabled) {
 	background: var(--ess-primary-press);
 }

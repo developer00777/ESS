@@ -185,7 +185,7 @@
 					<span class="k">To approve</span>
 				</a>
 			{/if}
-			<a href="/leave/apply" class="ess-btn ess-btn--primary apply"><Calendar size={16} /> Apply leave</a>
+			<a href="/leave/apply" class="ess-btn ess-btn--primary ess-btn--cta apply"><Calendar size={16} /> Apply leave</a>
 		</div>
 	</header>
 
