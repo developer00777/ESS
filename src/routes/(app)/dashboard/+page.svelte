@@ -188,7 +188,7 @@
 		</div>
 	</header>
 
-	<AbsencePlanner planner={data.planner} />
+	<AbsencePlanner planner={data.planner} attendance={data.analytics} missingCheckOuts={data.missingCheckOuts.length} />
 
 	<div class="lower">
 		<FutureEvents events={data.events} />
@@ -410,10 +410,14 @@
 <style>
 	/* ---------- one-screen home ---------- */
 	@media (min-width: 721px) and (min-height: 680px) {
-		:global(.ess-content:has(> .home)) { display:flex; flex-direction:column; overflow:hidden; padding-bottom:12px; }
-		:global(.ess-content > .home) { flex:1; min-height:0; }
+		/* Fills the screen; if the panels truly can't fit, the page scrolls
+		   rather than cutting them off. */
+		:global(.ess-content:has(> .home)) { display:flex; flex-direction:column; overflow:auto; padding-bottom:12px; }
+		/* Grows to fill the screen, never shrinks below what its cards need. */
+		:global(.ess-content > .home) { flex:1 0 auto; }
+		.home :global(.planner) { max-height:58vh; }
 		:global(.ess-content:has(.workspace-details[open]) > .home) { display:none; }
-		.workspace-details { flex:0 1 auto; min-height:0; max-height:100%; overflow:auto; overscroll-behavior:contain; }
+		.workspace-details { flex:0 0 auto; }
 		.workspace-details > summary { position:sticky; top:0; background:var(--ess-canvas); z-index:2; }
 	}
 	.workspace-details > summary { cursor: pointer; padding: 10px 2px 0; color: var(--ess-primary-text); font-weight: 500; font-size: 13px; }
@@ -504,8 +508,14 @@
 	}
 
 	@media (max-width: 1100px) {
+		.home {
+			grid-template-rows: auto auto auto;
+		}
 		.lower {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.lower > :global(*) {
+			height: auto;
 		}
 		.lower > :global(:last-child) {
 			grid-column: 1 / -1;

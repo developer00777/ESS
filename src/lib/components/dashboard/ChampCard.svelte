@@ -180,6 +180,13 @@
 		color: var(--ess-text-muted);
 	}
 
+	@media (min-width: 721px) and (max-height: 820px) {
+		.orb {
+			width: 38px;
+			height: 38px;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.orb {
 			animation: none;

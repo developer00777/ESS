@@ -8,14 +8,20 @@
 	 * Selecting a bar opens its details in a side sheet; when the request is
 	 * in the viewer's queue they can approve or reject it right there, through
 	 * the same /api/leave/[id]/approve endpoint the Leave page uses.
+	 *
+	 * Given `attendance`, the card also switches to "My attendance": the
+	 * viewer's 13-week punch heatmap (AttendanceHeatmap). The choice is
+	 * remembered in this browser.
 	 */
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import Search from '@lucide/svelte/icons/search';
 	import X from '@lucide/svelte/icons/x';
+	import type { ComponentProps } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import SideSheet from '$lib/components/hub/SideSheet.svelte';
+	import AttendanceHeatmap from './AttendanceHeatmap.svelte';
 
 	type Tone = 'blue' | 'purple' | 'green' | 'yellow' | 'pink';
 	type Person = {
@@ -48,9 +54,25 @@
 			leaves: Leave[];
 			legend: { name: string; tone: Tone }[];
 		};
+		attendance?: ComponentProps<typeof AttendanceHeatmap>['analytics'];
+		missingCheckOuts?: number;
 	}
 
-	let { planner }: Props = $props();
+	let { planner, attendance, missingCheckOuts = 0 }: Props = $props();
+
+	const VIEW_KEY = 'essDashView';
+	let view = $state<'absences' | 'attendance'>('absences');
+	$effect(() => {
+		try {
+			if (attendance && localStorage.getItem(VIEW_KEY) === 'attendance') view = 'attendance';
+		} catch {}
+	});
+	function setView(v: typeof view) {
+		view = v;
+		try {
+			localStorage.setItem(VIEW_KEY, v);
+		} catch {}
+	}
 
 	const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -201,13 +223,27 @@
 <section class="planner ess-card" aria-labelledby="planner-h">
 	<header class="head">
 		<div class="title">
-			<h2 id="planner-h">Absence planner</h2>
-			<p>
-				{#if todayIndex}{awayToday} away today ·{/if}
-				{pendingCount} pending
-				{#if planner.people.length > 1}· {planner.people.length} people{/if}
-			</p>
+			{#if view === 'attendance'}
+				<h2 id="planner-h">My attendance</h2>
+				<p>Last 13 weeks · time between your punches</p>
+			{:else}
+				<h2 id="planner-h">Absence planner</h2>
+				<p>
+					{#if todayIndex}{awayToday} away today ·{/if}
+					{pendingCount} pending
+					{#if planner.people.length > 1}· {planner.people.length} people{/if}
+				</p>
+			{/if}
 		</div>
+
+		{#if attendance}
+			<div class="seg views" role="group" aria-label="Show">
+				<button type="button" aria-pressed={view === 'absences'} onclick={() => setView('absences')}>Absences</button>
+				<button type="button" aria-pressed={view === 'attendance'} onclick={() => setView('attendance')}>My attendance</button>
+			</div>
+		{/if}
+
+		{#if view === 'absences'}
 
 		<div class="month" role="group" aria-label="Month">
 			<button type="button" class="nav-btn" onclick={() => shiftMonth(-1)} aria-label="Previous month"><ChevronLeft size={16} /></button>
@@ -235,8 +271,12 @@
 				<button type="button" class="chip" aria-pressed={awayOnly} onclick={() => (awayOnly = !awayOnly)}>Away only</button>
 			{/if}
 		</div>
+		{/if}
 	</header>
 
+	{#if view === 'attendance' && attendance}
+	<AttendanceHeatmap analytics={attendance} {missingCheckOuts} />
+	{:else}
 	<div class="scroller" role="region" aria-label="Absences in {monthLabel}" tabindex="-1">
 		<div class="grid" style="--days: {planner.month.days}">
 			<div class="row hrow">
@@ -322,6 +362,7 @@
 		<span class="key static"><span class="swatch off-sw"></span>Week off</span>
 		<span class="key static"><span class="swatch hol-sw"></span>Holiday</span>
 	</footer>
+	{/if}
 </section>
 
 {#if selected}
@@ -480,6 +521,9 @@
 		outline: none;
 	}
 
+	.views button[aria-pressed='true'] {
+		color: var(--ess-primary-text);
+	}
 	.seg {
 		display: flex;
 		padding: 3px;
