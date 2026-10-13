@@ -1,8 +1,8 @@
 <script lang="ts">
 	/**
-	 * The planner card's "My attendance" view: the viewer's last 13 weeks of
-	 * punches (buildAttendanceHeatmap in $lib/dashboard-analytics), one column
-	 * per week, Monday at the top, beside this month's totals.
+	 * Dashboard panel: the viewer's last 13 weeks of punches
+	 * (buildAttendanceHeatmap in $lib/dashboard-analytics), one column per
+	 * week with Monday on top, and this month's totals underneath.
 	 */
 	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 
@@ -19,35 +19,36 @@
 	let selected = $state<string | null>(null);
 	const selectedCell = $derived(analytics.heatmap.find((c) => c.date === selected));
 
-	const weeks = $derived.by(() => {
-		const out: Cell[][] = [];
-		analytics.heatmap.forEach((c, i) => (out[Math.floor(i / 7)] ??= []).push(c));
-		return out;
-	});
-
 	// A month name over the first week that holds its 1st (and over week one).
 	const monthName = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-IN', { timeZone: 'UTC', month: 'short' });
 	const monthLabels = $derived(
-		weeks.map((w, i) => {
-			const first = w.find((c) => c.date.endsWith('-01'));
-			return first ? monthName(first.date) : i === 0 ? monthName(w[0].date) : '';
+		Array.from({ length: Math.ceil(analytics.heatmap.length / 7) }, (_, i) => {
+			const week = analytics.heatmap.slice(i * 7, i * 7 + 7);
+			const first = week.find((c) => c.date.endsWith('-01'));
+			return first ? monthName(first.date) : i === 0 ? monthName(week[0].date) : '';
 		})
 	);
 
 	const describe = (c: Cell) =>
 		c.level === -1 ? 'Future' : !c.recorded ? 'No punch recorded' : !c.complete ? 'Check-in recorded, check-out missing' : `${c.hours} recorded hours`;
-
-	const monthLabel = $derived(new Date(`${analytics.today}T00:00:00Z`).toLocaleDateString('en-IN', { timeZone: 'UTC', month: 'long' }));
 </script>
 
-<div class="att">
+<section class="ess-card panel" aria-labelledby="att-h">
+	<header class="p-head">
+		<div>
+			<h2 id="att-h">My attendance</h2>
+			<p>Last 13 weeks of punches</p>
+		</div>
+		<a class="more" href="/attendance" aria-label="Open attendance"><ArrowUpRight size={16} /></a>
+	</header>
+
 	<div class="map">
 		<div class="months" aria-hidden="true">
 			{#each monthLabels as m, i (i)}<span>{m}</span>{/each}
 		</div>
 		<div class="body">
 			<div class="weekdays" aria-hidden="true">
-				{#each ['Mon', '', 'Wed', '', 'Fri', '', 'Sun'] as d, i (i)}<span>{d}</span>{/each}
+				{#each ['M', '', 'W', '', 'F', '', 'S'] as d, i (i)}<span>{d}</span>{/each}
 			</div>
 			<div class="grid" role="group" aria-label="Attendance over the last 13 weeks, Monday through Sunday, oldest week first">
 				{#each analytics.heatmap as cell (cell.date)}
@@ -65,63 +66,92 @@
 		</div>
 		<div class="foot">
 			<p class="detail" aria-live="polite">
-				{#if selectedCell}<b>{selectedCell.label}</b> · {describe(selectedCell)}{:else}Select a day for its hours.{/if}
+				{#if selectedCell}<b>{selectedCell.label}</b> · {describe(selectedCell)}{:else}Select a day for its hours{/if}
 			</p>
-			<span class="legend" aria-hidden="true">
-				<span class="key"><i data-level="1"></i> No check-out</span>
-				Less <i data-level="0"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i> More
-			</span>
+			<span class="legend" aria-hidden="true">Less <i data-level="0"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i> More</span>
 		</div>
 	</div>
 
 	<dl class="stats">
-		<div><dt>Days recorded</dt><dd>{analytics.recordedDays}<small> in {monthLabel}</small></dd></div>
-		<div><dt>Hours recorded</dt><dd>{analytics.recordedHours}<small> hrs</small></dd></div>
-		<div><dt>Complete days</dt><dd>{analytics.completeDays}<small> in and out</small></dd></div>
-		<div class:warn={missingCheckOuts > 0}>
-			<dt>Missing check-outs</dt>
-			<dd>{missingCheckOuts}{#if missingCheckOuts > 0}<a href="/attendance" class="fix">Review</a>{/if}</dd>
+		<div title="Days with a punch this month"><dt>Days</dt><dd>{analytics.recordedDays}</dd></div>
+		<div title="Recorded hours this month"><dt>Hours</dt><dd>{analytics.recordedHours}</dd></div>
+		<div class:warn={missingCheckOuts > 0} title="Recent days with a check-in but no check-out">
+			<dt>Missing</dt>
+			<dd>{#if missingCheckOuts > 0}<a href="/attendance">{missingCheckOuts}</a>{:else}0{/if}</dd>
 		</div>
-		<a class="more" href="/attendance">Open attendance <ArrowUpRight size={14} /></a>
 	</dl>
-</div>
+</section>
 
 <style>
-	.att {
+	.panel {
 		display: flex;
-		gap: 28px;
-		align-items: stretch;
-		margin-top: 14px;
+		flex-direction: column;
+		gap: 10px;
+		min-height: 0;
 		min-width: 0;
+		padding: 16px 18px;
 	}
-	.map {
-		flex: 0 0 auto;
-		min-width: 0;
+	.p-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 8px;
+	}
+	.p-head h2 {
+		margin: 0;
+		font-size: 15px;
+		font-weight: 650;
+		letter-spacing: -0.01em;
+	}
+	.p-head p {
+		margin: 1px 0 0;
+		font-size: 12px;
+		color: var(--ess-text-muted);
+	}
+	.more {
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+		width: 30px;
+		height: 30px;
+		border-radius: 50%;
+		background: var(--ess-sunken);
+		color: var(--ess-text-secondary);
+	}
+	.more:hover {
+		color: var(--ess-text);
 	}
 
+	.map {
+		min-width: 0;
+	}
+	.months,
+	.grid,
+	.foot {
+		max-width: 300px;
+	}
 	.months,
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(13, 18px);
-		gap: 5px;
+		grid-template-columns: repeat(13, minmax(0, 1fr));
+		gap: 3px;
 	}
 	.months {
-		margin-left: 36px;
-		margin-bottom: 4px;
-		font-size: 11px;
+		margin: 0 0 3px 16px;
+		font-size: 10.5px;
 		color: var(--ess-text-muted);
 		white-space: nowrap;
 	}
 	.body {
 		display: flex;
-		gap: 8px;
+		gap: 4px;
 	}
 	.weekdays {
 		display: grid;
-		grid-template-rows: repeat(7, 18px);
-		gap: 5px;
-		width: 28px;
-		font-size: 10.5px;
+		grid-template-rows: repeat(7, 14px);
+		gap: 3px;
+		width: 12px;
+		font-size: 9.5px;
 		color: var(--ess-text-muted);
 	}
 	.weekdays span {
@@ -132,7 +162,7 @@
 		flex: 1;
 		min-width: 0;
 		grid-auto-flow: column;
-		grid-template-rows: repeat(7, 18px);
+		grid-template-rows: repeat(7, 14px);
 	}
 
 	.grid button,
@@ -140,7 +170,7 @@
 		padding: 0;
 		min-width: 0;
 		border: 1px solid var(--ess-border-subtle);
-		border-radius: 4px;
+		border-radius: 3px;
 		background: var(--ess-sunken);
 	}
 	.grid button {
@@ -149,7 +179,7 @@
 	}
 	.grid button:hover,
 	.grid button[aria-pressed='true'] {
-		transform: scale(1.15);
+		transform: scale(1.2);
 		outline: 2px solid var(--ess-primary);
 		outline-offset: 1px;
 		position: relative;
@@ -183,157 +213,84 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
+		gap: 4px 10px;
 		flex-wrap: wrap;
-		gap: 6px 16px;
-		margin: 10px 0 0 36px;
-		font-size: 11.5px;
+		margin: 6px 0 0 16px;
+		font-size: 11px;
 		color: var(--ess-text-muted);
 	}
 	.detail {
 		margin: 0;
+		min-width: 0;
 	}
 	.detail b {
 		color: var(--ess-text);
 		font-weight: 600;
 	}
-	.legend,
-	.key {
+	.legend {
 		display: inline-flex;
 		align-items: center;
-		gap: 4px;
-	}
-	.key {
-		margin-right: 10px;
+		gap: 3px;
 	}
 	.legend i {
-		width: 11px;
-		height: 11px;
+		width: 9px;
+		height: 9px;
 	}
 
 	.stats {
-		flex: 1 1 auto;
-		min-width: 0;
 		display: grid;
-		grid-template-columns: 1fr 1fr;
-		grid-template-rows: 1fr 1fr auto;
-		gap: 10px;
-		margin: 0;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 8px;
+		margin: auto 0 0;
 	}
 	.stats > div {
-		display: flex;
-		flex-direction: column;
-		justify-content: space-between;
-		padding: 12px 14px;
-		border-radius: var(--ess-radius-md);
+		min-width: 0;
+		padding: 8px 10px;
+		border-radius: 12px;
 		background: var(--ess-sunken);
 	}
 	.stats > div.warn {
 		background: var(--ess-warning-bg);
 	}
 	dt {
-		font-size: 11.5px;
+		font-size: 11px;
 		color: var(--ess-text-muted);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	dd {
-		display: flex;
-		align-items: baseline;
-		gap: 2px;
-		margin: 2px 0 0;
-		font-size: 22px;
+		margin: 1px 0 0;
+		font-size: 18px;
 		font-weight: 650;
 		letter-spacing: -0.02em;
 		font-variant-numeric: tabular-nums;
 	}
-	dd small {
-		font-size: 11.5px;
-		font-weight: 500;
-		letter-spacing: 0;
-		color: var(--ess-text-muted);
-	}
-	.fix {
-		margin-left: auto;
-		font-size: 12px;
-		font-weight: 600;
-		letter-spacing: 0;
+	.warn dd a {
 		color: var(--ess-warning);
 	}
-	.more {
-		grid-column: 1 / -1;
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
-		justify-self: start;
-		font-size: 12.5px;
-		font-weight: 600;
-		color: var(--ess-primary-text);
-		text-decoration: none;
-	}
-	.more:hover {
-		text-decoration: underline;
-	}
 
+	/* Laptop-height screens: a little denser so the dashboard still fits. */
 	@media (min-width: 721px) and (max-height: 820px) {
-		.att {
-			margin-top: 2px;
-		}
-		.months,
-		.grid {
-			grid-template-columns: repeat(13, 14px);
-			gap: 4px;
+		.panel {
+			gap: 8px;
+			padding: 14px 16px;
 		}
 		.grid,
 		.weekdays {
-			grid-template-rows: repeat(7, 14px);
-			gap: 4px;
+			grid-template-rows: repeat(7, 12px);
 		}
 		.foot {
-			margin-top: 6px;
-		}
-		.stats {
-			gap: 8px;
+			margin-top: 4px;
 		}
 		.stats > div {
-			padding: 8px 12px;
+			padding: 6px 10px;
+		}
+		dd {
+			font-size: 16px;
 		}
 	}
-	@media (max-width: 1000px) {
-		.att {
-			flex-direction: column;
-			gap: 16px;
-		}
-		.stats {
-			grid-template-columns: repeat(4, minmax(0, 1fr));
-			grid-template-rows: auto;
-		}
-	}
-	@media (max-width: 720px) {
-		.map {
-			width: 100%;
-		}
-		.months,
-		.grid {
-			grid-template-columns: repeat(13, minmax(0, 1fr));
-		}
-		.stats {
-			grid-template-columns: 1fr 1fr;
-		}
-		.months {
-			margin-left: 0;
-		}
-		.weekdays {
-			display: none;
-		}
-		.grid,
-		.months {
-			gap: 3px;
-		}
-		.grid {
-			grid-template-rows: repeat(7, 13px);
-		}
-		.foot {
-			margin-left: 0;
-		}
-	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.grid button {
 			transition: none;

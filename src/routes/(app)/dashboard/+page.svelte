@@ -16,6 +16,7 @@
 	import Check from '@lucide/svelte/icons/check';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import AbsencePlanner from '$lib/components/dashboard/AbsencePlanner.svelte';
+	import AttendanceHeatmap from '$lib/components/dashboard/AttendanceHeatmap.svelte';
 	import FutureEvents from '$lib/components/dashboard/FutureEvents.svelte';
 	import OnboardingPanel from '$lib/components/dashboard/OnboardingPanel.svelte';
 	import ChampCard from '$lib/components/dashboard/ChampCard.svelte';
@@ -188,10 +189,11 @@
 		</div>
 	</header>
 
-	<AbsencePlanner planner={data.planner} attendance={data.analytics} missingCheckOuts={data.missingCheckOuts.length} />
+	<AbsencePlanner planner={data.planner} />
 
 	<div class="lower">
 		<FutureEvents events={data.events} />
+		<AttendanceHeatmap analytics={data.analytics} missingCheckOuts={data.missingCheckOuts.length} />
 		<OnboardingPanel people={data.planner.onboarding} mode={data.planner.onboardingMode} />
 		<ChampCard {firstName} champ={data.champ} />
 	</div>
@@ -499,7 +501,7 @@
 
 	.lower {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
 		gap: 14px;
 		min-height: 0;
 	}
@@ -516,9 +518,6 @@
 		}
 		.lower > :global(*) {
 			height: auto;
-		}
-		.lower > :global(:last-child) {
-			grid-column: 1 / -1;
 		}
 	}
 	@media (max-width: 720px), (max-height: 679px) {
