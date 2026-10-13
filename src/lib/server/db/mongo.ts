@@ -91,6 +91,36 @@ export async function getPolicyDocument(id: string) {
 	return db.collection<PolicyDocumentEntry>('policy_documents').findOne({ _id: new ObjectId(id) } as never);
 }
 
+/** Uploaded policy documents, newest first, without the file bytes. */
+export async function listPolicyDocuments(limit = 100) {
+	const db = await getMongo();
+	const rows = await db
+		.collection<PolicyDocumentEntry>('policy_documents')
+		.find({}, { projection: { fileBase64: 0, extractedJson: 0 } })
+		.sort({ createdAt: -1 })
+		.limit(limit)
+		.toArray();
+	return rows.map((r) => ({
+		id: String((r as unknown as { _id: unknown })._id),
+		kind: r.kind,
+		filename: r.filename,
+		mimeType: r.mimeType,
+		status: r.status,
+		uploadedBy: r.uploadedBy,
+		createdAt: r.createdAt,
+		publishedAt: r.publishedAt ?? null
+	}));
+}
+
+/** Removes an uploaded policy document. Returns false when there was none. */
+export async function deletePolicyDocument(id: string): Promise<boolean> {
+	const { ObjectId } = await import('mongodb');
+	if (!ObjectId.isValid(id)) return false;
+	const db = await getMongo();
+	const result = await db.collection<PolicyDocumentEntry>('policy_documents').deleteOne({ _id: new ObjectId(id) } as never);
+	return result.deletedCount > 0;
+}
+
 // --- Profile pictures ---
 // Stored here rather than on employee_profiles so the Postgres row that every
 // roster and profile query reads stays small. One document per user; uploading

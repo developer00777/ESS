@@ -73,7 +73,9 @@ export const POST: RequestHandler = async (event) => {
 		if (existing) {
 			const [updated] = await db
 				.update(leaveTypes)
-				.set({ ...values, policyVersion: existing.policyVersion + 1 })
+				// Re-uploading a policy brings an archived type back: publishing it is
+				// the admin saying it applies again.
+				.set({ ...values, isActive: true, policyVersion: existing.policyVersion + 1 })
 				.where(eq(leaveTypes.id, existing.id))
 				.returning();
 			published.push(updated);

@@ -419,14 +419,24 @@
 		await invalidateAll();
 	}
 
-	async function deleteRoster(rosterId: string) {
+	async function deleteRoster(roster: (typeof data.weekOffRosters)[number]) {
 		rosterError = '';
-		const res = await fetch(`/api/admin/week-off-rosters/${rosterId}`, { method: 'DELETE' });
+		if (!confirm(`Delete the roster "${roster.name}"? You can create it again afterwards.`)) return;
+		let res = await fetch(`/api/admin/week-off-rosters/${roster.id}`, { method: 'DELETE' });
+		// People are still on it: say so, and delete anyway only if confirmed.
+		if (res.status === 409) {
+			const body = await res.json().catch(() => ({}));
+			if (!confirm(`${body.message ?? 'Employees are still on this roster.'}
+
+Delete it anyway? Those employees go back to Sat/Sun week offs until they are given another roster.`)) return;
+			res = await fetch(`/api/admin/week-off-rosters/${roster.id}?force=1`, { method: 'DELETE' });
+		}
 		if (!res.ok) {
 			const body = await res.json().catch(() => ({}));
 			rosterError = body.message ?? 'Could not delete this roster';
 			return;
 		}
+		if (editingRosterId === roster.id) editingRosterId = null;
 		await invalidateAll();
 	}
 
@@ -1093,7 +1103,7 @@
 										<button type="button" class="ess-btn ess-btn--sm ess-btn--ghost" onclick={() => togglePublish(roster)}>
 											{roster.status === 'published' ? 'Unpublish' : 'Publish'}
 										</button>
-										<button type="button" class="ess-icon-btn danger" onclick={() => deleteRoster(roster.id)} aria-label="Delete {roster.name}" title="Delete {roster.name}">
+										<button type="button" class="ess-icon-btn danger" onclick={() => deleteRoster(roster)} aria-label="Delete {roster.name}" title="Delete {roster.name}">
 											<Trash2 size={15} />
 										</button>
 									</div>
