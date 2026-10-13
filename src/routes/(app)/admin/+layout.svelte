@@ -14,6 +14,8 @@
 	import MessagesSquare from '@lucide/svelte/icons/messages-square';
 	import Video from '@lucide/svelte/icons/video';
 	import Search from '@lucide/svelte/icons/search';
+	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import { adminTabForPath, visibleAdminTabs, type AdminTabId } from '$lib/admin-tabs';
 	import { tabSeverities } from '$lib/admin-issues';
 	import { lockPageScroll } from '$lib/scroll-lock';
@@ -119,11 +121,42 @@
 
 	$effect(() => () => unlockScroll?.());
 
-	/* Keep the active tab in view when the bar scrolls sideways on a phone. */
+	/* The tab bar scrolls sideways: keep the active tab in view, show the
+	   arrows and edge fades only on the side that has more tabs, and let
+	   a mouse wheel over the bar scroll it sideways. */
 	let tabBar = $state<HTMLElement | null>(null);
+	let canLeft = $state(false);
+	let canRight = $state(false);
+	function measureTabs() {
+		if (!tabBar) return;
+		canLeft = tabBar.scrollLeft > 2;
+		canRight = tabBar.scrollLeft + tabBar.clientWidth < tabBar.scrollWidth - 2;
+	}
+	function scrollTabs(dir: -1 | 1) {
+		tabBar?.scrollBy({ left: dir * Math.max(160, (tabBar.clientWidth ?? 0) * 0.6), behavior: 'smooth' });
+	}
+	function wheelTabs(e: WheelEvent) {
+		if (!tabBar || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+		if (tabBar.scrollWidth <= tabBar.clientWidth) return;
+		e.preventDefault();
+		tabBar.scrollLeft += e.deltaY;
+	}
 	$effect(() => {
 		void current?.id;
 		tabBar?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+		measureTabs();
+	});
+	$effect(() => {
+		if (!tabBar) return;
+		const bar = tabBar;
+		const ro = new ResizeObserver(measureTabs);
+		ro.observe(bar);
+		// Not passive: a vertical wheel over the bar scrolls it sideways.
+		bar.addEventListener('wheel', wheelTabs, { passive: false });
+		return () => {
+			ro.disconnect();
+			bar.removeEventListener('wheel', wheelTabs);
+		};
 	});
 </script>
 
@@ -144,8 +177,9 @@
 	{/snippet}
 </PageHeader>
 
-<nav class="admin-tabs" aria-label="Admin sections">
-	<div class="ess-tabs ess-tabs--line tab-row" bind:this={tabBar}>
+<nav class="admin-tabs" aria-label="Admin sections" class:fade-l={canLeft} class:fade-r={canRight}>
+	<button type="button" class="tab-arrow left" hidden={!canLeft} onclick={() => scrollTabs(-1)} aria-label="Scroll sections left" tabindex="-1"><ChevronLeft size={16} /></button>
+	<div class="ess-tabs ess-tabs--line tab-row" bind:this={tabBar} onscroll={measureTabs}>
 		{#each tabs as tab, i (tab.id)}
 			{@const Icon = ICONS[tab.id]}
 			{@const sev = severities[tab.id]}
@@ -163,6 +197,7 @@
 			</a>
 		{/each}
 	</div>
+	<button type="button" class="tab-arrow right" hidden={!canRight} onclick={() => scrollTabs(1)} aria-label="Scroll sections right" tabindex="-1"><ChevronRight size={16} /></button>
 </nav>
 
 <div class="admin-body ess-fill">
@@ -218,10 +253,51 @@
 		-webkit-backdrop-filter: blur(14px) saturate(160%);
 	}
 
+	.admin-tabs {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
 	.tab-row {
+		flex: 1 1 auto;
+		min-width: 0;
 		width: 100%;
 		overflow-x: auto;
+		scroll-behavior: smooth;
 		scrollbar-width: none;
+	}
+	/* Edge fades on the side(s) with more tabs to scroll to. */
+	.fade-l .tab-row {
+		-webkit-mask-image: linear-gradient(to right, transparent, #000 36px);
+		mask-image: linear-gradient(to right, transparent, #000 36px);
+	}
+	.fade-r .tab-row {
+		-webkit-mask-image: linear-gradient(to left, transparent, #000 36px);
+		mask-image: linear-gradient(to left, transparent, #000 36px);
+	}
+	.fade-l.fade-r .tab-row {
+		-webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+		mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+	}
+	.tab-arrow {
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		border: 1px solid var(--ess-border-subtle);
+		background: var(--ess-surface);
+		color: var(--ess-text-secondary);
+		box-shadow: 0 1px 3px rgba(20, 22, 40, 0.08);
+		cursor: pointer;
+	}
+	.tab-arrow:hover {
+		color: var(--ess-primary-text);
+		border-color: var(--ess-primary-soft);
+	}
+	.tab-arrow[hidden] {
+		display: none;
 	}
 	.tab-row::-webkit-scrollbar {
 		display: none;
@@ -237,7 +313,7 @@
 	.tab {
 		flex-shrink: 0;
 		white-space: nowrap;
-		padding: 9px 12px;
+		padding: 9px 14px;
 		font-size: 13px;
 	}
 	.tab :global(svg) {
@@ -399,22 +475,6 @@
 		font-size: var(--ess-fs-caption);
 	}
 
-	/* Desktop: ten tabs on one row without sideways scroll at 1280px. */
-	@media (min-width: 1101px) {
-		.tab {
-			gap: 5px;
-			padding-left: 7px;
-			padding-right: 7px;
-		}
-		.tab :global(svg) {
-			width: 14px;
-			height: 14px;
-		}
-		.group-sep {
-			margin-left: 2px;
-			margin-right: 2px;
-		}
-	}
 
 	/* Short desktop screens (a 1280x580 browser): the header, tabs and
 	   summary strip give back as much height as they can, so the page below
