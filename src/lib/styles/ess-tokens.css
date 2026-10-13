@@ -2,11 +2,11 @@
    ESS Design System — Tokens · TIMELINE
    Champ HR Employee Self-Service Portal
    ============================================================
-   The "Timeline workspace" look (ess-timeline-mockups): a warm
-   off-white canvas, dark navy ink, an editorial serif for the
-   main headings, a clean sans for everything else, thin neutral
-   dividers, restrained vivid violet for actions, pale lavender for
-   the active navigation, 10px soft corners and small outline icons.
+   One rounded workspace floating on a pale silver backdrop, a
+   free-floating pill of icons overlapping its left edge, white cards
+   with large soft corners and wide, faint shadows, near-black ink, a
+   clean geometric sans, and a single royal-blue accent with a pale
+   periwinkle second tone. Status colours stay restrained.
 
    Two palettes, one mechanism:
      <html>                        → Light (the design default)
@@ -25,78 +25,81 @@
 	color-scheme: light;
 
 	/* ---------- Accent ---------- */
-	--acc: #4f30f0; /* violet: buttons, active marks, links */
-	--acc2: #7c5cff; /* lighter violet: gradients, secondary marks */
-	--glow: rgba(79, 48, 240, 0.18);
-	--ring: rgba(79, 48, 240, 0.22);
+	--acc: #2f43e6; /* royal blue: buttons, active marks, links */
+	--acc2: #a8b2f6; /* periwinkle: second data series, soft marks */
+	--acc-soft: #a8b2f6;
+	--glow: rgba(47, 67, 230, 0.18);
+	--ring: rgba(47, 67, 230, 0.22);
 
 	/* ---------- Surface recipes (flat; names kept for old styles) ---------- */
 	--ess-glass-bg: #ffffff;
-	--ess-glass-border: #e7e5ef;
-	--ess-glass-shadow: 0 1px 2px rgba(27, 31, 59, 0.04);
+	--ess-glass-border: #ececf0;
+	--ess-glass-shadow: 0 1px 2px rgba(20, 22, 40, 0.03), 0 10px 28px -16px rgba(20, 22, 40, 0.14);
 	--ess-glass-raised-bg: #ffffff;
-	--ess-pane-bg: #f7f6f3;
+	--ess-pane-bg: #f1f1f3;
 	--ess-pane-raised-bg: #ffffff;
 	--ess-modal-bg: #ffffff;
 	--ess-field-bg: #ffffff;
 
 	/* ---------- Legacy "teal" ramp → navy/lavender aliases ---------- */
-	--ess-teal-950: #f3f1fd;
+	--ess-teal-950: #eef0fd;
 	--ess-teal-900: #ffffff; /* text on accent surfaces */
-	--ess-teal-800: #ece8fd;
-	--ess-teal-700: #ddd6fb;
-	--ess-teal-600: #6a4ff3;
-	--ess-teal-500: #4f30f0;
-	--ess-teal-400: #4f30f0;
-	--ess-teal-300: #3e24c9;
-	--ess-teal-200: #2f2a73;
-	--ess-teal-100: #23224f;
-	--ess-teal-50: #1b1f3b;
+	--ess-teal-800: #e4e8fd;
+	--ess-teal-700: #cdd4fb;
+	--ess-teal-600: #5566ee;
+	--ess-teal-500: #2f43e6;
+	--ess-teal-400: #2f43e6;
+	--ess-teal-300: #2537d4;
+	--ess-teal-200: #1d2a8a;
+	--ess-teal-100: #161c55;
+	--ess-teal-50: #15171c;
 
 	/* ---------- Legacy "green" ramp → violet accent aliases ---------- */
-	--ess-green-700: #3e24c9;
-	--ess-green-600: #4f30f0;
-	--ess-green-500: #6a4ff3;
-	--ess-green-400: #7c5cff;
-	--ess-green-200: #a894ff;
-	--ess-green-50: #ece8fd;
+	--ess-green-700: #2537d4;
+	--ess-green-600: #2f43e6;
+	--ess-green-500: #5566ee;
+	--ess-green-400: #7a88f2;
+	--ess-green-200: #a8b2f6;
+	--ess-green-50: #e4e8fd;
 
 	/* ---------- Neutrals ---------- */
 	--ess-n-0: #ffffff;
-	--ess-n-25: #fcfbf9;
-	--ess-n-50: #f7f6f3;
-	--ess-n-100: #f1f0f5;
-	--ess-n-200: #e7e5ef;
-	--ess-n-300: #d4d1e0;
-	--ess-n-400: #8e90a8;
-	--ess-n-500: #686b86;
-	--ess-n-700: #3c405c;
-	--ess-n-900: #1b1f3b; /* primary ink */
+	--ess-n-25: #fafafb;
+	--ess-n-50: #f4f4f6;
+	--ess-n-100: #efeff2;
+	--ess-n-200: #e6e6ea;
+	--ess-n-300: #d3d3da;
+	--ess-n-400: #8f9199;
+	--ess-n-500: #6b6e76;
+	--ess-n-700: #3a3c43;
+	--ess-n-900: #15171c; /* primary ink */
 
 	/* ---------- Semantic surfaces ----------
 	   canvas   → warm off-white page
 	   surface  → white cards and panels
 	   sunken   → faint inset areas inside a surface
 	   inverse  → the sidebar pane (light too, slightly warmer) */
-	--ess-canvas: #f7f8ff;
+	--ess-backdrop: #e9eaee; /* behind the workspace */
+	--ess-shell-border: rgba(255, 255, 255, 0.85);
+	--ess-canvas: #f1f1f3; /* the workspace */
 	--ess-surface: #ffffff;
-	--ess-surface-hover: #f5f3fb;
-	--ess-sunken: #f6f5f9;
-	--ess-inverse: #f3f4ff;
+	--ess-surface-hover: #f3f3f6;
+	--ess-sunken: #f2f2f5;
+	--ess-inverse: #ffffff;
 	--ess-inverse-raised: #ffffff;
 
-	--ess-border: #e3e7fa;
-	--ess-border-subtle: #efedf4;
-	--ess-border-strong: #cfcbdd;
-	--ess-border-inverse: #e9e7ef;
+	--ess-border: #e6e6ea;
+	--ess-border-subtle: #eeeef1;
+	--ess-border-strong: #d3d3da;
+	--ess-border-inverse: #e6e6ea;
 
 	/* ---------- Semantic text ---------- */
-	--ess-text: #1b1f3b;
-	--ess-text-secondary: #4b4f6b;
-	--ess-text-muted: #686b86;
+	--ess-text: #15171c;
+	--ess-text-secondary: #464951;
+	--ess-text-muted: #6b6e76; /* 4.9:1 on white */
 	--ess-text-on-primary: #ffffff;
-	--ess-text-inverse: #1b1f3b;
-	--ess-text-inverse-secondary: #4b4f6b;
+	--ess-text-inverse: #15171c;
+	--ess-text-inverse-secondary: #464951;
 
 	/* Alias the inherited skeleton's foreground tokens. */
 	--fg-1: var(--ess-text);
@@ -106,13 +109,33 @@
 
 	/* ---------- Interactive ---------- */
 	--ess-primary: var(--acc);
-	--ess-primary-hover: #4426d6;
-	--ess-primary-press: #381fb8;
-	--ess-primary-soft: #ece8fd; /* pale lavender: active nav, selected rows */
-	--ess-primary-softer: #f4f1fe;
-	--ess-primary-ring: rgba(79, 48, 240, 0.35);
+	--ess-primary-hover: #2537d4;
+	--ess-primary-press: #1d2cb4;
+	--ess-primary-soft: #e8ebfd; /* active nav, selected rows */
+	--ess-primary-softer: #f3f4fe;
+	--ess-primary-ring: rgba(47, 67, 230, 0.32);
 	--ess-focus-ring: 0 0 0 3px var(--ess-primary-ring);
-	--ess-primary-text: #4a2fd9; /* 7.1:1 on white */
+	--ess-primary-text: #2537d4; /* 7.6:1 on white */
+	--ess-primary-shadow: 0 8px 18px -8px rgba(47, 67, 230, 0.6);
+
+	/* ---------- Calendar fills (absence planner bars, legends) ---------- */
+	--ess-ev-blue: #1f3fb0;
+	--ess-ev-blue-bg: #e0e6fd;
+	--ess-ev-blue-line: #a9b7f4;
+	--ess-ev-purple: #5b34a8;
+	--ess-ev-purple-bg: #ece5fc;
+	--ess-ev-purple-line: #c4b1f1;
+	--ess-ev-green: #17683f;
+	--ess-ev-green-bg: #ddf3e6;
+	--ess-ev-green-line: #9fd6b7;
+	--ess-ev-yellow: #775300;
+	--ess-ev-yellow-bg: #fcf1d2;
+	--ess-ev-yellow-line: #ebcd77;
+	--ess-ev-pink: #9c1a56;
+	--ess-ev-pink-bg: #fbe3ef;
+	--ess-ev-pink-line: #eeaccb;
+	--ess-cell: #f1f1f4;
+	--ess-cell-off: #e5e5ea;
 
 	/* ---------- Status (chip fg / tint bg, AA on white) ---------- */
 	--ess-success: #157f52;
@@ -131,16 +154,17 @@
 	/* ---------- Radius ("soft" scale, 10px cards) ---------- */
 	--ess-radius-xs: 6px;
 	--ess-radius-sm: 8px; /* inputs, buttons, chips */
-	--ess-radius-md: 10px; /* cards, table shells */
-	--ess-radius-lg: 14px; /* page panels, dialogs */
+	--ess-radius-md: 16px; /* cards, table shells */
+	--ess-radius-lg: 20px; /* page panels, dialogs */
+	--ess-radius-xl: 30px; /* the workspace */
 	--ess-radius-pill: 999px;
 
 	/* ---------- Elevation — quiet ink shadows ---------- */
 	--ess-elev-0: none;
-	--ess-elev-1: 0 1px 2px rgba(27, 31, 59, 0.04);
-	--ess-elev-2: 0 4px 14px -6px rgba(27, 31, 59, 0.1);
-	--ess-elev-3: 0 12px 32px -12px rgba(27, 31, 59, 0.16);
-	--ess-elev-4: 0 24px 60px -20px rgba(27, 31, 59, 0.24);
+	--ess-elev-1: 0 1px 2px rgba(20, 22, 40, 0.03), 0 10px 28px -16px rgba(20, 22, 40, 0.14);
+	--ess-elev-2: 0 4px 14px -6px rgba(20, 22, 40, 0.12);
+	--ess-elev-3: 0 14px 34px -12px rgba(20, 22, 40, 0.18);
+	--ess-elev-4: 0 24px 60px -20px rgba(20, 22, 40, 0.26);
 
 	/* ---------- Spacing (4px base) ---------- */
 	--ess-space-1: 4px;
@@ -154,26 +178,33 @@
 	--ess-space-14: 56px;
 
 	/* ---------- Type ---------- */
-	--ess-font-sans: 'IBM Plex Sans', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--ess-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
 	--ess-font-display: var(--ess-font-sans);
 	--ess-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
 	--ess-fs-display: 56px; /* sign-in marquee */
-	--ess-fs-title: 40px; /* page title (serif) */
-	--ess-fs-h2: 21px; /* section heading (serif) */
+	--ess-fs-title: 28px; /* page title */
+	--ess-fs-h2: 17px; /* section heading */
 	--ess-fs-h3: 15px; /* card heading */
 	--ess-fs-body-lg: 16px;
 	--ess-fs-body: 14px; /* dense UI default */
 	--ess-fs-caption: 12.5px;
 	--ess-fs-eyebrow: 11px;
-	--ess-fs-stat: 28px; /* stat card value (serif) */
+	--ess-fs-stat: 24px; /* stat card value */
 
 	/* ---------- Layout ---------- */
-	--ess-rail-width: 210px;
-	--ess-rail-width-collapsed: 68px;
-	--ess-content-max: 1440px;
-	--ess-page-pad-x: 36px;
-	--ess-page-pad-y: 24px;
+	/* The workspace floats on the backdrop with --ess-shell-inset around it;
+	   the icon pill sits at --ess-rail-left and overlaps its left edge, so
+	   the workspace's own left padding clears it. */
+	--ess-shell-inset: 12px;
+	--ess-shell-inset-left: 40px;
+	--ess-shell-pad-left: 44px;
+	--ess-rail-left: 10px;
+	--ess-rail-width: 60px;
+	--ess-rail-width-collapsed: 60px;
+	--ess-content-max: 1680px;
+	--ess-page-pad-x: 18px;
+	--ess-page-pad-y: 6px;
 	--ess-aside-width: 360px;
 
 	/* ---------- Motion ---------- */
@@ -190,10 +221,11 @@
 [data-ess-theme='dark'] {
 	color-scheme: dark;
 
-	--acc: #8b7bff;
-	--acc2: #b3a7ff;
-	--glow: rgba(139, 123, 255, 0.28);
-	--ring: rgba(139, 123, 255, 0.3);
+	--acc: #7486ff;
+	--acc2: #3c4a99;
+	--acc-soft: #3c4a99;
+	--glow: rgba(116, 134, 255, 0.28);
+	--ring: rgba(116, 134, 255, 0.3);
 
 	--ess-glass-bg: #171a2e;
 	--ess-glass-border: rgba(255, 255, 255, 0.09);
@@ -234,6 +266,8 @@
 	--ess-n-700: rgba(255, 255, 255, 0.82);
 	--ess-n-900: #f2f1f8;
 
+	--ess-backdrop: #06070c;
+	--ess-shell-border: #1d2032;
 	--ess-canvas: #0f1222;
 	--ess-surface: #171a2e;
 	--ess-surface-hover: #1f2340;
@@ -254,12 +288,31 @@
 	--ess-text-inverse-secondary: rgba(242, 241, 248, 0.7);
 
 	--ess-primary: var(--acc);
-	--ess-primary-hover: #a094ff;
-	--ess-primary-press: #7363f0;
-	--ess-primary-soft: rgba(139, 123, 255, 0.18);
-	--ess-primary-softer: rgba(139, 123, 255, 0.1);
-	--ess-primary-ring: rgba(139, 123, 255, 0.4);
-	--ess-primary-text: #b3a7ff;
+	--ess-primary-hover: #8f9eff;
+	--ess-primary-press: #5c70f5;
+	--ess-primary-soft: rgba(116, 134, 255, 0.18);
+	--ess-primary-softer: rgba(116, 134, 255, 0.1);
+	--ess-primary-ring: rgba(116, 134, 255, 0.42);
+	--ess-primary-text: #a7b3ff;
+	--ess-primary-shadow: none;
+
+	--ess-ev-blue: #a9c0fb;
+	--ess-ev-blue-bg: rgba(110, 140, 245, 0.18);
+	--ess-ev-blue-line: rgba(110, 140, 245, 0.42);
+	--ess-ev-purple: #c9b5fa;
+	--ess-ev-purple-bg: rgba(170, 140, 245, 0.18);
+	--ess-ev-purple-line: rgba(170, 140, 245, 0.42);
+	--ess-ev-green: #8fdcb1;
+	--ess-ev-green-bg: rgba(76, 195, 138, 0.16);
+	--ess-ev-green-line: rgba(76, 195, 138, 0.4);
+	--ess-ev-yellow: #f3cd73;
+	--ess-ev-yellow-bg: rgba(240, 190, 70, 0.15);
+	--ess-ev-yellow-line: rgba(240, 190, 70, 0.4);
+	--ess-ev-pink: #f5a9cc;
+	--ess-ev-pink-bg: rgba(245, 156, 198, 0.15);
+	--ess-ev-pink-line: rgba(245, 156, 198, 0.4);
+	--ess-cell: #1b1f36;
+	--ess-cell-off: #13162a;
 
 	--ess-success: #4ade80;
 	--ess-success-bg: rgba(74, 222, 128, 0.14);
@@ -283,5 +336,15 @@
 /* Keep the document background in step with the palette when the themed
    element is nested inside body (overscroll, short viewports). */
 body:has([data-ess-theme='dark']) {
-	background: #0f1222;
+	background: #06070c;
+}
+
+/* Phones drop the floating workspace and fill the screen. */
+@media (max-width: 720px) {
+	:root {
+		--ess-shell-inset: 0px;
+		--ess-shell-inset-left: 0px;
+		--ess-shell-pad-left: 0px;
+		--ess-page-pad-x: 16px;
+	}
 }

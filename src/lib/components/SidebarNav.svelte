@@ -8,14 +8,13 @@
 	import Settings from '@lucide/svelte/icons/settings';
 	import Wallet from '@lucide/svelte/icons/wallet';
 	import CircleHelp from '@lucide/svelte/icons/circle-help';
-	import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
-	import PanelLeftOpen from '@lucide/svelte/icons/panel-left-open';
-	import Avatar from './Avatar.svelte';
+	import UserCog from '@lucide/svelte/icons/user-cog';
 	import type { Role } from '$lib/server/auth';
 
 	/**
-	 * The 210px sidebar from the Timeline mockups: brand, the main sections,
-	 * then Help & support and the person's avatar at the foot. Admin Controls
+	 * A narrow, free-floating pill of icons that overlaps the workspace's
+	 * left edge: the logo on top, the main sections, then Help & support and
+	 * profile settings at the foot. Labels show as tooltips. Admin Controls
 	 * only shows for people whose privileges open it.
 	 */
 	interface Props {
@@ -44,20 +43,6 @@
 		adminIssueCount = 0,
 		chatBadge = { count: 0, urgent: false }
 	}: Props = $props();
-
-	let shell = $state<'classic' | 'rail'>('classic');
-
-	$effect(() => {
-		shell = document.documentElement.getAttribute('data-ess-shell') === 'rail' ? 'rail' : 'classic';
-	});
-
-	function toggleShell() {
-		const next = shell === 'rail' ? 'classic' : 'rail';
-		shell = next;
-		if (next === 'rail') document.documentElement.setAttribute('data-ess-shell', 'rail');
-		else document.documentElement.removeAttribute('data-ess-shell');
-		localStorage.setItem('essShell', next);
-	}
 
 	type NavItem = { href: string; label: string; icon: typeof Calendar; soon?: boolean };
 
@@ -89,15 +74,6 @@
 			</span>
 			<span class="brand-text">Champ HR</span>
 		</a>
-		<button
-			type="button"
-			class="collapse-btn"
-			onclick={toggleShell}
-			aria-label={shell === 'rail' ? 'Expand navigation' : 'Collapse navigation'}
-			title={shell === 'rail' ? 'Expand navigation' : 'Collapse navigation'}
-		>
-			{#if shell === 'rail'}<PanelLeftOpen size={16} />{:else}<PanelLeftClose size={16} />{/if}
-		</button>
 	</div>
 
 	<div class="nav-list">
@@ -130,306 +106,176 @@
 			<CircleHelp size={19} strokeWidth={1.75} />
 			<span class="nav-label">Help &amp; support</span>
 		</a>
-		<a href="/profile" class="nav-item me" aria-current={isActive('/profile') ? 'page' : undefined} data-tip="My profile" aria-label="My profile">
-			<Avatar {userId} {fullName} {hasPicture} size="sm" version={pictureVersion ?? undefined} />
-			<span class="nav-label me-name">{fullName}</span>
+		<a href="/profile" class="nav-item" aria-current={isActive('/profile') ? 'page' : undefined} data-tip="Profile & settings" aria-label="Profile and settings">
+			<UserCog size={19} strokeWidth={1.75} />
+			<span class="nav-label">Profile &amp; settings</span>
 		</a>
 	</div>
 </nav>
 
 <style>
+	/* A floating pill, vertically centred, overlapping the workspace's left
+	   edge (the workspace leaves room with --ess-shell-pad-left). */
 	.rail {
+		position: fixed;
+		left: var(--ess-rail-left);
+		top: 50%;
+		transform: translateY(-50%);
+		z-index: 40;
 		width: var(--ess-rail-width);
-		flex-shrink: 0;
-		background: var(--ess-inverse);
-		color: var(--ess-text-inverse);
+		max-height: calc(100dvh - 48px);
 		display: flex;
 		flex-direction: column;
-		height: 100vh;
-		height: 100dvh;
-		position: sticky;
-		top: 0;
-		padding: 18px 12px 16px;
-		border-right: 1px solid var(--ess-border-inverse);
-	}
-
-	.brand {
-		display: flex;
 		align-items: center;
-		gap: 4px;
-		padding: 4px 6px 18px;
-		margin-bottom: 22px;
-		border-bottom: 1px solid var(--ess-border-inverse);
+		gap: 10px;
+		padding: 14px 0;
+		background: color-mix(in srgb, var(--ess-surface) 84%, transparent);
+		backdrop-filter: saturate(180%) blur(20px);
+		-webkit-backdrop-filter: saturate(180%) blur(20px);
+		border: 1px solid var(--ess-shell-border);
+		border-radius: 999px;
+		box-shadow:
+			0 1px 2px rgba(20, 22, 40, 0.04),
+			0 18px 40px -16px rgba(20, 22, 40, 0.22);
+		color: var(--ess-text);
 	}
 
 	.brand-link {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		min-width: 0;
-		color: var(--ess-text);
+		display: grid;
+		place-items: center;
+		width: 42px;
+		height: 42px;
+		border-radius: 50%;
+		color: var(--ess-primary);
 	}
-
 	.brand-mark {
 		display: grid;
 		place-items: center;
-		width: 30px;
-		height: 30px;
-		color: var(--ess-primary);
-		flex: none;
+	}
+	.brand-text,
+	.nav-label,
+	.soon-badge {
+		display: none;
 	}
 
-	.brand-text {
-		font-size: 19px;
-		font-weight: 600;
-		letter-spacing: -0.01em;
-		white-space: nowrap;
-	}
-
-	.collapse-btn {
-		margin-left: auto;
-		display: grid;
-		place-items: center;
-		width: 28px;
-		height: 28px;
-		flex: none;
-		background: transparent;
-		border: 1px solid transparent;
-		border-radius: 7px;
-		color: var(--ess-text-muted);
-		cursor: pointer;
-		opacity: 0;
-		transition:
-			background var(--ess-t-fast),
-			color var(--ess-t-fast),
-			opacity var(--ess-t-fast);
-	}
-	.rail:hover .collapse-btn,
-	.collapse-btn:focus-visible {
-		opacity: 1;
-	}
-	.collapse-btn:hover {
-		background: var(--ess-surface-hover);
-		color: var(--ess-text);
-	}
-
-	.nav-list {
+	.nav-list,
+	.rail-foot {
 		display: flex;
 		flex-direction: column;
-		gap: 4px;
+		align-items: center;
+		gap: 6px;
+	}
+	.nav-list {
 		flex: 1;
 		min-height: 0;
-		overflow-y: auto;
-		overflow-x: hidden;
-		padding: 2px;
-		overscroll-behavior: contain;
+	}
+	.rail-foot {
+		padding-top: 10px;
+		border-top: 1px solid var(--ess-border);
 	}
 
 	.nav-item {
 		position: relative;
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		height: 44px;
-		padding: 0 14px;
-		border-radius: var(--ess-radius-md);
-		color: var(--ess-text-secondary);
-		font-size: 14.5px;
-		font-weight: 500;
-		white-space: nowrap;
+		display: grid;
+		place-items: center;
+		width: 42px;
+		height: 42px;
+		border-radius: 50%;
+		color: var(--ess-text-muted);
 		transition:
 			background var(--ess-t-fast),
 			color var(--ess-t-fast);
-	}
-	.nav-item :global(svg) {
-		flex: none;
-		color: var(--ess-text-muted);
-		transition: color var(--ess-t-fast);
 	}
 	.nav-item:hover {
 		background: var(--ess-surface-hover);
 		color: var(--ess-text);
 	}
-	.nav-item:hover :global(svg) {
-		color: var(--ess-text);
-	}
 	.nav-item[aria-current='page'] {
-		background: var(--ess-primary-soft);
-		color: var(--ess-primary-text);
-	}
-	.nav-item[aria-current='page'] :global(svg) {
 		color: var(--ess-primary);
+		background: var(--ess-primary-soft);
 	}
-
 	.nav-item.soon {
-		color: var(--ess-text-muted);
-	}
-
-	.soon-badge {
-		margin-left: auto;
-		font-size: 10px;
-		font-weight: 600;
-		letter-spacing: 0.02em;
-		padding: 2px 7px;
-		border-radius: var(--ess-radius-pill);
-		background: var(--ess-sunken);
-		color: var(--ess-text-muted);
-		white-space: nowrap;
+		opacity: 0.5;
 	}
 
 	.count {
-		margin-left: auto;
-		min-width: 20px;
-		height: 20px;
-		padding: 0 6px;
-		border-radius: var(--ess-radius-pill);
+		position: absolute;
+		top: 2px;
+		right: 0;
+		min-width: 16px;
+		height: 16px;
+		padding: 0 4px;
+		border-radius: 999px;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		font-size: 11px;
+		font-size: 9.5px;
 		font-weight: 600;
 		font-variant-numeric: tabular-nums;
-		background: var(--ess-primary-soft);
-		color: var(--ess-primary-text);
-	}
-	.nav-item[aria-current='page'] .count {
-		background: var(--ess-surface);
+		background: var(--ess-primary);
+		color: var(--ess-text-on-primary);
+		box-shadow: 0 0 0 2px var(--ess-surface);
 	}
 	.count.warn {
-		background: var(--ess-warning-bg);
-		color: var(--ess-warning);
+		background: var(--ess-warning);
+		color: #fff;
 	}
 	.count.urgent {
 		background: var(--ess-danger);
 		color: #fff;
 	}
 
-	.rail-foot {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		padding-top: 12px;
-		border-top: 1px solid var(--ess-border-inverse);
-	}
-
-	.me {
-		padding-left: 12px;
-	}
-	.me-name {
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	/* ------------------------------------------------------------
-	   COMPACT RAIL — 68px icon column ([data-ess-shell='rail'] on <html>).
-	------------------------------------------------------------ */
-
-	:global([data-ess-shell='rail']) .rail {
-		width: var(--ess-rail-width-collapsed);
-		padding: 14px 10px 12px;
-		align-items: center;
-	}
-	:global([data-ess-shell='rail']) .brand {
-		flex-direction: column;
-		gap: 8px;
-		padding: 0 0 12px;
-		justify-content: center;
-		width: 100%;
-	}
-	:global([data-ess-shell='rail']) .brand-text,
-	:global([data-ess-shell='rail']) .nav-label,
-	:global([data-ess-shell='rail']) .soon-badge {
-		display: none;
-	}
-	:global([data-ess-shell='rail']) .collapse-btn {
-		margin-left: 0;
-		opacity: 1;
-	}
-	:global([data-ess-shell='rail']) .nav-list,
-	:global([data-ess-shell='rail']) .rail-foot {
-		width: 100%;
-		overflow: visible;
-	}
-	:global([data-ess-shell='rail']) .nav-item {
-		justify-content: center;
-		padding: 0;
-		height: 46px;
-	}
-	:global([data-ess-shell='rail']) .count {
-		position: absolute;
-		top: 4px;
-		right: 4px;
-		min-width: 16px;
-		height: 16px;
-		padding: 0 4px;
-		font-size: 9.5px;
-	}
-
-	/* Icon-only rails show the label on hover. */
-	:global([data-ess-shell='rail']) .nav-item::after {
+	/* Tooltips to the right of each icon. */
+	.nav-item::after {
 		content: attr(data-tip);
 		position: absolute;
-		left: calc(100% + 10px);
+		left: calc(100% + 14px);
 		top: 50%;
 		transform: translateY(-50%) translateX(-4px);
+		padding: 5px 10px;
+		border-radius: 8px;
 		background: var(--ess-text);
-		color: var(--ess-canvas);
+		color: var(--ess-surface);
 		font-size: 12px;
 		font-weight: 500;
 		white-space: nowrap;
-		padding: 6px 10px;
-		border-radius: var(--ess-radius-xs);
-		box-shadow: var(--ess-elev-2);
-		opacity: 0;
 		pointer-events: none;
+		opacity: 0;
 		transition:
-			opacity 140ms ease-out,
-			transform 140ms ease-out;
-		z-index: 60;
+			opacity var(--ess-t-fast),
+			transform var(--ess-t-fast);
+		z-index: 50;
 	}
-	:global([data-ess-shell='rail']) .nav-item:hover::after,
-	:global([data-ess-shell='rail']) .nav-item:focus-visible::after {
+	.nav-item:hover::after,
+	.nav-item:focus-visible::after {
 		opacity: 1;
 		transform: translateY(-50%) translateX(0);
 	}
 
-	/* Below tablet the full rail leaves too little room, so it always collapses. */
+	/* Phones: an ordinary narrow rail down the left edge. */
 	@media (max-width: 720px) {
 		.rail {
-			width: var(--ess-rail-width-collapsed);
-			padding: 14px 8px 12px;
-			align-items: center;
+			position: sticky;
+			left: auto;
+			top: 0;
+			transform: none;
+			flex-shrink: 0;
+			width: 60px;
+			height: 100dvh;
+			max-height: none;
+			border-radius: 0;
+			border-width: 0 1px 0 0;
+			border-color: var(--ess-border);
+			box-shadow: none;
+			background: var(--ess-surface);
+			backdrop-filter: none;
 		}
-		.brand {
-			flex-direction: column;
-			gap: 8px;
-			padding: 0 0 12px;
-			justify-content: center;
-			width: 100%;
+		.nav-list {
+			overflow-y: auto;
+			scrollbar-width: none;
 		}
-		.collapse-btn,
-		.brand-text,
-		.nav-label,
-		.soon-badge {
+		.nav-item::after {
 			display: none;
-		}
-		.nav-list,
-		.rail-foot {
-			width: 100%;
-		}
-		.nav-item {
-			justify-content: center;
-			padding: 0;
-			height: 46px;
-		}
-		.count {
-			position: absolute;
-			top: 4px;
-			right: 4px;
-			min-width: 16px;
-			height: 16px;
-			padding: 0 4px;
-			font-size: 9.5px;
 		}
 	}
 </style>

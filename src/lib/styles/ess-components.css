@@ -96,7 +96,7 @@ textarea {
 }
 
 .ess-page-sub {
-	font-size: 17px;
+	font-size: 14px;
 	line-height: 1.45;
 	color: var(--ess-text-secondary);
 	margin-top: 8px;
@@ -165,7 +165,7 @@ textarea {
 
 .ess-card {
 	background: var(--ess-surface);
-	border: 1px solid var(--ess-border);
+	border: 1px solid var(--ess-border-subtle);
 	border-radius: var(--ess-radius-md);
 	padding: var(--ess-space-5);
 	box-shadow: var(--ess-elev-1);
@@ -206,7 +206,7 @@ textarea {
 	border-radius: var(--ess-radius-lg);
 }
 
-/* A card's title row: serif heading on the left, a quiet link or control on
+/* A card's title row: heading on the left, a quiet link or control on
    the right. */
 .ess-card-head {
 	display: flex;
@@ -216,7 +216,7 @@ textarea {
 	margin-bottom: 14px;
 }
 .ess-card-head .ess-h2 {
-	font-size: 19px;
+	font-size: 16px;
 }
 .ess-link {
 	display: inline-flex;
@@ -284,7 +284,7 @@ button.ess-link {
 .ess-btn--primary {
 	background: var(--ess-primary);
 	color: var(--ess-text-on-primary);
-	box-shadow: 0 1px 2px rgba(27, 31, 59, 0.12);
+	box-shadow: var(--ess-primary-shadow);
 }
 .ess-btn--primary:hover:not(:disabled) {
 	background: var(--ess-primary-hover);
@@ -1744,6 +1744,24 @@ button.ess-row:hover {
 	background: var(--ess-canvas);
 }
 
+/* Desktop: the app is one rounded workspace floating on a pale backdrop,
+   with the icon pill (SidebarNav) overlapping its left edge. */
+@media (min-width: 721px) {
+	body:has(.ess-shell) {
+		background: var(--ess-backdrop);
+	}
+	.ess-shell {
+		height: calc(100dvh - 2 * var(--ess-shell-inset));
+		margin: var(--ess-shell-inset) var(--ess-shell-inset) var(--ess-shell-inset) var(--ess-shell-inset-left);
+		padding-left: var(--ess-shell-pad-left);
+		border: 1px solid var(--ess-shell-border);
+		border-radius: var(--ess-radius-xl);
+		box-shadow:
+			0 1px 2px rgba(20, 22, 40, 0.04),
+			0 30px 60px -30px rgba(20, 22, 40, 0.22);
+	}
+}
+
 .ess-main {
 	flex: 1 1 0%;
 	min-width: 0;
@@ -1762,7 +1780,7 @@ button.ess-row:hover {
 	overscroll-behavior: contain;
 	scrollbar-gutter: stable;
 	width: 100%;
-	padding: var(--ess-page-pad-y) var(--ess-page-pad-x) var(--ess-space-10);
+	padding: var(--ess-page-pad-y) var(--ess-page-pad-x) 18px;
 }
 
 /* Signed-in pages own their scrolling; the document and navigation stay still. */
@@ -1775,7 +1793,7 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 
 @media (max-width: 720px) {
 	.ess-content {
-		padding: 20px 16px 32px;
+		padding: 16px 14px 28px;
 	}
 }
 

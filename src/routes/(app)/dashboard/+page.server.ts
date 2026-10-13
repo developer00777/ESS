@@ -17,6 +17,12 @@ import { eq, and, gte, lt, sql, desc } from 'drizzle-orm';
 import { getUsersWithProfilePicture } from '$lib/server/db/mongo';
 import { ensureLeaveAllocations } from '$lib/server/leave-accrual';
 import { meetingsToday } from '$lib/server/meetings/service';
+import { reviewableUserIds } from '$lib/server/approval-chain';
+import { loadFeed } from '$lib/server/announcements';
+import { summaryOf } from '$lib/announcements';
+import { hasCap } from '$lib/server/capabilities';
+import { champConfigured } from '$lib/server/champ/chat';
+import { loadPlanner } from './planner.server';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -26,7 +32,7 @@ function dateKey(value: string | Date): string {
 	return String(value).slice(0, 10);
 }
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const user = locals.user!;
 	const year = new Date().getFullYear();
 
@@ -202,6 +208,55 @@ export const load: PageServerLoad = async ({ locals }) => {
 		meetingsToday(user).catch(() => [])
 	]);
 
+	// --- Absence planner + onboarding ---
+	// Whose leave shows follows the approval chain, the same reporting lines
+	// /api/leave/[id]/approve checks when a decision is sent.
+	const [manageable, hrReviewable, feed] = await Promise.all([
+		reviewableUserIds(user, 'manager'),
+		reviewableUserIds(user, 'hr'),
+		loadFeed(user.id, now)
+	]);
+	const planner = await loadPlanner(user, { manager: manageable, hr: hrReviewable }, url.searchParams.get('m'), now);
+
+	// --- Future events: today's meetings still to come, then event
+	// announcements and holidays from the feed's "Coming up" list. ---
+	const upcomingMeetings = todaysMeetings.filter((m) => m.state === 'upcoming');
+	const attendeePictures = await getUsersWithProfilePicture([
+		...new Set(upcomingMeetings.flatMap((m) => [...(m.host ? [m.host.id] : []), ...m.attendees.map((a) => a.id)]))
+	]);
+	const events = [
+		...upcomingMeetings.map((m) => ({
+			id: `m-${m.id}`,
+			kind: 'meeting' as const,
+			title: m.topic,
+			summary: `${m.durationMin ?? 30} min · ${m.source === 'zoom' ? 'Zoom' : 'Notes'}`,
+			date: today,
+			time: new Date(m.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' }),
+			read: true,
+			href: m.canJoin ? `/hub/meetings/${m.id}/join` : '/hub/meetings',
+			newTab: m.canJoin,
+			people: [...(m.host ? [m.host] : []), ...m.attendees]
+				.filter((p, i, all) => all.findIndex((q) => q.id === p.id) === i)
+				.map((p) => ({ ...p, hasPicture: attendeePictures.has(p.id) }))
+		})),
+		...feed.comingUp.map((e) =>
+			e.kind === 'holiday'
+				? { id: e.id, kind: 'holiday' as const, title: e.title, summary: null, date: e.eventDate, time: null, read: true, href: '/policies', newTab: false, people: [] }
+				: {
+						id: e.id,
+						kind: 'event' as const,
+						title: e.title,
+						summary: summaryOf(e),
+						date: e.eventDate!,
+						time: e.eventTime,
+						read: e.read,
+						href: '/chat?c=announcements',
+						newTab: false,
+						people: []
+					}
+		)
+	].slice(0, 4);
+
 	const analyticsToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 	const window = attendanceWindow(analyticsToday);
 	const [profileRows, punchRows] = await Promise.all([
@@ -246,6 +301,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 			...r,
 			applicantHasPicture: applicantsWithPictures.has(r.applicant.id)
 		})),
-		upcomingHolidays: upcomingHolidays.map((h) => ({ ...h, date: dateKey(h.date) }))
+		upcomingHolidays: upcomingHolidays.map((h) => ({ ...h, date: dateKey(h.date) })),
+		planner,
+		events,
+		toApprove: planner.leaves.filter((l) => l.reviewable).length,
+		// Champ's suggested prompts only offer what this person may do; the
+		// assistant's tools check again.
+		champ: {
+			configured: champConfigured(),
+			team: user.role === 'team_lead' || hasCap(user, 'champ.reports')
+		}
 	};
 };

@@ -52,6 +52,11 @@
 			pictureVersion={data.profilePictureVersion}
 			{roleLabel}
 			notifications={data.announcementBadge}
+			activePath={page.url.pathname}
+			role={data.user.role}
+			canAdmin={data.canAdmin}
+			teamPeek={data.teamPeek}
+			addEmployeeHref={data.addEmployeeHref}
 		/>
 		<div class="ess-content" tabindex="0" role="region" aria-label="Page content">
 			{@render children()}
