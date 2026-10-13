@@ -2176,13 +2176,11 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 	/* Light: sleek and quiet — a soft grey workspace, crisp near-white
 	   cards with a hairline edge and a whisper of shadow, no colour glows.
 	   (Dark mode, below, keeps the lit glass.) */
-	/* A soft pastel wash, like a macOS wallpaper seen through the window:
-	   sky blue, lavender, peach and mint, kept pale so cards stay crisp. */
-	--glow-a: rgba(147, 197, 253, 0.42);
-	--glow-b: rgba(196, 181, 253, 0.38);
-	--glow-c: rgba(253, 186, 140, 0.32);
-	--glow-d: rgba(167, 243, 208, 0.3);
-	--glass-fill: linear-gradient(rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.86));
+	--glow-a: transparent;
+	--glow-b: transparent;
+	--glow-c: transparent;
+	--glow-d: transparent;
+	--glass-fill: linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92));
 	--glass-edge: rgba(0, 0, 0, 0.07);
 	--glass-shadow:
 		0 1px 1px rgba(0, 0, 0, 0.03),
