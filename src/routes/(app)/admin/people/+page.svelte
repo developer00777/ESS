@@ -35,15 +35,15 @@
 	}
 	/* The directory table bleeds to the card's edges; match the card padding. */
 	.people-fill :global(.directory .table-wrap) {
-		margin-inline: calc(-1 * var(--ess-space-4));
+		margin-inline: calc(-1 * var(--card-px, var(--ess-space-4)));
 	}
 	.people-fill :global(.directory .table-wrap .ess-table th:first-child),
 	.people-fill :global(.directory .table-wrap .ess-table td:first-child) {
-		padding-left: var(--ess-space-4);
+		padding-left: var(--card-px, var(--ess-space-4));
 	}
 	.people-fill :global(.directory .table-wrap .ess-table th:last-child),
 	.people-fill :global(.directory .table-wrap .ess-table td:last-child) {
-		padding-right: var(--ess-space-4);
+		padding-right: var(--card-px, var(--ess-space-4));
 	}
 
 	@media (min-width: 1101px) and (min-height: 480px) {
@@ -79,7 +79,7 @@
 			overflow: auto;
 			overscroll-behavior: contain;
 			scrollbar-width: thin;
-			margin-bottom: calc(-1 * var(--ess-space-4));
+			margin-bottom: calc(-1 * var(--card-py, var(--ess-space-4)));
 		}
 		.people-fill :global(.people-split > .directory thead th) {
 			position: sticky;

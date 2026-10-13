@@ -2594,7 +2594,7 @@
 		}
 		.directory .table-wrap,
 		.grid-card .table-wrap {
-			margin-bottom: calc(-1 * var(--ess-space-4));
+			margin-bottom: calc(-1 * var(--card-py, var(--ess-space-4)));
 		}
 		/* Week-off: the roster grid and the templates share the column, each
 		   scrolling inside its own card when it is long. */
@@ -2758,6 +2758,88 @@
 		.view-tabs .ess-tab {
 			min-width: 0;
 			flex: 1;
+		}
+	}
+
+	/* Short laptop screens (1280x580 up to 1366x768): Bulk import and
+	   Password activity fit without their columns scrolling. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
+		.bulk-steps {
+			margin-bottom: 0;
+		}
+		.bulk-steps :global(.ess-step) {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		.bulk-steps :global(.ess-step:not(:last-child)::before) {
+			display: none;
+		}
+		.bulk-steps :global(.ess-step__dot) {
+			width: 20px;
+			height: 20px;
+		}
+		.bulk-steps :global(.ess-step__label) {
+			font-size: 13px;
+		}
+		.bulk-steps :global(.ess-step__meta) {
+			display: none;
+		}
+		.bulk-split {
+			grid-template-columns: minmax(0, 1fr) 420px;
+		}
+		.bulk-split .ess-card-head {
+			flex-wrap: nowrap;
+			align-items: flex-start;
+		}
+		.bulk-split .side {
+			gap: 8px;
+		}
+		.next-steps {
+			padding-top: 6px;
+		}
+		.bulk-split .side .card-title {
+			margin-bottom: 4px;
+		}
+		.queue-hint {
+			gap: 8px;
+			padding: 8px 10px;
+		}
+		.queue-figure {
+			margin: 2px 0;
+		}
+		.next-steps strong {
+			font-size: 12.5px;
+			margin-bottom: 4px;
+		}
+		.queue-hint :global(.ess-tile) {
+			display: none;
+		}
+		.queue-hint .ess-caption {
+			font-size: 12px;
+		}
+		.queue-figure {
+			padding: 4px 0;
+			align-items: center;
+		}
+		.queue-figure > div {
+			display: flex;
+			align-items: baseline;
+			gap: 6px;
+		}
+		.queue-figure :global(.ess-figure__value) {
+			font-size: 18px;
+		}
+		.next-steps ol {
+			gap: 3px;
+		}
+		.next-steps li {
+			font-size: 12px;
+		}
+		.next-steps li span {
+			width: 16px;
+			height: 16px;
+			font-size: 10px;
 		}
 	}
 </style>

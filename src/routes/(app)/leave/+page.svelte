@@ -205,7 +205,7 @@
 	compact
 >
 	{#snippet actions()}
-		<a href="/leave/apply" class="ess-btn ess-btn--primary ess-btn--cta">
+		<a href="/leave/apply" class="ess-btn ess-btn--primary">
 			<Calendar size={17} strokeWidth={1.75} />
 			Apply leave
 		</a>

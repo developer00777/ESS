@@ -164,12 +164,13 @@ textarea {
 ------------------------------------------------------------ */
 
 .ess-card {
-	/* Side padding, exposed so edge-to-edge tables can bleed exactly. */
+	/* Padding, exposed so edge-to-edge tables can bleed exactly. */
 	--card-px: var(--ess-space-4);
+	--card-py: var(--ess-space-4);
 	background: var(--ess-surface);
 	border: 1px solid var(--ess-border-subtle);
 	border-radius: var(--ess-radius-md);
-	padding: var(--ess-space-4) var(--card-px);
+	padding: var(--card-py) var(--card-px);
 	box-shadow: var(--ess-elev-1);
 }
 
@@ -291,38 +292,6 @@ button.ess-link {
 .ess-btn--primary:hover:not(:disabled) {
 	background: var(--ess-primary-hover);
 }
-/* The page's main call to action (Apply leave): the primary button with a
-   soft halo so it reads first on a busy page. */
-.ess-btn--cta {
-	font-weight: 600;
-	color: #fff;
-	background: linear-gradient(180deg, color-mix(in srgb, var(--ess-primary) 78%, #fff), var(--ess-primary) 55%, color-mix(in srgb, var(--ess-primary) 88%, #000));
-	border-color: color-mix(in srgb, var(--ess-primary) 80%, #000);
-	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.35),
-		0 0 0 4px color-mix(in srgb, var(--ess-primary) 22%, transparent),
-		0 10px 24px -8px color-mix(in srgb, var(--ess-primary) 85%, transparent);
-	transition:
-		transform var(--ess-t-fast),
-		box-shadow var(--ess-t-fast),
-		filter var(--ess-t-fast);
-}
-.ess-btn--cta:hover:not(:disabled) {
-	background: linear-gradient(180deg, color-mix(in srgb, var(--ess-primary) 78%, #fff), var(--ess-primary) 55%, color-mix(in srgb, var(--ess-primary) 88%, #000));
-	color: #fff;
-	filter: brightness(1.07);
-	transform: translateY(-1px);
-	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.35),
-		0 0 0 5px color-mix(in srgb, var(--ess-primary) 28%, transparent),
-		0 14px 28px -8px color-mix(in srgb, var(--ess-primary) 90%, transparent);
-}
-@media (prefers-reduced-motion: reduce) {
-	.ess-btn--cta:hover:not(:disabled) {
-		transform: none;
-	}
-}
-
 /* A very light pink wash for Pink Leave (monthly-quota leave) cards. */
 .ess-pink-wash,
 .ess-card.ess-pink-wash,
@@ -1935,7 +1904,8 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 	}
 	.ess-card {
 		--card-px: 14px;
-		padding: 12px var(--card-px);
+		--card-py: 12px;
+		padding: var(--card-py) var(--card-px);
 	}
 	.ess-card-head {
 		margin-bottom: 8px;
@@ -1953,6 +1923,15 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 	.ess-textarea {
 		padding-top: 6px;
 		padding-bottom: 6px;
+	}
+	.ess-empty {
+		padding: 16px 16px;
+		gap: 4px;
+	}
+	.ess-empty__icon {
+		width: 36px;
+		height: 36px;
+		margin-bottom: 2px;
 	}
 }
 
