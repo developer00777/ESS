@@ -5,7 +5,7 @@
 	import Clock from '@lucide/svelte/icons/clock';
 	import FileText from '@lucide/svelte/icons/file-text';
 	import Users from '@lucide/svelte/icons/users';
-	import Settings from '@lucide/svelte/icons/settings';
+	import ShieldUser from '@lucide/svelte/icons/shield-user';
 	import Wallet from '@lucide/svelte/icons/wallet';
 	import CircleHelp from '@lucide/svelte/icons/circle-help';
 	import type { Role } from '$lib/server/auth';
@@ -52,7 +52,7 @@
 		{ href: '/attendance', label: 'Attendance', icon: Clock },
 		{ href: '/policies', label: 'Policies', icon: FileText },
 		...(role !== 'employee' ? [{ href: '/team', label: 'Team', icon: Users }] : []),
-		...(canAdmin ? [{ href: '/admin', label: 'Admin Controls', icon: Settings }] : []),
+		...(canAdmin ? [{ href: '/admin', label: 'Admin Controls', icon: ShieldUser }] : []),
 		/* Payroll is not built yet. The row stays so people know where it will
 		   live, and opens an honest "not available yet" page. */
 		{ href: '/payroll', label: 'Payroll', icon: Wallet, soon: true }
