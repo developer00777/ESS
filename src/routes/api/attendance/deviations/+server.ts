@@ -24,6 +24,7 @@ import {
 	monthKeyOf
 } from '$lib/server/comp-off';
 import { notifyNewRequest, notifyDecision } from '$lib/server/chat/cards';
+import { officeToday } from '$lib/server/shifts';
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -149,7 +150,8 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 			throw error(400, `${label} must be in HH:MM format`);
 		}
 	}
-	if (date > new Date().toISOString().slice(0, 10)) {
+	// The office's today (IST), not UTC's, which lags until 05:30.
+	if (date > officeToday()) {
 		throw error(400, 'You cannot raise a deviation for a future date');
 	}
 

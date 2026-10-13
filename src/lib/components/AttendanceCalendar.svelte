@@ -268,7 +268,7 @@
 			cell.inMonth &&
 			!cell.isWeekend &&
 			cell.key < todayKey &&
-			!recordsByDate.get(cell.key)?.checkInAt &&
+			!shiftByDate.has(cell.key) &&
 			!prohancePresence(prohanceByDate.get(cell.key)?.timeOnSystemMinutes) &&
 			!(holidaysByDate.get(cell.key)?.length ?? 0) &&
 			!(leaveByDate.get(cell.key)?.length ?? 0)
@@ -301,22 +301,12 @@
 	function anomalyLabel(a: NonNullable<ShiftDay['anomaly']>): string {
 		switch (a) {
 			case 'missing-check-out':
-				return 'Check-in recorded but no check-out';
+				return 'Check-in recorded but no check-out within 9h 30m';
 			case 'orphan-check-out':
 				return 'Check-out with no matching check-in';
-			case 'gap-too-long':
-				return 'Check-out too far from check-in to pair as one shift';
-			case 'check-out-before-check-in':
-				return 'Check-out is earlier than check-in — device clock fault';
 		}
 	}
 
-	function duration(from: string | Date, to: string | Date): string {
-		const ms = new Date(to).getTime() - new Date(from).getTime();
-		const h = Math.floor(ms / 3_600_000);
-		const m = Math.floor((ms % 3_600_000) / 60_000);
-		return `${h}h ${m}m`;
-	}
 
 	function minutesLabel(mins: number | null | undefined): string | null {
 		if (mins === null || mins === undefined || mins === 0) return null;
@@ -346,9 +336,11 @@
 	}
 
 	function markerFor(cell: Cell) {
-		const rec = recordsByDate.get(cell.key);
 		return dayMarker({
-			hasCheckIn: Boolean(rec?.checkInAt),
+			// Any shift credited to the day, including a check-out whose check-in
+			// was missed. A punch that only closed the previous night's shift is
+			// credited to that night, so it no longer marks this day present.
+			hasCheckIn: shiftByDate.has(cell.key),
 			leaves: leaveByDate.get(cell.key) ?? [],
 			isHoliday: (holidaysByDate.get(cell.key)?.length ?? 0) > 0,
 			isAbsent: isAbsent(cell),
@@ -358,7 +350,7 @@
 	}
 
 	function cellLabel(cell: Cell): string {
-		const rec = recordsByDate.get(cell.key);
+		const shift = shiftByDate.get(cell.key);
 		const dayHolidays = holidaysByDate.get(cell.key) ?? [];
 		// Named from the cell's own date, not the cycle's end month — a 26 Jul
 		// cell in the August cycle must not read as "August 26".
@@ -370,13 +362,10 @@
 
 		const parts = [base];
 		if (marker) parts.push(marker.label);
-		if (rec?.checkInAt) {
-			parts.push(`in ${fmtTime(rec.checkInAt)}`);
-			if (rec.checkOutAt) {
-				parts.push(`out ${fmtTime(rec.checkOutAt)}`);
-				parts.push(duration(rec.checkInAt, rec.checkOutAt));
-			}
-		}
+		if (shift?.checkInAt) parts.push(`in ${fmtTime(shift.checkInAt)}`);
+		if (shift?.checkOutAt) parts.push(`out ${fmtTime(shift.checkOutAt)}${shift.crossesMidnight ? ' next day' : ''}`);
+		if (shift?.workedMinutes != null) parts.push(formatMinutes(shift.workedMinutes));
+		if (shift?.overtimeMinutes) parts.push(`${formatMinutes(shift.overtimeMinutes)} overtime`);
 		if (!marker && dayHolidays.length > 0) parts.push(dayHolidays[0].name);
 		return parts.join(', ');
 	}
@@ -398,8 +387,8 @@
 			isWeekend: isWeekOffDate(key),
 			isPast: key < todayKey,
 			isToday: key === todayKey,
-			// A check-in with no check-out on a day that has ended.
-			missingOut: Boolean(record?.checkInAt && !record.checkOutAt && !shift?.checkOutAt && key < todayKey)
+			// A check-in whose check-out never came within the grace period.
+			missingOut: shift?.anomaly === 'missing-check-out'
 		};
 	}
 
@@ -410,10 +399,8 @@
 		if (d.shift?.anomaly || d.missingOut) {
 			return { label: d.shift?.anomaly === 'orphan-check-out' ? 'Missing check-in' : 'Missing check-out', badge: 'pending', tone: 'warn' };
 		}
-		if (d.record?.checkInAt) {
-			const half = prohancePresence(d.prohance?.timeOnSystemMinutes) === 'half' && !d.record.checkOutAt;
-			return half ? { label: 'Half day', badge: 'pending', tone: 'warn' } : { label: 'Present', badge: 'present', tone: 'ok' };
-		}
+		if (d.shift?.inProgress) return { label: 'Checked in', badge: 'present', tone: 'ok' };
+		if (d.shift) return { label: 'Present', badge: 'present', tone: 'ok' };
 		const approvedLeave = d.leaves.find((l) => l.status === 'approved');
 		if (approvedLeave) return { label: 'On leave', badge: 'approved', tone: isPinkLeave(approvedLeave) ? 'pink' : 'leave' };
 		const ph = prohancePresence(d.prohance?.timeOnSystemMinutes);
@@ -433,7 +420,7 @@
 		const d = dayInfo(key);
 		if (d.isWeekend || d.holidays.length > 0) return false;
 		if (d.leaves.some((l) => l.status === 'approved')) return false;
-		return Boolean(d.shift?.anomaly || d.missingOut || (!d.record?.checkInAt && d.isPast) || d.shift?.isShort);
+		return Boolean(d.shift?.anomaly || (!d.shift && d.isPast) || d.shift?.isShort);
 	}
 
 	const selected = $derived(selectedKey ? dayInfo(selectedKey) : null);
@@ -443,7 +430,7 @@
 		const d = dayInfo(key);
 		if (d.tailOf) return `ends ${cellTime(d.tailOf.checkOutAt)}`;
 		if (d.shift?.workedMinutes !== null && d.shift?.workedMinutes !== undefined) return formatMinutes(d.shift.workedMinutes);
-		if (d.record?.checkInAt && d.record.checkOutAt) return duration(d.record.checkInAt, d.record.checkOutAt);
+		if (d.shift?.inProgress) return 'In progress';
 		return '—';
 	}
 </script>
@@ -519,7 +506,7 @@
 							{#if tailOf}
 								<span class="t-in t-cont">↳ shift</span>
 							{:else}
-								<span class="t-in">{cellTime(shift?.checkInAt ?? rec?.checkInAt)}</span>
+								<span class="t-in">{cellTime(shift?.checkInAt)}</span>
 							{/if}
 							<span class="t-mid">
 								{#if ph && minutesLabel(ph.timeOnSystemMinutes)}
@@ -530,7 +517,7 @@
 								<span class="t-out">{cellTime(tailOf.checkOutAt)}</span>
 							{:else}
 								<span class="t-out">
-									{cellTime(shift?.checkOutAt ?? rec?.checkOutAt)}{#if shift?.crossesMidnight}<span class="next-day">+1</span>{/if}
+									{cellTime(shift?.checkOutAt)}{#if shift?.crossesMidnight}<span class="next-day">+1</span>{/if}
 								</span>
 							{/if}
 						</span>
@@ -540,9 +527,11 @@
 								{#if tailOf}
 									<span class="mid-tag">ends {cellTime(tailOf.checkOutAt)}</span>
 								{:else if shift?.workedMinutes !== null && shift?.workedMinutes !== undefined}
-									<span class:short-hours={shift.isShort} title={shift.isShort ? `Under ${STANDARD_HOURS_LABEL}` : ''}>
-										{formatMinutes(shift.workedMinutes)}{#if shift.isShort}<span class="short-flag">!</span>{/if}
+									<span class:short-hours={shift.isShort} title={shift.isShort ? `Under ${STANDARD_HOURS_LABEL}` : shift.overtimeMinutes ? `${formatMinutes(shift.overtimeMinutes)} overtime` : ''}>
+										{formatMinutes(shift.workedMinutes)}{#if shift.isShort}<span class="short-flag">!</span>{:else if shift.overtimeMinutes}<span class="ot-flag">+{formatMinutes(shift.overtimeMinutes)}</span>{/if}
 									</span>
+								{:else if shift?.inProgress}
+									<span class="mid-tag">in progress</span>
 								{:else if shift?.anomaly}
 									<span class="mid-tag anomaly" title={anomalyLabel(shift.anomaly)}>needs review</span>
 								{:else if dayLeaves.length > 0}
@@ -624,12 +613,12 @@
 						>
 							<td class="c-date">{s.date}{#if cell.isToday}<span class="today-tag">Today</span>{/if}</td>
 							<td class="c-day">{s.day}</td>
-							<td class="c-time">{d.tailOf ? '↳ shift' : d.shift?.checkInAt || d.record?.checkInAt ? cellTime(d.shift?.checkInAt ?? d.record?.checkInAt) : '—'}</td>
+							<td class="c-time">{d.tailOf ? '↳ shift' : d.shift?.checkInAt ? cellTime(d.shift.checkInAt) : '—'}</td>
 							<td class="c-time">
-								{#if d.tailOf}{cellTime(d.tailOf.checkOutAt)}{:else if d.shift?.checkOutAt || d.record?.checkOutAt}{cellTime(d.shift?.checkOutAt ?? d.record?.checkOutAt)}{#if d.shift?.crossesMidnight}<span class="next-day">+1</span>{/if}{:else}—{/if}
+								{#if d.tailOf}{cellTime(d.tailOf.checkOutAt)}{:else if d.shift?.checkOutAt}{cellTime(d.shift.checkOutAt)}{#if d.shift.crossesMidnight}<span class="next-day">+1</span>{/if}{:else}—{/if}
 							</td>
 							<td class="c-time">
-								{workedLabel(cell.key)}{#if d.shift?.isShort}<span class="short-flag" title="Under {STANDARD_HOURS_LABEL}">!</span>{/if}
+								{workedLabel(cell.key)}{#if d.shift?.isShort}<span class="short-flag" title="Under {STANDARD_HOURS_LABEL}">!</span>{:else if d.shift?.overtimeMinutes}<span class="ot-flag">+{formatMinutes(d.shift.overtimeMinutes)} OT</span>{/if}
 								{#if d.prohance && minutesLabel(d.prohance.timeOnSystemMinutes)}<span class="ph-note">· {minutesLabel(d.prohance.timeOnSystemMinutes)} ProHance</span>{/if}
 							</td>
 							<td>
@@ -659,28 +648,28 @@
 			</div>
 
 			<ol class="punches">
-				<li class="punch" data-tone={selected.record?.checkInAt || selected.shift?.checkInAt ? 'ok' : selected.isPast && !selected.isWeekend && !selected.holidays.length && !selected.leaves.length ? 'bad' : 'none'}>
-					<span class="p-time">{selected.tailOf ? '↳' : cellTime(selected.shift?.checkInAt ?? selected.record?.checkInAt) || '--:--'}</span>
+				<li class="punch" data-tone={selected.shift?.checkInAt ? 'ok' : selected.shift?.anomaly === 'orphan-check-out' ? 'warn' : selected.isPast && !selected.isWeekend && !selected.holidays.length && !selected.leaves.length ? 'bad' : 'none'}>
+					<span class="p-time">{selected.tailOf ? '↳' : cellTime(selected.shift?.checkInAt) || '--:--'}</span>
 					<span class="p-dot" aria-hidden="true"></span>
 					<span class="p-body">
 						<strong>Check-in</strong>
 						<small>
 							{#if selected.tailOf}Continues the shift that started on {fmtShort(selected.tailOf.date).date}
-							{:else if selected.record?.checkInAt}{selected.record.source === 'biometric' ? 'Biometric (Office)' : 'Portal'}
+							{:else if selected.shift?.checkInAt}{selected.record?.source === 'manual' ? 'Portal' : 'Biometric (Office)'}
 							{:else}Not recorded{/if}
 						</small>
 					</span>
-					{#if selected.record?.checkInAt}<span class="ess-badge ess-badge--present">Recorded</span>{/if}
+					{#if selected.shift?.checkInAt}<span class="ess-badge ess-badge--present">Recorded</span>{:else if selected.shift?.anomaly === 'orphan-check-out'}<span class="ess-badge ess-badge--pending">Missing punch</span>{/if}
 				</li>
-				<li class="punch" data-tone={selected.tailOf || selected.shift?.checkOutAt || selected.record?.checkOutAt ? 'ok' : selected.missingOut ? 'warn' : 'none'}>
-					<span class="p-time">{selected.tailOf ? cellTime(selected.tailOf.checkOutAt) : cellTime(selected.shift?.checkOutAt ?? selected.record?.checkOutAt) || '--:--'}</span>
+				<li class="punch" data-tone={selected.tailOf || selected.shift?.checkOutAt ? 'ok' : selected.missingOut ? 'warn' : 'none'}>
+					<span class="p-time">{selected.tailOf ? cellTime(selected.tailOf.checkOutAt) : cellTime(selected.shift?.checkOutAt) || '--:--'}</span>
 					<span class="p-dot" aria-hidden="true"></span>
 					<span class="p-body">
 						<strong>Check-out</strong>
 						<small>
-							{#if selected.tailOf || selected.shift?.checkOutAt || selected.record?.checkOutAt}
-								{#if selected.shift?.workedMinutes != null}{formatMinutes(selected.shift.workedMinutes)} worked{#if selected.shift.crossesMidnight} · next day{/if}{:else if selected.record?.checkInAt && selected.record.checkOutAt}{duration(selected.record.checkInAt, selected.record.checkOutAt)} worked{:else}Recorded{/if}
-							{:else if selected.isToday && selected.record?.checkInAt}Not yet recorded
+							{#if selected.tailOf || selected.shift?.checkOutAt}
+								{#if selected.shift?.workedMinutes != null}{formatMinutes(selected.shift.workedMinutes)} worked{#if selected.shift.overtimeMinutes} · {formatMinutes(selected.shift.overtimeMinutes)} overtime{/if}{#if selected.shift.crossesMidnight} · next day{/if}{:else}Recorded{/if}
+							{:else if selected.shift?.inProgress}Not yet recorded · due within 9h 30m of check-in
 							{:else}Not recorded{/if}
 						</small>
 					</span>
@@ -1097,6 +1086,14 @@
 		font-weight: 700;
 		margin-left: 2px;
 		color: var(--ess-warning);
+	}
+	/* Time beyond a standard shift, on the same day — overtime, not a new day. */
+	.ot-flag {
+		margin-left: 4px;
+		font-size: 0.85em;
+		font-weight: 600;
+		color: var(--ess-success);
+		white-space: nowrap;
 	}
 	.mid-tag.anomaly {
 		color: var(--ess-danger);

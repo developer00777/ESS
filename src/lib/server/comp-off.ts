@@ -1,6 +1,5 @@
 import { db } from '$lib/server/db/postgres';
 import {
-	attendance,
 	compOffCredits,
 	holidayCalendars,
 	holidays,
@@ -8,6 +7,7 @@ import {
 	prohanceDays
 } from '$lib/server/db/schema';
 import { and, eq, gte, lte } from 'drizzle-orm';
+import { loadShiftsFor } from '$lib/server/shifts';
 
 /** SOP §1: 7+ working hours on an eligible holiday or weekend earns one comp-off. */
 export const COMP_OFF_MIN_MINUTES = 7 * 60;
@@ -96,17 +96,14 @@ export async function evaluateCompOffEligibility(
 	let workedMinutes: number | null = null;
 	let source: string | null = null;
 
-	const [att] = await db
-		.select()
-		.from(attendance)
-		.where(and(eq(attendance.userId, userId), eq(attendance.date, workedDate)))
-		.limit(1);
+	// The shift credited to that day, built from every punch, so a shift that
+	// ran past midnight counts its whole span here — and the morning it ended
+	// on doesn't count it a second time.
+	const [shift] = await loadShiftsFor(userId, workedDate, workedDate);
 
-	if (att?.checkInAt && att?.checkOutAt) {
-		workedMinutes = Math.round(
-			(new Date(att.checkOutAt).getTime() - new Date(att.checkInAt).getTime()) / 60000
-		);
-		source = `portal (${att.source})`;
+	if (shift?.workedMinutes != null) {
+		workedMinutes = shift.workedMinutes;
+		source = 'portal (biometric shift)';
 	} else if (profile?.employeeCode) {
 		const [ph] = await db
 			.select({

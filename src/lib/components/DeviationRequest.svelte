@@ -57,7 +57,8 @@
 	let result = $state<{ status: string; aiSummary: string | null; aiEvidenceNote: string | null; aiFlags: string[]; aiConfidence: string | null; triaged: boolean } | null>(null);
 	let firstField = $state<HTMLInputElement | null>(null);
 
-	const today = new Date().toISOString().slice(0, 10);
+	// The office's date (IST); toISOString() is UTC's, a day behind until 05:30.
+	const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 	const MAX_DESCRIPTION = 500;
 
 	// Opening from a calendar day pre-fills that day; a sensible reason follows

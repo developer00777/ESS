@@ -23,7 +23,9 @@ import {
 	cycleForKey,
 	daysSoFar
 } from '$lib/attendance-cycle';
-import { pairShifts, gapForShift, STANDARD_SHIFT_MINUTES } from '$lib/shift-hours';
+import { STANDARD_SHIFT_MINUTES, officeDateKey } from '$lib/shift-hours';
+import { loadShiftsFor, officeToday } from '$lib/server/shifts';
+import { deviceUtcOffsetMinutes } from '$lib/server/easytime-import';
 import { loadWeekOffFor } from '$lib/server/week-off';
 import { reviewableUserIds } from '$lib/server/approval-chain';
 import { prohancePresence } from '$lib/attendance-markers';
@@ -46,7 +48,9 @@ function attendanceDateKey(value: string | Date): string {
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const user = locals.user!;
 	const now = new Date();
-	const todayStr = now.toISOString().slice(0, 10);
+	// The office's calendar day — not UTC's, which is still "yesterday" until
+	// 05:30 IST.
+	const todayStr = officeToday(now);
 
 	// Attendance runs on the payroll cycle — the 26th of one month to the 25th
 	// of the next — not the calendar month. `?month=YYYY-MM` still identifies a
@@ -63,12 +67,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const cycleEnd = new Date(vy, vm - 1, CYCLE_END_DAY + 1);
 	const nextMonthStart = `${cycleEnd.getFullYear()}-${pad(cycleEnd.getMonth() + 1)}-${pad(cycleEnd.getDate())}`;
 
-	const [todayRow] = await db
-		.select()
-		.from(attendance)
-		.where(and(eq(attendance.userId, user.id), eq(attendance.date, todayStr)))
-		.limit(1);
-
 	const records = await db
 		.select()
 		.from(attendance)
@@ -81,23 +79,25 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		)
 		.orderBy(desc(attendance.date));
 
-	// Raw biometric punches for the month, folded to one summary per day.
-	// Days are keyed the same way easytime-import keys attendance.date (UTC),
-	// so a punch always lands on the same calendar day as its attendance row.
+	// Raw biometric punches for the month, folded to one summary per office
+	// calendar day (IST) for the day panel's "Biometric sync" line. Hours come
+	// from the shifts below, never from these per-day summaries.
+	const offset = deviceUtcOffsetMinutes();
+	const officeMidnight = (key: string) => new Date(Date.parse(`${key}T00:00:00Z`) - offset * 60_000);
 	const punches = await db
 		.select({ punchedAt: devicePunches.punchedAt })
 		.from(devicePunches)
 		.where(
 			and(
 				eq(devicePunches.matchedUserId, user.id),
-				gte(devicePunches.punchedAt, new Date(`${monthStart}T00:00:00Z`)),
-				lt(devicePunches.punchedAt, new Date(`${nextMonthStart}T00:00:00Z`))
+				gte(devicePunches.punchedAt, officeMidnight(monthStart)),
+				lt(devicePunches.punchedAt, officeMidnight(nextMonthStart))
 			)
 		);
 
 	const punchDayMap = new Map<string, { date: string; firstAt: Date; lastAt: Date; count: number }>();
 	for (const p of punches) {
-		const key = p.punchedAt.toISOString().slice(0, 10);
+		const key = officeDateKey(p.punchedAt, offset);
 		const day = punchDayMap.get(key);
 		if (!day) {
 			punchDayMap.set(key, { date: key, firstAt: p.punchedAt, lastAt: p.punchedAt, count: 1 });
@@ -113,11 +113,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	let monthHolidays: Array<{ date: string; name: string; type: string }> = [];
 	const [profile] = await db
 		.select({
-			shiftGroupId: employeeProfiles.shiftGroupId,
-			// Drives how far a check-out may sit from its check-in when pairing an
-			// overnight shift.
-			officeTimings: employeeProfiles.officeTimings,
-			shiftType: employeeProfiles.shiftType
+			shiftGroupId: employeeProfiles.shiftGroupId
 		})
 		.from(employeeProfiles)
 		.where(eq(employeeProfiles.userId, user.id))
@@ -219,24 +215,25 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 				? daysSoFar(cycle, new Date(vy, vm - 1, CYCLE_END_DAY))
 				: 0;
 
-	// Pair overnight shifts before measuring anything. A night shift arrives as
-	// two rows — a check-in with no check-out, then a check-out with no check-in —
-	// so subtracting per row would report neither day's hours correctly. The
-	// employee's own shift window bounds how far a check-out may sit from its
-	// check-in; staff with no timings on file fall back to the default gap.
-	const shifts = pairShifts(
-		records.map((r) => ({
-			date: attendanceDateKey(r.date),
-			checkInAt: r.checkInAt,
-			checkOutAt: r.checkOutAt
-		})),
-		gapForShift(profile?.officeTimings)
-	);
+	// Shifts are built from every punch and credited to the day they started,
+	// so a shift that runs past midnight is one day's hours on its own date —
+	// not a 23-hour "day" on the next one (see $lib/shift-hours).
+	const shifts = await loadShiftsFor(user.id, monthStart, monthEnd, now);
+	const shiftByDate = new Map(shifts.map((s) => [s.date, s]));
 
-	// Counted from paired shifts, not raw rows: an overnight shift spans two rows
-	// and would otherwise count as two days present. Days with no record but
-	// enough ProHance time-on-system count too, matching the calendar's P rule.
-	const shiftDates = new Set(shifts.filter((s) => s.checkInAt).map((s) => s.date));
+	// The "Today" tile: the shift credited to today, or — for someone whose
+	// shift started yesterday evening — the one still running.
+	const currentShift =
+		shiftByDate.get(todayStr) ??
+		shifts.find((s) => s.inProgress) ??
+		null;
+	const todaySource = records.find((r) => attendanceDateKey(r.date) === (currentShift?.date ?? todayStr))?.source ?? 'biometric';
+
+	// Counted from shifts, not raw rows: an overnight shift touches two
+	// calendar days but is one day present. A check-out whose check-in was
+	// missed still means the person was at work. Days with no record but enough
+	// ProHance time-on-system count too, matching the calendar's P rule.
+	const shiftDates = new Set(shifts.map((s) => s.date));
 	const presentDates = new Set(shiftDates);
 	for (const p of monthProhance) {
 		if (prohancePresence(p.timeOnSystemMinutes) === 'present') {
@@ -392,7 +389,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	}
 
 	return {
-		today: todayRow ?? null,
+		today: currentShift
+			? { checkInAt: currentShift.checkInAt, checkOutAt: currentShift.checkOutAt, source: todaySource }
+			: null,
 		viewMonth,
 		isCurrentMonth: viewMonth === currentCycle.key,
 		// Dates normalised to a plain 'YYYY-MM-DD' string. Left as Date objects
