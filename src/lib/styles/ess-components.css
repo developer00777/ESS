@@ -2208,6 +2208,75 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 	-webkit-backdrop-filter: blur(22px) saturate(180%);
 	backdrop-filter: blur(22px) saturate(180%);
 }
+/* ---------- motion: cards fade up as a page opens, and catch the light
+   on hover (a deeper shadow, a brighter edge and a soft sheen sweeping
+   across). No transform is kept after the entrance, so dialogs opened
+   from inside a card are never displaced. ---------- */
+.ess-shell .ess-card,
+.ess-shell .ess-metric,
+.ess-shell .ess-figures {
+	--sheen: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.7) 50%, transparent 62%);
+	background-image: var(--sheen), var(--glass-fill);
+	background-size: 250% 100%, 100% 100%;
+	background-position: 140% 0, 0 0;
+	background-repeat: no-repeat;
+	animation: ess-card-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+	transition:
+		box-shadow 0.25s ease,
+		border-color 0.25s ease,
+		background-position 0.9s ease;
+}
+[data-ess-theme='dark'] .ess-shell .ess-card,
+[data-ess-theme='dark'] .ess-shell .ess-metric,
+[data-ess-theme='dark'] .ess-shell .ess-figures {
+	--sheen: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.1) 50%, transparent 62%);
+}
+.ess-shell .ess-card.ess-pink-wash,
+.ess-shell .ess-metric.ess-pink-wash {
+	background-image: var(--sheen), linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0));
+}
+.ess-shell .ess-card:hover,
+.ess-shell .ess-metric:hover {
+	background-position: -40% 0, 0 0;
+	border-color: color-mix(in srgb, var(--ess-primary) 22%, var(--glass-edge));
+	box-shadow:
+		var(--glass-shadow),
+		0 18px 40px -16px color-mix(in srgb, var(--ess-primary) 35%, transparent);
+}
+/* Nested cards don't re-animate or glow on their own. */
+.ess-shell .ess-card .ess-card,
+.ess-shell .ess-card .ess-metric {
+	animation: none;
+}
+.ess-shell .ess-card .ess-card:hover,
+.ess-shell .ess-card .ess-metric:hover {
+	box-shadow: var(--glass-shadow);
+}
+/* A gentle stagger: siblings arrive one after another. */
+.ess-shell :is(.ess-card, .ess-metric, .ess-figures):nth-child(2) { animation-delay: 50ms; }
+.ess-shell :is(.ess-card, .ess-metric, .ess-figures):nth-child(3) { animation-delay: 100ms; }
+.ess-shell :is(.ess-card, .ess-metric, .ess-figures):nth-child(4) { animation-delay: 150ms; }
+.ess-shell :is(.ess-card, .ess-metric, .ess-figures):nth-child(5) { animation-delay: 200ms; }
+.ess-shell :is(.ess-card, .ess-metric, .ess-figures):nth-child(n + 6) { animation-delay: 250ms; }
+@keyframes ess-card-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.ess-shell .ess-card,
+	.ess-shell .ess-metric,
+	.ess-shell .ess-figures {
+		animation: none;
+		transition: none;
+	}
+	.ess-shell .ess-card:hover,
+	.ess-shell .ess-metric:hover {
+		background-position: 140% 0, 0 0;
+	}
+}
+
 /* Glass inside glass doesn't blur again. */
 .ess-shell .ess-card .ess-card,
 .ess-shell .ess-card .ess-metric {
