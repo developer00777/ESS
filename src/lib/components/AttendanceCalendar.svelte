@@ -782,6 +782,11 @@
 			overflow: auto;
 			overscroll-behavior: contain;
 			scrollbar-width: thin;
+			/* The rows below the fold fade out rather than being sliced off. */
+			-webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+			mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+			/* Room so the last row can scroll clear of the fade. */
+			padding-bottom: 22px;
 		}
 		.records thead th {
 			position: sticky;
@@ -1166,37 +1171,49 @@
 
 	/* ---------- records table ---------- */
 	.records-box {
-		padding: 12px 16px 4px;
+		padding: 12px 14px;
 	}
+	/* The table stays inside the card: no bleed past the padding, columns
+	   size to their content and share any spare width, and only a table
+	   too wide for a narrow screen scrolls sideways inside its own box. */
 	.table-wrap {
-		margin: 0 -16px;
+		margin: 0;
 		overflow-x: auto;
 		overscroll-behavior-x: contain;
+		border-radius: 10px;
 	}
-	.records th:first-child,
-	.records td:first-child {
-		padding-left: 16px;
+	.records {
+		width: 100%;
+		table-layout: auto;
+		border-collapse: separate;
+		border-spacing: 0;
 	}
-	.records th:last-child,
-	.records td:last-child {
-		padding-right: 16px;
+	.records th,
+	.records td {
+		padding: 6px 10px;
 	}
 	.records th {
 		padding-top: 8px;
 		padding-bottom: 8px;
+		font-size: 12px;
 	}
 	.records tbody tr {
 		cursor: pointer;
 	}
+	/* Flagged days: a soft tinted row with rounded ends, inside the card. */
 	.records tbody tr.is-flag td {
-		background: var(--ess-warning-bg);
+		background: color-mix(in srgb, var(--ess-warning-bg) 80%, transparent);
+	}
+	.records tbody tr.is-flag td:first-child {
+		border-radius: 8px 0 0 8px;
+	}
+	.records tbody tr.is-flag td:last-child {
+		border-radius: 0 8px 8px 0;
 	}
 	.records tbody tr.is-future td {
 		color: var(--ess-text-muted);
 	}
 	.records td {
-		padding-top: 6px;
-		padding-bottom: 6px;
 		font-size: 13px;
 	}
 	.c-date {
@@ -1224,7 +1241,12 @@
 		color: var(--ess-warning);
 	}
 	.c-act {
+		width: 1%;
 		white-space: nowrap;
+		text-align: right;
+	}
+	.records th:last-child {
+		text-align: right;
 	}
 	.c-act .ess-btn {
 		height: 26px;
