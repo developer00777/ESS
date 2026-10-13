@@ -872,7 +872,7 @@
 		.preview-shell .ess-table-foot {
 			position: sticky;
 			bottom: 0;
-			background: var(--ess-surface);
+			background: var(--ess-glass-solid);
 		}
 	}
 	@media (max-width: 720px) {

@@ -549,7 +549,7 @@
 		top: 0;
 		z-index: 3;
 		height: 40px;
-		background: var(--ess-surface);
+		background: var(--ess-glass-solid);
 	}
 
 	.who {
@@ -563,7 +563,7 @@
 		min-width: 0;
 		height: 100%;
 		padding-right: 10px;
-		background: var(--ess-surface);
+		background: var(--ess-glass-solid);
 	}
 	.who-h {
 		font-size: 11.5px;

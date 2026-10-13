@@ -787,7 +787,7 @@
 			position: sticky;
 			top: 0;
 			z-index: 1;
-			background: var(--ess-surface);
+			background: var(--ess-glass-solid);
 		}
 	}
 

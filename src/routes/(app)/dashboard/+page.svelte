@@ -420,7 +420,7 @@
 		.home :global(.planner) { max-height:58vh; }
 		:global(.ess-content:has(.workspace-details[open]) > .home) { display:none; }
 		.workspace-details { flex:0 0 auto; }
-		.workspace-details > summary { position:sticky; top:0; background:var(--ess-canvas); z-index:2; }
+		.workspace-details[open] > summary { position:sticky; top:0; background:var(--ess-glass-solid); z-index:2; }
 	}
 	.workspace-details > summary { cursor: pointer; padding: 10px 2px 0; color: var(--ess-primary-text); font-weight: 500; font-size: 13px; }
 	.workspace-details[open] > summary { margin-bottom: 12px; padding-bottom: 8px; }

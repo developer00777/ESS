@@ -248,7 +248,7 @@
 		<section class="ess-card">
 			<h3 class="ess-h2 aside-h">Related</h3>
 			<div class="ess-rows">
-				<a class="ess-row" href="/leave/apply">
+				<a class="ess-row apply-row" href="/leave/apply">
 					<span class="ess-tile ess-tile--sm"><FileText size={16} /></span>
 					<span class="ess-row__body"><span class="ess-row__title">Apply for leave</span><span class="ess-row__meta">Uses the balances from this policy</span></span>
 					<ChevronRight size={16} class="chev" />
@@ -728,6 +728,40 @@
 		}
 		.rule-list li {
 			padding: 7px 12px 7px 9px;
+		}
+	}
+
+	/* "Apply for leave" under Related reads as the page's blue button. */
+	.apply-row {
+		margin-bottom: 4px;
+		border-radius: 12px;
+		background: linear-gradient(180deg, color-mix(in srgb, var(--ess-primary) 78%, #fff), var(--ess-primary) 55%, color-mix(in srgb, var(--ess-primary) 88%, #000));
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.3),
+			0 8px 20px -8px color-mix(in srgb, var(--ess-primary) 85%, transparent);
+		transition:
+			filter var(--ess-t-fast),
+			transform var(--ess-t-fast);
+	}
+	.apply-row:hover {
+		filter: brightness(1.07);
+		transform: translateY(-1px);
+	}
+	.apply-row :global(.ess-row__title),
+	.apply-row :global(.ess-row__meta),
+	.apply-row :global(.chev) {
+		color: #fff;
+	}
+	.apply-row :global(.ess-row__meta) {
+		opacity: 0.85;
+	}
+	.apply-row :global(.ess-tile) {
+		background: rgba(255, 255, 255, 0.2);
+		color: #fff;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.apply-row:hover {
+			transform: none;
 		}
 	}
 </style>

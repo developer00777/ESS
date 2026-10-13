@@ -213,9 +213,9 @@
 		z-index: 30;
 		margin: 0 calc(-1 * var(--ess-page-pad-x));
 		padding: 0 var(--ess-page-pad-x);
-		background: color-mix(in oklab, var(--ess-canvas) 90%, transparent);
-		backdrop-filter: blur(10px);
-		-webkit-backdrop-filter: blur(10px);
+		background: color-mix(in oklab, var(--ess-canvas) 45%, transparent);
+		backdrop-filter: blur(14px) saturate(160%);
+		-webkit-backdrop-filter: blur(14px) saturate(160%);
 	}
 
 	.tab-row {

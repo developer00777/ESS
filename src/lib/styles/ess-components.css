@@ -293,22 +293,27 @@ button.ess-link {
    soft halo so it reads first on a busy page. */
 .ess-btn--cta {
 	font-weight: 600;
-	background: linear-gradient(135deg, var(--ess-primary), color-mix(in srgb, var(--ess-primary) 72%, #8b5cf6));
+	color: #fff;
+	background: linear-gradient(180deg, color-mix(in srgb, var(--ess-primary) 78%, #fff), var(--ess-primary) 55%, color-mix(in srgb, var(--ess-primary) 88%, #000));
+	border-color: color-mix(in srgb, var(--ess-primary) 80%, #000);
 	box-shadow:
-		0 0 0 3px color-mix(in srgb, var(--ess-primary) 16%, transparent),
-		0 8px 20px -8px color-mix(in srgb, var(--ess-primary) 75%, transparent);
+		inset 0 1px 0 rgba(255, 255, 255, 0.35),
+		0 0 0 4px color-mix(in srgb, var(--ess-primary) 22%, transparent),
+		0 10px 24px -8px color-mix(in srgb, var(--ess-primary) 85%, transparent);
 	transition:
 		transform var(--ess-t-fast),
 		box-shadow var(--ess-t-fast),
 		filter var(--ess-t-fast);
 }
 .ess-btn--cta:hover:not(:disabled) {
-	background: linear-gradient(135deg, var(--ess-primary), color-mix(in srgb, var(--ess-primary) 72%, #8b5cf6));
-	filter: brightness(1.06);
+	background: linear-gradient(180deg, color-mix(in srgb, var(--ess-primary) 78%, #fff), var(--ess-primary) 55%, color-mix(in srgb, var(--ess-primary) 88%, #000));
+	color: #fff;
+	filter: brightness(1.07);
 	transform: translateY(-1px);
 	box-shadow:
-		0 0 0 4px color-mix(in srgb, var(--ess-primary) 22%, transparent),
-		0 12px 24px -8px color-mix(in srgb, var(--ess-primary) 80%, transparent);
+		inset 0 1px 0 rgba(255, 255, 255, 0.35),
+		0 0 0 5px color-mix(in srgb, var(--ess-primary) 28%, transparent),
+		0 14px 28px -8px color-mix(in srgb, var(--ess-primary) 90%, transparent);
 }
 @media (prefers-reduced-motion: reduce) {
 	.ess-btn--cta:hover:not(:disabled) {
@@ -319,9 +324,11 @@ button.ess-link {
 /* A very light pink wash for Pink Leave (monthly-quota leave) cards. */
 .ess-pink-wash,
 .ess-card.ess-pink-wash,
-.ess-metric.ess-pink-wash {
-	background: color-mix(in srgb, var(--ess-pink-bg) 22%, var(--ess-surface));
-	border-color: color-mix(in srgb, var(--ess-pink) 8%, var(--ess-border-subtle));
+.ess-metric.ess-pink-wash,
+.ess-shell .ess-card.ess-pink-wash,
+.ess-shell .ess-metric.ess-pink-wash {
+	background: var(--ess-pink-wash);
+	border-color: var(--ess-pink-wash-line);
 }
 
 .ess-btn--primary:active:not(:disabled) {
@@ -2140,3 +2147,45 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 .ess-row__end { flex-wrap: wrap; max-width: 100%; }
 .ess-card-head { flex-wrap: wrap; }
 @media (max-width: 720px) { .ess-page-head__actions { justify-content: flex-start; } }
+
+/* ------------------------------------------------------------
+   GLASS — every card is frosted glass over a softly lit workspace.
+   The workspace carries faint colour glows so the blur has something
+   to pick up; cards are translucent with a light edge and an inner
+   highlight. Pink Leave keeps its tint (.ess-pink-wash) on top.
+------------------------------------------------------------ */
+.ess-shell {
+	background:
+		radial-gradient(55% 45% at 12% 8%, color-mix(in srgb, var(--ess-primary) 13%, transparent), transparent 70%),
+		radial-gradient(45% 40% at 92% 14%, color-mix(in srgb, #8b5cf6 12%, transparent), transparent 70%),
+		radial-gradient(50% 45% at 78% 96%, color-mix(in srgb, #ec4899 8%, transparent), transparent 70%),
+		radial-gradient(45% 40% at 20% 92%, color-mix(in srgb, #06b6d4 8%, transparent), transparent 70%),
+		var(--ess-canvas);
+}
+.ess-shell .ess-card,
+.ess-shell .ess-metric,
+.ess-shell .ess-panel,
+.ess-shell .ess-figures {
+	background-color: var(--ess-glass-bg);
+	border-color: var(--ess-glass-border);
+	box-shadow: var(--ess-glass-shadow);
+	-webkit-backdrop-filter: var(--ess-glass-blur);
+	backdrop-filter: var(--ess-glass-blur);
+}
+.ess-shell .ess-card:not(.ess-pink-wash),
+.ess-shell .ess-metric:not(.ess-pink-wash) {
+	background-color: var(--ess-glass-bg);
+}
+.ess-shell .ess-tabs {
+	background: var(--ess-glass-bg);
+	border-color: var(--ess-glass-border);
+	-webkit-backdrop-filter: var(--ess-glass-blur);
+	backdrop-filter: var(--ess-glass-blur);
+}
+/* Glass inside glass doesn't blur again; nested cards just stay light. */
+.ess-shell .ess-card .ess-card,
+.ess-shell .ess-card .ess-metric {
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+

@@ -13,11 +13,12 @@
      <html data-ess-theme="dark">  → Dark (same navy, inverted)
 
    Every semantic token name from the earlier skins is preserved
-   so page-scoped styles keep working. The legacy ramps and glass
-   recipes are kept as names and remapped to flat equivalents:
-     --ess-glass-bg      → the plain card surface
-     --ess-glass-border  → the hairline border
-     --ess-glass-shadow  → the resting card shadow
+   so page-scoped styles keep working. The legacy ramps are kept as
+   names. Cards are frosted glass (see GLASS in ess-components.css):
+     --ess-glass-bg      → the translucent card fill
+     --ess-glass-border  → the light edge
+     --ess-glass-shadow  → inner highlight + soft drop shadow
+     --ess-pink-wash(-line) → the Pink Leave tint
    ============================================================ */
 
 .brand-ess,
@@ -32,9 +33,14 @@
 	--ring: rgba(47, 67, 230, 0.22);
 
 	/* ---------- Surface recipes (flat; names kept for old styles) ---------- */
-	--ess-glass-bg: #ffffff;
-	--ess-glass-border: #ececf0;
-	--ess-glass-shadow: 0 1px 2px rgba(20, 22, 40, 0.03), 0 10px 28px -16px rgba(20, 22, 40, 0.14);
+	--ess-glass-bg: rgba(255, 255, 255, 0.6);
+	--ess-glass-border: rgba(255, 255, 255, 0.8);
+	--ess-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 2px rgba(20, 22, 40, 0.04), 0 12px 32px -14px rgba(40, 46, 110, 0.22);
+	--ess-glass-blur: blur(18px) saturate(170%);
+	/* Opaque stand-in for glass, for sticky parts content scrolls under. */
+	--ess-glass-solid: color-mix(in srgb, #ffffff 62%, var(--ess-canvas));
+	--ess-pink-wash: rgba(252, 222, 235, 0.78);
+	--ess-pink-wash-line: rgba(184, 32, 95, 0.2);
 	--ess-glass-raised-bg: #ffffff;
 	--ess-pane-bg: #f1f1f3;
 	--ess-pane-raised-bg: #ffffff;
@@ -227,9 +233,13 @@
 	--glow: rgba(116, 134, 255, 0.28);
 	--ring: rgba(116, 134, 255, 0.3);
 
-	--ess-glass-bg: #171a2e;
+	--ess-glass-bg: rgba(28, 32, 56, 0.55);
 	--ess-glass-border: rgba(255, 255, 255, 0.09);
-	--ess-glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+	--ess-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 14px 34px -14px rgba(0, 0, 0, 0.6);
+	--ess-glass-blur: blur(18px) saturate(150%);
+	--ess-glass-solid: color-mix(in srgb, rgb(28, 32, 56) 40%, var(--ess-canvas));
+	--ess-pink-wash: rgba(249, 168, 212, 0.15);
+	--ess-pink-wash-line: rgba(249, 168, 212, 0.32);
 	--ess-glass-raised-bg: #1c2036;
 	--ess-pane-bg: #12152a;
 	--ess-pane-raised-bg: #1c2036;
