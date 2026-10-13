@@ -194,11 +194,6 @@
 </div>
 
 <style>
-	/* Above the light-mode grid behind the page. */
-	.topbar {
-		position: relative;
-		z-index: 2;
-	}
 	.topbar {
 		display: flex;
 		align-items: center;
