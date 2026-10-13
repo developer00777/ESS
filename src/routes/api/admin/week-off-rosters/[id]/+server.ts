@@ -56,13 +56,16 @@ export const PUT: RequestHandler = async (event) => {
 };
 
 /**
- * Deletes a roster. Refused while anyone is still assigned to it — the
- * assignment is what a calendar reads, so removing the pattern underneath it
- * would silently return those employees to Sat/Sun.
+ * Deletes a roster. While anyone is still assigned to it the delete is refused
+ * with a 409 — the assignment is what a calendar reads, so removing the
+ * pattern underneath it returns those employees to Sat/Sun. Sending
+ * `?force=1` is the admin confirming exactly that: the assignments go with the
+ * roster, and the employees can be moved to a re-created roster afterwards.
  */
 export const DELETE: RequestHandler = async (event) => {
 	const actor = requireCap(event, 'leave.week_off_rosters');
 	const id = event.params.id;
+	const force = event.url.searchParams.get('force') === '1';
 
 	const [existing] = await db.select().from(weekOffRosters).where(eq(weekOffRosters.id, id)).limit(1);
 	if (!existing) throw error(404, 'Roster not found');
@@ -71,22 +74,25 @@ export const DELETE: RequestHandler = async (event) => {
 		.select({ id: weekOffAssignments.id })
 		.from(weekOffAssignments)
 		.where(eq(weekOffAssignments.rosterId, id));
-	if (assigned.length > 0) {
+	if (assigned.length > 0 && !force) {
 		throw error(
 			409,
-			`${assigned.length} employee(s) are still on this roster — move them to another one first`
+			`${assigned.length} employee(s) are still on this roster — move them to another one first, or delete it anyway to return them to Sat/Sun week offs`
 		);
 	}
 
-	await db.delete(weekOffRosters).where(eq(weekOffRosters.id, id));
+	await db.transaction(async (tx) => {
+		if (assigned.length > 0) await tx.delete(weekOffAssignments).where(eq(weekOffAssignments.rosterId, id));
+		await tx.delete(weekOffRosters).where(eq(weekOffRosters.id, id));
+	});
 
 	await logActivity({
 		actorUserId: actor.id,
 		action: 'week_off_roster.delete',
 		targetType: 'week_off_roster',
 		targetId: id,
-		details: { name: existing.name }
+		details: { name: existing.name, unassigned: assigned.length }
 	});
 
-	return json({ ok: true });
+	return json({ ok: true, unassigned: assigned.length });
 };

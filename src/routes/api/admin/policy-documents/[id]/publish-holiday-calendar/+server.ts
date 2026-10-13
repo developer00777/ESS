@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { shiftGroups, holidayCalendars, holidays } from '$lib/server/db/schema';
 import { updatePolicyDocument, logActivity } from '$lib/server/db/mongo';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { requireCap } from '$lib/server/capabilities';
 
 interface PublishTable {
@@ -56,7 +56,9 @@ export const POST: RequestHandler = async (event) => {
 			.select()
 			.from(holidayCalendars)
 			.where(and(eq(holidayCalendars.shiftGroupId, group.id), eq(holidayCalendars.year, year)))
-			.orderBy(holidayCalendars.version);
+			// Newest first: ascending order read the oldest version, so a third
+			// upload for the same group and year reused an earlier number.
+			.orderBy(desc(holidayCalendars.version));
 
 		const nextVersion = existing ? existing.version + 1 : 1;
 

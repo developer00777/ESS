@@ -109,6 +109,40 @@
 		}
 	}
 
+	/* Delete and restore. Each delete is a two-step inline confirm, like leave
+	   types: the first click arms it, the second does it. */
+	let confirmingDelete = $state<string | null>(null);
+	let busyId = $state<string | null>(null);
+
+	async function act(id: string, url: string, method: 'POST' | 'DELETE', failure: string) {
+		errorMsg = '';
+		busyId = id;
+		try {
+			const res = await fetch(url, { method });
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				errorMsg = body.message ?? failure;
+				return;
+			}
+			confirmingDelete = null;
+			await invalidateAll();
+		} finally {
+			busyId = null;
+		}
+	}
+	const deleteCalendar = (id: string) => act(id, `/api/admin/holiday-calendars/${id}`, 'DELETE', 'Could not delete calendar');
+	const restoreCalendar = (id: string) => act(id, `/api/admin/holiday-calendars/${id}/restore`, 'POST', 'Could not restore calendar');
+	const restoreLeaveType = (id: string) => act(id, `/api/admin/leave-types/${id}/restore`, 'POST', 'Could not restore leave type');
+	const deleteDocument = (id: string) => act(id, `/api/admin/policy-documents/${id}`, 'DELETE', 'Could not delete document');
+
+	const kindDocuments = $derived(data.documents.filter((d) => d.kind === kind));
+	const DOC_STATUS: Record<string, { label: string; tone: string }> = {
+		published: { label: 'Published', tone: 'ok' },
+		extracted: { label: 'Read, not published', tone: 'pending' },
+		uploaded: { label: 'Uploaded', tone: 'neutral' },
+		extraction_failed: { label: 'Could not read', tone: 'rejected' }
+	};
+
 	let savingCapId = $state<string | null>(null);
 	let capError = $state<Record<string, string>>({});
 
@@ -531,9 +565,70 @@
 								<td><span class="ess-badge ess-badge--ok">Published</span></td>
 								<td>{fmtDate(cal.effectiveFrom)}</td>
 								<td>
-									<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm danger" onclick={() => archiveCalendar(cal.id)} disabled={archivingId === cal.id}>
-										{archivingId === cal.id ? 'Archiving…' : 'Archive'}
-									</button>
+									{#if confirmingDelete === cal.id}
+										<span class="acts">
+											<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" onclick={() => deleteCalendar(cal.id)} disabled={busyId === cal.id}>
+												{busyId === cal.id ? 'Deleting…' : 'Confirm delete'}
+											</button>
+											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (confirmingDelete = null)}>Cancel</button>
+										</span>
+									{:else}
+										<span class="acts">
+											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => archiveCalendar(cal.id)} disabled={archivingId === cal.id}>
+												{archivingId === cal.id ? 'Archiving…' : 'Archive'}
+											</button>
+											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm danger" onclick={() => (confirmingDelete = cal.id)} title="Permanently delete this calendar and its holidays">
+												Delete
+											</button>
+										</span>
+									{/if}
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+
+		{#if data.otherCalendars.length > 0}
+			<h3 class="ess-h3 sub-h">Archived calendars</h3>
+			<p class="ess-caption">Not shown to employees. Restore one to publish it again (it replaces the live calendar for that shift group and year), or delete it for good.</p>
+			<div class="ess-table-shell current-table">
+				<table class="ess-table">
+					<thead>
+						<tr>
+							<th>Version</th>
+							<th>Shift group</th>
+							<th class="ess-num">Year</th>
+							<th class="ess-num">Holidays</th>
+							<th>Status</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.otherCalendars as cal (cal.id)}
+							<tr>
+								<td class="muted">v{cal.version}</td>
+								<td><strong>{cal.shiftGroupName}</strong></td>
+								<td class="ess-num">{cal.year}</td>
+								<td class="ess-num">{cal.holidays.length}</td>
+								<td><span class="ess-badge">{cal.status === 'archived' ? 'Archived' : 'Draft'}</span></td>
+								<td>
+									{#if confirmingDelete === cal.id}
+										<span class="acts">
+											<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" onclick={() => deleteCalendar(cal.id)} disabled={busyId === cal.id}>
+												{busyId === cal.id ? 'Deleting…' : 'Confirm delete'}
+											</button>
+											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (confirmingDelete = null)}>Cancel</button>
+										</span>
+									{:else}
+										<span class="acts">
+											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => restoreCalendar(cal.id)} disabled={busyId === cal.id}>
+												{busyId === cal.id ? 'Restoring…' : 'Restore'}
+											</button>
+											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm danger" onclick={() => (confirmingDelete = cal.id)}>Delete</button>
+										</span>
+									{/if}
 								</td>
 							</tr>
 						{/each}
@@ -618,13 +713,102 @@
 				</table>
 			</div>
 		{/if}
+
+		{#if data.archivedLeaveTypes.length > 0}
+			<h3 class="ess-h3 sub-h">Archived leave types</h3>
+			<p class="ess-caption">Not offered when applying for leave. Restore one to offer it again, or delete it with every allocation and application under it. Re-uploading a policy with the same code also restores it.</p>
+			<div class="ess-table-shell current-table">
+				<table class="ess-table">
+					<thead>
+						<tr><th>Version</th><th>Policy name</th><th>Code</th><th>Status</th><th>Actions</th></tr>
+					</thead>
+					<tbody>
+						{#each data.archivedLeaveTypes as lt (lt.id)}
+							<tr>
+								<td class="muted">v{lt.policyVersion}</td>
+								<td><strong>{lt.name}</strong></td>
+								<td class="mono">{lt.code ?? '—'}</td>
+								<td><span class="ess-badge">Archived</span></td>
+								<td>
+									{#if confirmingDeleteType === lt.id}
+										<span class="acts">
+											<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" onclick={() => deleteLeaveType(lt.id)} disabled={deletingTypeId === lt.id}>
+												{deletingTypeId === lt.id ? 'Deleting…' : 'Confirm delete'}
+											</button>
+											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (confirmingDeleteType = null)}>Cancel</button>
+										</span>
+									{:else}
+										<span class="acts">
+											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => restoreLeaveType(lt.id)} disabled={busyId === lt.id}>
+												{busyId === lt.id ? 'Restoring…' : 'Restore'}
+											</button>
+											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm danger" onclick={() => (confirmingDeleteType = lt.id)} title="Permanently delete this leave type and all leave taken under it">Delete</button>
+										</span>
+									{/if}
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
 	</section>
 {/if}
+
+<!-- ---------- uploaded source documents ---------- -->
+<section class="ess-card current" aria-labelledby="docs-h">
+	<div class="ess-card-head">
+		<div>
+			<h2 class="ess-h2" id="docs-h">Uploaded {kind === 'holiday_calendar' ? 'calendar' : 'policy'} documents</h2>
+			<p class="ess-caption">The files calendars and policies were read from. Deleting a file keeps what was published from it; to replace a published {kind === 'holiday_calendar' ? 'calendar' : 'policy'}, upload the corrected file above and publish it.</p>
+		</div>
+	</div>
+	{#if kindDocuments.length === 0}
+		<p class="ess-help">No {kind === 'holiday_calendar' ? 'calendar' : 'policy'} documents uploaded yet.</p>
+	{:else}
+		<div class="ess-table-shell current-table">
+			<table class="ess-table">
+				<thead>
+					<tr><th>File</th><th>Uploaded</th><th>Status</th><th>Actions</th></tr>
+				</thead>
+				<tbody>
+					{#each kindDocuments as doc (doc.id)}
+						{@const st = DOC_STATUS[doc.status] ?? { label: doc.status, tone: 'neutral' }}
+						<tr>
+							<td><a class="doc-link" href="/api/admin/policy-documents/{doc.id}" target="_blank" rel="noopener">{doc.filename}</a></td>
+							<td>{fmtDate(doc.createdAt)}</td>
+							<td><span class="ess-badge ess-badge--{st.tone}">{st.label}</span></td>
+							<td>
+								{#if confirmingDelete === doc.id}
+									<span class="acts">
+										<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" onclick={() => deleteDocument(doc.id)} disabled={busyId === doc.id}>
+											{busyId === doc.id ? 'Deleting…' : 'Confirm delete'}
+										</button>
+										<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (confirmingDelete = null)}>Cancel</button>
+									</span>
+								{:else}
+									<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm danger" onclick={() => (confirmingDelete = doc.id)}>Delete</button>
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+	{/if}
+</section>
 </div>
 
 <style>
 	.kinds {
 		margin-bottom: 0;
+	}
+	.sub-h {
+		margin: 18px 0 2px;
+	}
+	.doc-link {
+		color: var(--ess-primary-text);
+		overflow-wrap: anywhere;
 	}
 	.pol-body {
 		display: grid;
