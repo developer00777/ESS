@@ -165,7 +165,7 @@
 	</div>
 </nav>
 
-<div class="admin-body">
+<div class="admin-body ess-fill">
 	{#if strip && strip.length > 0}
 		<SummaryStrip items={strip} />
 	{/if}
@@ -235,8 +235,10 @@
 	}
 
 	.tab {
-		padding: 12px 14px;
-		font-size: 13.5px;
+		flex-shrink: 0;
+		white-space: nowrap;
+		padding: 9px 12px;
+		font-size: 13px;
 	}
 	.tab :global(svg) {
 		flex-shrink: 0;
@@ -257,9 +259,63 @@
 
 	.admin-body {
 		display: grid;
-		gap: var(--ess-space-5);
-		padding-top: var(--ess-space-5);
+		gap: 14px;
+		padding-top: 14px;
 		min-width: 0;
+	}
+
+	/* The summary strip sits above every admin page: keep it a slim band. */
+	.admin-body > :global(.ess-figures > .ess-figure) {
+		padding: 10px 16px;
+		gap: 10px;
+	}
+	/* Value on the left, label and detail stacked beside it. */
+	.admin-body > :global(.ess-figures > .ess-figure > div) {
+		grid-template-columns: auto minmax(0, 1fr);
+		column-gap: 10px;
+		align-items: start;
+	}
+	.admin-body > :global(.ess-figures) :global(.ess-figure__value) {
+		grid-row: 1 / span 2;
+		font-size: 20px;
+		line-height: 1;
+	}
+	.admin-body > :global(.ess-figures) :global(.ess-figure__label),
+	.admin-body > :global(.ess-figures) :global(.ess-figure__value ~ span) {
+		grid-column: 2;
+		line-height: 1.3;
+	}
+	.admin-body > :global(.ess-figures) :global(.ess-figure__label) {
+		font-size: 12.5px;
+	}
+	.admin-body > :global(.ess-figures) :global(.ess-figure__dot) {
+		width: 10px;
+		height: 10px;
+		margin-top: 6px;
+		align-self: flex-start;
+	}
+
+	/* Fill layout (desktop). The body is the .ess-fill child of .ess-content,
+	   so it stretches to the bottom of the workspace as a column. A page opts
+	   in by putting .ess-fill on its own top block: that block takes the
+	   height left under the summary strip, and the page never scrolls.
+	   A page that does not opt in keeps its natural height and the workspace
+	   scrolls as before. */
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.admin-body {
+			display: flex;
+			flex-direction: column;
+		}
+		.admin-body > :global(*) {
+			flex-shrink: 0;
+		}
+		.admin-body > :global(.ess-fill) {
+			flex: 1 1 0px;
+			min-height: 0;
+		}
+		:global(.ess-content) > .admin-body:not(:has(> :global(.ess-fill))) {
+			flex: 1 0 auto;
+		}
 	}
 
 	/* The pages were written as standalone screens and each sets its own top

@@ -121,7 +121,7 @@
 	</article>
 {/snippet}
 
-<div class="page">
+<div class="page hub-fill">
 	<div class="top">
 		<div class="ess-daystrip strip" aria-label="Week">
 			<button type="button" class="ess-daystrip__nav" onclick={() => (selected = keyPlus(selected, -7))} aria-label="Previous week"><ChevronLeft size={18} /></button>
@@ -150,13 +150,14 @@
 		<p class="ess-alert ess-alert--info">Video calls are not switched on yet, so meetings are listed without a call to join and minutes come from pasted notes. HR can switch them on in Admin Controls.</p>
 	{/if}
 
-	<div class="ess-split">
+	<div class="ess-split main-split">
 		<div class="ess-stack">
-			<section class="ess-card" aria-labelledby="day-h">
+			<section class="ess-card ess-fill-card day-card" aria-labelledby="day-h">
 				<div class="ess-card-head">
 					<h2 id="day-h" class="ess-h2">{selected === today ? 'Today’s meetings' : selected > today ? 'Upcoming meetings' : 'Meetings that day'}</h2>
 					<span class="ess-caption">{onDay.length ? `${onDay.length} ${onDay.length === 1 ? 'meeting' : 'meetings'}` : ''}</span>
 				</div>
+				<div class="ess-scroll day-body">
 				<div class="rows">
 					{#each onDay as m (m.id)}
 						{@render agendaRow(m)}
@@ -178,15 +179,16 @@
 						{/each}
 					</div>
 				{/if}
+				</div>
 			</section>
 
-			<section class="ess-card" aria-labelledby="past-h">
+			<section class="ess-card ess-fill-card past-card" aria-labelledby="past-h">
 				<div class="ess-card-head">
 					<h2 id="past-h" class="ess-h2">Past meetings</h2>
 					<span class="ess-caption">Last 45 days</span>
 				</div>
 				{#if past.length}
-					<div class="table-wrap">
+					<div class="table-wrap ess-scroll">
 						<table class="ess-table past">
 							<thead>
 								<tr><th>Topic</th><th>Date</th><th>Minutes status</th><th>Action</th></tr>
@@ -227,16 +229,16 @@
 						</table>
 					</div>
 				{:else}
-					<p class="empty">No meetings yet. Schedule one, or use Paste notes to turn a meeting into tasks.</p>
+					<p class="empty ess-scroll">No meetings yet. Schedule one, or use Paste notes to turn a meeting into tasks.</p>
 				{/if}
 			</section>
 		</div>
 
-		<aside class="ess-card sched" aria-labelledby="sched-h">
+		<aside class="ess-card ess-fill-card sched" aria-labelledby="sched-h">
 			<div class="ess-card-head">
 				<h2 id="sched-h" class="ess-h2">Today’s schedule</h2>
 			</div>
-			<ol class="tl">
+			<ol class="tl ess-scroll">
 				{#each todays as m (m.id)}
 					{@const live = m.state === 'upcoming'}
 					<li class="tl-i" class:live>
@@ -273,14 +275,64 @@
 <style>
 	.page {
 		display: grid;
-		gap: 20px;
+		gap: 12px;
 		min-width: 0;
 	}
 	.top {
 		display: flex;
 		align-items: center;
-		gap: 16px;
+		gap: 12px 16px;
 		flex-wrap: wrap;
+	}
+	/* Compact week strip. */
+	.strip :global(.ess-day) {
+		padding-top: 5px;
+		padding-bottom: 5px;
+	}
+	.strip :global(.ess-day strong) {
+		font-size: 16px;
+	}
+	/* Desktop: the split fills the rest of the screen. Today's meetings
+	   take what they need (up to about half), past meetings the rest, and
+	   each scrolls inside its card. */
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.page {
+			display: flex;
+			flex-direction: column;
+		}
+		.main-split {
+			flex: 1 1 0%;
+			min-height: 0;
+		}
+		.main-split .ess-stack {
+			overflow: hidden;
+		}
+		.main-split .ess-stack > .day-card {
+			flex: 0 1 auto;
+			max-height: 55%;
+		}
+		.main-split .ess-stack > .past-card {
+			flex: 1 1 0%;
+			min-height: 120px;
+		}
+		.sched {
+			position: static;
+		}
+		.past-card .table-wrap {
+			margin: 0;
+			padding: 0;
+		}
+		.past thead th {
+			position: sticky;
+			top: 0;
+			z-index: 1;
+		}
+		.past-card .empty,
+		.day-body:has(.rows > .empty:only-child):not(:has(.later)),
+		.tl:has(> .empty:only-child) {
+			display: grid;
+			align-content: center;
+		}
 	}
 	.strip {
 		flex: 1 1 520px;
@@ -306,7 +358,7 @@
 	}
 	.picked-day {
 		font-family: var(--ess-font-display);
-		font-size: 19px;
+		font-size: 16px;
 		font-weight: 500;
 		color: var(--ess-text);
 	}
@@ -331,9 +383,9 @@
 	.m {
 		display: grid;
 		grid-template-columns: 96px minmax(0, 1fr) auto;
-		gap: 18px;
+		gap: 14px;
 		align-items: center;
-		padding: 18px 0;
+		padding: 10px 0;
 		border-bottom: 1px solid var(--ess-border-subtle);
 	}
 	.m:last-child {
@@ -348,7 +400,7 @@
 		align-content: center;
 	}
 	.when strong {
-		font-size: 17px;
+		font-size: 15px;
 		font-weight: 500;
 		font-variant-numeric: tabular-nums;
 	}
@@ -364,9 +416,9 @@
 	.topic {
 		margin: 0;
 		font-family: var(--ess-font-display);
-		font-size: 19px;
+		font-size: 15px;
 		font-weight: 600;
-		line-height: 1.2;
+		line-height: 1.25;
 	}
 	.agenda {
 		margin: 0;
@@ -415,8 +467,8 @@
 		align-items: center;
 	}
 	.later {
-		margin-top: 14px;
-		padding-top: 14px;
+		margin-top: 8px;
+		padding-top: 8px;
 		border-top: 1px solid var(--ess-border);
 	}
 	.later-h {
@@ -428,7 +480,7 @@
 		color: var(--ess-text-muted);
 	}
 	.later-row {
-		padding: 10px 0;
+		padding: 7px 0;
 		cursor: pointer;
 	}
 	.later-row:hover {
@@ -493,7 +545,7 @@
 	}
 	.empty {
 		margin: 0;
-		padding: 22px 0;
+		padding: 14px 0;
 		text-align: center;
 		color: var(--ess-text-muted);
 		font-size: 13.5px;
@@ -515,7 +567,7 @@
 		display: grid;
 		grid-template-columns: 48px 20px minmax(0, 1fr);
 		gap: 0 10px;
-		padding: 12px 8px;
+		padding: 8px 6px;
 		border-radius: var(--ess-radius-md);
 	}
 	.tl-i::before {

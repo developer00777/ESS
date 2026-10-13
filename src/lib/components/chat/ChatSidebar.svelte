@@ -165,11 +165,11 @@
 		display: flex;
 		align-items: center;
 		gap: 2px;
-		padding: 16px 12px 10px 18px;
+		padding: 12px 10px 8px 16px;
 	}
 	.tools .ess-h2 {
 		flex: 1;
-		font-size: 22px;
+		font-size: 18px;
 	}
 	.ess-icon-btn[aria-pressed='true'] {
 		background: var(--ess-primary-soft);

@@ -30,14 +30,14 @@
 
 <svelte:head><title>Today · Champ Hub — Champ HR ESS Portal</title></svelte:head>
 
-<div class="ess-split today">
+<div class="ess-split today hub-fill">
 	<div class="ess-stack">
-		<section class="ess-card" aria-labelledby="needs-h">
+		<section class="ess-card ess-fill-card grow" aria-labelledby="needs-h">
 			<div class="ess-card-head">
 				<h2 id="needs-h" class="ess-h2">Needs you{#if t.needs.length}<span class="n">{t.needs.length}</span>{/if}</h2>
 				<a class="ess-link" href="/hub/tasks">All tasks <ChevronRight size={14} /></a>
 			</div>
-			<div class="ess-rows">
+			<div class="ess-rows ess-scroll body">
 				{#each t.needs as item (item.key)}
 					<NeedCard {item} />
 				{:else}
@@ -46,12 +46,12 @@
 			</div>
 		</section>
 
-		<section class="ess-card" aria-labelledby="week-h">
+		<section class="ess-card ess-fill-card grow" aria-labelledby="week-h">
 			<div class="ess-card-head">
 				<h2 id="week-h" class="ess-h2">Due this week</h2>
 				<a class="ess-link" href="/hub/tasks">View all tasks <ChevronRight size={14} /></a>
 			</div>
-			<ol class="timeline">
+			<ol class="timeline ess-scroll body">
 				{#each t.dueThisWeek as task (task.id)}
 					{@const col = dateCol(task.dueDate)}
 					<li class="tl" data-tone={dueTone(task.dueDate, task.status === 'done')}>
@@ -75,12 +75,12 @@
 			<DayStrip meetings={t.meetingsToday} {dueToday} />
 		</section>
 
-		<section class="ess-card" aria-labelledby="chats-h">
+		<section class="ess-card ess-fill-card grow" aria-labelledby="chats-h">
 			<div class="ess-card-head">
 				<h2 id="chats-h" class="ess-h2">Unread chats</h2>
 				<a class="ess-link" href="/hub/chats">View all chats <ChevronRight size={14} /></a>
 			</div>
-			<div class="ess-rows">
+			<div class="ess-rows ess-scroll body">
 				{#each t.unreadChats as c (c.id)}
 					<a class="ess-row chat" href="/hub/c/{c.id}">
 						<span class="ess-tile ess-tile--sm" class:ess-tile--neutral={c.kind !== 'announcements'}>
@@ -98,21 +98,21 @@
 			</div>
 		</section>
 
-		<section class="ess-card" aria-labelledby="quick-h">
+		<section class="ess-card ess-fill-card fixed" aria-labelledby="quick-h">
 			<div class="ess-card-head">
 				<h2 id="quick-h" class="ess-h2">Quick actions</h2>
 			</div>
 			<div class="quick">
 				<button type="button" class="qa" onclick={() => (hub.newTaskOpen = true)}>
-					<span class="ess-tile ess-tile--sm"><FileText size={17} /></span>
+					<span class="ess-tile ess-tile--sm"><FileText size={16} /></span>
 					<span>Create new task</span>
 				</button>
 				<a class="qa" href="/hub/meetings?schedule=1">
-					<span class="ess-tile ess-tile--sm"><Calendar size={17} /></span>
+					<span class="ess-tile ess-tile--sm"><Calendar size={16} /></span>
 					<span>Schedule a meeting</span>
 				</a>
 				<a class="qa" href={data.hub.isLead ? '/hub/team' : '/team'}>
-					<span class="ess-tile ess-tile--sm"><Users size={17} /></span>
+					<span class="ess-tile ess-tile--sm"><Users size={16} /></span>
 					<span>View team</span>
 				</a>
 			</div>
@@ -141,7 +141,7 @@
 	}
 	.empty {
 		margin: 0;
-		padding: 18px 0;
+		padding: 10px 0;
 		font-size: 13.5px;
 		color: var(--ess-text-muted);
 		list-style: none;
@@ -158,7 +158,7 @@
 		grid-template-columns: 64px 24px minmax(0, 1fr);
 		align-items: center;
 		gap: 0 8px;
-		padding: 8px 0;
+		padding: 5px 0;
 	}
 	.tl::before {
 		content: '';
@@ -210,6 +210,10 @@
 	.tl-row {
 		min-width: 0;
 	}
+	.chat {
+		padding-top: 9px;
+		padding-bottom: 9px;
+	}
 	.chat .ess-row__meta {
 		font-size: 12.5px;
 	}
@@ -231,17 +235,20 @@
 		gap: 10px;
 	}
 	.qa {
-		display: grid;
-		justify-items: center;
-		gap: 8px;
-		padding: 14px 8px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 5px;
+		padding: 8px 6px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-surface);
 		color: var(--ess-text);
 		font: inherit;
-		font-size: 13px;
+		font-size: 12.5px;
 		font-weight: 500;
+		line-height: 1.25;
 		text-align: center;
 		cursor: pointer;
 		transition: border-color var(--ess-t-fast);
@@ -249,6 +256,22 @@
 	.qa:hover {
 		border-color: var(--ess-primary);
 		color: var(--ess-primary-text);
+	}
+	/* Fit the screen: the needs and week cards share the left column, the
+	   chats card takes the free height on the right; each list scrolls. */
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.today .ess-stack > .grow {
+			flex: 1 1 0%;
+			min-height: 110px;
+		}
+		.today .ess-stack > .fixed {
+			flex: 0 0 auto;
+		}
+		.body:has(> .empty:only-child) {
+			display: grid;
+			align-content: center;
+			text-align: center;
+		}
 	}
 	@media (max-width: 720px) {
 		.tl {

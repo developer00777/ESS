@@ -226,8 +226,8 @@
 </div>
 
 {#if tab === 'mine'}
-	<div class="ess-split">
-		<div class="ess-stack">
+	<div class="ess-split ess-fill fill-split">
+		<div class="fill-col">
 			<!-- Balances -->
 			{#if data.allocations.length > 0 || data.monthlyBalances.length > 0}
 				<div class="balances">
@@ -257,7 +257,7 @@
 			{/if}
 
 			<!-- Requests -->
-			<section class="ess-card">
+			<section class="ess-card ess-fill-card grow">
 				<div class="ess-card-head">
 					<h2 class="ess-h2">Leave requests</h2>
 					<select class="ess-select filter" bind:value={filter} aria-label="Filter requests">
@@ -268,7 +268,7 @@
 					</select>
 				</div>
 				{#if visibleApplications.length > 0}
-					<div class="table-wrap">
+					<div class="table-wrap ess-scroll">
 						<table class="ess-table requests">
 							<thead>
 								<tr>
@@ -301,7 +301,7 @@
 						</table>
 					</div>
 				{:else}
-					<div class="ess-empty">
+					<div class="ess-empty fill-empty">
 						<span class="ess-empty__icon"><Calendar size={22} strokeWidth={1.75} /></span>
 						<span class="ess-empty__title">{filter === 'all' ? 'No leave requests yet' : 'Nothing here'}</span>
 						<span>{filter === 'all' ? 'Requests you submit appear here with their progress.' : 'No requests match this filter.'}</span>
@@ -310,12 +310,12 @@
 			</section>
 
 			<!-- Holidays -->
-			<section class="ess-card">
+			<section class="ess-card holidays">
 				<div class="ess-card-head">
 					<h2 class="ess-h2">Upcoming holidays</h2>
 					<button type="button" class="ess-link" onclick={() => (tab = 'calendar')}>View calendar <ChevronRight size={15} /></button>
 				</div>
-				<div class="ess-rows">
+				<div class="ess-rows holiday-strip">
 					{#each upcomingHolidays as h (h.id)}
 						{@const d = parse(h.date)}
 						<div class="ess-row">
@@ -323,8 +323,8 @@
 							<div class="ess-row__body">
 								<span class="ess-row__title">{h.name}</span>
 								<span class="ess-row__meta">{d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+								<span class="hol-type"><span class="ess-badge {h.type === 'restricted' ? 'ess-badge--info' : 'ess-badge--accent'}">{h.type} holiday</span></span>
 							</div>
-							<span class="ess-row__end"><span class="ess-badge {h.type === 'restricted' ? 'ess-badge--info' : 'ess-badge--accent'}">{h.type} holiday</span></span>
 						</div>
 					{:else}
 						<p class="quiet">No holidays published for the rest of the year.</p>
@@ -333,12 +333,13 @@
 			</section>
 		</div>
 
-		<aside class="ess-stack">
+		<aside class="fill-col">
 			<!-- Progress -->
-			<section class="ess-card">
+			<section class="ess-card ess-fill-card grow">
 				<div class="ess-card-head">
 					<h2 class="ess-h2">Request progress</h2>
 				</div>
+				<div class="ess-scroll">
 				{#if selected}
 					<ol class="ess-stepper progress">
 						{#each progress as step (step.label)}
@@ -377,13 +378,17 @@
 						{/if}
 					</dl>
 				{:else}
-					<p class="quiet">Once you apply for leave, its progress from submission to decision shows here.</p>
+					<div class="ess-empty fill-empty">
+						<span class="ess-empty__icon"><Clock size={20} strokeWidth={1.75} /></span>
+						<span>Once you apply for leave, its progress from submission to decision shows here.</span>
+					</div>
 				{/if}
+				</div>
 			</section>
 
 			<!-- Usage -->
 			{#if data.allocations.length > 0 || data.monthlyBalances.length > 0}
-				<section class="ess-card">
+				<section class="ess-card usage-card">
 					<div class="ess-card-head">
 						<h2 class="ess-h2">Leave usage</h2>
 					</div>
@@ -417,7 +422,7 @@
 		</aside>
 	</div>
 {:else if tab === 'calendar'}
-	<section class="calendar-section">
+	<section class="calendar-section ess-fill">
 		<LeaveCalendar
 			holidays={data.calendarHolidays}
 			leaveEvents={calendarLeaveEvents}
@@ -429,9 +434,9 @@
 		/>
 	</section>
 {:else if tab === 'approvals'}
-	<div class="ess-split ess-split--wide approvals">
-		<div class="ess-stack">
-			<section class="ess-card">
+	<div class="ess-split ess-split--wide ess-fill fill-split approvals">
+		<div class="fill-col">
+			<section class="ess-card ess-fill-card grow">
 				<div class="ess-card-head">
 					<div>
 						<h2 class="ess-h2">Awaiting your review</h2>
@@ -440,7 +445,7 @@
 						</p>
 					</div>
 				</div>
-				<div class="ess-rows">
+				<div class="ess-rows ess-scroll queue-list">
 					{#each queueSorted as row (row.application.id)}
 						<button type="button" class="ess-row queue-row" class:ess-row--selected={queueSelected?.application.id === row.application.id} onclick={() => { queuePickedId = row.application.id; showReject = false; rejectNote = ''; }}>
 							<Avatar userId={row.applicant.id} fullName={row.applicant.fullName} hasPicture={row.applicantHasPicture} size="md" />
@@ -458,7 +463,7 @@
 							</span>
 						</button>
 					{:else}
-						<div class="ess-empty">
+						<div class="ess-empty fill-empty">
 							<span class="ess-empty__icon"><CircleCheck size={22} strokeWidth={1.75} /></span>
 							<span class="ess-empty__title">Nothing waiting</span>
 							<span>Requests from the people you review will appear here.</span>
@@ -468,7 +473,7 @@
 			</section>
 
 			{#if data.canReverseDecisions}
-				<section class="ess-card">
+				<section class="ess-card ess-fill-card grow">
 					<div class="ess-card-head">
 						<h2 class="ess-h2">Recent decisions</h2>
 					</div>
@@ -478,7 +483,7 @@
 					{#if reversalError}
 						<p class="ess-error">{reversalError}</p>
 					{/if}
-					<div class="ess-rows">
+					<div class="ess-rows ess-scroll">
 						{#each data.decidedQueue as row (row.application.id)}
 							{@const status = row.application.status}
 							<div class="ess-row">
@@ -508,15 +513,16 @@
 								</span>
 							</div>
 						{:else}
-							<p class="quiet">Nothing decided yet.</p>
+							<p class="quiet fill-empty">Nothing decided yet.</p>
 						{/each}
 					</div>
 				</section>
 			{/if}
 		</div>
 
-		<aside class="ess-stack">
-			<section class="ess-card detail">
+		<aside class="fill-col">
+			<section class="ess-card ess-fill-card grow detail-card">
+				<div class="ess-scroll detail">
 				{#if queueSelected}
 					{@const r = queueSelected}
 					{@const after = r.balanceBefore != null ? Math.round((r.balanceBefore - Number(r.application.days)) * 100) / 100 : null}
@@ -589,12 +595,13 @@
 						</label>
 					{/if}
 				{:else}
-					<div class="ess-empty">
+					<div class="ess-empty fill-empty">
 						<span class="ess-empty__icon"><User size={22} strokeWidth={1.75} /></span>
 						<span class="ess-empty__title">Pick a request</span>
 						<span>Its balance, reason and dates show here.</span>
 					</div>
 				{/if}
+				</div>
 			</section>
 		</aside>
 	</div>
@@ -602,20 +609,138 @@
 
 <style>
 	.page-tabs {
-		margin-bottom: var(--ess-space-5);
+		margin-bottom: 12px;
+		align-self: flex-start;
+	}
+	.holiday-strip > .quiet {
+		grid-column: 1 / -1;
+	}
+	p.fill-empty {
+		text-align: center;
+	}
+
+	/* ---------- fit-to-screen layout ----------
+	   Each column is a flex stack: natural-height cards, plus one .grow card
+	   that takes the rest of the height and scrolls its list inside. */
+	.fill-col {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		min-width: 0;
+	}
+	.fill-empty {
+		padding: 20px 16px;
+	}
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.fill-split {
+			grid-template-rows: minmax(0, 1fr);
+		}
+		.fill-col {
+			min-height: 0;
+		}
+		.fill-col > .grow {
+			flex: 1 1 0%;
+			min-height: 150px;
+		}
+		.fill-col > :not(.grow) {
+			flex: none;
+		}
+		/* An empty list centres its message in the space it was given. */
+		.grow .ess-scroll:not(.table-wrap):not(.detail) {
+			display: flex;
+			flex-direction: column;
+		}
+		.grow .fill-empty {
+			margin: auto 0;
+		}
+		.calendar-section {
+			display: flex;
+			flex-direction: column;
+			min-height: 0;
+		}
 	}
 
 	.balances {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-		gap: 14px;
+		grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+		gap: 10px;
+	}
+	.balances .ess-metric {
+		padding: 10px 14px;
+		gap: 12px;
+		align-items: center;
+	}
+	.balances .ess-tile {
+		width: 36px;
+		height: 36px;
+	}
+	.balances .ess-metric__value {
+		font-size: 19px;
+	}
+	.balances .ess-metric__label {
+		font-size: 12.5px;
+	}
+	.balances .ess-metric__meta {
+		font-size: 11.5px;
 	}
 
 	.filter {
 		width: auto;
-		min-width: 140px;
-		padding-top: 7px;
-		padding-bottom: 7px;
+		min-width: 130px;
+		padding-top: 5px;
+		padding-bottom: 5px;
+		font-size: 13px;
+	}
+	.requests th,
+	.requests td {
+		padding-top: 8px;
+		padding-bottom: 8px;
+	}
+	.requests thead th {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		background: var(--ess-surface);
+	}
+	.type-cell .ess-tile--sm {
+		width: 30px;
+		height: 30px;
+	}
+
+	/* Up to four upcoming holidays sit side by side rather than stacking. */
+	.holiday-strip {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+		gap: 8px;
+	}
+	.holiday-strip .ess-row {
+		padding: 6px 8px;
+		gap: 10px;
+		border: 1px solid var(--ess-border-subtle);
+		border-radius: var(--ess-radius-md);
+	}
+	.holiday-strip .ess-row:last-child {
+		border-bottom: 1px solid var(--ess-border-subtle);
+	}
+	.holiday-strip .ess-date-tile {
+		width: 42px;
+		padding: 4px 0;
+	}
+	.holiday-strip .ess-date-tile strong {
+		font-size: 16px;
+	}
+	.holiday-strip .ess-row__title {
+		font-size: 13.5px;
+	}
+	.holiday-strip .ess-row__meta {
+		font-size: 12px;
+	}
+	.hol-type {
+		display: flex;
+		margin-top: 2px;
+	}
+	.hol-type .ess-badge {
+		text-transform: capitalize;
 	}
 
 	.table-wrap {
@@ -668,29 +793,37 @@
 	}
 
 	.progress {
-		margin: 4px 0 22px;
+		margin: 2px 0 14px;
 	}
 	.selected-head {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 10px;
-		margin-bottom: 12px;
-		padding-top: 16px;
+		margin-bottom: 10px;
+		padding-top: 12px;
 		border-top: 1px solid var(--ess-border-subtle);
 	}
 	.selected-head .ess-h3 {
 		font-family: var(--ess-font-display);
-		font-size: 17px;
+		font-size: 15px;
 	}
 	.selected-summary {
 		display: flex;
 		align-items: center;
-		gap: 14px;
-		padding: 14px;
+		gap: 12px;
+		padding: 10px 12px;
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-primary-softer);
-		margin-bottom: 16px;
+		margin-bottom: 12px;
+	}
+	.selected-summary .ess-tile {
+		width: 36px;
+		height: 36px;
+	}
+	.progress + .selected-head + .selected-summary + :global(.ess-kv) {
+		row-gap: 7px;
+		font-size: 13px;
 	}
 	.selected-summary > div {
 		display: grid;
@@ -707,22 +840,30 @@
 
 	.usage {
 		display: grid;
-		gap: 16px;
+		gap: 10px;
 	}
 	.usage-row {
 		display: flex;
 		align-items: center;
-		gap: 14px;
+		gap: 12px;
+	}
+	.usage-row .ess-tile--sm {
+		width: 30px;
+		height: 30px;
 	}
 	.usage-body {
 		flex: 1;
 		min-width: 0;
 		display: grid;
-		gap: 8px;
+		gap: 5px;
 	}
 	.usage-label {
-		font-size: 14px;
+		font-size: 13px;
 		font-weight: 500;
+	}
+	.usage-card {
+		max-height: 40%;
+		overflow: auto;
 	}
 	.usage-count {
 		flex: none;
@@ -748,7 +889,16 @@
 		box-shadow: inset 3px 0 0 var(--ess-primary);
 	}
 	.dates {
-		flex: 0 0 200px;
+		flex: 0 0 170px;
+	}
+	.queue-list .queue-row,
+	.approvals .ess-row {
+		padding-top: 9px;
+		padding-bottom: 9px;
+	}
+	.queue-list {
+		margin: 0 -12px;
+		padding: 0 12px;
 	}
 	.queue-row :global(.chev-icon) {
 		color: var(--ess-text-muted);
@@ -768,28 +918,33 @@
 
 	.detail {
 		display: grid;
-		gap: 18px;
+		gap: 12px;
+		align-content: start;
+	}
+	.detail:has(> .fill-empty) {
+		display: flex;
+		flex-direction: column;
 	}
 	.detail-head {
 		display: flex;
 		align-items: center;
-		gap: 16px;
-		padding-bottom: 16px;
+		gap: 12px;
+		padding-bottom: 12px;
 		border-bottom: 1px solid var(--ess-border-subtle);
 	}
 	.detail-name {
 		display: grid;
-		gap: 4px;
+		gap: 2px;
 		min-width: 0;
 	}
 	.detail-name .ess-h2 {
-		font-size: 24px;
+		font-size: 18px;
 	}
 
 	.facts {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-		gap: 14px;
+		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+		gap: 10px;
 	}
 	.fact {
 		display: grid;
@@ -801,7 +956,7 @@
 		border-right: none;
 	}
 	.fact strong {
-		font-size: 14.5px;
+		font-size: 13.5px;
 		font-weight: 500;
 	}
 	.fact small {
@@ -818,19 +973,19 @@
 
 	.panels {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-		gap: 14px;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 10px;
 	}
 	.panel {
-		padding: 16px;
+		padding: 10px 12px;
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-sunken);
 		display: grid;
-		gap: 10px;
+		gap: 6px;
 		align-content: start;
 	}
 	.panel-title {
-		font-size: 14px;
+		font-size: 13px;
 		font-weight: 500;
 	}
 	.balance-flow {
@@ -847,7 +1002,7 @@
 	}
 	.big {
 		font-family: var(--ess-font-display);
-		font-size: 24px;
+		font-size: 19px;
 		font-weight: 600;
 		line-height: 1.1;
 	}
@@ -859,7 +1014,7 @@
 		color: var(--ess-text-muted);
 	}
 	.reason {
-		font-size: 14px;
+		font-size: 13px;
 		color: var(--ess-text-secondary);
 		line-height: 1.5;
 	}
@@ -867,7 +1022,7 @@
 	.stage {
 		display: grid;
 		gap: 4px;
-		padding: 14px 0;
+		padding: 10px 0;
 		border-top: 1px solid var(--ess-border-subtle);
 		border-bottom: 1px solid var(--ess-border-subtle);
 	}
@@ -878,8 +1033,7 @@
 		gap: 10px;
 	}
 	.decide .ess-btn {
-		height: 46px;
-		padding: 0 22px;
+		padding: 0 18px;
 	}
 
 	@media (max-width: 720px) {

@@ -274,7 +274,16 @@
 	.balance {
 		display: flex;
 		align-items: center;
-		gap: 14px;
+		gap: 12px;
+	}
+	.balance .ess-tile {
+		width: 36px;
+		height: 36px;
+	}
+	.balance .ess-btn {
+		height: 32px;
+		padding: 0 12px;
+		font-size: 13px;
 	}
 	.balance-body {
 		flex: 1;
@@ -284,20 +293,21 @@
 	}
 	.balance-body strong {
 		font-family: var(--ess-font-display);
-		font-size: 26px;
+		font-size: 20px;
 		font-weight: 600;
 		line-height: 1.1;
+		white-space: nowrap;
 	}
 	.balance-body span {
-		font-size: 13px;
+		font-size: 12px;
 		color: var(--ess-text-secondary);
 	}
 
 	.claim-form {
 		display: grid;
-		gap: 12px;
-		margin-top: 16px;
-		padding: 14px 16px;
+		gap: 10px;
+		margin-top: 12px;
+		padding: 12px 14px;
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-sunken);
 	}
@@ -337,11 +347,11 @@
 	}
 
 	.credits {
-		margin-top: 12px;
+		margin-top: 10px;
 		border-top: 1px solid var(--ess-border);
 	}
 	.credit {
-		padding: 11px 0;
+		padding: 7px 0;
 	}
 	.hrs {
 		font-weight: 400;

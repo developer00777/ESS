@@ -498,16 +498,15 @@
 							<span class="day-number">
 								{cell.date}{#if cell.showMonth}<span class="day-month">{cell.monthShort}</span>{/if}
 							</span>
+							<!-- The day's status as one dot, as in the mockup; the marker letter
+							     bottom-right keeps the exact code (P / H / EL / SL …). -->
+							<span class="status-dot" data-tone={status.tone} aria-hidden="true"></span>
 							<span class="day-dots">
 								{#if rec?.source === 'manual' && rec.checkInAt}<i class="dot dot-portal" title="Portal"></i>{/if}
 								{#if punch || rec?.source === 'biometric'}<i class="dot dot-biometric" title="Biometric"></i>{/if}
 								{#if prohanceByDate.get(cell.key)?.firstLogin}<i class="dot dot-prohance" title="ProHance"></i>{/if}
 							</span>
 						</span>
-
-						<!-- The day's status as one dot, as in the mockup; the marker letter
-						     bottom-right keeps the exact code (P / H / EL / SL …). -->
-						<span class="status-dot" data-tone={status.tone} aria-hidden="true"></span>
 
 						<!-- In-time, ProHance activity, out-time on one row. An overnight
 						     shift shows its own span on the start date; the morning it ends
@@ -750,7 +749,46 @@
 
 <style>
 	.calendar-box {
-		padding: 18px 20px 16px;
+		padding: 12px 16px;
+	}
+
+	/* Fit-to-screen: the page gives the calendar / records card the
+	   column's spare height (flex: 1); the weeks share that height, and the
+	   records table scrolls inside the card under a sticky header. */
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.calendar-box,
+		.records-box {
+			display: flex;
+			flex-direction: column;
+			min-height: 0;
+		}
+		.calendar-box > :not(.month-grid),
+		.records-box > :not(.table-wrap) {
+			flex: none;
+		}
+		.calendar-box .month-grid {
+			flex: 1 1 0%;
+			min-height: 0;
+			grid-auto-rows: minmax(54px, 1fr);
+			overflow: auto;
+			scrollbar-width: thin;
+		}
+		.calendar-box .day-cell {
+			min-height: 0;
+		}
+		.records-box .table-wrap {
+			flex: 1 1 0%;
+			min-height: 0;
+			overflow: auto;
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+		}
+		.records thead th {
+			position: sticky;
+			top: 0;
+			z-index: 1;
+			background: var(--ess-surface);
+		}
 	}
 
 	/* A 7-column month grid can't compress below ~300px and stay legible,
@@ -775,7 +813,7 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 12px;
-		margin-bottom: 14px;
+		margin-bottom: 10px;
 	}
 
 	.month-nav {
@@ -786,7 +824,7 @@
 
 	.month-label {
 		font-family: var(--ess-font-display);
-		font-size: 22px;
+		font-size: 18px;
 		font-weight: 600;
 		color: var(--ess-text);
 		white-space: nowrap;
@@ -808,8 +846,8 @@
 	}
 
 	.nav-btn {
-		width: 32px;
-		height: 32px;
+		width: 30px;
+		height: 30px;
 	}
 
 	.weekday-row {
@@ -823,8 +861,8 @@
 
 	.weekday {
 		text-align: center;
-		padding: 9px 0;
-		font-size: 13px;
+		padding: 5px 0;
+		font-size: 12px;
 		font-weight: 500;
 		color: var(--ess-text-secondary);
 	}
@@ -844,14 +882,14 @@
 	}
 
 	.day-cell {
-		min-height: 82px;
+		min-height: 62px;
 		border: none;
 		background: var(--ess-surface);
-		padding: 8px 9px 6px;
+		padding: 4px 6px;
 		display: flex;
 		flex-direction: column;
 		align-items: stretch;
-		gap: 3px;
+		gap: 1px;
 		cursor: pointer;
 		text-align: left;
 		overflow: hidden;
@@ -892,12 +930,15 @@
 	.day-head {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		gap: 4px;
+		gap: 5px;
+		line-height: 16px;
+	}
+	.day-head .day-dots {
+		margin-left: auto;
 	}
 
 	.day-number {
-		font-size: 14px;
+		font-size: 13px;
 		font-weight: 500;
 		color: var(--ess-text);
 	}
@@ -937,8 +978,8 @@
 	.status-dot,
 	.sdot {
 		display: inline-block;
-		width: 9px;
-		height: 9px;
+		width: 8px;
+		height: 8px;
 		border-radius: 50%;
 		background: transparent;
 		flex-shrink: 0;
@@ -981,7 +1022,8 @@
 		color: var(--ess-text-secondary);
 		font-variant-numeric: tabular-nums;
 		white-space: nowrap;
-		min-height: 14px;
+		min-height: 13px;
+		line-height: 13px;
 	}
 	.t-in {
 		justify-self: start;
@@ -1010,7 +1052,7 @@
 		align-items: flex-end;
 		justify-content: space-between;
 		gap: 4px;
-		min-height: 16px;
+		min-height: 15px;
 	}
 
 	.cell-middle {
@@ -1066,7 +1108,7 @@
 		font-weight: 700;
 		line-height: 1;
 		letter-spacing: 0.02em;
-		padding: 3px 5px;
+		padding: 2px 4px;
 		border-radius: 4px;
 		font-variant-numeric: tabular-nums;
 		flex-shrink: 0;
@@ -1102,16 +1144,16 @@
 
 	.legend {
 		display: flex;
-		gap: 6px 18px;
-		margin-top: 14px;
+		gap: 4px 14px;
+		margin-top: 8px;
 		flex-wrap: wrap;
 		align-items: center;
 	}
 	.legend-item {
 		display: inline-flex;
 		align-items: center;
-		gap: 7px;
-		font-size: 12.5px;
+		gap: 6px;
+		font-size: 11.5px;
 		color: var(--ess-text-secondary);
 	}
 	.legend-sep {
@@ -1122,20 +1164,24 @@
 
 	/* ---------- records table ---------- */
 	.records-box {
-		padding: 18px 20px 8px;
+		padding: 12px 16px 4px;
 	}
 	.table-wrap {
-		margin: 0 -20px;
+		margin: 0 -16px;
 		overflow-x: auto;
 		overscroll-behavior-x: contain;
 	}
 	.records th:first-child,
 	.records td:first-child {
-		padding-left: 20px;
+		padding-left: 16px;
 	}
 	.records th:last-child,
 	.records td:last-child {
-		padding-right: 20px;
+		padding-right: 16px;
+	}
+	.records th {
+		padding-top: 8px;
+		padding-bottom: 8px;
 	}
 	.records tbody tr {
 		cursor: pointer;
@@ -1147,8 +1193,9 @@
 		color: var(--ess-text-muted);
 	}
 	.records td {
-		padding-top: 11px;
-		padding-bottom: 11px;
+		padding-top: 6px;
+		padding-bottom: 6px;
+		font-size: 13px;
 	}
 	.c-date {
 		font-weight: 500;
@@ -1177,6 +1224,11 @@
 	.c-act {
 		white-space: nowrap;
 	}
+	.c-act .ess-btn {
+		height: 26px;
+		padding: 0 10px;
+		font-size: 12px;
+	}
 	.muted {
 		color: var(--ess-text-muted);
 	}
@@ -1186,18 +1238,18 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 12px;
-		padding-bottom: 14px;
-		margin-bottom: 6px;
+		gap: 10px;
+		padding-bottom: 10px;
+		margin-bottom: 2px;
 		border-bottom: 1px solid var(--ess-border);
 	}
 	.detail-head .ess-h2 {
-		font-size: 22px;
+		font-size: 16px;
 	}
 
 	.punches {
 		list-style: none;
-		margin: 0 0 14px;
+		margin: 0 0 8px;
 		padding: 0;
 		display: grid;
 	}
@@ -1207,7 +1259,7 @@
 		grid-template-columns: 48px 20px minmax(0, 1fr) auto;
 		align-items: center;
 		gap: 0 12px;
-		padding: 12px 0;
+		padding: 4px 0;
 	}
 	.punch::before {
 		content: '';
@@ -1225,7 +1277,7 @@
 		bottom: 50%;
 	}
 	.p-time {
-		font-size: 14px;
+		font-size: 13px;
 		color: var(--ess-text-secondary);
 		font-variant-numeric: tabular-nums;
 	}
@@ -1254,11 +1306,11 @@
 		min-width: 0;
 	}
 	.p-body strong {
-		font-size: 15px;
+		font-size: 13.5px;
 		font-weight: 500;
 	}
 	.p-body small {
-		font-size: 13px;
+		font-size: 12px;
 		color: var(--ess-text-secondary);
 	}
 
@@ -1275,15 +1327,15 @@
 		display: grid;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
-		margin-bottom: 14px;
+		margin-bottom: 10px;
 	}
 	.source-row {
 		display: grid;
-		grid-template-columns: 110px 1fr;
+		grid-template-columns: 104px 1fr;
 		gap: 10px;
 		align-items: baseline;
-		padding: 9px 12px;
-		font-size: 13px;
+		padding: 5px 10px;
+		font-size: 12.5px;
 	}
 	.source-row:not(:last-child) {
 		border-bottom: 1px solid var(--ess-border-subtle);
@@ -1322,19 +1374,29 @@
 
 	.detail-box .ess-notice {
 		flex-wrap: wrap;
+		align-items: flex-start;
+		gap: 6px 10px;
+		padding: 8px 10px;
+		font-size: 12.5px;
+	}
+	.detail-box .ess-notice :global(.ess-notice__body) {
+		flex: 1 1 200px;
 	}
 	.detail-box .ess-notice .ess-btn {
 		margin-left: auto;
+		height: 30px;
+		padding: 0 12px;
+		font-size: 12.5px;
 	}
 
 	.detail-empty {
 		display: grid;
 		justify-items: center;
-		gap: 10px;
-		padding: 24px 0;
+		gap: 8px;
+		padding: 12px 0;
 		text-align: center;
 		color: var(--ess-text-muted);
-		font-size: 13.5px;
+		font-size: 13px;
 	}
 	.detail-empty p {
 		margin: 0;

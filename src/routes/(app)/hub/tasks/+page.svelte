@@ -122,8 +122,8 @@
 
 <svelte:head><title>Tasks · Champ Hub — Champ HR ESS Portal</title></svelte:head>
 
-<div class="page">
-	<div class="ess-figures">
+<div class="page hub-fill">
+	<div class="ess-figures figs">
 		<div class="ess-figure">
 			<span class="ess-figure__dot" class:ess-figure__dot--bad={stats.overdue > 0} class:ess-figure__dot--neutral={stats.overdue === 0}></span>
 			<div><div class="ess-figure__value">{stats.overdue}</div><div class="ess-figure__label">Overdue</div></div>
@@ -142,7 +142,7 @@
 		</div>
 	</div>
 
-	<section class="ess-card board-card" aria-labelledby="tasks-h">
+	<section class="ess-card board-card ess-fill-card" aria-labelledby="tasks-h">
 		<header class="toolbar">
 			<h2 id="tasks-h" class="ess-h2">My tasks</h2>
 			<div class="ess-segmented" role="group" aria-label="View">
@@ -190,7 +190,7 @@
 				{/snippet}
 			</TaskBoard>
 		{:else}
-			<div class="list">
+			<div class="list ess-scroll">
 				<form class="quick" onsubmit={add}>
 					<Plus size={15} />
 					<input class="quick-input" bind:value={quick} placeholder="Add a task for yourself" aria-label="New task title" />
@@ -222,13 +222,70 @@
 <style>
 	.page {
 		display: grid;
-		gap: 20px;
+		gap: 12px;
 		min-width: 0;
+	}
+	.figs .ess-figure {
+		padding: 10px 16px;
+		gap: 12px;
+	}
+	.figs :global(.ess-figure__value) {
+		font-size: 20px;
+	}
+	.figs :global(.ess-figure__label) {
+		font-size: 12.5px;
 	}
 	.board-card {
 		display: grid;
-		gap: 14px;
+		gap: 10px;
 		min-width: 0;
+	}
+	/* Desktop: the card fills the rest of the screen; the list (or each
+	   board column) scrolls inside it instead of growing the page. */
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.page {
+			display: flex;
+			flex-direction: column;
+		}
+		.board-card {
+			display: flex;
+			flex: 1 1 0%;
+		}
+		.board-card > :global(.board-wrap) {
+			flex: 1 1 0%;
+			min-height: 0;
+			display: flex;
+			flex-direction: column;
+		}
+		.board-card :global(.board) {
+			flex: 1 1 0%;
+			min-height: 0;
+			align-items: stretch;
+			padding-bottom: 4px;
+		}
+		.board-card :global(.col) {
+			min-height: 0;
+		}
+		.board-card :global([data-zone-list]) {
+			flex: 1 1 0%;
+			min-height: 0;
+			overflow-y: auto;
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+			margin: 0 -4px;
+			padding: 0 4px 2px;
+		}
+		.list {
+			align-content: start;
+			padding-right: 2px;
+		}
+		.list:has(> .empty) {
+			grid-template-rows: auto minmax(0, 1fr);
+		}
+		.list:has(> .empty) .empty {
+			display: grid;
+			place-items: center;
+		}
 	}
 	.toolbar {
 		display: flex;
@@ -259,7 +316,7 @@
 		align-items: center;
 		gap: 10px;
 		padding: 0 12px;
-		height: 40px;
+		height: 36px;
 		border: 1px dashed var(--ess-border-strong);
 		border-radius: var(--ess-radius-md);
 		color: var(--ess-text-muted);
@@ -285,7 +342,7 @@
 	}
 	.list {
 		display: grid;
-		gap: 22px;
+		gap: 14px;
 	}
 	.grp {
 		display: grid;
@@ -296,10 +353,10 @@
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		padding-bottom: 10px;
+		padding-bottom: 6px;
 		border-bottom: 1px solid var(--ess-border);
 		font-family: var(--ess-font-display);
-		font-size: 19px;
+		font-size: 15px;
 		font-weight: 600;
 		color: var(--ess-text);
 	}

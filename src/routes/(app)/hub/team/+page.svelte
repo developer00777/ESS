@@ -114,7 +114,7 @@
 
 <svelte:head><title>Team · Champ Hub — Champ HR ESS Portal</title></svelte:head>
 
-<div class="page">
+<div class="page hub-fill" class:board-view={view === 'board' && data.lanes.length > 0}>
 	<div class="toolbar">
 		<label class="team-pick">
 			<span class="lbl">Team</span>
@@ -155,7 +155,9 @@
 	{/if}
 
 	{#if data.lanes.length === 0}
-		<p class="empty">Nobody reports to {data.leadId === meId ? 'you' : data.leadName} in ESS yet. Reporting lines come from Admin Controls › People.</p>
+		<div class="ess-card none-card">
+			<p class="empty">Nobody reports to {data.leadId === meId ? 'you' : data.leadName} in ESS yet. Reporting lines come from Admin Controls › People.</p>
+		</div>
 	{:else if view === 'board'}
 		<p class="ess-help">Drag a card to another person to give it to them, or focus one and press Alt + ← / →. They hear about it in Champ Hub; Undo is there for a few seconds.</p>
 		<TaskBoard {columns} {meId} ondrop={drop} onkeymove={keymove}>
@@ -180,9 +182,9 @@
 			{/snippet}
 		</TaskBoard>
 	{:else}
-		<div class="ess-split">
+		<div class="ess-split main-split">
 			<div class="ess-stack">
-				<div class="ess-figures">
+				<div class="ess-figures figs">
 					<div class="ess-figure">
 						<span class="ess-tile"><ListChecks size={20} strokeWidth={1.75} /></span>
 						<div><div class="ess-figure__value">{figures.active}</div><div class="ess-figure__label">active tasks</div></div>
@@ -197,7 +199,7 @@
 					</div>
 				</div>
 
-				<section class="ess-card" aria-labelledby="work-h">
+				<section class="ess-card ess-fill-card work-card" aria-labelledby="work-h">
 					<div class="ess-card-head">
 						<h2 id="work-h" class="ess-h2">Team workload</h2>
 						<button type="button" class="ess-link" onclick={() => (view = 'board')}>Open the board <ChevronRight size={14} /></button>
@@ -206,7 +208,7 @@
 					<div class="wl-head" aria-hidden="true">
 						<span>Team member</span><span>Progress</span><span class="c">Assigned</span><span class="c">In progress</span><span class="c">Done</span><span></span>
 					</div>
-					<div class="wl">
+					<div class="wl ess-scroll">
 						{#each people as l (l.id)}
 							{@const n = open(l).length}
 							{@const c = counts(l)}
@@ -265,12 +267,12 @@
 					</div>
 				</section>
 
-				<section class="ess-card" aria-labelledby="dl-h">
+				<section class="ess-card ess-fill-card dl-card" aria-labelledby="dl-h">
 					<div class="ess-card-head">
 						<h2 id="dl-h" class="ess-h2">Upcoming deadlines</h2>
 						<a class="ess-link" href="/hub/tasks">All tasks <ChevronRight size={14} /></a>
 					</div>
-					<ol class="tl">
+					<ol class="tl ess-scroll">
 						{#each deadlines as t (t.id)}
 							{@const col = dateCol(t.dueDate!)}
 							{@const left = daysLeft(t.dueDate!)}
@@ -291,11 +293,11 @@
 				</section>
 			</div>
 
-			<aside class="ess-card" aria-labelledby="rev-h">
+			<aside class="ess-card ess-fill-card" aria-labelledby="rev-h">
 				<div class="ess-card-head">
 					<h2 id="rev-h" class="ess-h2">Needs review{#if review.length}<span class="n">{review.length}</span>{/if}</h2>
 				</div>
-				<div class="ess-rows">
+				<div class="ess-rows ess-scroll rev-body">
 					{#each review as t (t.id)}
 						<button type="button" class="ess-row rev" onclick={() => hub.openTask(t.id)}>
 							<span class="ess-tile ess-tile--sm" class:ess-tile--warn={t.can.approve}><ListChecks size={16} /></span>
@@ -320,8 +322,84 @@
 <style>
 	.page {
 		display: grid;
-		gap: 18px;
+		gap: 12px;
 		min-width: 0;
+	}
+	.figs .ess-figure {
+		padding: 10px 16px;
+		gap: 12px;
+	}
+	.figs .ess-tile {
+		width: 34px;
+		height: 34px;
+	}
+	.figs :global(.ess-figure__value) {
+		font-size: 20px;
+	}
+	.figs :global(.ess-figure__label) {
+		font-size: 12.5px;
+	}
+	/* Desktop: everything fits the screen. The workload list and the
+	   deadlines share the left column, review fills the right, and each
+	   list scrolls inside its card. The board's columns scroll too. */
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.page {
+			display: flex;
+			flex-direction: column;
+		}
+		.none-card,
+		.main-split {
+			flex: 1 1 0%;
+			min-height: 0;
+		}
+		.none-card {
+			display: grid;
+			place-items: center;
+		}
+		.main-split .ess-stack {
+			overflow: hidden;
+		}
+		.main-split .ess-stack > .work-card {
+			flex: 1.4 1 0%;
+			min-height: 140px;
+		}
+		.main-split .ess-stack > .dl-card {
+			flex: 1 1 0%;
+			min-height: 120px;
+		}
+		.board-view > :global(.board-wrap) {
+			flex: 1 1 0%;
+			min-height: 0;
+			display: flex;
+			flex-direction: column;
+		}
+		.board-view :global(.board) {
+			flex: 1 1 0%;
+			min-height: 0;
+			align-items: stretch;
+			padding-bottom: 4px;
+		}
+		.board-view :global(.col) {
+			min-height: 0;
+		}
+		.board-view :global([data-zone-list]) {
+			flex: 1 1 0%;
+			min-height: 0;
+			overflow-y: auto;
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+			margin: 0 -4px;
+			padding: 0 4px 2px;
+		}
+		.wl,
+		.tl {
+			align-content: start;
+		}
+		.tl:has(> .empty:only-child),
+		.rev-body:has(> .empty:only-child) {
+			display: grid;
+			align-content: center;
+		}
 	}
 	.toolbar {
 		display: flex;
@@ -477,7 +555,7 @@
 		font-variant-numeric: tabular-nums;
 	}
 	.counts-note {
-		margin: -6px 0 12px;
+		margin: -4px 0 6px;
 	}
 	.wl-head,
 	.wl-row {
@@ -506,7 +584,7 @@
 	}
 	.wl-row {
 		width: 100%;
-		padding: 12px 0;
+		padding: 7px 0;
 		border: 0;
 		background: none;
 		font: inherit;
@@ -578,8 +656,7 @@
 		vertical-align: middle;
 	}
 	.rev {
-		padding-left: 0;
-		padding-right: 0;
+		padding: 9px 0;
 	}
 	.when {
 		font-size: 12.5px;
@@ -597,7 +674,7 @@
 		grid-template-columns: 64px 20px minmax(0, 1fr) auto auto;
 		align-items: center;
 		gap: 0 12px;
-		padding: 10px 0;
+		padding: 6px 0;
 	}
 	.tl-i::before {
 		content: '';
@@ -669,7 +746,7 @@
 	}
 	.empty {
 		margin: 0;
-		padding: 22px 0;
+		padding: 14px 0;
 		text-align: center;
 		color: var(--ess-text-muted);
 		font-size: 13.5px;

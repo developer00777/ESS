@@ -77,7 +77,7 @@
 	<title>Data cleanup — Champ HR ESS Portal</title>
 </svelte:head>
 
-<div class="ess-split">
+<div class="ess-split ess-fill cleanup">
 	<div class="ess-stack">
 		<div class="ess-notice">
 			<span class="ess-notice__icon"><AlertTriangle size={16} /></span>
@@ -87,13 +87,13 @@
 			</span>
 		</div>
 
-		<section class="ess-card">
+		<section class="ess-card ess-fill-card opts-card">
 			<div class="ess-card-head">
 				<h2 class="ess-h2">Select data to delete</h2>
 			</div>
 			<p class="ess-caption">Choose one or more kinds of data to permanently remove from Champ HR.</p>
 
-			<div class="ess-rows opts">
+			<div class="ess-rows opts ess-scroll">
 				<label class="ess-row opt">
 					<input type="checkbox" class="box" bind:checked={seededLeaveTypes} />
 					<span class="ess-tile"><Calendar size={20} strokeWidth={1.75} /></span>
@@ -159,7 +159,7 @@
 	</div>
 
 	<aside class="ess-stack">
-		<section class="ess-card">
+		<section class="ess-card ess-fill-card summary-card">
 			<div class="ess-card-head">
 				<h2 class="ess-h2">Selection summary</h2>
 			</div>
@@ -170,7 +170,7 @@
 					<p class="ess-caption">Choose one or more data types on the left to see a summary here.</p>
 				</div>
 			{:else}
-				<ul class="chosen">
+				<ul class="chosen ess-scroll">
 					{#each chosen as c (c.label)}
 						<li><span>{c.label}</span><strong class="ess-num">{fmt(c.count)}</strong></li>
 					{/each}
@@ -186,7 +186,7 @@
 			</div>
 		</section>
 
-		<section class="ess-card">
+		<section class="ess-card confirm-card">
 			<div class="ess-card-head">
 				<h2 class="ess-h2">Type DELETE to confirm</h2>
 			</div>
@@ -212,35 +212,47 @@
 </div>
 
 <style>
+	.cleanup {
+		--ess-aside-width: 340px;
+	}
+	.cleanup > .ess-stack > .ess-notice {
+		padding: 10px 14px;
+		gap: 12px;
+		font-size: 13px;
+	}
 	.opts {
-		margin-top: 10px;
+		margin-top: 6px;
 	}
 	.opt {
 		align-items: flex-start;
-		padding: 18px 0;
+		gap: 12px;
+		padding: 10px 0;
 		cursor: pointer;
 	}
 	.opt:hover {
 		background: transparent;
 	}
 	.box {
-		margin-top: 12px;
-		width: 18px;
-		height: 18px;
+		margin-top: 9px;
+		width: 16px;
+		height: 16px;
 		accent-color: var(--ess-danger);
 		flex: none;
 	}
 	.opt .ess-tile {
-		margin-top: 2px;
+		width: 34px;
+		height: 34px;
+		border-radius: var(--ess-radius-sm);
 	}
 	.title {
 		font-family: var(--ess-font-display);
-		font-size: 18px;
+		font-size: 14.5px;
 		font-weight: 600;
-		line-height: 1.2;
+		line-height: 1.25;
 	}
 	.hint {
-		font-size: 13.5px;
+		font-size: 12.5px;
+		line-height: 1.45;
 		color: var(--ess-text-secondary);
 		white-space: normal;
 	}
@@ -252,40 +264,45 @@
 		flex: none;
 		display: grid;
 		justify-items: end;
-		min-width: 72px;
+		min-width: 64px;
 		text-align: right;
 	}
 	.count strong {
 		font-family: var(--ess-font-display);
-		font-size: 22px;
+		font-size: 18px;
 		font-weight: 600;
 		line-height: 1.1;
 	}
 	.count small {
-		font-size: 12.5px;
+		font-size: 12px;
 		color: var(--ess-text-muted);
 	}
 
 	.none {
-		padding: 28px 12px;
+		padding: 12px 8px;
+		gap: 4px;
 	}
 	.none .ess-empty__icon {
-		width: 64px;
-		height: 64px;
+		width: 40px;
+		height: 40px;
+	}
+	.none .ess-empty__title {
+		font-size: 15px;
 	}
 	.chosen {
 		list-style: none;
 		margin: 0;
 		padding: 0;
 		display: grid;
+		align-content: start;
 	}
 	.chosen li {
 		display: flex;
 		justify-content: space-between;
 		gap: 12px;
-		padding: 10px 0;
+		padding: 7px 0;
 		border-bottom: 1px solid var(--ess-border-subtle);
-		font-size: 14px;
+		font-size: 13px;
 	}
 	.chosen .total {
 		border-bottom: none;
@@ -295,42 +312,41 @@
 	.kept {
 		display: flex;
 		align-items: center;
-		gap: 14px;
-		margin-top: 14px;
-		padding-top: 16px;
+		gap: 12px;
+		margin-top: 10px;
+		padding-top: 12px;
 		border-top: 1px solid var(--ess-border-subtle);
+	}
+	.kept .ess-tile {
+		width: 38px;
+		height: 38px;
 	}
 	.kept span:last-child {
 		display: grid;
-		gap: 2px;
+		gap: 1px;
 	}
 	.kept strong {
 		font-family: var(--ess-font-display);
-		font-size: 17px;
+		font-size: 14px;
 		font-weight: 600;
 	}
 	.kept small {
-		font-size: 13px;
+		font-size: 12px;
 		color: var(--ess-text-secondary);
 	}
 
 	.confirm {
-		margin-top: 14px;
-	}
-	.confirm .ess-input {
-		height: 48px;
-		font-size: 15px;
+		margin-top: 10px;
 	}
 	.run {
 		width: 100%;
-		height: 48px;
-		margin-top: 12px;
+		margin-top: 8px;
 	}
 	.ess-help {
-		margin-top: 8px;
+		margin-top: 6px;
 	}
 	.ess-error {
-		margin-top: 8px;
+		margin-top: 6px;
 	}
 	.done .ess-h2 {
 		display: inline-flex;
@@ -339,5 +355,31 @@
 	}
 	.done :global(.ok) {
 		color: var(--ess-success);
+	}
+
+	/* Desktop fill: the option list and the summary scroll inside their cards;
+	   the page itself never scrolls. */
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.cleanup .opts-card {
+			flex: 1 1 0%;
+		}
+		.cleanup .summary-card {
+			flex: 1 1 0%;
+			min-height: 180px;
+		}
+		.cleanup .confirm-card {
+			flex: 0 0 auto;
+		}
+		.none {
+			flex: 1 1 0%;
+			min-height: 0;
+			justify-content: center;
+		}
+		.kept {
+			margin-top: auto;
+		}
+		.chosen + .kept {
+			margin-top: 10px;
+		}
 	}
 </style>

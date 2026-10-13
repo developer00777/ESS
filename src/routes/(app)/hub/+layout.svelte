@@ -89,7 +89,7 @@
 
 <svelte:window onkeydown={keys} />
 
-<div class="hub" class:own-header={ownHeader}>
+<div class="hub ess-fill" class:own-header={ownHeader}>
 	{#if head && !ownHeader}
 		<PageHeader crumb={['Champ Hub']} title={head.title} sub={head.sub} compact>
 			{#snippet actions()}
@@ -146,24 +146,28 @@
 	.hub {
 		display: flex;
 		flex-direction: column;
-		gap: 20px;
+		gap: 12px;
 		min-width: 0;
 	}
 	.hub.own-header {
-		gap: 16px;
+		gap: 10px;
+	}
+	/* The header's own bottom margin plus the gap read as too much air. */
+	.hub > :global(.ess-page-head) {
+		margin-bottom: 0;
 	}
 	.tabs {
 		align-self: flex-start;
 	}
 	.tabs .ess-tab {
-		min-width: 128px;
+		min-width: 104px;
 	}
 	.search {
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		min-width: 300px;
-		height: 40px;
+		min-width: 280px;
+		height: 36px;
 		padding: 0 12px 0 14px;
 		border-radius: var(--ess-radius-md);
 		border: 1px solid var(--ess-border);
@@ -182,6 +186,21 @@
 	}
 	.page {
 		min-width: 0;
+	}
+	/* Fit to the screen: .hub is the .ess-fill block, .page takes what is
+	   left under the header and tabs, and each page's main block (marked
+	   .hub-fill) stretches to the bottom. Long lists scroll inside cards. */
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.page {
+			flex: 1 1 0%;
+			min-height: 0;
+			display: flex;
+			flex-direction: column;
+		}
+		.page > :global(.hub-fill) {
+			flex: 1 1 0%;
+			min-height: 0;
+		}
 	}
 	.toast {
 		position: fixed;

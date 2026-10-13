@@ -79,7 +79,7 @@
 
 <svelte:head><title>{m.topic} · Champ Hub — Champ HR ESS Portal</title></svelte:head>
 
-<div class="page">
+<div class="page hub-fill">
 	<a class="back" href="/hub/meetings"><ArrowLeft size={15} /> Back to Meetings</a>
 	<header class="head">
 		<h1 class="ess-page-title">{m.topic}</h1>
@@ -94,12 +94,12 @@
 	</header>
 
 	{#if !m.isHost}
-		<div class="ess-split">
-			<section class="ess-card" aria-labelledby="mine-h">
+		<div class="ess-split main-split guest">
+			<section class="ess-card ess-fill-card" aria-labelledby="mine-h">
 				<div class="ess-card-head">
 					<h2 id="mine-h" class="ess-h2">Your tasks from this meeting</h2>
 				</div>
-				<div class="ess-rows">
+				<div class="ess-rows ess-scroll fill-body">
 					{#each items as i (i.id)}
 						<div class="ess-row">
 							<span class="ess-tile ess-tile--sm"><ListChecks size={16} /></span>
@@ -125,16 +125,16 @@
 			<button type="button" role="tab" class="ess-tab" aria-selected={tab === 'items'} onclick={() => (tab = 'items')}>Action items{#if kept.length}<span class="ess-count">{kept.length}</span>{/if}</button>
 		</div>
 
-		<div class="ess-split review">
+		<div class="ess-split main-split review">
 			<div class="ess-stack">
 				{#if tab === 'summary'}
-					<section class="ess-card" aria-labelledby="sum-h">
+					<section class="ess-card ess-fill-card share" aria-labelledby="sum-h">
 						<div class="ess-card-head">
 							<h2 id="sum-h" class="ess-h2">{m.source === 'pasted' ? 'Your notes' : 'Meeting summary'}</h2>
 							<span class="ess-badge ess-badge--accent">{m.source === 'pasted' ? 'Pasted' : 'Written automatically'}</span>
 						</div>
 						{#if m.summary}
-							<div class="sum-rows">
+							<div class="sum-rows ess-scroll">
 								{#if m.summary.overview}
 									<div class="sum">
 										<span class="ess-tile"><FileText size={18} strokeWidth={1.75} /></span>
@@ -167,7 +167,7 @@
 					</section>
 				{/if}
 
-				<section class="ess-card" aria-labelledby="items-h">
+				<section class="ess-card ess-fill-card share items-card" aria-labelledby="items-h">
 					<div class="ess-card-head">
 						<h2 id="items-h" class="ess-h2">Action items{#if kept.length} ({kept.length}){/if}</h2>
 						{#if pending.length}
@@ -181,7 +181,7 @@
 					{#if m.state !== 'published' || pending.length}
 						<p class="ess-help hint">Hover or focus an item to see the line it came from. Nothing is sent until you publish.</p>
 					{/if}
-					<div class="items">
+					<div class="items ess-scroll">
 						{#each items as i (i.id)}
 							<div
 								class="item"
@@ -265,12 +265,12 @@
 			</div>
 
 			<aside class="ess-stack">
-				<section class="ess-card" aria-labelledby="yours-h">
+				<section class="ess-card ess-fill-card share" aria-labelledby="yours-h">
 					<div class="ess-card-head">
 						<h2 id="yours-h" class="ess-h2">Your tasks from this meeting</h2>
 						<a class="ess-link" href="/hub/tasks" aria-label="All tasks"><ChevronRight size={16} /></a>
 					</div>
-					<div class="ess-rows">
+					<div class="ess-rows ess-scroll fill-body">
 						{#each mine as i (i.id)}
 							<div class="ess-row">
 								<span class="ess-tile" class:ess-tile--ok={!!i.taskId}><ListChecks size={18} strokeWidth={1.75} /></span>
@@ -289,7 +289,7 @@
 					</div>
 				</section>
 
-				<section class="ess-card" aria-labelledby="rev-h">
+				<section class="ess-card ess-fill-card fixed" aria-labelledby="rev-h">
 					<div class="ess-card-head">
 						<h2 id="rev-h" class="ess-h2">Minutes review</h2>
 						{#if m.state === 'published'}
@@ -318,7 +318,7 @@
 				</section>
 
 				{#if m.state !== 'published'}
-					<div class="ess-notice ess-notice--info">
+					<div class="ess-notice ess-notice--info fixed">
 						<span class="ess-notice__icon"><Info size={15} /></span>
 						<div class="ess-notice__body"><strong>Review before publishing</strong>Check the owners, dates and wording. Once published, each item becomes a task in its owner's To do and your team channel gets one line listing them.</div>
 					</div>
@@ -331,27 +331,69 @@
 <style>
 	.page {
 		display: grid;
-		gap: 18px;
+		gap: 10px;
 		min-width: 0;
+	}
+	/* Desktop: the minutes fit the screen. Cards share their column's
+	   height and their lists scroll inside them; the add-item form and
+	   the publish bar stay at the bottom of the action items card. */
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.page {
+			display: flex;
+			flex-direction: column;
+		}
+		.main-split {
+			flex: 1 1 0%;
+			min-height: 0;
+		}
+		.main-split .ess-stack > .share {
+			flex: 1 1 0%;
+			min-height: 150px;
+		}
+		.main-split .ess-stack > .items-card {
+			flex-grow: 1.5;
+		}
+		.main-split .ess-stack > .fixed {
+			flex: 0 0 auto;
+		}
+		.guest > .ess-notice {
+			align-self: start;
+		}
+		.items {
+			align-content: start;
+			margin: 0 -4px;
+			padding: 2px 4px;
+		}
+		.publish {
+			position: static;
+			box-shadow: none;
+		}
+		.fill-body:has(> .empty:only-child) {
+			display: grid;
+			align-content: center;
+		}
 	}
 	.back {
 		display: inline-flex;
 		align-items: center;
 		gap: 6px;
 		font-weight: 500;
-		font-size: 14px;
+		font-size: 13px;
 		width: max-content;
 	}
 	.head {
 		display: grid;
-		gap: 12px;
+		gap: 6px;
+	}
+	.head .ess-page-title {
+		margin: 0;
 	}
 	.facts {
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
-		gap: 8px 22px;
-		font-size: 15px;
+		gap: 6px 18px;
+		font-size: 13.5px;
 		color: var(--ess-text-secondary);
 	}
 	.facts > span {
@@ -383,33 +425,37 @@
 	}
 	.sum {
 		display: grid;
-		grid-template-columns: 44px 120px minmax(0, 1fr);
-		gap: 20px;
+		grid-template-columns: 34px 110px minmax(0, 1fr);
+		gap: 14px;
 		align-items: start;
-		padding: 18px 0;
+		padding: 10px 0;
 		border-bottom: 1px solid var(--ess-border-subtle);
 	}
 	.sum:last-child {
 		border-bottom: none;
 	}
+	.sum .ess-tile {
+		width: 34px;
+		height: 34px;
+	}
 	.sum h3 {
-		margin: 8px 0 0;
+		margin: 6px 0 0;
 		font-family: var(--ess-font-display);
-		font-size: 17px;
+		font-size: 14.5px;
 		font-weight: 600;
 	}
 	.sum p {
-		margin: 8px 0 0;
-		font-size: 14.5px;
-		line-height: 1.6;
+		margin: 6px 0 0;
+		font-size: 13.5px;
+		line-height: 1.5;
 		color: var(--ess-text-secondary);
 	}
 	.steps {
-		margin: 8px 0 0;
+		margin: 6px 0 0;
 		padding-left: 20px;
 		display: grid;
-		gap: 6px;
-		font-size: 14.5px;
+		gap: 4px;
+		font-size: 13.5px;
 		color: var(--ess-text-secondary);
 	}
 	.steps li {
@@ -423,16 +469,16 @@
 		color: var(--ess-text);
 	}
 	.hint {
-		margin: -6px 0 12px;
+		margin: -4px 0 8px;
 	}
 	.items {
 		display: grid;
-		gap: 10px;
+		gap: 8px;
 	}
 	.item {
 		display: grid;
-		gap: 10px;
-		padding: 14px;
+		gap: 8px;
+		padding: 10px 12px;
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-surface);
 		border: 1px solid var(--ess-border);
@@ -523,18 +569,18 @@
 	.add {
 		display: flex;
 		gap: 8px;
-		margin-top: 14px;
+		margin-top: 10px;
 	}
 	.publish {
 		position: sticky;
 		bottom: 12px;
-		margin-top: 14px;
+		margin-top: 10px;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 10px;
 		flex-wrap: wrap;
-		padding: 12px 14px;
+		padding: 8px 12px;
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-modal-bg);
 		border: 1px solid var(--ess-border);
@@ -561,7 +607,7 @@
 	}
 	.wide {
 		width: 100%;
-		margin-top: 16px;
+		margin-top: 10px;
 	}
 	.empty {
 		margin: 0;

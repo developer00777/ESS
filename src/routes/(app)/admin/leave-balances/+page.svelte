@@ -190,10 +190,10 @@
 	<a class="ess-btn ess-btn--secondary" href="#import"><UploadCloud size={16} /> Import balances</a>
 </div>
 
-<div class="ess-split page">
+<div class="ess-split ess-fill page">
 	<div class="ess-stack">
 		<!-- ---------- import ---------- -->
-		<section class="ess-card" id="import" aria-labelledby="import-h">
+		<section class="ess-card import-card" id="import" aria-labelledby="import-h">
 			<div class="ess-card-head">
 				<div>
 					<h2 class="ess-h2" id="import-h">Import balances</h2>
@@ -251,7 +251,7 @@
 
 		<!-- ---------- preview table ---------- -->
 		{#if preview}
-			<section class="ess-card" aria-labelledby="prev-h">
+			<section class="ess-card ess-fill-card preview-card" aria-labelledby="prev-h">
 				<div class="ess-card-head">
 					<div>
 						<h2 class="ess-h2" id="prev-h">Employee balances</h2>
@@ -298,7 +298,7 @@
 					</div>
 				{/if}
 
-				<div class="ess-table-shell tall">
+				<div class="ess-table-shell tall ess-scroll">
 					<table class="ess-table">
 						<thead>
 							<tr>
@@ -352,7 +352,7 @@
 		{/if}
 
 		<!-- ---------- history ---------- -->
-		<section class="ess-card" aria-labelledby="hist-h">
+		<section class="ess-card ess-fill-card history-card" aria-labelledby="hist-h">
 			<div class="ess-card-head">
 				<div>
 					<h2 class="ess-h2" id="hist-h">Adjustment history</h2>
@@ -362,7 +362,7 @@
 			{#if visibleHistory.length === 0}
 				<p class="ess-help">{data.hrSet.length === 0 ? 'No balance has been set by hand yet.' : 'Nothing matches the search.'}</p>
 			{:else}
-				<ol class="history">
+				<ol class="history ess-scroll">
 					{#each visibleHistory as r, i (`${r.employeeCode}-${r.leaveTypeName}-${r.year}-${i}`)}
 						{@const w = fmtWhen(r.hrSetAt)}
 						<li class="h">
@@ -388,7 +388,7 @@
 
 	<!-- ---------- right: what applying does ---------- -->
 	<aside class="ess-stack aside">
-		<section class="ess-card" aria-labelledby="apply-h">
+		<section class="ess-card apply-card" aria-labelledby="apply-h">
 			<div class="ess-card-head">
 				<h2 class="ess-h2" id="apply-h">Apply balances</h2>
 			</div>
@@ -414,11 +414,11 @@
 			{/if}
 		</section>
 
-		<section class="ess-card" aria-labelledby="types-h">
+		<section class="ess-card ess-fill-card types-card" aria-labelledby="types-h">
 			<div class="ess-card-head">
 				<h2 class="ess-h2" id="types-h">Leave types</h2>
 			</div>
-			<ul class="types">
+			<ul class="types ess-scroll">
 				{#each data.leaveTypes as t (t.id)}
 					<li>
 						<span class="ess-figure__dot" class:ess-figure__dot--ok={t.holdsBalance} class:ess-figure__dot--neutral={!t.holdsBalance}></span>
@@ -442,7 +442,6 @@
 		gap: 12px;
 		align-items: center;
 		flex-wrap: wrap;
-		margin-bottom: 20px;
 	}
 	.toolbar .year {
 		width: 120px;
@@ -458,11 +457,11 @@
 	.format {
 		background: var(--ess-sunken);
 		border-radius: var(--ess-radius-md);
-		padding: 12px 14px;
-		margin-bottom: 14px;
-		font-size: 13px;
+		padding: 8px 12px;
+		margin-bottom: 10px;
+		font-size: 12.5px;
 		display: grid;
-		gap: 4px;
+		gap: 2px;
 	}
 	.format-label {
 		font-size: 11px;
@@ -473,11 +472,11 @@
 	}
 	.format p {
 		margin: 0;
-		line-height: 1.6;
+		line-height: 1.5;
 	}
 	code {
 		font-family: var(--ess-font-mono);
-		font-size: 12px;
+		font-size: 11.5px;
 		background: var(--ess-surface);
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-xs);
@@ -502,8 +501,8 @@
 	.file-drop {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		padding: 10px 12px;
+		gap: 10px;
+		padding: 6px 10px;
 		border: 1px dashed var(--ess-border-strong);
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-sunken);
@@ -544,7 +543,10 @@
 		margin-top: 12px;
 	}
 	.ess-notice {
-		margin-top: 12px;
+		margin-top: 10px;
+		padding: 9px 12px;
+		gap: 10px;
+		font-size: 13px;
 	}
 	.codes {
 		font-family: var(--ess-font-mono);
@@ -621,14 +623,15 @@
 		list-style: none;
 		margin: 0;
 		padding: 0;
+		align-content: start;
 	}
 	.h {
 		position: relative;
 		display: grid;
-		grid-template-columns: 96px 20px minmax(0, 1fr) auto;
-		gap: 14px;
+		grid-template-columns: 88px 20px minmax(0, 1fr) auto;
+		gap: 12px;
 		align-items: start;
-		padding: 12px 0;
+		padding: 8px 0;
 		border-bottom: 1px solid var(--ess-border-subtle);
 	}
 	.h:last-child {
@@ -637,7 +640,7 @@
 	.h::before {
 		content: '';
 		position: absolute;
-		left: calc(96px + 14px + 9px);
+		left: calc(88px + 12px + 9px);
 		top: 0;
 		bottom: 0;
 		width: 2px;
@@ -651,7 +654,7 @@
 	}
 	.when {
 		display: grid;
-		font-size: 13px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 		line-height: 1.35;
 	}
@@ -679,7 +682,7 @@
 		font-weight: 500;
 	}
 	.h-body span {
-		font-size: 13px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 	}
 	.actor {
@@ -699,12 +702,12 @@
 		grid-template-columns: repeat(3, 1fr);
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
-		margin-bottom: 14px;
+		margin-bottom: 10px;
 	}
 	.sum {
 		display: grid;
 		gap: 2px;
-		padding: 14px 12px;
+		padding: 8px 10px;
 		text-align: center;
 	}
 	.sum + .sum {
@@ -712,7 +715,7 @@
 	}
 	.sum strong {
 		font-family: var(--ess-font-display);
-		font-size: 28px;
+		font-size: 22px;
 		font-weight: 600;
 		line-height: 1.05;
 		font-variant-numeric: tabular-nums;
@@ -722,8 +725,8 @@
 		color: var(--ess-text-secondary);
 	}
 	.effects {
-		margin-bottom: 14px;
-		font-size: 13.5px;
+		margin-bottom: 10px;
+		font-size: 13px;
 	}
 	.apply,
 	.cancel {
@@ -737,12 +740,13 @@
 		margin: 0;
 		padding: 0;
 		display: grid;
+		align-content: start;
 	}
 	.types li {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		padding: 10px 0;
+		gap: 10px;
+		padding: 7px 0;
 		border-bottom: 1px solid var(--ess-border-subtle);
 	}
 	.types li:last-child {
@@ -764,6 +768,36 @@
 	@media (max-width: 1100px) {
 		.aside {
 			position: static;
+		}
+	}
+
+	/* Desktop fill: the page ends at the bottom of the workspace; the preview
+	   table, the history and the leave types scroll inside their own cards. */
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.aside {
+			position: static;
+		}
+		.page .import-card,
+		.page .apply-card {
+			flex: 0 0 auto;
+		}
+		.page .preview-card {
+			flex: 2 1 0%;
+			min-height: 220px;
+		}
+		.page .history-card {
+			flex: 1 1 0%;
+			min-height: 100px;
+		}
+		.page .types-card {
+			flex: 1 1 0%;
+			min-height: 140px;
+		}
+		.tall {
+			max-height: none;
+		}
+		.page .import-card :global(.steps) {
+			margin-bottom: 12px;
 		}
 	}
 	@media (max-width: 860px) {

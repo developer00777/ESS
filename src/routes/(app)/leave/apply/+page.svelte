@@ -111,8 +111,8 @@
 	<p class="ess-page-sub">Submit a leave request and we’ll take care of the rest.</p>
 </header>
 
-<div class="ess-split apply">
-	<div class="ess-stack">
+<div class="ess-split ess-fill apply">
+	<div class="fill-col">
 		<ol class="ess-stepper ess-stepper--center steps">
 			<li class="ess-step" data-state={step > 0 ? 'done' : 'current'}>
 				<span class="ess-step__dot">{#if step > 0}<Check size={13} strokeWidth={3} />{:else}1{/if}</span>
@@ -132,11 +132,13 @@
 		</ol>
 
 		{#if step === 0}
-			<form class="ess-card form" onsubmit={toReview}>
+			<form class="ess-card ess-fill-card form grow" onsubmit={toReview}>
 				<div class="form-head">
 					<h2 class="ess-h2">Leave details</h2>
 					<p>Tell us about your leave request.</p>
 				</div>
+
+				<div class="form-body ess-scroll">
 
 				<label class="ess-field">
 					<span class="ess-label">Leave type <i class="req">*</i></span>
@@ -181,7 +183,7 @@
 					</label>
 				</div>
 
-				<label class="ess-field">
+				<label class="ess-field reason-field">
 					<span class="ess-label">Reason for leave</span>
 					<textarea class="ess-textarea" bind:value={reason} rows="4" maxlength="500" placeholder="Add any context for your manager"></textarea>
 					<span class="help-row"><span class="ess-help">This will be visible to your manager.</span><span class="ess-help">{reason.length}/500</span></span>
@@ -190,13 +192,6 @@
 				{#if error}
 					<p class="ess-error" role="alert">{error}</p>
 				{/if}
-
-				<div class="ess-notice ess-notice--info">
-					<span class="ess-notice__icon"><Info size={16} /></span>
-					<div class="ess-notice__body">
-						Leave requests are subject to your company’s leave policy.
-						<a href="/policies" class="policy-link">View leave policy <ExternalLink size={13} /></a>
-					</div>
 				</div>
 
 				<div class="actions">
@@ -207,12 +202,13 @@
 				</div>
 			</form>
 		{:else}
-			<section class="ess-card form">
+			<section class="ess-card ess-fill-card form grow">
 				<div class="form-head">
 					<h2 class="ess-h2">Review your request</h2>
 					<p>Check the details, then send it for approval.</p>
 				</div>
 
+				<div class="form-body ess-scroll">
 				<dl class="ess-kv review">
 					<dt>Leave type</dt>
 					<dd>{type?.name ?? '—'}</dd>
@@ -231,6 +227,7 @@
 				{#if error}
 					<p class="ess-error" role="alert">{error}</p>
 				{/if}
+				</div>
 
 				<div class="actions">
 					<button type="button" class="ess-btn ess-btn--secondary" onclick={() => (step = 0)} disabled={submitting}><ArrowLeft size={17} /> Edit details</button>
@@ -243,8 +240,8 @@
 		{/if}
 	</div>
 
-	<aside class="ess-stack">
-		<section class="ess-card impact">
+	<aside class="fill-col">
+		<section class="ess-card impact grow">
 			<div class="form-head">
 				<h2 class="ess-h2">Leave impact summary</h2>
 				<p>Here’s how this request affects your balance.</p>
@@ -292,6 +289,14 @@
 					<p class="quiet"><Mail size={14} /> No reporting manager is set, so this goes straight to HR.</p>
 				{/if}
 			</div>
+
+			<div class="ess-notice ess-notice--info policy-note">
+				<span class="ess-notice__icon"><Info size={16} /></span>
+				<div class="ess-notice__body">
+					Leave requests are subject to your company’s leave policy.
+					<a href="/policies" class="policy-link">View leave policy <ExternalLink size={13} /></a>
+				</div>
+			</div>
 		</section>
 	</aside>
 </div>
@@ -300,43 +305,98 @@
 	.back {
 		display: inline-flex;
 		align-items: center;
-		gap: 8px;
-		font-size: 15px;
+		gap: 6px;
+		font-size: 13px;
 		color: var(--ess-text-secondary);
-		margin-bottom: 22px;
+		margin-bottom: 6px;
+		align-self: flex-start;
 	}
 	.back:hover {
 		color: var(--ess-text);
 	}
 	.head {
 		display: grid;
-		gap: 8px;
-		margin-bottom: var(--ess-space-6);
+		gap: 2px;
+		margin-bottom: 12px;
 	}
 	.head .ess-page-sub {
 		margin-top: 0;
 	}
 
 	.apply {
-		--ess-aside-width: 440px;
+		--ess-aside-width: 400px;
+	}
+
+	/* ---------- fit-to-screen layout ---------- */
+	.fill-col {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		min-width: 0;
+	}
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.apply {
+			grid-template-rows: minmax(0, 1fr);
+		}
+		.fill-col {
+			min-height: 0;
+		}
+		.fill-col > .grow {
+			flex: 1 1 0%;
+			min-height: 0;
+		}
+		.fill-col > :not(.grow) {
+			flex: none;
+		}
+		.impact {
+			overflow: auto;
+			scrollbar-width: thin;
+		}
+		/* The reason box takes whatever height the form has spare. */
+		.form .form-body {
+			display: flex;
+			flex-direction: column;
+		}
+		.reason-field {
+			flex: 1 0 auto;
+			display: flex;
+			flex-direction: column;
+		}
+		.reason-field .ess-textarea {
+			flex: 1 1 auto;
+			min-height: 64px;
+		}
 	}
 
 	.steps {
-		padding: 4px 24px 0;
+		padding: 0 24px;
+	}
+	.steps .ess-step {
+		gap: 3px;
+	}
+	.steps .ess-step__label {
+		font-size: 13px;
+	}
+	.steps .ess-step__meta {
+		font-size: 11.5px;
+		margin-top: -2px;
 	}
 
 	.form {
+		gap: 12px;
+	}
+	.form-body {
 		display: grid;
-		gap: 20px;
-		padding: var(--ess-space-6);
+		gap: 12px;
+		align-content: start;
 	}
 	.form-head {
 		display: grid;
-		gap: 4px;
+		gap: 2px;
 	}
 	.form-head p {
 		color: var(--ess-text-secondary);
-		font-size: 15px;
+		font-size: 13px;
 	}
 
 	.req {
@@ -352,22 +412,22 @@
 	}
 	.with-icon > :global(svg) {
 		position: absolute;
-		left: 14px;
+		left: 12px;
 		color: var(--ess-text-secondary);
 		pointer-events: none;
 	}
 	.with-icon .ess-select,
 	.with-icon .ess-input {
-		padding-left: 42px;
-		padding-top: 12px;
-		padding-bottom: 12px;
-		font-size: 15px;
+		padding-left: 38px;
+		padding-top: 8px;
+		padding-bottom: 8px;
+		font-size: 14px;
 	}
 
 	.date-row {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
-		gap: 18px;
+		gap: 14px;
 	}
 	.date-row > * {
 		min-width: 0;
@@ -375,8 +435,8 @@
 
 	.ess-textarea {
 		resize: vertical;
-		min-height: 110px;
-		font-size: 15px;
+		min-height: 80px;
+		font-size: 14px;
 	}
 	.help-row {
 		display: flex;
@@ -394,22 +454,22 @@
 	.actions {
 		display: flex;
 		justify-content: flex-end;
-		gap: 12px;
-		padding-top: 18px;
+		gap: 10px;
+		padding-top: 12px;
 		border-top: 1px solid var(--ess-border-subtle);
 	}
 	.actions .ess-btn {
-		height: 46px;
-		padding: 0 22px;
+		padding: 0 18px;
 	}
 
 	.review dd {
-		font-size: 15px;
+		font-size: 14px;
 	}
 
 	.impact {
-		display: grid;
-		gap: 22px;
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
 	}
 	.impact-grid {
 		display: grid;
@@ -417,8 +477,9 @@
 	}
 	.impact-cell {
 		display: grid;
-		gap: 4px;
-		padding: 0 14px;
+		gap: 2px;
+		align-content: start;
+		padding: 0 12px;
 		border-right: 1px solid var(--ess-border-subtle);
 	}
 	.impact-cell:first-child {
@@ -429,15 +490,17 @@
 		padding-right: 0;
 	}
 	.impact-cell .ess-tile {
-		margin-bottom: 8px;
+		width: 34px;
+		height: 34px;
+		margin-bottom: 6px;
 	}
 	.impact-label {
-		font-size: 13.5px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 	}
 	.impact-cell strong {
 		font-family: var(--ess-font-display);
-		font-size: 22px;
+		font-size: 18px;
 		font-weight: 600;
 		line-height: 1.15;
 	}
@@ -445,31 +508,31 @@
 		color: var(--ess-danger);
 	}
 	.impact-cell small {
-		font-size: 12.5px;
+		font-size: 12px;
 		color: var(--ess-text-muted);
 	}
 
 	.impact-section {
 		display: grid;
-		gap: 12px;
-		padding-top: 20px;
+		gap: 8px;
+		padding-top: 14px;
 		border-top: 1px solid var(--ess-border-subtle);
 	}
 	.manager {
 		display: flex;
 		align-items: center;
-		gap: 14px;
+		gap: 12px;
 	}
 	.manager-text {
 		display: grid;
 		gap: 2px;
 	}
 	.manager-text strong {
-		font-size: 15px;
+		font-size: 14px;
 		font-weight: 500;
 	}
 	.manager-text small {
-		font-size: 13px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 	}
 	.quiet {
@@ -477,7 +540,13 @@
 		gap: 8px;
 		align-items: center;
 		color: var(--ess-text-secondary);
-		font-size: 14px;
+		font-size: 13px;
+	}
+	/* Sits at the foot of the summary card. */
+	.policy-note {
+		margin-top: auto;
+		padding: 10px 12px;
+		font-size: 13px;
 	}
 
 	@media (max-width: 720px) {

@@ -183,14 +183,14 @@
 	--ess-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
 	--ess-fs-display: 56px; /* sign-in marquee */
-	--ess-fs-title: 28px; /* page title */
-	--ess-fs-h2: 17px; /* section heading */
+	--ess-fs-title: 22px; /* page title */
+	--ess-fs-h2: 15px; /* section heading */
 	--ess-fs-h3: 15px; /* card heading */
 	--ess-fs-body-lg: 16px;
 	--ess-fs-body: 14px; /* dense UI default */
 	--ess-fs-caption: 12.5px;
 	--ess-fs-eyebrow: 11px;
-	--ess-fs-stat: 24px; /* stat card value */
+	--ess-fs-stat: 20px; /* stat card value */
 
 	/* ---------- Layout ---------- */
 	/* The workspace floats on the backdrop with --ess-shell-inset around it;

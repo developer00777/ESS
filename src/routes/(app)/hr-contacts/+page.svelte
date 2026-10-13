@@ -57,20 +57,20 @@
 
 <PageHeader crumb={[{ label: 'Today', href: '/dashboard' }, 'HR contacts']} title="The right person to help." sub="Find and contact the HR team for quick support." compact />
 
-<div class="ess-split layout">
-	<div class="ess-stack">
+<div class="ess-split ess-fill layout">
+	<div class="fill-col">
 		<div class="ess-search">
 			<Search size={18} />
 			<input class="ess-input big" type="search" placeholder="Search by name, role or location" bind:value={q} aria-label="Search HR contacts" />
 		</div>
 
-		<section class="ess-card">
+		<section class="ess-card ess-fill-card grow">
 			<div class="head">
 				<h2 class="ess-h2">Your HR team</h2>
 				<p>Your manager and the HR team who handle leave, attendance records, logins and policy questions.</p>
 			</div>
 			{#if chatError}<p class="ess-error" role="alert">{chatError}</p>{/if}
-			<div class="ess-rows">
+			<div class="ess-rows ess-scroll people">
 				{#each contacts as contact (contact.id)}
 					<div class="ess-row person">
 						<Avatar userId={contact.id} fullName={contact.fullName} hasPicture={contact.hasPicture} size="lg" />
@@ -89,7 +89,7 @@
 						</div>
 					</div>
 				{:else}
-					<div class="ess-empty">
+					<div class="ess-empty fill-empty">
 						<span class="ess-empty__icon"><Headset size={22} /></span>
 						<span class="ess-empty__title">{data.contacts.length === 0 ? 'No HR contacts on file yet' : 'No one matches that'}</span>
 						<span>{data.contacts.length === 0 ? 'Your manager and HR team appear here once HR sets them up.' : 'Try a name, a role or an office.'}</span>
@@ -99,8 +99,8 @@
 		</section>
 	</div>
 
-	<aside class="ess-stack">
-		<section class="ess-card">
+	<aside class="fill-col">
+		<section class="ess-card grow help-card">
 			<h2 class="ess-h2 aside-h">How to get help</h2>
 			<p class="aside-sub">Follow these steps to reach the right person.</p>
 			<ol class="steps">
@@ -130,38 +130,38 @@
 
 <style>
 	.layout {
-		--ess-aside-width: 380px;
+		--ess-aside-width: 340px;
 	}
 	.big {
-		height: 54px;
-		font-size: 16px;
+		height: 38px;
+		font-size: 14px;
 		border-radius: var(--ess-radius-md);
 	}
 	.head {
-		padding-bottom: 14px;
+		padding-bottom: 10px;
 		border-bottom: 1px solid var(--ess-border);
-		margin-bottom: 4px;
+		margin-bottom: 2px;
 	}
 	.head p {
-		margin-top: 4px;
-		font-size: 14.5px;
+		margin-top: 2px;
+		font-size: 13px;
 		color: var(--ess-text-secondary);
 	}
 	.person {
 		align-items: flex-start;
-		padding: 20px 0;
-		gap: 18px;
+		padding: 12px 0;
+		gap: 14px;
 	}
 	.person .ess-row__body {
-		gap: 4px;
+		gap: 2px;
 	}
 	.name {
 		display: flex;
 		align-items: center;
-		gap: 10px;
+		gap: 8px;
 		flex-wrap: wrap;
 		font-family: var(--ess-font-display);
-		font-size: 20px;
+		font-size: 16px;
 		font-weight: 600;
 		color: var(--ess-text);
 	}
@@ -169,14 +169,14 @@
 		font-family: var(--ess-font-sans);
 	}
 	.role {
-		font-size: 14.5px;
+		font-size: 13px;
 		color: var(--ess-text-secondary);
 	}
 	.line {
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		font-size: 13.5px;
+		gap: 6px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 	}
 	.line :global(svg) {
@@ -185,32 +185,35 @@
 	.actions {
 		align-self: center;
 	}
+	.fill-empty {
+		padding: 20px 16px;
+	}
 	.aside-h {
-		font-size: 20px;
+		font-size: 15px;
 	}
 	.aside-sub {
-		margin-top: 4px;
-		font-size: 14px;
+		margin-top: 2px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 	}
 	.steps {
 		list-style: none;
-		margin: 18px 0 0;
+		margin: 12px 0 0;
 		padding: 0;
 		display: grid;
 	}
 	.steps li {
 		position: relative;
 		display: flex;
-		gap: 16px;
-		padding-bottom: 22px;
+		gap: 12px;
+		padding-bottom: 14px;
 	}
 	.steps li:not(:last-child)::before {
 		content: '';
 		position: absolute;
-		left: 21px;
-		top: 44px;
-		bottom: 0;
+		left: 15px;
+		top: 34px;
+		bottom: 2px;
 		width: 2px;
 		background: var(--ess-border);
 	}
@@ -221,29 +224,87 @@
 		flex: none;
 		display: grid;
 		place-items: center;
-		width: 44px;
-		height: 44px;
+		width: 32px;
+		height: 32px;
 		border-radius: 50%;
 		background: var(--ess-primary-soft);
 		color: var(--ess-primary-text);
 		font-family: var(--ess-font-display);
-		font-size: 20px;
+		font-size: 15px;
 		font-weight: 600;
 	}
 	.steps div {
 		display: grid;
-		gap: 4px;
-		padding-top: 6px;
+		gap: 2px;
+		align-content: start;
+		padding-top: 4px;
 	}
 	.steps strong {
 		font-family: var(--ess-font-display);
-		font-size: 18px;
+		font-size: 14px;
 		font-weight: 600;
 	}
 	.steps span:not(.num) {
-		font-size: 14px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 	}
+	.fill-col a.ess-row {
+		padding: 9px 0;
+	}
+	.fill-col a.ess-row .ess-row__title {
+		font-size: 13.5px;
+	}
+	.fill-col a.ess-row .ess-row__meta {
+		font-size: 12px;
+	}
+
+	/* ---------- fit-to-screen layout ----------
+	   The contact list fills the main column and scrolls inside; in the
+	   aside the steps spread over the height the guide card is given. */
+	.fill-col {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		min-width: 0;
+	}
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.layout {
+			grid-template-rows: minmax(0, 1fr);
+		}
+		.fill-col {
+			min-height: 0;
+		}
+		.fill-col > .grow {
+			flex: 1 1 0%;
+			min-height: 0;
+		}
+		.fill-col > :not(.grow) {
+			flex: none;
+		}
+		.people {
+			display: flex;
+			flex-direction: column;
+		}
+		.people > .fill-empty {
+			margin: auto 0;
+		}
+		.help-card {
+			display: flex;
+			flex-direction: column;
+			overflow: auto;
+			scrollbar-width: thin;
+		}
+		.help-card .steps {
+			flex: 1 0 auto;
+			display: flex;
+			flex-direction: column;
+			max-height: 380px;
+		}
+		.help-card .steps li:not(:last-child) {
+			flex: 1 0 auto;
+		}
+	}
+
 	@media (max-width: 720px) {
 		.person {
 			flex-wrap: wrap;

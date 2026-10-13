@@ -616,39 +616,82 @@
 
 	/* Large / hero variant */
 	.calendar-box.large {
-		padding: 24px 28px 26px;
+		padding: 14px 18px 16px;
+	}
+
+	.calendar-box.large .calendar-header {
+		margin-bottom: 10px;
 	}
 
 	.calendar-box.large .month-label {
-		font-size: 26px;
+		font-size: 20px;
 	}
 
 	.calendar-box.large .legend {
-		gap: 22px;
-		margin-bottom: 18px;
+		gap: 6px 18px;
+		margin-bottom: 10px;
+	}
+
+	.calendar-box.large .legend-item {
+		font-size: 12.5px;
+	}
+
+	.calendar-box.large .weekday {
+		padding: 6px 0;
+		font-size: 12.5px;
 	}
 
 	.calendar-box.large .month-grid .day-cell {
-		min-height: 7.5rem;
+		min-height: 5rem;
 		aspect-ratio: auto;
-		padding: 10px;
+		padding: 7px 9px;
 		align-items: flex-start;
 		text-align: left;
-		gap: 5px;
+		gap: 4px;
 	}
 
 	.calendar-box.large .day-number {
-		font-size: 15px;
+		font-size: 14px;
 	}
 
 	.calendar-box.large .day-tag {
-		font-size: 12px;
-		padding: 3px 8px;
+		font-size: 11.5px;
+		padding: 2px 7px;
 	}
 
 	.calendar-box.large .day-detail {
-		margin-top: 20px;
-		padding-top: 18px;
+		margin-top: 10px;
+		padding-top: 10px;
+	}
+
+	/* On a laptop-sized screen the large calendar fills the height it is
+	   given (its parent is a flex column): the weeks share the height, and
+	   if there is too little the grid scrolls inside the card rather than
+	   the page. */
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.calendar-box.large {
+			flex: 1 1 0%;
+			min-height: 0;
+			display: flex;
+			flex-direction: column;
+		}
+		.calendar-box.large > :not(.month-grid) {
+			flex: none;
+		}
+		.calendar-box.large .month-grid {
+			flex: 1 1 0%;
+			min-height: 0;
+			grid-auto-rows: minmax(52px, 1fr);
+			overflow: auto;
+			scrollbar-width: thin;
+		}
+		.calendar-box.large .month-grid .day-cell {
+			min-height: 0;
+		}
+		.calendar-box.large .day-detail {
+			max-height: 28%;
+			overflow: auto;
+		}
 	}
 
 	@media (max-width: 900px) {

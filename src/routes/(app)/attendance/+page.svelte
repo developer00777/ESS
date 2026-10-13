@@ -4,6 +4,7 @@
 	import CalendarDays from '@lucide/svelte/icons/calendar-days';
 	import BarChart3 from '@lucide/svelte/icons/bar-chart-3';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import Inbox from '@lucide/svelte/icons/inbox';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import AttendanceCalendar from '$lib/components/AttendanceCalendar.svelte';
 	import CompOffClaim from '$lib/components/CompOffClaim.svelte';
@@ -37,7 +38,14 @@
 
 	/* ---------- tabs, selection, drawers ---------- */
 
-	let view = $state<'calendar' | 'records'>('calendar');
+	let view = $state<'calendar' | 'records' | 'review'>('calendar');
+	// The reviewer's queue gets its own tab (rather than sitting below the
+	// calendar) so the page still fits the screen; the tab only appears
+	// when there is something to decide.
+	const reviewCount = $derived(data.canReview ? data.deviationQueue.length + data.compOffQueue.length : 0);
+	$effect(() => {
+		if (view === 'review' && reviewCount === 0) view = 'calendar';
+	});
 	let selectedKey = $state<string | null>(null);
 
 	let raiseOpen = $state(false);
@@ -88,10 +96,13 @@
 <div class="ess-tabs tabs" role="tablist" aria-label="Attendance views">
 	<button type="button" role="tab" class="ess-tab" aria-selected={view === 'calendar'} onclick={() => (view = 'calendar')}><CalendarDays size={16} strokeWidth={1.75} /> Calendar</button>
 	<button type="button" role="tab" class="ess-tab" aria-selected={view === 'records'} onclick={() => (view = 'records')}><BarChart3 size={16} strokeWidth={1.75} /> Records</button>
+	{#if reviewCount > 0}
+		<button type="button" role="tab" class="ess-tab" aria-selected={view === 'review'} onclick={() => (view = 'review')}><Inbox size={16} strokeWidth={1.75} /> To review <span class="ess-count">{reviewCount}</span></button>
+	{/if}
 </div>
 
-<div class="ess-split layout">
-	<div class="ess-stack">
+<div class="ess-split ess-fill layout">
+	<div class="fill-col main-col">
 		{#if view === 'calendar'}
 			<div class="metrics">
 				<!--
@@ -144,6 +155,10 @@
 				weekOffRosters={data.weekOffRosters}
 				weekOffAssignments={data.weekOffAssignments}
 			/>
+		{:else if view === 'review'}
+			<!-- SOP: the reviewer's queue — corrections and comp-off claims from
+			     the people who report to the viewer. -->
+			<SopReviewQueue deviations={data.deviationQueue} compOffs={data.compOffQueue} />
 		{:else}
 			<AttendanceCalendar
 				mode="records"
@@ -163,7 +178,7 @@
 		{/if}
 	</div>
 
-	<aside class="ess-stack">
+	<aside class="fill-col side-col">
 		<AttendanceCalendar
 			mode="detail"
 			bind:selectedKey
@@ -182,13 +197,13 @@
 
 		<CompOffClaim credits={data.compOffCredits} bind:open={compOffOpen} />
 
-		<section class="ess-card" aria-labelledby="dev-h">
+		<section class="ess-card ess-fill-card dev-card" aria-labelledby="dev-h">
 			<div class="ess-card-head">
 				<h2 id="dev-h" class="ess-h2">Recent deviations</h2>
 				<button type="button" class="ess-link as-btn" onclick={() => (view = 'records')}>View all records <ChevronRight size={14} /></button>
 			</div>
 			<p class="allowance">Corrections allowance · <strong>{data.deviationMonthlyUsed} of {data.deviationMonthlyCap}</strong> used this month</p>
-			<div class="ess-rows">
+			<div class="ess-rows ess-scroll dev-list">
 				{#each data.myDeviations.slice(0, 5) as d (d.id)}
 					{@const s = devStatus(d.status)}
 					<div class="ess-row dev">
@@ -209,14 +224,6 @@
 	</aside>
 </div>
 
-<!-- SOP: the reviewer's queue — corrections and comp-off claims from the
-     people who report to the viewer. -->
-{#if data.canReview}
-	<div class="queue-wrap">
-		<SopReviewQueue deviations={data.deviationQueue} compOffs={data.compOffQueue} />
-	</div>
-{/if}
-
 <DeviationRequest
 	bind:open={raiseOpen}
 	initialDate={raiseDate}
@@ -228,19 +235,99 @@
 
 <style>
 	.tabs {
-		margin-bottom: 20px;
+		margin-bottom: 12px;
+		align-self: flex-start;
 	}
 	.layout {
-		--ess-aside-width: 380px;
+		--ess-aside-width: 360px;
+	}
+
+	/* ---------- fit-to-screen layout ----------
+	   Two flex columns. The calendar / records table / review queue takes
+	   the main column's spare height; in the aside the day detail and
+	   comp-off cards keep their height and the deviations list takes the
+	   rest, scrolling inside. */
+	.fill-col {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		min-width: 0;
+	}
+	@media (min-width: 1101px) and (min-height: 640px) {
+		.layout {
+			grid-template-rows: minmax(0, 1fr);
+		}
+		.fill-col {
+			min-height: 0;
+		}
+		.fill-col > :global(*) {
+			flex: none;
+		}
+		.main-col > :global(.calendar-box),
+		.main-col > :global(.records-box),
+		.main-col > :global(.queue) {
+			flex: 1 1 0%;
+			min-height: 0;
+		}
+		.main-col > :global(.queue) {
+			overflow: auto;
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+		}
+		.side-col {
+			overflow-y: auto;
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+		}
+		.side-col > .dev-card {
+			flex: 1 1 0%;
+			min-height: 150px;
+		}
 	}
 
 	.metrics {
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 14px;
+		gap: 12px;
+	}
+	/* A slim strip: figure and label on one line, the caption below. */
+	.metrics .ess-metric {
+		padding: 8px 12px;
+		gap: 10px;
+		align-items: center;
+	}
+	.metrics .ess-tile {
+		width: 32px;
+		height: 32px;
+	}
+	.metrics .ess-metric__body {
+		grid-template-columns: auto minmax(0, 1fr);
+		align-items: baseline;
+		column-gap: 8px;
+		row-gap: 1px;
+	}
+	.metrics .ess-metric__value {
+		grid-row: 1;
+		grid-column: 1;
+		font-size: 18px;
+	}
+	.metrics .ess-metric__label {
+		grid-row: 1;
+		grid-column: 2;
+		font-size: 12.5px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.metrics .ess-metric__meta {
+		grid-column: 1 / -1;
+		font-size: 11.5px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.ess-metric__value small {
-		font-size: 16px;
+		font-size: 13px;
 		font-weight: 500;
 		color: var(--ess-text-secondary);
 	}
@@ -256,9 +343,9 @@
 	}
 
 	.allowance {
-		font-size: 13px;
+		font-size: 12.5px;
 		color: var(--ess-text-secondary);
-		margin: -6px 0 6px;
+		margin: -6px 0 4px;
 	}
 	.allowance strong {
 		color: var(--ess-text);
@@ -266,11 +353,19 @@
 	}
 
 	.dev {
-		gap: 12px;
+		gap: 10px;
+		padding-top: 8px;
+		padding-bottom: 8px;
+	}
+	.dev-list .ess-row__title {
+		font-size: 13.5px;
+	}
+	.dev-list .ess-row__meta {
+		font-size: 12px;
 	}
 	.dev-date {
 		min-width: 76px;
-		font-size: 12.5px;
+		font-size: 12px;
 		color: var(--ess-text-secondary);
 		font-variant-numeric: tabular-nums;
 	}
@@ -296,17 +391,15 @@
 
 	.empty {
 		margin: 0;
-		padding: 10px 0;
-		font-size: 13px;
+		padding: 2px 0;
+		font-size: 12.5px;
 		color: var(--ess-text-muted);
 	}
 	.raise-any {
 		width: 100%;
-		margin-top: 12px;
-	}
-
-	.queue-wrap {
-		margin-top: 20px;
+		height: 32px;
+		margin-top: 8px;
+		flex: none;
 	}
 
 	@media (max-width: 980px) {

@@ -96,10 +96,10 @@ textarea {
 }
 
 .ess-page-sub {
-	font-size: 14px;
-	line-height: 1.45;
+	font-size: 13px;
+	line-height: 1.4;
 	color: var(--ess-text-secondary);
-	margin-top: 8px;
+	margin-top: 4px;
 	max-width: 68ch;
 	text-wrap: pretty;
 }
@@ -167,7 +167,7 @@ textarea {
 	background: var(--ess-surface);
 	border: 1px solid var(--ess-border-subtle);
 	border-radius: var(--ess-radius-md);
-	padding: var(--ess-space-5);
+	padding: var(--ess-space-4);
 	box-shadow: var(--ess-elev-1);
 }
 
@@ -189,14 +189,14 @@ textarea {
 	background: var(--ess-surface);
 	border: 1px solid var(--ess-border);
 	border-radius: var(--ess-radius-lg);
-	padding: var(--ess-space-6);
+	padding: var(--ess-space-4);
 	box-shadow: var(--ess-elev-1);
 }
 
 .ess-sunken {
 	background: var(--ess-sunken);
 	border-radius: var(--ess-radius-md);
-	padding: var(--ess-space-4);
+	padding: var(--ess-space-3);
 }
 
 .ess-inverse {
@@ -213,10 +213,10 @@ textarea {
 	align-items: center;
 	justify-content: space-between;
 	gap: 12px;
-	margin-bottom: 14px;
+	margin-bottom: 10px;
 }
 .ess-card-head .ess-h2 {
-	font-size: 16px;
+	font-size: 15px;
 }
 .ess-link {
 	display: inline-flex;
@@ -249,8 +249,8 @@ button.ess-link {
 	align-items: center;
 	justify-content: center;
 	gap: 8px;
-	height: 40px;
-	padding: 0 18px;
+	height: 36px;
+	padding: 0 16px;
 	border: 1px solid transparent;
 	border-radius: var(--ess-radius-sm);
 	font-size: var(--ess-fs-body);
@@ -387,7 +387,7 @@ button.ess-link {
 	background: var(--ess-field-bg);
 	border: 1px solid var(--ess-border);
 	border-radius: var(--ess-radius-sm);
-	padding: 10px 12px;
+	padding: 8px 11px;
 	font-size: var(--ess-fs-body);
 	color: var(--ess-text);
 	transition:
@@ -530,7 +530,10 @@ button.ess-link {
 	overscroll-behavior-x: contain;
 }
 
+/* Positioned so a visually hidden header label stays inside the table
+   instead of widening the page. */
 .ess-table {
+	position: relative;
 	width: 100%;
 	border-collapse: collapse;
 	font-size: var(--ess-fs-body);
@@ -651,8 +654,9 @@ button.ess-link {
 	align-items: center;
 	justify-content: center;
 	gap: 8px;
-	min-width: 112px;
-	padding: 11px 20px;
+	flex-shrink: 0;
+	min-width: 88px;
+	padding: 7px 16px;
 	background: none;
 	border: none;
 	border-right: 1px solid var(--ess-border);
@@ -1039,6 +1043,7 @@ button.ess-row:hover {
 
 /* Key / value list (Total days — 3 days). */
 .ess-kv {
+	margin: 0;
 	display: grid;
 	grid-template-columns: max-content 1fr;
 	column-gap: 24px;
@@ -1803,14 +1808,14 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 	flex-wrap: wrap;
 	align-items: flex-end;
 	justify-content: space-between;
-	gap: 20px;
-	margin-bottom: var(--ess-space-6);
+	gap: 12px 20px;
+	margin-bottom: var(--ess-space-3);
 }
 .ess-page-head__text {
 	flex: 1 1 260px;
 	overflow-wrap: anywhere;
 	display: grid;
-	gap: 8px;
+	gap: 3px;
 	min-width: 0;
 }
 .ess-page-head__text .ess-page-sub {
@@ -1830,7 +1835,7 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 .ess-split {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) var(--ess-aside-width);
-	gap: 20px;
+	gap: 14px;
 	align-items: start;
 }
 .ess-split--wide {
@@ -1844,11 +1849,74 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 }
 .ess-stack {
 	display: grid;
-	gap: 20px;
+	gap: 14px;
 	align-content: start;
 }
 .ess-stack--tight {
-	gap: 14px;
+	gap: 10px;
+}
+
+/* ------------------------------------------------------------
+   FILL LAYOUT — the page fits the screen, no page scroll.
+   Put .ess-fill on the page's main block (a direct child of
+   .ess-content): it stretches to the bottom of the workspace, so
+   every column ends on the same line. Inside it:
+     .ess-fill-card  a card that fills its cell, as a column
+     .ess-scroll     the part of a card that scrolls when its
+                     content (a long list, a table) is taller
+   In a .ess-split or .ess-stack under .ess-fill, the last card of
+   each column grows to meet the bottom edge.
+   Desktop only; narrower screens keep the normal page flow.
+------------------------------------------------------------ */
+@media (min-width: 1101px) and (min-height: 640px) {
+	.ess-content:has(> .ess-fill) {
+		display: flex;
+		flex-direction: column;
+	}
+	/* A flex column would otherwise stretch tab bars across the page. */
+	.ess-content:has(> .ess-fill) > .ess-tabs {
+		align-self: flex-start;
+	}
+	.ess-content > .ess-fill {
+		flex: 1 1 0%;
+		min-height: 0;
+	}
+	.ess-fill.ess-split,
+	.ess-fill .ess-split {
+		align-items: stretch;
+		grid-template-rows: minmax(0, 1fr);
+		min-height: 0;
+	}
+	.ess-fill .ess-stack,
+	.ess-fill.ess-stack {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+		overflow: auto;
+		scrollbar-width: thin;
+	}
+	.ess-fill .ess-stack > :last-child,
+	.ess-fill.ess-stack > :last-child {
+		flex: 1 0 auto;
+	}
+	/* In a flex column of the fill layout, the card that takes the spare height. */
+	.ess-grow {
+		flex: 1 1 0%;
+		min-height: 0;
+	}
+	.ess-fill-card {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+		overflow: hidden;
+	}
+	.ess-scroll {
+		flex: 1 1 0%;
+		min-height: 0;
+		overflow: auto;
+		overscroll-behavior: contain;
+		scrollbar-width: thin;
+	}
 }
 @media (max-width: 1100px) {
 	.ess-split {
