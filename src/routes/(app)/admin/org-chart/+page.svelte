@@ -563,7 +563,7 @@
 
 	/* Desktop fill: the chart pans and scrolls inside its card; the details
 	   card takes the rest of the aside and scrolls on its own. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.org .chart-card {
 			display: flex;
 			flex: 1 1 0%;
@@ -577,6 +577,45 @@
 		}
 		.results {
 			align-content: start;
+		}
+	}
+
+	/* Short desktop screens: a slightly wider, tighter aside so the checks
+	   fit in fewer lines and the details card keeps room below them. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
+		.org {
+			--ess-aside-width: 340px;
+		}
+		.checks-card > .ess-caption {
+			font-size: 12px;
+		}
+		.checks {
+			margin-top: 2px;
+		}
+		.checks .ess-row {
+			padding-top: 5px;
+			padding-bottom: 5px;
+		}
+		.checks .ess-tile {
+			width: 28px;
+			height: 28px;
+		}
+		.checks .ess-row__meta {
+			font-size: 12px;
+			line-height: 1.35;
+		}
+		.org .detail-card {
+			min-height: 120px;
+		}
+		.detail-head {
+			margin-bottom: 6px;
+		}
+		.sub {
+			margin: 8px 0 2px;
+			padding-top: 8px;
+		}
+		.person {
+			padding: 4px 0;
 		}
 	}
 

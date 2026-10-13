@@ -337,7 +337,7 @@
 	/* Desktop: the minutes fit the screen. Cards share their column's
 	   height and their lists scroll inside them; the add-item form and
 	   the publish bar stay at the bottom of the action items card. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.page {
 			display: flex;
 			flex-direction: column;

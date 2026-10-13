@@ -133,8 +133,8 @@
 
 		<!-- ===== Leave policy ===== -->
 		{:else if tab === 'leave'}
-			<div class="docs">
-				<nav class="ess-card list" aria-label="Policy documents">
+			<div class="docs docs--leave">
+				<nav class="ess-card list list--chips" aria-label="Policy documents">
 					<h3 class="ess-h2 list-h">Policy documents</h3>
 					{#each shownLeave as lt (lt.id)}
 						<button type="button" class="doc-link" aria-current={leave?.id === lt.id ? 'true' : undefined} onclick={() => (leaveId = lt.id)}>
@@ -159,13 +159,14 @@
 								<p class="doc-sub">{entitlement(leave)}.</p>
 							</div>
 						</div>
-						<dl class="ess-kv rules">
-							<dt>Entitlement</dt><dd>{entitlement(leave)}</dd>
-							{#if Number(leave.carryForwardCap) > 0}<dt>Carry-forward cap</dt><dd>{leave.carryForwardCap} days</dd>{/if}
-							{#if leave.monthlyUsageCap}<dt>Monthly usage cap</dt><dd>{Number(leave.monthlyUsageCap)} days in a calendar month</dd>{/if}
-							<dt>Encashment</dt><dd>{leave.encashmentEligible ? 'Eligible' : 'Not eligible'}</dd>
-							{#if leave.eligibility}<dt>Eligibility</dt><dd class="cap">{leave.eligibility.replace(/_/g, ' ')}</dd>{/if}
-							<dt>Documentation</dt><dd>{leave.requiresDocumentation ? `Required${leave.documentationNote ? `: ${leave.documentationNote}` : ''}` : 'Not required'}</dd>
+						<!-- Each rule is a small fact tile, several to a row. -->
+						<dl class="facts">
+							<div class="fact"><dt>Entitlement</dt><dd>{entitlement(leave)}</dd></div>
+							{#if Number(leave.carryForwardCap) > 0}<div class="fact"><dt>Carry-forward cap</dt><dd>{leave.carryForwardCap} days</dd></div>{/if}
+							{#if leave.monthlyUsageCap}<div class="fact"><dt>Monthly usage cap</dt><dd>{Number(leave.monthlyUsageCap)} days in a calendar month</dd></div>{/if}
+							<div class="fact"><dt>Encashment</dt><dd>{leave.encashmentEligible ? 'Eligible' : 'Not eligible'}</dd></div>
+							{#if leave.eligibility}<div class="fact"><dt>Eligibility</dt><dd class="cap">{leave.eligibility.replace(/_/g, ' ')}</dd></div>{/if}
+							<div class="fact"><dt>Documentation</dt><dd>{leave.requiresDocumentation ? `Required${leave.documentationNote ? `: ${leave.documentationNote}` : ''}` : 'Not required'}</dd></div>
 						</dl>
 						<div class="ess-notice ess-notice--info">
 							<span class="ess-notice__icon"><Info size={16} /></span>
@@ -180,7 +181,7 @@
 
 		<!-- ===== Workplace policies ===== -->
 		{:else}
-			<div class="docs">
+			<div class="docs docs--workplace">
 				<nav class="ess-card list" aria-label="Workplace policies">
 					<h3 class="ess-h2 list-h">Policy documents</h3>
 					{#each shownWorkplace as p (p.id)}
@@ -207,8 +208,8 @@
 							</div>
 						</div>
 						<ol class="rule-list">
-							{#each workplace.rules as rule (rule)}
-								<li>{rule}</li>
+							{#each workplace.rules as rule, i (rule)}
+								<li><span class="rule-n" aria-hidden="true">{i + 1}</span><span>{rule}</span></li>
 							{/each}
 						</ol>
 					</article>
@@ -237,6 +238,7 @@
 					</div>
 				{:else}
 					<p class="empty fill-empty">
+						<span class="empty-icon" aria-hidden="true"><Umbrella size={18} strokeWidth={1.75} /></span>
 						{#if !data.hasShiftAssignment}Your holiday calendar appears once HR sets your shift group.{:else if !data.resolvedCalendar}No holiday calendar has been published yet.{:else}No more holidays this year.{/if}
 					</p>
 				{/each}
@@ -397,26 +399,118 @@
 		color: var(--ess-text);
 		font-weight: 500;
 	}
-	.rules {
-		grid-template-columns: 180px 1fr;
-		row-gap: 9px;
-		font-size: 13.5px;
-	}
 	.cap {
 		text-transform: capitalize;
 	}
+
+	/* Leave policy: the few leave types sit as chips in one strip above the
+	   document instead of a tall, mostly empty side list. */
+	.docs--leave {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.list--chips {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 6px;
+		padding: 7px 10px;
+	}
+	.list--chips .list-h {
+		padding: 0 8px 0 4px;
+		margin-right: 4px;
+	}
+	.list--chips .doc-link {
+		width: auto;
+		padding: 5px 10px 5px 6px;
+		border: 1px solid var(--ess-border);
+		gap: 8px;
+	}
+	.list--chips .doc-link[aria-current='true'] {
+		border-color: transparent;
+	}
+	.list--chips .doc-link .ess-tile--sm {
+		width: 26px;
+		height: 26px;
+	}
+	.list--chips .doc-link .ess-row__body {
+		display: flex;
+		flex-direction: row;
+		align-items: baseline;
+		gap: 8px;
+	}
+	.list--chips :global(.chev) {
+		display: none;
+	}
+	.list--chips .empty {
+		padding: 4px;
+	}
+
+	.facts {
+		margin: 0;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+		gap: 10px;
+	}
+	.fact {
+		padding: 9px 13px;
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-sunken);
+		display: grid;
+		gap: 3px;
+		align-content: start;
+	}
+	.fact dt {
+		margin: 0;
+		font-size: 12px;
+		color: var(--ess-text-secondary);
+	}
+	.fact dd {
+		margin: 0;
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--ess-text);
+	}
+
+	/* Workplace rules: numbered rows, each in its own soft panel. */
 	.rule-list {
 		margin: 0;
-		padding-left: 22px;
+		padding: 0;
+		list-style: none;
 		display: grid;
-		gap: 6px;
+		gap: 8px;
 		font-size: 14px;
 		line-height: 1.5;
 		color: var(--ess-text);
 	}
-	.rule-list li::marker {
+	.rule-list li {
+		display: flex;
+		align-items: flex-start;
+		gap: 12px;
+		padding: 9px 14px 9px 10px;
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-sunken);
+	}
+	.rule-n {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 22px;
+		height: 22px;
+		border-radius: var(--ess-radius-pill);
+		background: var(--ess-primary-soft);
 		color: var(--ess-primary-text);
+		font-size: 12px;
 		font-weight: 600;
+	}
+	.empty-icon {
+		display: grid;
+		place-items: center;
+		width: 38px;
+		height: 38px;
+		margin: 0 auto 8px;
+		border-radius: var(--ess-radius-md);
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
 	}
 
 	/* Holiday rows, two to a line on a wide screen. */
@@ -493,13 +587,6 @@
 		.docs {
 			grid-template-columns: 1fr;
 		}
-		.rules {
-			grid-template-columns: 1fr;
-			row-gap: 4px;
-		}
-		.rules dd {
-			margin-bottom: 8px;
-		}
 		.doc-title {
 			font-size: 19px;
 		}
@@ -508,13 +595,16 @@
 		.holiday-list {
 			grid-template-columns: minmax(0, 1fr);
 		}
+		.facts {
+			grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+		}
 		.search {
 			min-width: 0;
 			max-width: none;
 			flex-basis: 100%;
 		}
 	}
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.layout {
 			grid-template-rows: minmax(0, 1fr);
 		}
@@ -540,6 +630,50 @@
 		}
 		.docs > .list {
 			align-content: start;
+		}
+		.docs--leave {
+			grid-template-rows: auto minmax(0, 1fr);
+		}
+		/* Eleven long titles: a denser list, the rule count beside the
+		   title instead of under it. */
+		.docs--workplace {
+			grid-template-columns: 280px minmax(0, 1fr);
+		}
+		.docs--workplace .list {
+			padding: 10px 8px;
+			gap: 1px;
+		}
+		.docs--workplace .list-h {
+			padding: 0 8px 6px;
+		}
+		.docs--workplace .doc-link {
+			padding: 5px 8px;
+			gap: 9px;
+		}
+		.docs--workplace .doc-link .ess-tile--sm {
+			width: 26px;
+			height: 26px;
+			font-size: 13px;
+		}
+		.docs--workplace .doc-link .ess-row__body {
+			display: flex;
+			align-items: baseline;
+			gap: 8px;
+		}
+		.docs--workplace .doc-link .ess-row__title {
+			flex: 1 1 auto;
+			line-height: 1.3;
+		}
+		.docs--workplace .doc-link .ess-row__meta {
+			flex: none;
+			font-size: 11.5px;
+			color: var(--ess-text-muted);
+		}
+		.docs--workplace .list :global(.chev) {
+			display: none;
+		}
+		.docs--leave > .list--chips {
+			overflow: visible;
 		}
 		.fill-col {
 			min-height: 0;
@@ -567,6 +701,33 @@
 		}
 		.holidays-doc > .ess-notice:only-child {
 			max-width: 560px;
+		}
+	}
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
+		.doc {
+			gap: 10px;
+			padding: 12px 16px;
+		}
+		.doc-head {
+			padding-bottom: 8px;
+		}
+		.doc-title {
+			font-size: 18px;
+		}
+		.doc-sub {
+			font-size: 13px;
+		}
+		.doc .ess-notice {
+			padding: 9px 12px;
+			font-size: 13px;
+		}
+		.rule-list {
+			gap: 6px;
+			font-size: 13.5px;
+			line-height: 1.45;
+		}
+		.rule-list li {
+			padding: 7px 12px 7px 9px;
 		}
 	}
 </style>

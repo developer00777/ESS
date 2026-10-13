@@ -844,7 +844,7 @@
 	/* Fill layout: both columns end on the workspace's bottom edge. The
 	   upload history scrolls inside its card; a long preview scrolls inside
 	   its table. If a preview is open the left column scrolls as a whole. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.aside {
 			position: static;
 		}
@@ -882,6 +882,67 @@
 		.sum + .sum {
 			border-left: none;
 			border-top: 1px solid var(--ess-border);
+		}
+	}
+
+	/* Short desktop screens (a 1280x580 browser): the feed note sits beside
+	   its title, the upload controls tighten and the date fallback puts its
+	   label beside the input, so the upload history keeps a visible card. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
+		.feed:has(> .ess-card-head + .ess-help:last-child) {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: baseline;
+			column-gap: 14px;
+		}
+		.feed > .ess-card-head:has(+ .ess-help:last-child) {
+			margin-bottom: 0;
+		}
+		.feed > .ess-card-head + .ess-help:last-child {
+			margin: 0;
+		}
+		.upload-card :global(.steps) {
+			margin-bottom: 8px;
+		}
+		.upload-form {
+			gap: 10px;
+		}
+		.file-drop {
+			padding: 5px 10px;
+			gap: 10px;
+		}
+		.file-drop .ess-tile {
+			width: 30px;
+			height: 30px;
+		}
+		.file-text span {
+			font-size: 12px;
+		}
+		.options {
+			margin-top: 8px;
+			align-items: center;
+		}
+		.options .ess-help {
+			padding-bottom: 0;
+		}
+		.date-fallback {
+			flex-direction: row;
+			align-items: center;
+			gap: 10px;
+		}
+		.date-fallback .ess-label {
+			flex: 1 1 0;
+			font-size: 12.5px;
+			line-height: 1.3;
+		}
+		.date-fallback .ess-input {
+			flex: 0 0 150px;
+		}
+		.formats {
+			margin-top: 6px;
+		}
+		.main-col > .recent-card {
+			min-height: 90px;
 		}
 	}
 </style>

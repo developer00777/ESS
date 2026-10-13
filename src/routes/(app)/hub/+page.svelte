@@ -6,6 +6,7 @@
 	import Calendar from '@lucide/svelte/icons/calendar';
 	import Users from '@lucide/svelte/icons/users';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import NeedCard from '$lib/components/hub/NeedCard.svelte';
 	import TaskRow from '$lib/components/hub/TaskRow.svelte';
 	import DayStrip from '$lib/components/hub/DayStrip.svelte';
@@ -32,7 +33,7 @@
 
 <div class="ess-split today hub-fill">
 	<div class="ess-stack">
-		<section class="ess-card ess-fill-card grow" aria-labelledby="needs-h">
+		<section class="ess-card ess-fill-card grow" class:is-empty={!t.needs.length} aria-labelledby="needs-h">
 			<div class="ess-card-head">
 				<h2 id="needs-h" class="ess-h2">Needs you{#if t.needs.length}<span class="n">{t.needs.length}</span>{/if}</h2>
 				<a class="ess-link" href="/hub/tasks">All tasks <ChevronRight size={14} /></a>
@@ -41,12 +42,12 @@
 				{#each t.needs as item (item.key)}
 					<NeedCard {item} />
 				{:else}
-					<p class="empty">Nothing is waiting on you. Leave approvals, task requests, meeting minutes and mentions show up here.</p>
+					<p class="empty"><span class="empty-ic" aria-hidden="true"><CircleCheck size={16} /></span><span>Nothing is waiting on you. Leave approvals, task requests, meeting minutes and mentions show up here.</span></p>
 				{/each}
 			</div>
 		</section>
 
-		<section class="ess-card ess-fill-card grow" aria-labelledby="week-h">
+		<section class="ess-card ess-fill-card grow" class:is-empty={!t.dueThisWeek.length} aria-labelledby="week-h">
 			<div class="ess-card-head">
 				<h2 id="week-h" class="ess-h2">Due this week</h2>
 				<a class="ess-link" href="/hub/tasks">View all tasks <ChevronRight size={14} /></a>
@@ -60,22 +61,42 @@
 						<div class="tl-row"><TaskRow {task} /></div>
 					</li>
 				{:else}
-					<li class="empty">Nothing else is due in the next seven days.</li>
+					<li class="empty"><span class="empty-ic" aria-hidden="true"><Calendar size={16} /></span><span>Nothing else is due in the next seven days.</span></li>
 				{/each}
 			</ol>
+		</section>
+
+		<section class="ess-card fixed quick-card" aria-labelledby="quick-h">
+			<h2 id="quick-h" class="ess-h2">Quick actions</h2>
+			<div class="quick">
+				<button type="button" class="qa" onclick={() => (hub.newTaskOpen = true)}>
+					<span class="ess-tile ess-tile--sm"><FileText size={16} /></span>
+					<span>Create new task</span>
+				</button>
+				<a class="qa" href="/hub/meetings?schedule=1">
+					<span class="ess-tile ess-tile--sm"><Calendar size={16} /></span>
+					<span>Schedule a meeting</span>
+				</a>
+				<a class="qa" href={data.hub.isLead ? '/hub/team' : '/team'}>
+					<span class="ess-tile ess-tile--sm"><Users size={16} /></span>
+					<span>View team</span>
+				</a>
+			</div>
 		</section>
 	</div>
 
 	<aside class="ess-stack">
-		<section class="ess-card" aria-labelledby="meet-h">
+		<section class="ess-card ess-fill-card meet" aria-labelledby="meet-h">
 			<div class="ess-card-head">
 				<h2 id="meet-h" class="ess-h2">Upcoming meeting</h2>
 				<a class="ess-link" href="/hub/meetings">View calendar <ChevronRight size={14} /></a>
 			</div>
-			<DayStrip meetings={t.meetingsToday} {dueToday} />
+			<div class="strip-wrap">
+				<DayStrip meetings={t.meetingsToday} {dueToday} />
+			</div>
 		</section>
 
-		<section class="ess-card ess-fill-card grow" aria-labelledby="chats-h">
+		<section class="ess-card ess-fill-card grow chats" class:is-empty={!t.unreadChats.length} aria-labelledby="chats-h">
 			<div class="ess-card-head">
 				<h2 id="chats-h" class="ess-h2">Unread chats</h2>
 				<a class="ess-link" href="/hub/chats">View all chats <ChevronRight size={14} /></a>
@@ -93,28 +114,8 @@
 						<span class="ess-row__end"><span class="count">{c.kind === 'channel' && c.mentions ? `${c.mentions} @` : c.unread}</span></span>
 					</a>
 				{:else}
-					<p class="empty">All caught up.</p>
+					<p class="empty"><span class="empty-ic" aria-hidden="true"><MessageSquare size={16} /></span><span>All caught up.</span></p>
 				{/each}
-			</div>
-		</section>
-
-		<section class="ess-card ess-fill-card fixed" aria-labelledby="quick-h">
-			<div class="ess-card-head">
-				<h2 id="quick-h" class="ess-h2">Quick actions</h2>
-			</div>
-			<div class="quick">
-				<button type="button" class="qa" onclick={() => (hub.newTaskOpen = true)}>
-					<span class="ess-tile ess-tile--sm"><FileText size={16} /></span>
-					<span>Create new task</span>
-				</button>
-				<a class="qa" href="/hub/meetings?schedule=1">
-					<span class="ess-tile ess-tile--sm"><Calendar size={16} /></span>
-					<span>Schedule a meeting</span>
-				</a>
-				<a class="qa" href={data.hub.isLead ? '/hub/team' : '/team'}>
-					<span class="ess-tile ess-tile--sm"><Users size={16} /></span>
-					<span>View team</span>
-				</a>
 			</div>
 		</section>
 	</aside>
@@ -122,7 +123,7 @@
 
 <style>
 	.today {
-		--ess-aside-width: 400px;
+		--ess-aside-width: clamp(320px, 31vw, 400px);
 	}
 	.n {
 		display: inline-grid;
@@ -140,11 +141,25 @@
 		vertical-align: middle;
 	}
 	.empty {
+		display: flex;
+		align-items: center;
+		gap: 10px;
 		margin: 0;
-		padding: 10px 0;
-		font-size: 13.5px;
+		padding: 8px 0;
+		font-size: 13px;
+		line-height: 1.4;
 		color: var(--ess-text-muted);
 		list-style: none;
+	}
+	.empty-ic {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 30px;
+		height: 30px;
+		border-radius: 50%;
+		background: var(--ess-neutral-bg);
+		color: var(--ess-text-muted);
 	}
 	.timeline {
 		list-style: none;
@@ -229,48 +244,115 @@
 		display: grid;
 		place-items: center;
 	}
+	/* Quick actions: the heading and three buttons on one line. */
+	.quick-card {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px 16px;
+	}
+	.quick-card .ess-h2 {
+		flex: none;
+	}
 	.quick {
+		flex: 1 1 420px;
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 10px;
+		gap: 8px;
 	}
 	.qa {
 		display: flex;
-		flex-direction: column;
 		align-items: center;
-		justify-content: center;
-		gap: 5px;
-		padding: 8px 6px;
+		gap: 8px;
+		min-width: 0;
+		padding: 5px 10px 5px 6px;
 		border: 1px solid var(--ess-border);
 		border-radius: var(--ess-radius-md);
 		background: var(--ess-surface);
 		color: var(--ess-text);
 		font: inherit;
-		font-size: 12.5px;
+		font-size: 13px;
 		font-weight: 500;
 		line-height: 1.25;
-		text-align: center;
+		text-align: left;
 		cursor: pointer;
 		transition: border-color var(--ess-t-fast);
+	}
+	.qa > span:last-child {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 	.qa:hover {
 		border-color: var(--ess-primary);
 		color: var(--ess-primary-text);
 	}
-	/* Fit the screen: the needs and week cards share the left column, the
-	   chats card takes the free height on the right; each list scrolls. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	/* Fit the screen. Left: needs and the week share the height above the
+	   quick-actions strip. Right: today's meetings at their own height (they
+	   scroll past a point), unread chats take the rest. A card with nothing
+	   in it takes a smaller share, so a full list gets the room. */
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.today .ess-stack > .grow {
-			flex: 1 1 0%;
-			min-height: 110px;
+			flex: 3 1 0%;
+			min-height: 120px;
+		}
+		.today .ess-stack > .grow.is-empty {
+			flex-grow: 1;
+			min-height: 96px;
 		}
 		.today .ess-stack > .fixed {
 			flex: 0 0 auto;
 		}
+		.today .ess-stack > .meet {
+			flex: 0 1 auto;
+			min-height: 120px;
+			max-height: 52%;
+		}
+		.strip-wrap {
+			flex: 0 1 auto;
+			min-height: 0;
+			overflow: auto;
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+		}
+		.today .ess-stack > .chats {
+			flex: 1 1 0%;
+			min-height: 110px;
+		}
 		.body:has(> .empty:only-child) {
 			display: grid;
 			align-content: center;
+			justify-content: center;
+		}
+	}
+	/* Taller screens give an empty card more room: stack the icon over the line. */
+	@media (min-width: 1101px) and (min-height: 761px) {
+		.body > .empty:only-child {
+			flex-direction: column;
+			gap: 10px;
+			max-width: 420px;
 			text-align: center;
+		}
+		.body > .empty:only-child .empty-ic {
+			width: 44px;
+			height: 44px;
+		}
+	}
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
+		.quick-card {
+			padding-top: 8px;
+			padding-bottom: 8px;
+		}
+		.chat {
+			padding-top: 7px;
+			padding-bottom: 7px;
+		}
+	}
+	@media (max-width: 720px) {
+		.quick {
+			flex-basis: 100%;
+			grid-template-columns: minmax(0, 1fr);
 		}
 	}
 	@media (max-width: 720px) {

@@ -93,54 +93,59 @@
 
 <PageHeader crumb={['Attendance']} title="Attendance, made clear." sub="Track your attendance, view your records and raise corrections when needed." compact />
 
-<div class="ess-tabs tabs" role="tablist" aria-label="Attendance views">
-	<button type="button" role="tab" class="ess-tab" aria-selected={view === 'calendar'} onclick={() => (view = 'calendar')}><CalendarDays size={16} strokeWidth={1.75} /> Calendar</button>
-	<button type="button" role="tab" class="ess-tab" aria-selected={view === 'records'} onclick={() => (view = 'records')}><BarChart3 size={16} strokeWidth={1.75} /> Records</button>
-	{#if reviewCount > 0}
-		<button type="button" role="tab" class="ess-tab" aria-selected={view === 'review'} onclick={() => (view = 'review')}><Inbox size={16} strokeWidth={1.75} /> To review <span class="ess-count">{reviewCount}</span></button>
+<!-- The month's figures sit beside the tabs, so the calendar below gets the
+     height for every week of the cycle. -->
+<div class="topbar">
+	<div class="ess-tabs tabs" role="tablist" aria-label="Attendance views">
+		<button type="button" role="tab" class="ess-tab" aria-selected={view === 'calendar'} onclick={() => (view = 'calendar')}><CalendarDays size={16} strokeWidth={1.75} /> Calendar</button>
+		<button type="button" role="tab" class="ess-tab" aria-selected={view === 'records'} onclick={() => (view = 'records')}><BarChart3 size={16} strokeWidth={1.75} /> Records</button>
+		{#if reviewCount > 0}
+			<button type="button" role="tab" class="ess-tab" aria-selected={view === 'review'} onclick={() => (view = 'review')}><Inbox size={16} strokeWidth={1.75} /> To review <span class="ess-count">{reviewCount}</span></button>
+		{/if}
+	</div>
+	{#if view === 'calendar'}
+		<div class="metrics">
+			<!--
+				Read-only. Attendance is recorded by the biometric terminals and ProHance,
+				never typed in here — a self-service button is a second, unverified source
+				for the same fact. A missed or mis-read punch is raised as an attendance
+				correction, which HR approves, rather than overwritten by hand.
+			-->
+			<div class="ess-metric">
+				<span class="ess-tile" class:ess-tile--ok={!!today?.checkInAt} class:ess-tile--neutral={!today?.checkInAt}><CalendarCheck size={20} strokeWidth={1.75} /></span>
+				<div class="ess-metric__body">
+					<span class="ess-metric__label">Today’s check-in</span>
+					<span class="ess-metric__value">{today?.checkInAt ? formatTime(today.checkInAt) : '—'}</span>
+					<span class="ess-metric__meta">
+						{#if today?.checkOutAt}Checked out {formatTime(today.checkOutAt)}{:else if today?.checkInAt}{today.source === 'biometric' ? 'Biometric check-in recorded' : 'Recorded in the portal'}{:else}No punch recorded yet today{/if}
+					</span>
+				</div>
+			</div>
+			<div class="ess-metric">
+				<span class="ess-tile"><CalendarDays size={20} strokeWidth={1.75} /></span>
+				<div class="ess-metric__body">
+					<span class="ess-metric__label">Present</span>
+					<span class="ess-metric__value">{data.presentDays}{#if data.businessDaysSoFar > 0} <small>of {data.businessDaysSoFar}</small>{/if}</span>
+					<!-- Names the denominator and says week offs are in it: "23 of 23" is
+					     otherwise puzzling for someone who only worked the weekdays. -->
+					<span class="ess-metric__meta">{#if data.businessDaysSoFar > 0}Eligible days {statPeriod} · week offs included{:else}{statPeriod}{/if}</span>
+				</div>
+			</div>
+			<div class="ess-metric">
+				<span class="ess-tile ess-tile--ok"><BarChart3 size={20} strokeWidth={1.75} /></span>
+				<div class="ess-metric__body">
+					<span class="ess-metric__label">Average shift</span>
+					<span class="ess-metric__value">{formatHours(data.avgHours)}</span>
+					<span class="ess-metric__meta">Per completed shift {statPeriod}</span>
+				</div>
+			</div>
+		</div>
 	{/if}
 </div>
 
 <div class="ess-split ess-fill layout">
 	<div class="fill-col main-col">
 		{#if view === 'calendar'}
-			<div class="metrics">
-				<!--
-					Read-only. Attendance is recorded by the biometric terminals and ProHance,
-					never typed in here — a self-service button is a second, unverified source
-					for the same fact. A missed or mis-read punch is raised as an attendance
-					correction, which HR approves, rather than overwritten by hand.
-				-->
-				<div class="ess-metric">
-					<span class="ess-tile" class:ess-tile--ok={!!today?.checkInAt} class:ess-tile--neutral={!today?.checkInAt}><CalendarCheck size={20} strokeWidth={1.75} /></span>
-					<div class="ess-metric__body">
-						<span class="ess-metric__label">Today’s check-in</span>
-						<span class="ess-metric__value">{today?.checkInAt ? formatTime(today.checkInAt) : '—'}</span>
-						<span class="ess-metric__meta">
-							{#if today?.checkOutAt}Checked out {formatTime(today.checkOutAt)}{:else if today?.checkInAt}{today.source === 'biometric' ? 'Biometric check-in recorded' : 'Recorded in the portal'}{:else}No punch recorded yet today{/if}
-						</span>
-					</div>
-				</div>
-				<div class="ess-metric">
-					<span class="ess-tile"><CalendarDays size={20} strokeWidth={1.75} /></span>
-					<div class="ess-metric__body">
-						<span class="ess-metric__label">Present</span>
-						<span class="ess-metric__value">{data.presentDays}{#if data.businessDaysSoFar > 0} <small>of {data.businessDaysSoFar}</small>{/if}</span>
-						<!-- Names the denominator and says week offs are in it: "23 of 23" is
-						     otherwise puzzling for someone who only worked the weekdays. -->
-						<span class="ess-metric__meta">{#if data.businessDaysSoFar > 0}Eligible days {statPeriod} · week offs included{:else}{statPeriod}{/if}</span>
-					</div>
-				</div>
-				<div class="ess-metric">
-					<span class="ess-tile ess-tile--ok"><BarChart3 size={20} strokeWidth={1.75} /></span>
-					<div class="ess-metric__body">
-						<span class="ess-metric__label">Average shift</span>
-						<span class="ess-metric__value">{formatHours(data.avgHours)}</span>
-						<span class="ess-metric__meta">Per completed shift {statPeriod}</span>
-					</div>
-				</div>
-			</div>
-
 			<AttendanceCalendar
 				mode="grid"
 				bind:selectedKey
@@ -202,7 +207,10 @@
 				<h2 id="dev-h" class="ess-h2">Recent deviations</h2>
 				<button type="button" class="ess-link as-btn" onclick={() => (view = 'records')}>View all records <ChevronRight size={14} /></button>
 			</div>
-			<p class="allowance">Corrections allowance · <strong>{data.deviationMonthlyUsed} of {data.deviationMonthlyCap}</strong> used this month</p>
+			<div class="allowance-row">
+				<p class="allowance">Corrections allowance · <strong>{data.deviationMonthlyUsed} of {data.deviationMonthlyCap}</strong> used this month</p>
+				<button type="button" class="ess-btn ess-btn--outline ess-btn--sm raise-any" onclick={() => raise(selectedKey ?? '')}>Raise correction</button>
+			</div>
 			<div class="ess-rows ess-scroll dev-list">
 				{#each data.myDeviations.slice(0, 5) as d (d.id)}
 					{@const s = devStatus(d.status)}
@@ -219,7 +227,6 @@
 					<p class="empty">No correction requests raised yet. Pick a day with a missing punch and raise one from there.</p>
 				{/each}
 			</div>
-			<button type="button" class="ess-btn ess-btn--outline raise-any" onclick={() => raise(selectedKey ?? '')}>Raise correction</button>
 		</section>
 	</aside>
 </div>
@@ -234,9 +241,15 @@
 />
 
 <style>
-	.tabs {
+	.topbar {
+		display: flex;
+		align-items: center;
+		gap: 10px 12px;
+		flex-wrap: wrap;
 		margin-bottom: 12px;
-		align-self: flex-start;
+	}
+	.tabs {
+		flex: none;
 	}
 	.layout {
 		--ess-aside-width: 360px;
@@ -253,7 +266,7 @@
 		gap: 10px;
 		min-width: 0;
 	}
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.layout {
 			grid-template-rows: minmax(0, 1fr);
 		}
@@ -281,24 +294,60 @@
 		}
 		.side-col > .dev-card {
 			flex: 1 1 0%;
-			min-height: 150px;
+			min-height: 140px;
+		}
+	}
+	/* Short laptop screens (about 1280x580): the aside's cards tighten so
+	   the day detail, comp-off balance and deviations all fit. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
+		.fill-col {
+			gap: 8px;
+		}
+		.side-col > .dev-card {
+			min-height: 112px;
+		}
+		.dev {
+			padding-top: 6px;
+			padding-bottom: 6px;
+		}
+		.allowance {
+			font-size: 12px;
+		}
+		.side-col {
+			gap: 6px;
+		}
+		.dev-card .ess-card-head {
+			margin-bottom: 6px;
+		}
+		.allowance-row {
+			margin-bottom: 4px;
+		}
+		.metrics .ess-metric {
+			padding-top: 3px;
+			padding-bottom: 3px;
+		}
+		.metrics .ess-tile {
+			width: 28px;
+			height: 28px;
 		}
 	}
 
 	.metrics {
+		flex: 1 1 640px;
+		min-width: 0;
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 12px;
+		gap: 10px;
 	}
 	/* A slim strip: figure and label on one line, the caption below. */
 	.metrics .ess-metric {
-		padding: 8px 12px;
+		padding: 4px 12px;
 		gap: 10px;
 		align-items: center;
 	}
 	.metrics .ess-tile {
-		width: 32px;
-		height: 32px;
+		width: 30px;
+		height: 30px;
 	}
 	.metrics .ess-metric__body {
 		grid-template-columns: auto minmax(0, 1fr);
@@ -309,7 +358,7 @@
 	.metrics .ess-metric__value {
 		grid-row: 1;
 		grid-column: 1;
-		font-size: 18px;
+		font-size: 16px;
 	}
 	.metrics .ess-metric__label {
 		grid-row: 1;
@@ -321,6 +370,7 @@
 	}
 	.metrics .ess-metric__meta {
 		grid-column: 1 / -1;
+		line-height: 1.25;
 		font-size: 11.5px;
 		white-space: nowrap;
 		overflow: hidden;
@@ -342,10 +392,22 @@
 		font-weight: 500;
 	}
 
+	/* The allowance and the raise button share a line above the list. */
+	.allowance-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+		margin: -4px 0 6px;
+		flex: none;
+	}
 	.allowance {
+		flex: 1 1 0%;
+		min-width: 0;
 		font-size: 12.5px;
+		line-height: 1.35;
 		color: var(--ess-text-secondary);
-		margin: -6px 0 4px;
+		margin: 0;
 	}
 	.allowance strong {
 		color: var(--ess-text);
@@ -396,9 +458,6 @@
 		color: var(--ess-text-muted);
 	}
 	.raise-any {
-		width: 100%;
-		height: 32px;
-		margin-top: 8px;
 		flex: none;
 	}
 

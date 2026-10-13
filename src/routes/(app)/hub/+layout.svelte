@@ -190,7 +190,7 @@
 	/* Fit to the screen: .hub is the .ess-fill block, .page takes what is
 	   left under the header and tabs, and each page's main block (marked
 	   .hub-fill) stretches to the bottom. Long lists scroll inside cards. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.page {
 			flex: 1 1 0%;
 			min-height: 0;
@@ -200,6 +200,23 @@
 		.page > :global(.hub-fill) {
 			flex: 1 1 0%;
 			min-height: 0;
+		}
+	}
+	/* Short laptop screens: a tighter header, search and tab row. */
+	@media (min-width: 721px) and (max-height: 760px) {
+		.hub {
+			gap: 8px;
+		}
+		.hub.own-header {
+			gap: 8px;
+		}
+		.search {
+			height: 32px;
+			min-width: 250px;
+			font-size: 13px;
+		}
+		.tabs .ess-tab {
+			min-width: 92px;
 		}
 	}
 	.toast {

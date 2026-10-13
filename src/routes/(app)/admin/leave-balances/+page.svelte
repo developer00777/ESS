@@ -773,7 +773,7 @@
 
 	/* Desktop fill: the page ends at the bottom of the workspace; the preview
 	   table, the history and the leave types scroll inside their own cards. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.aside {
 			position: static;
 		}
@@ -798,6 +798,79 @@
 		}
 		.page .import-card :global(.steps) {
 			margin-bottom: 12px;
+		}
+	}
+
+	/* Short desktop screens: tighter toolbar, steps and notices; headings
+	   share a line with their captions; the import card scrolls on its own
+	   if the accepted-format help is long, so the column never does. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
+		.toolbar {
+			gap: 10px;
+		}
+		.toolbar .ess-input,
+		.toolbar .ess-select {
+			height: 32px;
+			padding-top: 0;
+			padding-bottom: 0;
+		}
+		.page .import-card {
+			flex: 0 1 auto;
+			min-height: 0;
+			overflow: auto;
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+		}
+		.page .import-card .ess-caption {
+			font-size: 12px;
+			line-height: 1.4;
+		}
+		.page .import-card :global(.steps) {
+			margin-bottom: 8px;
+		}
+		.ess-notice {
+			margin-top: 8px;
+			padding: 6px 10px;
+			font-size: 12.5px;
+		}
+		.page .import-card > .ess-notice:first-of-type {
+			margin-top: 0;
+		}
+		.format {
+			padding: 6px 10px;
+			margin-bottom: 8px;
+			font-size: 12px;
+		}
+		.format p {
+			line-height: 1.4;
+		}
+		.upload-form {
+			gap: 10px;
+		}
+		.page .history-card {
+			min-height: 72px;
+		}
+		.page .preview-card {
+			min-height: 180px;
+		}
+		.page .types-card {
+			min-height: 110px;
+		}
+		.history-card .ess-card-head > div,
+		.preview-card .ess-card-head > div {
+			display: flex;
+			align-items: baseline;
+			flex-wrap: wrap;
+			gap: 2px 10px;
+		}
+		.types li {
+			padding: 5px 0;
+		}
+		.sum {
+			padding: 6px 8px;
+		}
+		.sum strong {
+			font-size: 19px;
 		}
 	}
 	@media (max-width: 860px) {

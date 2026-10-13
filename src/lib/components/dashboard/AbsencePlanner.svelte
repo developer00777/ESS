@@ -877,4 +877,58 @@
 			margin-left: 0;
 		}
 	}
+
+	/* Short laptop screens (about 1280×580): tighter so the dashboard fits. */
+	@media (min-width: 721px) and (max-height: 760px) {
+		.planner {
+			padding: 10px 14px 8px;
+			gap: 6px;
+		}
+		.title h2 {
+			font-size: 15px;
+		}
+		.title p {
+			font-size: 11.5px;
+		}
+		.nav-btn,
+		.today-btn {
+			height: 24px;
+			min-width: 24px;
+		}
+		.month-label {
+			font-size: 12.5px;
+		}
+		.seg button {
+			height: 24px;
+		}
+		.chip,
+		.find {
+			height: 28px;
+		}
+		.grid {
+			--who: 170px;
+			--cell-min: 24px;
+			gap: 3px;
+		}
+		.row {
+			height: 30px;
+		}
+		.hrow {
+			height: 32px;
+		}
+		.dh {
+			height: 30px;
+			border-radius: 8px;
+		}
+		.dow {
+			font-size: 9.5px;
+		}
+		.dn {
+			font-size: 11.5px;
+		}
+		.cell {
+			height: 24px;
+			border-radius: 6px;
+		}
+	}
 </style>

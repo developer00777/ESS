@@ -202,24 +202,24 @@
 	<div class="calendar-header">
 		<div class="month-nav">
 			<button class="nav-btn" onclick={goToPrevMonth} aria-label="Previous month">
-				<ChevronLeft size={size === 'large' ? 22 : 18} />
+				<ChevronLeft size={18} />
 			</button>
 			<h2 class="month-label">
 				{cycleLabel(cycle)}
 				<span class="fy-label">{financialYearLabel(viewYear, viewMonth)}</span>
 			</h2>
 			<button class="nav-btn" onclick={goToNextMonth} aria-label="Next month">
-				<ChevronRight size={size === 'large' ? 22 : 18} />
+				<ChevronRight size={18} />
 			</button>
 		</div>
+		<!-- The legend sits in the header row so the weeks get the height. -->
+		<div class="legend">
+			<span class="legend-item"><i class="dot dot-holiday"></i> Holiday</span>
+			<span class="legend-item"><i class="dot dot-approved"></i> Approved leave</span>
+			<span class="legend-item"><i class="dot dot-pending"></i> Pending leave</span>
+			<span class="legend-item"><i class="swatch swatch-weekoff"></i> Week off{weekOffLabel ? ` · ${weekOffLabel}` : ''}</span>
+		</div>
 		<button class="today-btn" onclick={goToToday}>Today</button>
-	</div>
-
-	<div class="legend">
-		<span class="legend-item"><i class="dot dot-holiday"></i> Holiday</span>
-		<span class="legend-item"><i class="dot dot-approved"></i> Approved leave</span>
-		<span class="legend-item"><i class="dot dot-pending"></i> Pending leave</span>
-		<span class="legend-item"><i class="swatch swatch-weekoff"></i> Week off{weekOffLabel ? ` · ${weekOffLabel}` : ''}</span>
 	</div>
 
 	<div class="weekday-row">
@@ -614,61 +614,127 @@
 		}
 	}
 
-	/* Large / hero variant */
+	/* Large / hero variant: compact chrome (one header row holding the
+	   navigation, legend and Today) so the weeks get the height. */
 	.calendar-box.large {
-		padding: 14px 18px 16px;
+		padding: 12px 14px;
 	}
 
 	.calendar-box.large .calendar-header {
-		margin-bottom: 10px;
+		flex-wrap: wrap;
+		gap: 6px 14px;
+		margin-bottom: 8px;
 	}
 
-	.calendar-box.large .month-label {
-		font-size: 20px;
-	}
-
-	.calendar-box.large .legend {
-		gap: 6px 18px;
-		margin-bottom: 10px;
-	}
-
-	.calendar-box.large .legend-item {
-		font-size: 12.5px;
-	}
-
-	.calendar-box.large .weekday {
-		padding: 6px 0;
-		font-size: 12.5px;
-	}
-
-	.calendar-box.large .month-grid .day-cell {
-		min-height: 5rem;
-		aspect-ratio: auto;
-		padding: 7px 9px;
-		align-items: flex-start;
-		text-align: left;
+	.calendar-box.large .month-nav {
 		gap: 4px;
 	}
 
+	.calendar-box.large .nav-btn {
+		width: 28px;
+		height: 28px;
+	}
+
+	.calendar-box.large .month-label {
+		font-size: 17px;
+		gap: 8px;
+		min-width: 15.5rem;
+	}
+
+	.calendar-box.large .fy-label {
+		font-size: 11px;
+		padding: 1px 7px;
+	}
+
+	.calendar-box.large .today-btn {
+		font-size: 12.5px;
+		padding: 5px 12px;
+	}
+
+	.calendar-box.large .legend {
+		flex: 1 1 auto;
+		justify-content: flex-end;
+		gap: 4px 14px;
+		margin-bottom: 0;
+	}
+
+	.calendar-box.large .legend-item {
+		font-size: 12px;
+		gap: 6px;
+	}
+
+	.calendar-box.large .dot {
+		width: 8px;
+		height: 8px;
+	}
+
+	.calendar-box.large .weekday {
+		padding: 4px 0;
+		font-size: 11.5px;
+	}
+
+	/* Day number and its holiday / week-off tag share the first line; the
+	   leave tag (a name, or "N on leave" when several) takes the second, so a
+	   busy day shows a count instead of growing the cell. */
+	.calendar-box.large .month-grid .day-cell {
+		min-height: 3.4rem;
+		aspect-ratio: auto;
+		padding: 4px 7px;
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: center;
+		align-content: flex-start;
+		justify-content: flex-start;
+		text-align: left;
+		gap: 2px 6px;
+	}
+
 	.calendar-box.large .day-number {
-		font-size: 14px;
+		font-size: 13px;
+		line-height: 18px;
+		white-space: nowrap;
 	}
 
 	.calendar-box.large .day-tag {
-		font-size: 11.5px;
-		padding: 2px 7px;
+		font-size: 11px;
+		line-height: 14px;
+		padding: 1px 6px;
+		min-width: 0;
 	}
 
+	.calendar-box.large .day-tag {
+		flex: 0 1 auto;
+	}
+
+	/* Day detail: one compact strip under the grid rather than a tall list. */
 	.calendar-box.large .day-detail {
-		margin-top: 10px;
-		padding-top: 10px;
+		margin-top: 8px;
+		padding-top: 8px;
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 18px;
+	}
+
+	.calendar-box.large .day-detail strong {
+		font-size: 14px;
+	}
+
+	.calendar-box.large .detail-row {
+		font-size: 13px;
+		gap: 6px;
+	}
+
+	.calendar-box.large .detail-type {
+		margin-left: 2px;
+		font-size: 12px;
 	}
 
 	/* On a laptop-sized screen the large calendar fills the height it is
 	   given (its parent is a flex column): the weeks share the height, and
 	   if there is too little the grid scrolls inside the card rather than
 	   the page. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.calendar-box.large {
 			flex: 1 1 0%;
 			min-height: 0;
@@ -681,7 +747,7 @@
 		.calendar-box.large .month-grid {
 			flex: 1 1 0%;
 			min-height: 0;
-			grid-auto-rows: minmax(52px, 1fr);
+			grid-auto-rows: minmax(42px, 1fr);
 			overflow: auto;
 			scrollbar-width: thin;
 		}
@@ -689,17 +755,19 @@
 			min-height: 0;
 		}
 		.calendar-box.large .day-detail {
-			max-height: 28%;
+			max-height: 22%;
 			overflow: auto;
 		}
 	}
 
 	@media (max-width: 900px) {
 		.calendar-box.large {
-			padding: 18px;
+			padding: 12px;
 		}
-		.calendar-box.large .month-grid .day-cell {
-			min-height: 4.5rem;
+		.calendar-box.large .legend {
+			justify-content: flex-start;
+			order: 3;
+			flex-basis: 100%;
 		}
 		.calendar-box.large .month-label,
 		.month-label {

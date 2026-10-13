@@ -334,7 +334,7 @@
 		gap: 12px;
 		min-width: 0;
 	}
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.apply {
 			grid-template-rows: minmax(0, 1fr);
 		}

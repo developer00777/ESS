@@ -313,4 +313,19 @@
 		color: var(--ess-text-muted);
 		font-size: 13px;
 	}
+
+	/* Short laptop screens (about 1280×580): tighter so the dashboard fits. */
+	@media (min-width: 721px) and (max-height: 760px) {
+		.panel {
+			padding: 10px 14px;
+			gap: 8px;
+		}
+		.p-head p {
+			display: none;
+		}
+		.more {
+			width: 26px;
+			height: 26px;
+		}
+	}
 </style>

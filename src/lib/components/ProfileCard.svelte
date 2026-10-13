@@ -80,4 +80,33 @@
 		display: grid;
 		gap: 10px;
 	}
+
+	/* Short laptop screens: the note sits beside the title, not under it. */
+	@media (min-width: 1101px) and (max-height: 760px) {
+		.profile-card {
+			gap: 8px;
+			padding: 10px 14px;
+		}
+		.head-text {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: baseline;
+			column-gap: 10px;
+			row-gap: 0;
+		}
+		h3 {
+			font-size: 15px;
+			align-self: center;
+		}
+		h3 .ess-tile {
+			width: 24px;
+			height: 24px;
+		}
+		.note {
+			font-size: 12px;
+		}
+		.card-body {
+			gap: 8px;
+		}
+	}
 </style>

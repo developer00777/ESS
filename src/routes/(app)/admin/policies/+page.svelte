@@ -873,7 +873,7 @@
 	/* Desktop fill: the publish card takes the height left over and its two
 	   panes scroll on their own; the published list keeps its natural height
 	   up to a cap and scrolls inside after that. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.pol-body {
 			display: flex;
 			flex-direction: column;
@@ -937,6 +937,9 @@
 		.file-drop > :global(*:not(.ess-tile)) {
 			grid-column: 2;
 		}
+		.fields:has(> .waiting) {
+			align-content: center;
+		}
 		.fields .waiting {
 			min-height: 100%;
 			align-content: center;
@@ -961,6 +964,98 @@
 			position: sticky;
 			top: 0;
 			z-index: 1;
+		}
+	}
+
+	/* Short desktop screens (laptops at 150% scaling): the stepper sits on
+	   one line, headings share a line with their captions and the empty
+	   states lie flat, so both cards fit without scrolling. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
+		.pol-body {
+			gap: 10px;
+		}
+		.kinds :global(.ess-tab) {
+			padding-top: 4px;
+			padding-bottom: 4px;
+		}
+		.publish {
+			min-height: 170px;
+		}
+		.pub-head {
+			margin-bottom: 8px;
+			align-items: center;
+		}
+		.pub-head .ess-caption,
+		.current .ess-caption {
+			font-size: 12px;
+		}
+		.steps .ess-step {
+			display: flex;
+			align-items: center;
+			gap: 0;
+		}
+		.steps .ess-step__label {
+			position: relative;
+			z-index: 1;
+			padding: 0 10px 0 6px;
+			background: var(--ess-surface);
+			font-size: 13px;
+			white-space: nowrap;
+		}
+		.pub-grid {
+			gap: 10px;
+		}
+		.doc,
+		.fields {
+			padding: 8px 12px;
+			gap: 6px;
+		}
+		.doc .ess-h3 {
+			font-size: 14px;
+		}
+		.doc .doc-preview {
+			min-height: 110px;
+		}
+		.doc .file-drop {
+			grid-template-columns: auto minmax(0, 1fr) auto;
+			padding: 8px 12px;
+			row-gap: 2px;
+		}
+		.file-drop .ess-tile {
+			grid-row: span 2;
+		}
+		.file-drop > :global(.ess-btn) {
+			grid-column: 3;
+			grid-row: 1 / span 2;
+			align-self: center;
+		}
+		.file-drop > span:not(.ess-tile):not(.ess-btn) {
+			font-size: 12.5px;
+			max-width: 48ch;
+		}
+		.fields .waiting {
+			grid-template-columns: auto minmax(0, 1fr);
+			justify-items: start;
+			column-gap: 12px;
+			row-gap: 2px;
+			text-align: left;
+		}
+		.waiting .ess-tile {
+			grid-row: span 2;
+			align-self: center;
+		}
+		.waiting span:not(.ess-tile) {
+			font-size: 12.5px;
+			max-width: 52ch;
+		}
+		.current {
+			min-height: 0;
+		}
+		.current .ess-card-head > div {
+			display: flex;
+			align-items: baseline;
+			flex-wrap: wrap;
+			gap: 2px 10px;
 		}
 	}
 

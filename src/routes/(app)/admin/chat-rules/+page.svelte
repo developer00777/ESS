@@ -388,7 +388,7 @@
 
 	/* Fill layout: the settings and the preview end on the save bar, which
 	   sits on the workspace's bottom edge; the preview scrolls inside. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.chat-form {
 			overflow: hidden;
 		}
@@ -410,6 +410,56 @@
 		.preview-scroll {
 			margin-right: -6px;
 			padding-right: 6px;
+		}
+	}
+
+	/* Short desktop screens (a 1280x580 browser): slimmer option rows and
+	   switches so both settings cards fit above the bottom edge. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
+		.opts {
+			margin-top: 8px;
+		}
+		.opt {
+			gap: 10px;
+			padding: 6px 12px;
+		}
+		.box {
+			margin-top: 2px;
+			width: 16px;
+			height: 16px;
+		}
+		.opt-body {
+			gap: 1px;
+		}
+		.opt-body strong {
+			font-size: 13px;
+			line-height: 1.3;
+		}
+		.opt-body small {
+			font-size: 12px;
+			line-height: 1.3;
+		}
+		.switch {
+			width: 40px;
+			height: 22px;
+		}
+		.switch::after {
+			width: 16px;
+			height: 16px;
+		}
+		.switch.on::after {
+			transform: translateX(18px);
+		}
+		.viewer {
+			padding: 6px 10px;
+		}
+		.viewer .ess-tile {
+			width: 30px;
+			height: 30px;
+		}
+		.chat-split > aside > .bar {
+			padding: 10px 14px;
+			gap: 10px;
 		}
 	}
 </style>

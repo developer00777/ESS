@@ -1857,6 +1857,61 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 }
 
 /* ------------------------------------------------------------
+   SHORT SCREENS — laptops whose page area is under ~760px tall
+   (e.g. 1920×1080 at 150% scaling gives about 1280×580). Same
+   layout, tighter: header, tabs, cards and gaps all shrink.
+------------------------------------------------------------ */
+@media (min-width: 721px) and (max-height: 760px) {
+	:root {
+		--ess-shell-inset: 8px;
+	}
+	.ess-content {
+		padding-bottom: 10px;
+	}
+	.ess-page-head {
+		margin-bottom: 8px;
+		gap: 8px 16px;
+	}
+	.ess-page-head__text {
+		gap: 1px;
+	}
+	.ess-page-title {
+		font-size: 19px;
+	}
+	.ess-page-sub {
+		font-size: 12px;
+		margin-top: 0;
+	}
+	.ess-crumb {
+		font-size: 10px;
+	}
+	.ess-tab {
+		padding: 5px 14px;
+		font-size: 13px;
+	}
+	.ess-card {
+		padding: 12px 14px;
+	}
+	.ess-card-head {
+		margin-bottom: 8px;
+	}
+	.ess-split,
+	.ess-stack {
+		gap: 10px;
+	}
+	.ess-btn:not(.ess-btn--sm):not(.ess-btn--icon) {
+		height: 32px;
+		padding: 0 14px;
+	}
+	.ess-input,
+	.ess-select,
+	.ess-textarea {
+		padding-top: 6px;
+		padding-bottom: 6px;
+	}
+}
+
+/* ------------------------------------------------------------
    FILL LAYOUT — the page fits the screen, no page scroll.
    Put .ess-fill on the page's main block (a direct child of
    .ess-content): it stretches to the bottom of the workspace, so
@@ -1866,9 +1921,9 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
                      content (a long list, a table) is taller
    In a .ess-split or .ess-stack under .ess-fill, the last card of
    each column grows to meet the bottom edge.
-   Desktop only; narrower screens keep the normal page flow.
+   Desktop only (and at least 480px tall); smaller screens keep the normal page flow.
 ------------------------------------------------------------ */
-@media (min-width: 1101px) and (min-height: 640px) {
+@media (min-width: 1101px) and (min-height: 480px) {
 	.ess-content:has(> .ess-fill) {
 		display: flex;
 		flex-direction: column;

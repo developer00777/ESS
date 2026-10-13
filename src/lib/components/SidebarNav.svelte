@@ -8,13 +8,12 @@
 	import Settings from '@lucide/svelte/icons/settings';
 	import Wallet from '@lucide/svelte/icons/wallet';
 	import CircleHelp from '@lucide/svelte/icons/circle-help';
-	import UserCog from '@lucide/svelte/icons/user-cog';
 	import type { Role } from '$lib/server/auth';
 
 	/**
 	 * A narrow, free-floating pill of icons that overlaps the workspace's
-	 * left edge: the logo on top, the main sections, then Help & support and
-	 * profile settings at the foot. Labels show as tooltips. Admin Controls
+	 * left edge: the logo on top, the main sections, then Help & support at
+	 * the foot. Profile lives in the top bar (settings button, avatar menu). Labels show as tooltips. Admin Controls
 	 * only shows for people whose privileges open it.
 	 */
 	interface Props {
@@ -105,10 +104,6 @@
 		<a href="/hr-contacts" class="nav-item" aria-current={isActive('/hr-contacts') ? 'page' : undefined} data-tip="Help & support" aria-label="Help & support">
 			<CircleHelp size={19} strokeWidth={1.75} />
 			<span class="nav-label">Help &amp; support</span>
-		</a>
-		<a href="/profile" class="nav-item" aria-current={isActive('/profile') ? 'page' : undefined} data-tip="Profile & settings" aria-label="Profile and settings">
-			<UserCog size={19} strokeWidth={1.75} />
-			<span class="nav-label">Profile &amp; settings</span>
 		</a>
 	</div>
 </nav>

@@ -242,7 +242,7 @@
 	}
 	/* Desktop: the card fills the rest of the screen; the list (or each
 	   board column) scrolls inside it instead of growing the page. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.page {
 			display: flex;
 			flex-direction: column;

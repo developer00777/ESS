@@ -301,7 +301,7 @@
 	   height left under the summary strip, and the page never scrolls.
 	   A page that does not opt in keeps its natural height and the workspace
 	   scrolls as before. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.admin-body {
 			display: flex;
 			flex-direction: column;
@@ -397,6 +397,94 @@
 		padding: 10px 12px;
 		color: var(--ess-text-muted);
 		font-size: var(--ess-fs-caption);
+	}
+
+	/* Desktop: ten tabs on one row without sideways scroll at 1280px. */
+	@media (min-width: 1101px) {
+		.tab {
+			gap: 5px;
+			padding-left: 7px;
+			padding-right: 7px;
+		}
+		.tab :global(svg) {
+			width: 14px;
+			height: 14px;
+		}
+		.group-sep {
+			margin-left: 2px;
+			margin-right: 2px;
+		}
+	}
+
+	/* Short desktop screens (a 1280x580 browser): the header, tabs and
+	   summary strip give back as much height as they can, so the page below
+	   keeps room for its cards. */
+	@media (min-width: 1101px) and (max-height: 800px) {
+		/* Title and its one-line blurb share a row under the crumb. */
+		:global(.ess-page-head:has(+ nav.admin-tabs)) {
+			margin-bottom: 4px;
+			align-items: center;
+		}
+		:global(.ess-page-head:has(+ nav.admin-tabs) > .ess-page-head__text) {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: baseline;
+			column-gap: 14px;
+			row-gap: 1px;
+		}
+		:global(.ess-page-head:has(+ nav.admin-tabs) .ess-crumb) {
+			flex-basis: 100%;
+		}
+		:global(.ess-page-head:has(+ nav.admin-tabs) .ess-page-sub) {
+			flex: 1 1 260px;
+			min-width: 0;
+		}
+		.tab {
+			padding-top: 6px;
+			padding-bottom: 6px;
+			font-size: 12.5px;
+		}
+		.group-sep {
+			margin-top: 7px;
+			margin-bottom: 7px;
+		}
+		.admin-body {
+			gap: 10px;
+			padding-top: 10px;
+		}
+		/* The strip becomes a slim band: each cell is the value beside
+		   two single lines (label, detail). */
+		.admin-body > :global(.ess-figures > .ess-figure) {
+			align-items: center;
+			padding: 6px 14px;
+			gap: 9px;
+		}
+		.admin-body > :global(.ess-figures > .ess-figure > div) {
+			align-items: center;
+			row-gap: 0;
+		}
+		.admin-body > :global(.ess-figures) :global(.ess-figure__value) {
+			font-size: 18px;
+		}
+		.admin-body > :global(.ess-figures) :global(.ess-figure__label),
+		.admin-body > :global(.ess-figures) :global(.ess-figure__value ~ span) {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			line-height: 1.25;
+		}
+		.admin-body > :global(.ess-figures) :global(.ess-figure__label) {
+			font-size: 12px;
+		}
+		.admin-body > :global(.ess-figures) :global(.ess-figure__label ~ span) {
+			font-size: 11.5px;
+		}
+		.admin-body > :global(.ess-figures) :global(.ess-figure__dot) {
+			width: 9px;
+			height: 9px;
+			margin-top: 0;
+			align-self: center;
+		}
 	}
 
 	@media (max-width: 720px) {

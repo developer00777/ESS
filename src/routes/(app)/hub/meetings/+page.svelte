@@ -295,7 +295,7 @@
 	/* Desktop: the split fills the rest of the screen. Today's meetings
 	   take what they need (up to about half), past meetings the rest, and
 	   each scrolls inside its card. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.page {
 			display: flex;
 			flex-direction: column;

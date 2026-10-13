@@ -187,6 +187,28 @@
 		}
 	}
 
+	/* Short laptop screens (about 1280×580): tighter so the dashboard fits. */
+	@media (min-width: 721px) and (max-height: 760px) {
+		.panel {
+			padding: 10px 14px;
+			gap: 8px;
+		}
+		.orb {
+			display: none;
+		}
+		.chip {
+			height: 24px;
+			padding: 0 9px;
+		}
+		.ask {
+			height: 34px;
+		}
+		.send {
+			width: 26px;
+			height: 26px;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.orb {
 			animation: none;

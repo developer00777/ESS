@@ -231,4 +231,32 @@
 		color: var(--ess-text-muted);
 		font-size: 13px;
 	}
+
+	/* Short laptop screens (about 1280×580): tighter so the dashboard fits. */
+	@media (min-width: 721px) and (max-height: 760px) {
+		.panel {
+			padding: 10px 14px;
+			gap: 8px;
+		}
+		.p-head p {
+			display: none;
+		}
+		.card {
+			padding: 8px 10px;
+		}
+		.steps {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 3px;
+			font-size: 11.5px;
+		}
+		.steps li {
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		.more {
+			width: 26px;
+			height: 26px;
+		}
+	}
 </style>

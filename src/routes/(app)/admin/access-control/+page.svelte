@@ -770,7 +770,7 @@
 	   named roles, the matrix, the teams table and the role's capability list
 	   scroll inside their cards. While the role editor is open the left column
 	   scrolls as a whole. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.ac .builtins {
 			grid-template-columns: repeat(4, minmax(0, 1fr));
 		}
@@ -810,6 +810,87 @@
 		}
 		.detail-scroll > .sub:first-child {
 			margin-top: 10px;
+		}
+	}
+
+	/* Short desktop screens (a 1280x580 browser): each built-in role card
+	   puts its icon beside the name and lets the blurb use the full card
+	   width, so the four cards are about half as tall and the named roles
+	   keep room below them. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
+		/* Title, caption and badge share the card's first row. */
+		.ac .builtin-card {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr) auto;
+			align-items: center;
+			column-gap: 14px;
+		}
+		.ac .builtin-card > .ess-card-head {
+			display: contents;
+		}
+		.ac .builtin-card > .ess-card-head > .ess-badge {
+			grid-column: 3;
+			grid-row: 1;
+		}
+		.ac .builtin-card > .ess-caption {
+			grid-column: 2;
+			grid-row: 1;
+			font-size: 12px;
+			line-height: 1.3;
+		}
+		.ac .builtins {
+			grid-column: 1 / -1;
+			margin-top: 8px;
+			gap: 8px;
+		}
+		.ac .builtins .role-card {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr);
+			grid-template-rows: auto 1fr auto;
+			align-items: center;
+			column-gap: 8px;
+			row-gap: 3px;
+			padding: 7px 10px;
+		}
+		/* The selected role's full blurb is in the panel on the right. */
+		.ac .builtins .role-card small {
+			display: -webkit-box;
+			-webkit-box-orient: vertical;
+			-webkit-line-clamp: 2;
+			line-clamp: 2;
+			overflow: hidden;
+			align-self: start;
+		}
+		.ac .builtins .role-card .role-card__body {
+			display: contents;
+		}
+		.ac .builtins .role-card small,
+		.ac .builtins .role-card .role-card__meta {
+			grid-column: 1 / -1;
+		}
+		.ac .builtins .role-card small {
+			font-size: 12px;
+			line-height: 1.3;
+		}
+		.ac .builtins .role-card .role-card__meta {
+			margin-top: 1px;
+		}
+		.ac .builtins .ess-tile {
+			width: 24px;
+			height: 24px;
+		}
+		.ac .main-col > .ess-fill-card {
+			min-height: 150px;
+		}
+		.ac .named {
+			gap: 10px;
+			margin-top: 8px;
+		}
+		.ac .named-pick {
+			padding: 8px 10px;
+		}
+		.ac .foot {
+			margin-top: 8px;
 		}
 	}
 </style>

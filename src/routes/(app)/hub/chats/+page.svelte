@@ -257,7 +257,7 @@
 		overflow: hidden;
 	}
 	/* Desktop: the hub layout stretches this card to the bottom edge. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.chats {
 			height: auto;
 			min-height: 0;
@@ -323,6 +323,22 @@
 		background: var(--ess-primary-soft);
 		border-color: var(--ess-primary-soft);
 		color: var(--ess-primary-text);
+	}
+	/* Short laptop screens: keep the six filters on one line. */
+	@media (min-width: 721px) and (max-height: 760px) {
+		.filters {
+			flex-wrap: nowrap;
+			gap: 4px;
+			padding: 6px 14px;
+			overflow-x: auto;
+			scrollbar-width: none;
+		}
+		.f {
+			flex: none;
+			padding: 2px 6px;
+			font-size: 12px;
+			white-space: nowrap;
+		}
 	}
 	.list {
 		flex: 1;

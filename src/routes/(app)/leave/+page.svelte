@@ -631,7 +631,7 @@
 	.fill-empty {
 		padding: 20px 16px;
 	}
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.fill-split {
 			grid-template-rows: minmax(0, 1fr);
 		}

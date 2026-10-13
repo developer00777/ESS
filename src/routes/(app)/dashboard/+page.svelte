@@ -411,7 +411,7 @@
 
 <style>
 	/* ---------- one-screen home ---------- */
-	@media (min-width: 721px) and (min-height: 680px) {
+	@media (min-width: 721px) and (min-height: 480px) {
 		/* Fills the screen; if the panels truly can't fit, the page scrolls
 		   rather than cutting them off. */
 		:global(.ess-content:has(> .home)) { display:flex; flex-direction:column; overflow:auto; padding-bottom:12px; }
@@ -509,6 +509,51 @@
 		height: 100%;
 	}
 
+	/* Short laptop screens (about 1280×580): slimmer title row, the planner
+	   capped so the panels keep their room, the drawer link tighter. */
+	@media (min-width: 721px) and (max-height: 760px) {
+		.home {
+			grid-template-rows: auto minmax(0, max-content) minmax(0, 1fr);
+			gap: 8px;
+		}
+		.home :global(.planner) {
+			max-height: 44vh;
+		}
+		/* Shorter still (a bookmarks bar, a smaller window): the page holds
+		   its height and each panel scrolls inside rather than the page. */
+		:global(.ess-content > .home) {
+			flex: 1 1 auto;
+			min-height: 0;
+		}
+		.lower > :global(*) {
+			overflow-y: auto;
+			scrollbar-width: thin;
+		}
+		.eyebrow {
+			font-size: 11.5px;
+		}
+		.hello h1 {
+			font-size: 22px;
+		}
+		.fig {
+			min-width: 80px;
+			padding: 3px 12px;
+		}
+		.fig b {
+			font-size: 17px;
+		}
+		.fig .k {
+			font-size: 11px;
+		}
+		.lower {
+			gap: 8px;
+		}
+		.workspace-details > summary {
+			padding: 2px 2px 0;
+			font-size: 12px;
+		}
+	}
+
 	@media (max-width: 1100px) {
 		.home {
 			grid-template-rows: auto auto auto;
@@ -520,7 +565,7 @@
 			height: auto;
 		}
 	}
-	@media (max-width: 720px), (max-height: 679px) {
+	@media (max-width: 720px), (max-height: 479px) {
 		.home {
 			grid-template-rows: auto;
 		}

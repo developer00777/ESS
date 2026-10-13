@@ -672,7 +672,7 @@
 
 	/* Desktop fill: settings and the summary share the left column, the live
 	   preview takes the full height on the right; nothing scrolls the page. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.tweaks {
 			display: flex;
 			flex-direction: column;
@@ -719,6 +719,60 @@
 		}
 		.preview {
 			min-height: 0;
+		}
+	}
+
+	/* Short desktop screens: slimmer setting rows, and the summary heading
+	   shares a line with its caption, so more of the settings list shows. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
+		.setting {
+			padding: 3px 0;
+		}
+		.setting-text {
+			gap: 0;
+		}
+		.setting-text strong {
+			font-size: 13px;
+		}
+		.setting-text small {
+			font-size: 11.5px;
+			line-height: 1.3;
+		}
+		.choices {
+			gap: 5px;
+		}
+		.choice {
+			height: 27px;
+			padding: 0 10px;
+			font-size: 12.5px;
+		}
+		.summary {
+			padding-top: 10px;
+			padding-bottom: 10px;
+		}
+		.summary .ess-card-head {
+			align-items: center;
+			flex-wrap: nowrap;
+			margin-bottom: 6px;
+		}
+		.summary-actions {
+			flex: none;
+		}
+		.summary .ess-card-head > div:first-child {
+			flex: 1 1 0%;
+			min-width: 0;
+			display: flex;
+			align-items: baseline;
+			flex-wrap: wrap;
+			gap: 0 10px;
+		}
+		.summary .ess-card-head .ess-caption {
+			font-size: 12px;
+		}
+		.summary .ess-help {
+			flex-basis: 100%;
+			margin-top: 0;
+			font-size: 12px;
 		}
 	}
 

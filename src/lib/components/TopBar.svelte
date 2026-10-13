@@ -448,6 +448,22 @@
 	}
 
 	/* Narrower laptops: the rail carries the sections. */
+	/* Short laptop screens (e.g. 1280×720 at 150% scaling): a slimmer bar. */
+	@media (min-width: 721px) and (max-height: 760px) {
+		.topbar {
+			min-height: 50px;
+			padding: 8px var(--ess-page-pad-x) 2px;
+		}
+		.search,
+		.add {
+			height: 32px;
+		}
+		.round {
+			width: 32px;
+			height: 32px;
+		}
+	}
+
 	@media (max-width: 1300px) {
 		.links {
 			display: none;

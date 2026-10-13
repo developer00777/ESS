@@ -291,6 +291,49 @@
 		}
 	}
 
+
+	/* Short laptop screens (about 1280×580): tighter so the dashboard fits. */
+	@media (min-width: 721px) and (max-height: 760px) {
+		.panel {
+			padding: 10px 14px;
+			gap: 8px;
+		}
+		.p-head p {
+			display: none;
+		}
+		.foot {
+			flex-wrap: nowrap;
+			margin-top: 4px;
+		}
+		.detail {
+			flex: 1;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		dt {
+			font-size: 10.5px;
+		}
+		.more {
+			width: 26px;
+			height: 26px;
+		}
+		.grid,
+		.weekdays {
+			grid-template-rows: repeat(7, 11px);
+		}
+		.stats > div {
+			display: flex;
+			align-items: baseline;
+			justify-content: space-between;
+			gap: 6px;
+			padding: 5px 9px;
+		}
+		dd {
+			margin: 0;
+			font-size: 15px;
+		}
+	}
 	@media (prefers-reduced-motion: reduce) {
 		.grid button {
 			transition: none;

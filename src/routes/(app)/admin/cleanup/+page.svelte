@@ -359,7 +359,7 @@
 
 	/* Desktop fill: the option list and the summary scroll inside their cards;
 	   the page itself never scrolls. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.cleanup .opts-card {
 			flex: 1 1 0%;
 		}
@@ -380,6 +380,87 @@
 		}
 		.chosen + .kept {
 			margin-top: 10px;
+		}
+		.none > :global(*) {
+			flex-shrink: 0;
+		}
+	}
+
+	/* Short desktop screens: a slimmer warning and option rows so all four
+	   options show without scrolling; the empty summary lies flat. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
+		.cleanup > .ess-stack > .ess-notice {
+			padding: 7px 12px;
+			font-size: 12.5px;
+			line-height: 1.4;
+		}
+		.opts {
+			margin-top: 2px;
+		}
+		.opt {
+			padding: 7px 0;
+			gap: 10px;
+		}
+		.box {
+			margin-top: 8px;
+		}
+		.opt .ess-tile {
+			width: 30px;
+			height: 30px;
+		}
+		.title {
+			font-size: 14px;
+		}
+		.hint {
+			font-size: 12px;
+			line-height: 1.4;
+		}
+		.count strong {
+			font-size: 16px;
+		}
+		.cleanup .summary-card {
+			min-height: 150px;
+		}
+		.none {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr);
+			align-content: center;
+			justify-items: start;
+			gap: 0 12px;
+			padding: 4px 0;
+			text-align: left;
+		}
+		.none .ess-empty__icon {
+			grid-row: span 2;
+			align-self: center;
+			width: 36px;
+			height: 36px;
+			margin: 0;
+		}
+		.none .ess-empty__title {
+			font-size: 14px;
+			margin: 0;
+		}
+		.none .ess-caption {
+			font-size: 12px;
+			margin: 0;
+		}
+		.kept {
+			padding-top: 10px;
+		}
+		.kept .ess-tile {
+			width: 34px;
+			height: 34px;
+		}
+		.confirm {
+			margin-top: 8px;
+		}
+		.run {
+			margin-top: 6px;
+		}
+		.confirm-card .ess-help {
+			margin-top: 4px;
+			font-size: 12px;
 		}
 	}
 </style>

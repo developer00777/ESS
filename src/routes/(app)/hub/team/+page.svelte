@@ -342,7 +342,7 @@
 	/* Desktop: everything fits the screen. The workload list and the
 	   deadlines share the left column, review fills the right, and each
 	   list scrolls inside its card. The board's columns scroll too. */
-	@media (min-width: 1101px) and (min-height: 640px) {
+	@media (min-width: 1101px) and (min-height: 480px) {
 		.page {
 			display: flex;
 			flex-direction: column;
