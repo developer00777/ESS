@@ -46,7 +46,7 @@
 	{#if back && typeof crumb[0] !== 'string'}
 		<a class="back" href={back.href} title="Back to {back.label}">{back.label}<span aria-hidden="true">/</span></a>
 	{/if}
-	<h1 class="ess-page-title bar-title" title={sub ? `${title} ${sub}` : title}>{name}</h1>
+	<h1 class="ess-page-title bar-title" data-grid-avoid title={sub ? `${title} ${sub}` : title}>{name}</h1>
 	{#if tabs}<div class="bar-tabs">{@render tabs()}</div>{/if}
 	{#if children}<div class="bar-extra">{@render children()}</div>{/if}
 	{#if actions}<div class="ess-page-head__actions bar-actions">{@render actions()}</div>{/if}

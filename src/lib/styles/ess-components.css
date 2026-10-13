@@ -1814,6 +1814,11 @@ button.ess-row:hover {
 	/* Where the floating top-bar cluster and the page's header row sit. */
 	--bar-top: 14px;
 }
+/* The page sits above the light-mode grid (GridPulse) behind it. */
+.ess-main > .ess-content {
+	position: relative;
+	z-index: 1;
+}
 @media (min-width: 1101px) {
 	.ess-main > .ess-content {
 		padding-top: var(--bar-top);

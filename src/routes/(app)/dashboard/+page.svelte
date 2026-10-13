@@ -163,7 +163,7 @@
 <div class="home">
 	<header class="top">
 		<div class="hello">
-			<h1>{greeting}, {firstName}</h1>
+			<h1 data-grid-avoid>{greeting}, {firstName}</h1>
 		</div>
 		<div class="figures" role="group" aria-label="At a glance">
 			<a class="fig" href="/leave" title="{fmtNum(data.leaveAllocated)} days allocated this year">

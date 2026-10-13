@@ -6,6 +6,7 @@
 	import { chat } from '$lib/chat/client.svelte';
 	import { hub } from '$lib/hub/client.svelte';
 	import { cardSpotlight } from '$lib/ui/spotlight';
+	import GridPulse from '$lib/components/GridPulse.svelte';
 
 	let { data, children } = $props();
 
@@ -49,6 +50,8 @@
 		{chatBadge}
 	/>
 	<main class="ess-main">
+		<!-- Light mode: a fine grid behind the page that lights up under the pointer. -->
+		<GridPulse />
 		<TopBar
 			fullName={data.user.fullName}
 			userId={data.user.id}
