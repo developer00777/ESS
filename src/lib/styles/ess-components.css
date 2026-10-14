@@ -1816,10 +1816,19 @@ button.ess-row:hover {
 	flex-direction: column;
 	/* Where the floating top-bar cluster and the page's header row sit. */
 	--bar-top: 14px;
+	/* Headers and the top bar compact by the workspace's own width, so a
+	   larger text size or a fixed dock narrows them like a smaller window.
+	   Widths here are the window's minus the shell inset (about 26px). */
+	container: ess-main / inline-size;
 }
+/* 1075px of workspace is what a 1101px window leaves; a larger text size
+   or a fixed dock can drop below it, and the header row then stacks as it
+   does on a narrower window. */
 @media (min-width: 1101px) {
-	.ess-main > .ess-content {
-		padding-top: var(--bar-top);
+	@container ess-main (min-width: 1075px) {
+		.ess-main > .ess-content {
+			padding-top: var(--bar-top);
+		}
 	}
 }
 @media (min-width: 721px) and (max-height: 760px) {

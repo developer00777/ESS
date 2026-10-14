@@ -424,7 +424,7 @@
 			min-height: 0;
 		}
 	}
-	@media (max-width: 1240px) {
+	@container ess-main (max-width: 1214px) {
 		.conv,
 		.conv.with-panel {
 			grid-template-columns: 260px minmax(0, 1fr);

@@ -533,14 +533,16 @@
 
 	/* The header row is shared with the top-bar cluster: Jump to shows its
 	   icon only until there's room for the label. */
-	@media (min-width: 1101px) and (max-width: 1500px) {
-		.jump-btn.jump-btn {
-			width: 36px;
-			padding: 0;
-		}
-		.jump-label,
-		.jump-btn kbd {
-			display: none;
+	@media (min-width: 1101px) {
+		@container ess-main (max-width: 1474px) {
+			.jump-btn.jump-btn {
+				width: 36px;
+				padding: 0;
+			}
+			.jump-label,
+			.jump-btn kbd {
+				display: none;
+			}
 		}
 	}
 </style>

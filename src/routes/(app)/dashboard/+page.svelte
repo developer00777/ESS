@@ -789,14 +789,16 @@
 	/* Desktop: the greeting row shares its line with the floating top-bar
 	   cluster on the right. */
 	@media (min-width: 1101px) {
-		.top {
-			flex-wrap: nowrap;
-			min-height: 38px;
-			padding-right: calc(var(--topbar-w, 380px) + 14px);
-		}
-		.hello h1 {
-			margin: 0;
-			white-space: nowrap;
+		@container ess-main (min-width: 1075px) {
+			.top {
+				flex-wrap: nowrap;
+				min-height: 38px;
+				padding-right: calc(var(--topbar-w, 380px) + 14px);
+			}
+			.hello h1 {
+				margin: 0;
+				white-space: nowrap;
+			}
 		}
 	}
 
@@ -1035,23 +1037,27 @@
 	/* Desktop: the figures take the room left in the row and show as many
 	   as fit on one line; the rest wrap onto a hidden second line. */
 	@media (min-width: 1101px) {
-		.top .figures {
-			flex: 1 1 auto;
-			min-width: 0;
-			flex-wrap: wrap;
-			justify-content: flex-end;
-			height: 58px;
-			overflow: hidden;
-			align-content: flex-start;
-			align-items: center;
+		@container ess-main (min-width: 1075px) {
+			.top .figures {
+				flex: 1 1 auto;
+				min-width: 0;
+				flex-wrap: wrap;
+				justify-content: flex-end;
+				height: 58px;
+				overflow: hidden;
+				align-content: flex-start;
+				align-items: center;
+			}
 		}
 	}
 	@media (min-width: 1101px) and (max-height: 760px) {
-		.top .figures {
-			height: 46px;
-		}
-		.top .apply {
-			flex: none;
+		@container ess-main (min-width: 1075px) {
+			.top .figures {
+				height: 46px;
+			}
+			.top .apply {
+				flex: none;
+			}
 		}
 	}
 </style>

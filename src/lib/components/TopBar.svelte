@@ -613,13 +613,21 @@
 	   sections) and the cluster floats at the top right, beside the page's
 	   own header row. */
 	@media (min-width: 1101px) {
-		.topbar {
-			position: absolute;
-			top: var(--bar-top, 14px);
-			right: var(--ess-page-pad-x);
-			z-index: 25;
-			min-height: 0;
-			padding: 0;
+		@container ess-main (min-width: 1075px) {
+			.topbar {
+				position: absolute;
+				top: var(--bar-top, 14px);
+				right: var(--ess-page-pad-x);
+				z-index: 25;
+				min-height: 0;
+				padding: 0;
+			}
+		}
+		/* Too narrow to float (large text, fixed dock): its own row. */
+		@container ess-main (max-width: 1074px) {
+			.right {
+				margin-left: auto;
+			}
 		}
 		.today,
 		.links {
@@ -629,17 +637,19 @@
 			gap: 8px;
 		}
 	}
-	@media (min-width: 1101px) and (max-width: 1500px) {
-		.search {
-			width: 38px;
-			padding: 0;
-			justify-content: center;
-			background: var(--ess-surface);
-			border-color: var(--ess-border-subtle);
-			color: var(--ess-text-secondary);
-		}
-		.search-label {
-			display: none;
+	@media (min-width: 1101px) {
+		@container ess-main (max-width: 1474px) {
+			.search {
+				width: 38px;
+				padding: 0;
+				justify-content: center;
+				background: var(--ess-surface);
+				border-color: var(--ess-border-subtle);
+				color: var(--ess-text-secondary);
+			}
+			.search-label {
+				display: none;
+			}
 		}
 	}
 	@media (min-width: 721px) and (max-width: 1100px) and (max-height: 760px) {
@@ -666,6 +676,8 @@
 		.right {
 			margin-left: auto;
 		}
+	}
+	@container ess-main (max-width: 1274px) {
 		.add-label {
 			display: none;
 		}

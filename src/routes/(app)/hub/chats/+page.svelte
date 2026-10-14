@@ -518,7 +518,7 @@
 
 	/* The button keeps its name for screen readers; the words show when
 	   there is room for them. */
-	@media (max-width: 1499px) {
+	@container ess-main (max-width: 1473px) {
 		.new-label {
 			position: absolute;
 			width: 1px;

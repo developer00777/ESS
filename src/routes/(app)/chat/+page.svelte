@@ -351,7 +351,7 @@
 		margin: auto;
 		color: var(--ess-text-muted);
 	}
-	@media (max-width: 1180px) {
+	@container ess-main (max-width: 1154px) {
 		.chat.with-panel {
 			grid-template-columns: 260px minmax(0, 1fr);
 		}

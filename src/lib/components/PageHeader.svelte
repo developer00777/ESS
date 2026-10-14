@@ -108,12 +108,14 @@
 
 	/* Desktop: one row, sharing it with the floating top-bar cluster. */
 	@media (min-width: 1101px) {
-		.bar {
-			flex-wrap: nowrap;
-			padding-right: calc(var(--topbar-w, 380px) + 14px);
-		}
-		.bar-tabs {
-			flex: 0 1 auto;
+		@container ess-main (min-width: 1075px) {
+			.bar {
+				flex-wrap: nowrap;
+				padding-right: calc(var(--topbar-w, 380px) + 14px);
+			}
+			.bar-tabs {
+				flex: 0 1 auto;
+			}
 		}
 	}
 	@media (min-width: 721px) and (max-height: 760px) {
@@ -126,7 +128,7 @@
 		}
 	}
 	/* Narrow screens: name and actions on a line, the tabs below in full. */
-	@media (max-width: 1100px) {
+	@container ess-main (max-width: 1074px) {
 		.bar-tabs {
 			order: 5;
 			flex-basis: 100%;

@@ -299,11 +299,13 @@
 	}
 
 	@media (min-width: 1101px) {
-		.own-tabs {
-			padding-right: calc(var(--topbar-w, 380px) + 14px);
-			min-height: 38px;
-			display: flex;
-			align-items: center;
+		@container ess-main (min-width: 1075px) {
+			.own-tabs {
+				padding-right: calc(var(--topbar-w, 380px) + 14px);
+				min-height: 38px;
+				display: flex;
+				align-items: center;
+			}
 		}
 	}
 	/* The header row is shared with the top-bar cluster: the palette button
@@ -315,7 +317,7 @@
 			display: none !important;
 		}
 	}
-	@media (max-width: 1500px) {
+	@container ess-main (max-width: 1474px) {
 		.search {
 			min-width: 0;
 			width: 36px;
