@@ -419,9 +419,11 @@
 	/* Desktop: the hub layout stretches this card to the bottom of the
 	   workspace, so the fixed height above gives way to the fill. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.conv {
-			height: auto;
-			min-height: 0;
+		@container ess-fill (min-width: 0px) {
+			.conv {
+				height: auto;
+				min-height: 0;
+			}
 		}
 	}
 	@container ess-main (max-width: 1214px) {

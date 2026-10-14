@@ -343,62 +343,64 @@
 	   deadlines share the left column, review fills the right, and each
 	   list scrolls inside its card. The board's columns scroll too. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.page {
-			display: flex;
-			flex-direction: column;
-		}
-		.none-card,
-		.main-split {
-			flex: 1 1 0%;
-			min-height: 0;
-		}
-		.none-card {
-			display: grid;
-			place-items: center;
-		}
-		.main-split .ess-stack {
-			overflow: hidden;
-		}
-		.main-split .ess-stack > .work-card {
-			flex: 1.4 1 0%;
-			min-height: 140px;
-		}
-		.main-split .ess-stack > .dl-card {
-			flex: 1 1 0%;
-			min-height: 120px;
-		}
-		.board-view > :global(.board-wrap) {
-			flex: 1 1 0%;
-			min-height: 0;
-			display: flex;
-			flex-direction: column;
-		}
-		.board-view :global(.board) {
-			flex: 1 1 0%;
-			min-height: 0;
-			align-items: stretch;
-			padding-bottom: 4px;
-		}
-		.board-view :global(.col) {
-			min-height: 0;
-		}
-		.board-view :global([data-zone-list]) {
-			flex: 1 1 0%;
-			min-height: 0;
-			overflow-y: auto;
-			overscroll-behavior: contain;
-			scrollbar-width: thin;
-			margin: 0 -4px;
-			padding: 0 4px 2px;
-		}
-		.wl,
-		.tl {
-			align-content: start;
-		}
-		.tl:has(> .empty:only-child),
-		.rev-body:has(> .empty:only-child) {
-			display: grid;
-			align-content: center;
+		@container ess-fill (min-width: 0px) {
+			.page {
+				display: flex;
+				flex-direction: column;
+			}
+			.none-card,
+			.main-split {
+				flex: 1 1 0%;
+				min-height: 0;
+			}
+			.none-card {
+				display: grid;
+				place-items: center;
+			}
+			.main-split .ess-stack {
+				overflow: hidden;
+			}
+			.main-split .ess-stack > .work-card {
+				flex: 1.4 1 0%;
+				min-height: 140px;
+			}
+			.main-split .ess-stack > .dl-card {
+				flex: 1 1 0%;
+				min-height: 120px;
+			}
+			.board-view > :global(.board-wrap) {
+				flex: 1 1 0%;
+				min-height: 0;
+				display: flex;
+				flex-direction: column;
+			}
+			.board-view :global(.board) {
+				flex: 1 1 0%;
+				min-height: 0;
+				align-items: stretch;
+				padding-bottom: 4px;
+			}
+			.board-view :global(.col) {
+				min-height: 0;
+			}
+			.board-view :global([data-zone-list]) {
+				flex: 1 1 0%;
+				min-height: 0;
+				overflow-y: auto;
+				overscroll-behavior: contain;
+				scrollbar-width: thin;
+				margin: 0 -4px;
+				padding: 0 4px 2px;
+			}
+			.wl,
+			.tl {
+				align-content: start;
+			}
+			.tl:has(> .empty:only-child),
+			.rev-body:has(> .empty:only-child) {
+				display: grid;
+				align-content: center;
+			}
 		}
 	}
 	.toolbar {

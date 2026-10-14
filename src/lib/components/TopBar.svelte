@@ -126,6 +126,8 @@
 		const root = document.documentElement;
 		if (scale === 1) root.style.removeProperty('--ess-text-scale');
 		else root.style.setProperty('--ess-text-scale', String(scale));
+		// Enlarged text: pages flow and scroll instead of fitting the screen.
+		root.toggleAttribute('data-ess-flow', scale > 1);
 		try {
 			if (scale === 1) localStorage.removeItem('essTextScale');
 			else localStorage.setItem('essTextScale', String(scale));
@@ -613,7 +615,7 @@
 	   sections) and the cluster floats at the top right, beside the page's
 	   own header row. */
 	@media (min-width: 1101px) {
-		@container ess-main (min-width: 1075px) {
+		@container ess-fill (min-width: 1075px) {
 			.topbar {
 				position: absolute;
 				top: var(--bar-top, 14px);
@@ -623,11 +625,15 @@
 				padding: 0;
 			}
 		}
-		/* Too narrow to float (large text, fixed dock): its own row. */
+		/* Not floating (the page scrolls with large text, or the workspace
+		   is too narrow with a fixed dock): its own row. */
 		@container ess-main (max-width: 1074px) {
 			.right {
 				margin-left: auto;
 			}
+		}
+		:global([data-ess-flow]) .right {
+			margin-left: auto;
 		}
 		.today,
 		.links {

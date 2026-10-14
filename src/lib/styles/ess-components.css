@@ -1818,14 +1818,23 @@ button.ess-row:hover {
 	--bar-top: 14px;
 	/* Headers and the top bar compact by the workspace's own width, so a
 	   larger text size or a fixed dock narrows them like a smaller window.
-	   Widths here are the window's minus the shell inset (about 26px). */
-	container: ess-main / inline-size;
+	   Widths here are the window's minus the shell inset (about 26px).
+	   It is also the `ess-fill` container the fit-to-screen rules query
+	   (see FILL LAYOUT), except in the large-text flow mode below. */
+	container: ess-main ess-fill / inline-size;
 }
-/* 1075px of workspace is what a 1101px window leaves; a larger text size
-   or a fixed dock can drop below it, and the header row then stacks as it
-   does on a narrower window. */
+/* Large text (data-ess-flow, set with a text size above 100%): no fill
+   container, so every page uses its normal flow; cards grow to their
+   content and the page scrolls, instead of cards scrolling inside. */
+[data-ess-flow] .ess-main {
+	container-name: ess-main;
+}
+/* The top bar floats beside the page's header row only in the fill
+   layout (not with large text, where the page scrolls under it) and with
+   at least 1075px of workspace, what a 1101px window leaves; otherwise it
+   takes its own row and headers stack, as on a narrower window. */
 @media (min-width: 1101px) {
-	@container ess-main (min-width: 1075px) {
+	@container ess-fill (min-width: 1075px) {
 		.ess-main > .ess-content {
 			padding-top: var(--bar-top);
 		}
@@ -1994,55 +2003,60 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
    In a .ess-split or .ess-stack under .ess-fill, the last card of
    each column grows to meet the bottom edge.
    Desktop only (and at least 480px tall); smaller screens keep the normal page flow.
+   Every fill rule, here and in pages, sits inside
+   `@container ess-fill (min-width: 0px)`, which only matches while
+   .ess-main is named ess-fill, so large text drops back to the flow.
 ------------------------------------------------------------ */
 @media (min-width: 1101px) and (min-height: 480px) {
-	.ess-content:has(> .ess-fill) {
-		display: flex;
-		flex-direction: column;
-	}
-	/* A flex column would otherwise stretch tab bars across the page. */
-	.ess-content:has(> .ess-fill) > .ess-tabs {
-		align-self: flex-start;
-	}
-	.ess-content > .ess-fill {
-		flex: 1 1 0%;
-		min-height: 0;
-	}
-	.ess-fill.ess-split,
-	.ess-fill .ess-split {
-		align-items: stretch;
-		grid-template-rows: minmax(0, 1fr);
-		min-height: 0;
-	}
-	.ess-fill .ess-stack,
-	.ess-fill.ess-stack {
-		display: flex;
-		flex-direction: column;
-		min-height: 0;
-		overflow: auto;
-		scrollbar-width: thin;
-	}
-	.ess-fill .ess-stack > :last-child,
-	.ess-fill.ess-stack > :last-child {
-		flex: 1 0 auto;
-	}
-	/* In a flex column of the fill layout, the card that takes the spare height. */
-	.ess-grow {
-		flex: 1 1 0%;
-		min-height: 0;
-	}
-	.ess-fill-card {
-		display: flex;
-		flex-direction: column;
-		min-height: 0;
-		overflow: hidden;
-	}
-	.ess-scroll {
-		flex: 1 1 0%;
-		min-height: 0;
-		overflow: auto;
-		overscroll-behavior: contain;
-		scrollbar-width: thin;
+	@container ess-fill (min-width: 0px) {
+		.ess-content:has(> .ess-fill) {
+			display: flex;
+			flex-direction: column;
+		}
+		/* A flex column would otherwise stretch tab bars across the page. */
+		.ess-content:has(> .ess-fill) > .ess-tabs {
+			align-self: flex-start;
+		}
+		.ess-content > .ess-fill {
+			flex: 1 1 0%;
+			min-height: 0;
+		}
+		.ess-fill.ess-split,
+		.ess-fill .ess-split {
+			align-items: stretch;
+			grid-template-rows: minmax(0, 1fr);
+			min-height: 0;
+		}
+		.ess-fill .ess-stack,
+		.ess-fill.ess-stack {
+			display: flex;
+			flex-direction: column;
+			min-height: 0;
+			overflow: auto;
+			scrollbar-width: thin;
+		}
+		.ess-fill .ess-stack > :last-child,
+		.ess-fill.ess-stack > :last-child {
+			flex: 1 0 auto;
+		}
+		/* In a flex column of the fill layout, the card that takes the spare height. */
+		.ess-grow {
+			flex: 1 1 0%;
+			min-height: 0;
+		}
+		.ess-fill-card {
+			display: flex;
+			flex-direction: column;
+			min-height: 0;
+			overflow: hidden;
+		}
+		.ess-scroll {
+			flex: 1 1 0%;
+			min-height: 0;
+			overflow: auto;
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+		}
 	}
 }
 @media (max-width: 1100px) {

@@ -296,42 +296,44 @@
 	   take what they need (up to about half), past meetings the rest, and
 	   each scrolls inside its card. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.page {
-			display: flex;
-			flex-direction: column;
-		}
-		.main-split {
-			flex: 1 1 0%;
-			min-height: 0;
-		}
-		.main-split .ess-stack {
-			overflow: hidden;
-		}
-		.main-split .ess-stack > .day-card {
-			flex: 0 1 auto;
-			max-height: 55%;
-		}
-		.main-split .ess-stack > .past-card {
-			flex: 1 1 0%;
-			min-height: 120px;
-		}
-		.sched {
-			position: static;
-		}
-		.past-card .table-wrap {
-			margin: 0;
-			padding: 0;
-		}
-		.past thead th {
-			position: sticky;
-			top: 0;
-			z-index: 1;
-		}
-		.past-card .empty,
-		.day-body:has(.rows > .empty:only-child):not(:has(.later)),
-		.tl:has(> .empty:only-child) {
-			display: grid;
-			align-content: center;
+		@container ess-fill (min-width: 0px) {
+			.page {
+				display: flex;
+				flex-direction: column;
+			}
+			.main-split {
+				flex: 1 1 0%;
+				min-height: 0;
+			}
+			.main-split .ess-stack {
+				overflow: hidden;
+			}
+			.main-split .ess-stack > .day-card {
+				flex: 0 1 auto;
+				max-height: 55%;
+			}
+			.main-split .ess-stack > .past-card {
+				flex: 1 1 0%;
+				min-height: 120px;
+			}
+			.sched {
+				position: static;
+			}
+			.past-card .table-wrap {
+				margin: 0;
+				padding: 0;
+			}
+			.past thead th {
+				position: sticky;
+				top: 0;
+				z-index: 1;
+			}
+			.past-card .empty,
+			.day-body:has(.rows > .empty:only-child):not(:has(.later)),
+			.tl:has(> .empty:only-child) {
+				display: grid;
+				align-content: center;
+			}
 		}
 	}
 	.strip {

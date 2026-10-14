@@ -447,52 +447,54 @@
 	/* Desktop fill: the two tables and the about panel scroll inside their
 	   cards; the connection setup scrolls in its own box when opened. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.zoom-page .connection,
-		.zoom-page .map-card {
-			flex: 0 0 auto;
-		}
-		.zoom-page .hosts-card {
-			flex: 3 1 0%;
-			min-height: 150px;
-		}
-		.zoom-page .unmatched-card {
-			flex: 1.6 1 0%;
-			min-height: 100px;
-		}
-		.hosts-card .empty {
-			flex: 1 1 0%;
-			min-height: 0;
-			overflow: auto;
-			justify-content: safe center;
-			padding: 6px 16px;
-		}
-		.empty > :global(*) {
-			flex-shrink: 0;
-		}
-		.setup {
-			max-height: 38vh;
-			overflow: auto;
-			overscroll-behavior: contain;
-			scrollbar-width: thin;
-		}
-		.zoom-page .about {
-			flex: 1 1 0%;
-			min-height: 120px;
-			display: flex;
-			flex-direction: column;
-			overflow: hidden;
-		}
-		.about-body {
-			flex: 1 1 0%;
-			min-height: 0;
-			overflow: auto;
-			overscroll-behavior: contain;
-			scrollbar-width: thin;
-		}
-		.zoom-page .ess-table-shell th {
-			position: sticky;
-			top: 0;
-			z-index: 1;
+		@container ess-fill (min-width: 0px) {
+			.zoom-page .connection,
+			.zoom-page .map-card {
+				flex: 0 0 auto;
+			}
+			.zoom-page .hosts-card {
+				flex: 3 1 0%;
+				min-height: 150px;
+			}
+			.zoom-page .unmatched-card {
+				flex: 1.6 1 0%;
+				min-height: 100px;
+			}
+			.hosts-card .empty {
+				flex: 1 1 0%;
+				min-height: 0;
+				overflow: auto;
+				justify-content: safe center;
+				padding: 6px 16px;
+			}
+			.empty > :global(*) {
+				flex-shrink: 0;
+			}
+			.setup {
+				max-height: 38vh;
+				overflow: auto;
+				overscroll-behavior: contain;
+				scrollbar-width: thin;
+			}
+			.zoom-page .about {
+				flex: 1 1 0%;
+				min-height: 120px;
+				display: flex;
+				flex-direction: column;
+				overflow: hidden;
+			}
+			.about-body {
+				flex: 1 1 0%;
+				min-height: 0;
+				overflow: auto;
+				overscroll-behavior: contain;
+				scrollbar-width: thin;
+			}
+			.zoom-page .ess-table-shell th {
+				position: sticky;
+				top: 0;
+				z-index: 1;
+			}
 		}
 	}
 	.about-list li {
@@ -505,119 +507,121 @@
 	   facts and empty state lie flat, and the forms tighten, so both
 	   columns end on the same line without scrolling. */
 	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 820px) {
-		.connection {
-			gap: 6px;
-		}
-		.conn-head {
-			display: grid;
-			grid-template-columns: auto minmax(0, 1fr) auto auto;
-			gap: 8px;
-		}
-		.conn-tile {
-			width: 34px;
-			height: 34px;
-		}
-		.conn-state {
-			margin-left: 0;
-			gap: 2px;
-			justify-items: end;
-			text-align: right;
-		}
-		.conn-state .ess-caption,
-		.conn-title .ess-caption {
-			font-size: 12px;
-		}
-		.conn-actions {
-			flex-wrap: nowrap;
-		}
-		.conn-actions .ess-btn {
-			height: 30px;
-			padding: 0 10px;
-			font-size: 13px;
-		}
-		.fact {
-			padding-top: 5px;
-			gap: 0;
-		}
-		.fact .ess-caption {
-			font-size: 12px;
-			line-height: 1.35;
-		}
-		.fact strong {
-			font-size: 13.5px;
-		}
-		.zoom-page .ess-card-head > div {
-			display: flex;
-			align-items: baseline;
-			flex-wrap: wrap;
-			gap: 0 10px;
-		}
-		.zoom-page .ess-card-head {
-			margin-bottom: 6px;
-		}
-		.zoom-page .ess-card-head .ess-caption {
-			font-size: 12px;
-			line-height: 1.35;
-		}
-		.hosts-card .ess-card-head .ess-btn {
-			height: 28px;
-			padding: 0 12px;
-			font-size: 13px;
-		}
-		.hosts-card > .ess-help {
-			font-size: 12px;
-			line-height: 1.35;
-		}
-		/* Natural heights first, so a short card is never cut while the
-		   other has room to spare; longer tables then share what's left. */
-		.zoom-page .hosts-card {
-			flex-basis: auto;
-			min-height: 120px;
-		}
-		.zoom-page .unmatched-card {
-			flex-basis: auto;
-			min-height: 80px;
-		}
-		.hosts-card .empty {
-			display: grid;
-			grid-template-columns: auto minmax(0, 1fr);
-			justify-items: start;
-			align-content: safe center;
-			column-gap: 12px;
-			row-gap: 0;
-			gap: 0 12px;
-			text-align: left;
-			padding: 2px 4px;
-		}
-		.empty .ess-empty__icon {
-			grid-row: span 2;
-			width: 30px;
-			height: 30px;
-		}
-		.empty .ess-empty__title {
-			font-size: 13.5px;
-			margin: 0;
-		}
-		.empty .ess-caption {
-			font-size: 12px;
-			margin: 0;
-		}
-		.table-gap {
-			margin-top: 8px;
-		}
-		.map-form {
-			gap: 8px;
-			margin-top: 6px;
-		}
-		.map-card .ess-help {
-			font-size: 12px;
-			line-height: 1.35;
-		}
-		.zoom-page .about {
-			min-height: 90px;
-		}
-		.about-body {
-			gap: 8px;
+		@container ess-fill (min-width: 0px) {
+			.connection {
+				gap: 6px;
+			}
+			.conn-head {
+				display: grid;
+				grid-template-columns: auto minmax(0, 1fr) auto auto;
+				gap: 8px;
+			}
+			.conn-tile {
+				width: 34px;
+				height: 34px;
+			}
+			.conn-state {
+				margin-left: 0;
+				gap: 2px;
+				justify-items: end;
+				text-align: right;
+			}
+			.conn-state .ess-caption,
+			.conn-title .ess-caption {
+				font-size: 12px;
+			}
+			.conn-actions {
+				flex-wrap: nowrap;
+			}
+			.conn-actions .ess-btn {
+				height: 30px;
+				padding: 0 10px;
+				font-size: 13px;
+			}
+			.fact {
+				padding-top: 5px;
+				gap: 0;
+			}
+			.fact .ess-caption {
+				font-size: 12px;
+				line-height: 1.35;
+			}
+			.fact strong {
+				font-size: 13.5px;
+			}
+			.zoom-page .ess-card-head > div {
+				display: flex;
+				align-items: baseline;
+				flex-wrap: wrap;
+				gap: 0 10px;
+			}
+			.zoom-page .ess-card-head {
+				margin-bottom: 6px;
+			}
+			.zoom-page .ess-card-head .ess-caption {
+				font-size: 12px;
+				line-height: 1.35;
+			}
+			.hosts-card .ess-card-head .ess-btn {
+				height: 28px;
+				padding: 0 12px;
+				font-size: 13px;
+			}
+			.hosts-card > .ess-help {
+				font-size: 12px;
+				line-height: 1.35;
+			}
+			/* Natural heights first, so a short card is never cut while the
+			   other has room to spare; longer tables then share what's left. */
+			.zoom-page .hosts-card {
+				flex-basis: auto;
+				min-height: 120px;
+			}
+			.zoom-page .unmatched-card {
+				flex-basis: auto;
+				min-height: 80px;
+			}
+			.hosts-card .empty {
+				display: grid;
+				grid-template-columns: auto minmax(0, 1fr);
+				justify-items: start;
+				align-content: safe center;
+				column-gap: 12px;
+				row-gap: 0;
+				gap: 0 12px;
+				text-align: left;
+				padding: 2px 4px;
+			}
+			.empty .ess-empty__icon {
+				grid-row: span 2;
+				width: 30px;
+				height: 30px;
+			}
+			.empty .ess-empty__title {
+				font-size: 13.5px;
+				margin: 0;
+			}
+			.empty .ess-caption {
+				font-size: 12px;
+				margin: 0;
+			}
+			.table-gap {
+				margin-top: 8px;
+			}
+			.map-form {
+				gap: 8px;
+				margin-top: 6px;
+			}
+			.map-card .ess-help {
+				font-size: 12px;
+				line-height: 1.35;
+			}
+			.zoom-page .about {
+				min-height: 90px;
+			}
+			.about-body {
+				gap: 8px;
+			}
 		}
 	}
 

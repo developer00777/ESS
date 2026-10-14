@@ -431,26 +431,28 @@
 	/* Fill layout: the columns end on the workspace's bottom edge; the issue
 	   list, the activity log and the task list scroll inside their cards. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.overview .main-col {
-			overflow: hidden;
-		}
-		.overview .main-col > .grow-card {
-			flex: 0 1 auto;
-			min-height: 150px;
-		}
-		.overview .main-col > .grow-card:last-child {
-			flex-grow: 1;
-		}
-		.overview .ess-scroll {
-			margin-right: -6px;
-			padding-right: 6px;
-		}
-		.overview .main-col > :first-child {
-			flex-shrink: 0;
-		}
-		.overview aside > .tasks-card {
-			flex: 1 1 0px;
-			min-height: 0;
+		@container ess-fill (min-width: 0px) {
+			.overview .main-col {
+				overflow: hidden;
+			}
+			.overview .main-col > .grow-card {
+				flex: 0 1 auto;
+				min-height: 150px;
+			}
+			.overview .main-col > .grow-card:last-child {
+				flex-grow: 1;
+			}
+			.overview .ess-scroll {
+				margin-right: -6px;
+				padding-right: 6px;
+			}
+			.overview .main-col > :first-child {
+				flex-shrink: 0;
+			}
+			.overview aside > .tasks-card {
+				flex: 1 1 0px;
+				min-height: 0;
+			}
 		}
 	}
 
@@ -458,66 +460,68 @@
 	   rows so all five tasks show without scrolling, and the two lists share
 	   the rest of the main column. */
 	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
-		/* A wider task column keeps most task descriptions on one line. */
-		.overview {
-			--ess-aside-width: 440px;
-		}
-		.figures {
-			gap: 10px;
-		}
-		.figure {
-			padding: 6px 10px;
-			gap: 10px;
-		}
-		.figure .ess-tile {
-			width: 32px;
-			height: 32px;
-		}
-		.fig-text strong {
-			font-size: 19px;
-		}
-		.fig-text span {
-			font-size: 12px;
-		}
-		.overview .main-col > .grow-card {
-			min-height: 120px;
-		}
-		.item {
-			padding-top: 7px;
-			padding-bottom: 7px;
-		}
-		.item > .ess-tile {
-			width: 32px;
-			height: 32px;
-		}
-		.act {
-			padding: 6px 0;
-		}
-		.task-list {
-			gap: 6px;
-		}
-		.task {
-			padding: 6px 10px;
-			gap: 10px;
-		}
-		.task-tile {
-			width: 32px;
-			height: 32px;
-		}
-		.task-text {
-			gap: 1px;
-		}
-		.task-text strong {
-			font-size: 13.5px;
-			line-height: 1.25;
-		}
-		.task-text span {
-			font-size: 12px;
-			line-height: 1.3;
-		}
-		/* The Jump to… button above already shows the shortcut. */
-		.hint {
-			display: none;
+		@container ess-fill (min-width: 0px) {
+			/* A wider task column keeps most task descriptions on one line. */
+			.overview {
+				--ess-aside-width: 440px;
+			}
+			.figures {
+				gap: 10px;
+			}
+			.figure {
+				padding: 6px 10px;
+				gap: 10px;
+			}
+			.figure .ess-tile {
+				width: 32px;
+				height: 32px;
+			}
+			.fig-text strong {
+				font-size: 19px;
+			}
+			.fig-text span {
+				font-size: 12px;
+			}
+			.overview .main-col > .grow-card {
+				min-height: 120px;
+			}
+			.item {
+				padding-top: 7px;
+				padding-bottom: 7px;
+			}
+			.item > .ess-tile {
+				width: 32px;
+				height: 32px;
+			}
+			.act {
+				padding: 6px 0;
+			}
+			.task-list {
+				gap: 6px;
+			}
+			.task {
+				padding: 6px 10px;
+				gap: 10px;
+			}
+			.task-tile {
+				width: 32px;
+				height: 32px;
+			}
+			.task-text {
+				gap: 1px;
+			}
+			.task-text strong {
+				font-size: 13.5px;
+				line-height: 1.25;
+			}
+			.task-text span {
+				font-size: 12px;
+				line-height: 1.3;
+			}
+			/* The Jump to… button above already shows the shortcut. */
+			.hint {
+				display: none;
+			}
 		}
 	}
 

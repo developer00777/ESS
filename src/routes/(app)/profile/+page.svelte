@@ -901,39 +901,41 @@
 	   height, the tabs and aside take the rest, and a tab whose cards are
 	   taller than that scrolls inside its own panel. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.profile-form {
-			display: flex;
-			flex-direction: column;
-		}
-		.profile-form > :not(.layout) {
-			flex: none;
-		}
-		.layout {
-			flex: 1 1 0%;
-			min-height: 0;
-			grid-template-rows: minmax(0, 1fr);
-		}
-		.main {
-			display: flex;
-			flex-direction: column;
-			min-height: 0;
-		}
-		.identity,
-		.tabs {
-			flex: none;
-		}
-		/* A few px of padding so the scroll box does not clip card shadows. */
-		.panel,
-		.aside {
-			flex: 1 1 0%;
-			padding: 1px 3px 3px;
-			margin: -1px -3px -3px;
-		}
-		.aside > .footer-actions {
-			flex: none;
-		}
-		.aside > .grow-card {
-			flex: 1 0 auto;
+		@container ess-fill (min-width: 0px) {
+			.profile-form {
+				display: flex;
+				flex-direction: column;
+			}
+			.profile-form > :not(.layout) {
+				flex: none;
+			}
+			.layout {
+				flex: 1 1 0%;
+				min-height: 0;
+				grid-template-rows: minmax(0, 1fr);
+			}
+			.main {
+				display: flex;
+				flex-direction: column;
+				min-height: 0;
+			}
+			.identity,
+			.tabs {
+				flex: none;
+			}
+			/* A few px of padding so the scroll box does not clip card shadows. */
+			.panel,
+			.aside {
+				flex: 1 1 0%;
+				padding: 1px 3px 3px;
+				margin: -1px -3px -3px;
+			}
+			.aside > .footer-actions {
+				flex: none;
+			}
+			.aside > .grow-card {
+				flex: 1 0 auto;
+			}
 		}
 	}
 

@@ -751,45 +751,47 @@
 	   column's spare height (flex: 1); the weeks share that height, and the
 	   records table scrolls inside the card under a sticky header. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.calendar-box,
-		.records-box {
-			display: flex;
-			flex-direction: column;
-			min-height: 0;
-		}
-		.calendar-box > :not(.month-grid),
-		.records-box > :not(.table-wrap) {
-			flex: none;
-		}
-		.calendar-box .month-grid {
-			flex: 1 1 0%;
-			min-height: 0;
-			grid-auto-rows: minmax(54px, 1fr);
-			overflow: auto;
-			scrollbar-width: thin;
-		}
-		.calendar-box .day-cell {
-			min-height: 0;
-		}
-		.records-box .table-wrap {
-			flex: 1 1 0%;
-			min-height: 0;
-			overflow: auto;
-			overscroll-behavior: contain;
-			scrollbar-width: thin;
-			/* The rows below the fold fade out rather than being sliced off. */
-			-webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
-			mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
-			/* Room so the last row can scroll clear of the fade. */
-			padding-bottom: 22px;
-		}
-		.records thead th {
-			position: sticky;
-			top: 0;
-			z-index: 1;
-			background: var(--ess-glass-solid);
-			-webkit-backdrop-filter: blur(16px) saturate(160%);
-			backdrop-filter: blur(16px) saturate(160%);
+		@container ess-fill (min-width: 0px) {
+			.calendar-box,
+			.records-box {
+				display: flex;
+				flex-direction: column;
+				min-height: 0;
+			}
+			.calendar-box > :not(.month-grid),
+			.records-box > :not(.table-wrap) {
+				flex: none;
+			}
+			.calendar-box .month-grid {
+				flex: 1 1 0%;
+				min-height: 0;
+				grid-auto-rows: minmax(54px, 1fr);
+				overflow: auto;
+				scrollbar-width: thin;
+			}
+			.calendar-box .day-cell {
+				min-height: 0;
+			}
+			.records-box .table-wrap {
+				flex: 1 1 0%;
+				min-height: 0;
+				overflow: auto;
+				overscroll-behavior: contain;
+				scrollbar-width: thin;
+				/* The rows below the fold fade out rather than being sliced off. */
+				-webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+				mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+				/* Room so the last row can scroll clear of the fade. */
+				padding-bottom: 22px;
+			}
+			.records thead th {
+				position: sticky;
+				top: 0;
+				z-index: 1;
+				background: var(--ess-glass-solid);
+				-webkit-backdrop-filter: blur(16px) saturate(160%);
+				backdrop-filter: blur(16px) saturate(160%);
+			}
 		}
 	}
 
@@ -1483,127 +1485,129 @@
 	   six-week cycle fits without the grid scrolling, and a day detail whose
 	   check-in and check-out sit side by side. */
 	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
-		.calendar-box {
-			padding: 8px 12px 8px;
-		}
-		.calendar-box .calendar-header {
-			margin-bottom: 6px;
-		}
-		.calendar-box .month-label {
-			font-size: 16px;
-		}
-		.calendar-box .nav-btn {
-			width: 28px;
-			height: 28px;
-		}
-		.calendar-box .weekday {
-			padding: 3px 0;
-			font-size: 11.5px;
-		}
-		.calendar-box .month-grid {
-			grid-auto-rows: minmax(40px, 1fr);
-		}
-		.calendar-box .day-cell {
-			padding: 2px 6px;
-			gap: 0;
-		}
-		.calendar-box .day-head {
-			line-height: 15px;
-		}
-		.calendar-box .cell-times {
-			min-height: 12px;
-			line-height: 12px;
-		}
-		.calendar-box .cell-foot {
-			min-height: 14px;
-		}
-		.calendar-box .legend {
-			margin-top: 6px;
-		}
+		@container ess-fill (min-width: 0px) {
+			.calendar-box {
+				padding: 8px 12px 8px;
+			}
+			.calendar-box .calendar-header {
+				margin-bottom: 6px;
+			}
+			.calendar-box .month-label {
+				font-size: 16px;
+			}
+			.calendar-box .nav-btn {
+				width: 28px;
+				height: 28px;
+			}
+			.calendar-box .weekday {
+				padding: 3px 0;
+				font-size: 11.5px;
+			}
+			.calendar-box .month-grid {
+				grid-auto-rows: minmax(40px, 1fr);
+			}
+			.calendar-box .day-cell {
+				padding: 2px 6px;
+				gap: 0;
+			}
+			.calendar-box .day-head {
+				line-height: 15px;
+			}
+			.calendar-box .cell-times {
+				min-height: 12px;
+				line-height: 12px;
+			}
+			.calendar-box .cell-foot {
+				min-height: 14px;
+			}
+			.calendar-box .legend {
+				margin-top: 6px;
+			}
 
-		.detail-box {
-			padding-top: 10px;
-			padding-bottom: 10px;
-		}
-		.detail-head {
-			padding-bottom: 6px;
-		}
-		.detail-head .ess-h2 {
-			font-size: 15px;
-		}
-		.punches {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-			gap: 8px;
-			margin: 6px 0;
-		}
-		/* Time and label on the first line, the source / hours below. */
-		.punch {
-			grid-template-columns: 10px auto minmax(0, 1fr);
-			gap: 0 7px;
-			padding: 4px 9px;
-			border-radius: var(--ess-radius-sm);
-			background: var(--ess-sunken);
-			align-items: center;
-			align-content: start;
-		}
-		.punch::before {
-			display: none;
-		}
-		.punch .p-dot {
-			grid-row: 1;
-			grid-column: 1;
-			width: 9px;
-			height: 9px;
-			box-shadow: none;
-		}
-		.punch .p-time {
-			grid-row: 1;
-			grid-column: 2;
-			font-size: 13.5px;
-			font-weight: 600;
-			color: var(--ess-text);
-		}
-		.punch .p-body {
-			display: contents;
-		}
-		.punch .p-body strong {
-			grid-row: 1;
-			grid-column: 3;
-			font-size: 12.5px;
-			color: var(--ess-text-secondary);
-		}
-		.punch .p-body small {
-			grid-column: 1 / -1;
-			font-size: 11.5px;
-			line-height: 1.35;
-		}
-		.punch > :global(.ess-badge) {
-			grid-column: 1 / -1;
-			justify-self: start;
-			margin-top: 3px;
-		}
-		/* Biometric and ProHance side by side, label above value. */
-		.source-rows {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-			margin-bottom: 8px;
-		}
-		.source-rows:last-child {
-			margin-bottom: 0;
-		}
-		.source-row {
-			grid-template-columns: minmax(0, 1fr);
-			gap: 1px;
-			padding: 5px 10px;
-		}
-		.source-row:not(:last-child) {
-			border-bottom: none;
-			border-right: 1px solid var(--ess-border-subtle);
-		}
-		.source-label {
-			font-size: 11.5px;
-		}
-		.detail-row {
-			margin-bottom: 6px;
+			.detail-box {
+				padding-top: 10px;
+				padding-bottom: 10px;
+			}
+			.detail-head {
+				padding-bottom: 6px;
+			}
+			.detail-head .ess-h2 {
+				font-size: 15px;
+			}
+			.punches {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+				gap: 8px;
+				margin: 6px 0;
+			}
+			/* Time and label on the first line, the source / hours below. */
+			.punch {
+				grid-template-columns: 10px auto minmax(0, 1fr);
+				gap: 0 7px;
+				padding: 4px 9px;
+				border-radius: var(--ess-radius-sm);
+				background: var(--ess-sunken);
+				align-items: center;
+				align-content: start;
+			}
+			.punch::before {
+				display: none;
+			}
+			.punch .p-dot {
+				grid-row: 1;
+				grid-column: 1;
+				width: 9px;
+				height: 9px;
+				box-shadow: none;
+			}
+			.punch .p-time {
+				grid-row: 1;
+				grid-column: 2;
+				font-size: 13.5px;
+				font-weight: 600;
+				color: var(--ess-text);
+			}
+			.punch .p-body {
+				display: contents;
+			}
+			.punch .p-body strong {
+				grid-row: 1;
+				grid-column: 3;
+				font-size: 12.5px;
+				color: var(--ess-text-secondary);
+			}
+			.punch .p-body small {
+				grid-column: 1 / -1;
+				font-size: 11.5px;
+				line-height: 1.35;
+			}
+			.punch > :global(.ess-badge) {
+				grid-column: 1 / -1;
+				justify-self: start;
+				margin-top: 3px;
+			}
+			/* Biometric and ProHance side by side, label above value. */
+			.source-rows {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+				margin-bottom: 8px;
+			}
+			.source-rows:last-child {
+				margin-bottom: 0;
+			}
+			.source-row {
+				grid-template-columns: minmax(0, 1fr);
+				gap: 1px;
+				padding: 5px 10px;
+			}
+			.source-row:not(:last-child) {
+				border-bottom: none;
+				border-right: 1px solid var(--ess-border-subtle);
+			}
+			.source-label {
+				font-size: 11.5px;
+			}
+			.detail-row {
+				margin-bottom: 6px;
+			}
 		}
 	}
 </style>

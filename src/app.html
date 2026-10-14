@@ -25,8 +25,11 @@
 					document.documentElement.setAttribute('data-ess-shell', 'rail');
 				// Text size and dock, from the account menu (TopBar).
 				var textScale = parseFloat(localStorage.getItem('essTextScale') || '');
-				if (textScale >= 0.8 && textScale <= 1.5)
+				if (textScale >= 0.8 && textScale <= 1.5) {
 					document.documentElement.style.setProperty('--ess-text-scale', String(textScale));
+					// Enlarged text: pages flow and scroll instead of fitting the screen.
+					if (textScale > 1) document.documentElement.setAttribute('data-ess-flow', '');
+				}
 				if (localStorage.getItem('essDock') === 'fixed')
 					document.documentElement.setAttribute('data-ess-dock', 'fixed');
 

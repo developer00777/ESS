@@ -2597,156 +2597,160 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 	   cards and the side panel end on the same line at the bottom of the
 	   workspace, and a long list scrolls inside its card. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.people-split,
-		.weekoff-split {
-			grid-template-rows: minmax(0, 1fr);
-		}
-		/* The side column already fills the height, so it no longer sticks. */
-		.side {
-			position: static;
-			gap: 10px;
-		}
-		.directory .table-wrap,
-		.grid-card .table-wrap {
-			margin-bottom: calc(-1 * var(--card-py, var(--ess-space-4)));
-		}
-		/* Week-off: the roster grid and the templates share the column, each
-		   scrolling inside its own card when it is long. */
-		.weekoff-split > .ess-stack {
-			gap: 10px;
-			overflow: hidden;
-		}
-		.weekoff-split .ess-stack > .grid-card,
-		.weekoff-split .ess-stack > .templates-card {
-			flex: 1 1 auto;
-			min-height: 150px;
-		}
-		.weekoff-split .templates-card > .ess-empty {
-			flex: 1 1 auto;
-			justify-content: center;
-		}
-		.weekoff-split .side > .placeholder {
-			flex: 1 0 auto;
-		}
-		.weekoff-split .side > .legend-card {
-			flex: none;
+		@container ess-fill (min-width: 0px) {
+			.people-split,
+			.weekoff-split {
+				grid-template-rows: minmax(0, 1fr);
+			}
+			/* The side column already fills the height, so it no longer sticks. */
+			.side {
+				position: static;
+				gap: 10px;
+			}
+			.directory .table-wrap,
+			.grid-card .table-wrap {
+				margin-bottom: calc(-1 * var(--card-py, var(--ess-space-4)));
+			}
+			/* Week-off: the roster grid and the templates share the column, each
+			   scrolling inside its own card when it is long. */
+			.weekoff-split > .ess-stack {
+				gap: 10px;
+				overflow: hidden;
+			}
+			.weekoff-split .ess-stack > .grid-card,
+			.weekoff-split .ess-stack > .templates-card {
+				flex: 1 1 auto;
+				min-height: 150px;
+			}
+			.weekoff-split .templates-card > .ess-empty {
+				flex: 1 1 auto;
+				justify-content: center;
+			}
+			.weekoff-split .side > .placeholder {
+				flex: 1 0 auto;
+			}
+			.weekoff-split .side > .legend-card {
+				flex: none;
+			}
 		}
 	}
 	/* Short laptop screens (1280x580 up to 1366x768): tighter person panel and week-off
 	   cards so the roster keeps at least one full row on show. */
 	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
-		.person-panel {
-			padding: 8px 14px 10px;
-		}
-		.person-top {
-			gap: 10px;
-		}
-		.person-top :global(.avatar--lg) {
-			width: 36px;
-			height: 36px;
-			font-size: 15px;
-		}
-		.person-name .ess-h2 {
-			font-size: 16px;
-		}
-		.person-top .ess-caption {
-			font-size: 12px;
-		}
-		.facts {
-			gap: 3px 10px;
-			margin: 5px 0;
-			padding: 5px 0;
-		}
-		.facts dd {
-			font-size: 13px;
-			line-height: 1.15;
-		}
-		.facts dd span,
-		.facts dd small {
-			font-size: 11.5px;
-		}
-		.person-panel .wide {
-			height: 28px;
-		}
-		.today-card {
-			display: flex;
-			align-items: center;
-			flex-wrap: wrap;
-			gap: 2px 10px;
-			margin-top: 5px;
-			padding: 3px 10px;
-		}
-		.today-head {
-			margin-bottom: 0;
-			gap: 8px;
-		}
-		.today-card p {
-			font-size: 12px;
-		}
-		.person-panel .ess-notice {
-			margin-top: 8px;
-		}
-		.person-panel .btn-row {
-			margin-top: 8px;
-		}
-		.placeholder {
-			padding: 14px 16px;
-			gap: 6px;
-		}
-		.placeholder .ess-tile--lg {
-			width: 44px;
-			height: 44px;
-		}
-		.placeholder .ess-btn {
-			margin-top: 2px;
-		}
-		.legend.col {
-			gap: 6px;
-			margin: 6px 0;
-		}
+		@container ess-fill (min-width: 0px) {
+			.person-panel {
+				padding: 8px 14px 10px;
+			}
+			.person-top {
+				gap: 10px;
+			}
+			.person-top :global(.avatar--lg) {
+				width: 36px;
+				height: 36px;
+				font-size: 15px;
+			}
+			.person-name .ess-h2 {
+				font-size: 16px;
+			}
+			.person-top .ess-caption {
+				font-size: 12px;
+			}
+			.facts {
+				gap: 3px 10px;
+				margin: 5px 0;
+				padding: 5px 0;
+			}
+			.facts dd {
+				font-size: 13px;
+				line-height: 1.15;
+			}
+			.facts dd span,
+			.facts dd small {
+				font-size: 11.5px;
+			}
+			.person-panel .wide {
+				height: 28px;
+			}
+			.today-card {
+				display: flex;
+				align-items: center;
+				flex-wrap: wrap;
+				gap: 2px 10px;
+				margin-top: 5px;
+				padding: 3px 10px;
+			}
+			.today-head {
+				margin-bottom: 0;
+				gap: 8px;
+			}
+			.today-card p {
+				font-size: 12px;
+			}
+			.person-panel .ess-notice {
+				margin-top: 8px;
+			}
+			.person-panel .btn-row {
+				margin-top: 8px;
+			}
+			.placeholder {
+				padding: 14px 16px;
+				gap: 6px;
+			}
+			.placeholder .ess-tile--lg {
+				width: 44px;
+				height: 44px;
+			}
+			.placeholder .ess-btn {
+				margin-top: 2px;
+			}
+			.legend.col {
+				gap: 6px;
+				margin: 6px 0;
+			}
 
-		/* week-off */
-		.weekoff-split .ess-stack > .grid-card {
-			min-height: 192px;
-		}
-		.weekoff-split .ess-stack > .templates-card {
-			min-height: 120px;
-		}
-		.day-head span {
-			display: inline;
-		}
-		.day-head small {
-			margin-left: 4px;
-		}
-		.grid-card .ess-card-head,
-		.templates-card .ess-card-head {
-			flex-wrap: nowrap;
-			margin-bottom: 6px;
-		}
-		.templates-card .ess-card-head > .ess-btn {
-			flex: none;
-		}
-		.legend {
-			margin-top: 6px;
-			padding-top: 6px;
-			font-size: 12.5px;
-		}
-		.templates-card .ess-empty {
-			padding: 4px 16px 8px;
-			gap: 4px;
-			font-size: 12.5px;
-		}
-		.templates-card .ess-empty__icon {
-			width: 36px;
-			height: 36px;
-			margin-bottom: 0;
-		}
-		.templates-card .ess-empty__title {
-			font-size: 14.5px;
-		}
-		.editor,
-		.create-panel {
-			gap: 8px;
+			/* week-off */
+			.weekoff-split .ess-stack > .grid-card {
+				min-height: 192px;
+			}
+			.weekoff-split .ess-stack > .templates-card {
+				min-height: 120px;
+			}
+			.day-head span {
+				display: inline;
+			}
+			.day-head small {
+				margin-left: 4px;
+			}
+			.grid-card .ess-card-head,
+			.templates-card .ess-card-head {
+				flex-wrap: nowrap;
+				margin-bottom: 6px;
+			}
+			.templates-card .ess-card-head > .ess-btn {
+				flex: none;
+			}
+			.legend {
+				margin-top: 6px;
+				padding-top: 6px;
+				font-size: 12.5px;
+			}
+			.templates-card .ess-empty {
+				padding: 4px 16px 8px;
+				gap: 4px;
+				font-size: 12.5px;
+			}
+			.templates-card .ess-empty__icon {
+				width: 36px;
+				height: 36px;
+				margin-bottom: 0;
+			}
+			.templates-card .ess-empty__title {
+				font-size: 14.5px;
+			}
+			.editor,
+			.create-panel {
+				gap: 8px;
+			}
 		}
 	}
 	@media (max-width: 1100px) {
@@ -2778,82 +2782,84 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 	/* Short laptop screens (1280x580 up to 1366x768): Bulk import and
 	   Password activity fit without their columns scrolling. */
 	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
-		.bulk-steps {
-			margin-bottom: 0;
-		}
-		.bulk-steps :global(.ess-step) {
-			display: flex;
-			align-items: center;
-			gap: 8px;
-		}
-		.bulk-steps :global(.ess-step:not(:last-child)::before) {
-			display: none;
-		}
-		.bulk-steps :global(.ess-step__dot) {
-			width: 20px;
-			height: 20px;
-		}
-		.bulk-steps :global(.ess-step__label) {
-			font-size: 13px;
-		}
-		.bulk-steps :global(.ess-step__meta) {
-			display: none;
-		}
-		.bulk-split {
-			grid-template-columns: minmax(0, 1fr) 420px;
-		}
-		.bulk-split .ess-card-head {
-			flex-wrap: nowrap;
-			align-items: flex-start;
-		}
-		.bulk-split .side {
-			gap: 8px;
-		}
-		.next-steps {
-			padding-top: 6px;
-		}
-		.bulk-split .side .card-title {
-			margin-bottom: 4px;
-		}
-		.queue-hint {
-			gap: 8px;
-			padding: 8px 10px;
-		}
-		.queue-figure {
-			margin: 2px 0;
-		}
-		.next-steps strong {
-			font-size: 12.5px;
-			margin-bottom: 4px;
-		}
-		.queue-hint :global(.ess-tile) {
-			display: none;
-		}
-		.queue-hint .ess-caption {
-			font-size: 12px;
-		}
-		.queue-figure {
-			padding: 4px 0;
-			align-items: center;
-		}
-		.queue-figure > div {
-			display: flex;
-			align-items: baseline;
-			gap: 6px;
-		}
-		.queue-figure :global(.ess-figure__value) {
-			font-size: 18px;
-		}
-		.next-steps ol {
-			gap: 3px;
-		}
-		.next-steps li {
-			font-size: 12px;
-		}
-		.next-steps li span {
-			width: 16px;
-			height: 16px;
-			font-size: 10px;
+		@container ess-fill (min-width: 0px) {
+			.bulk-steps {
+				margin-bottom: 0;
+			}
+			.bulk-steps :global(.ess-step) {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+			.bulk-steps :global(.ess-step:not(:last-child)::before) {
+				display: none;
+			}
+			.bulk-steps :global(.ess-step__dot) {
+				width: 20px;
+				height: 20px;
+			}
+			.bulk-steps :global(.ess-step__label) {
+				font-size: 13px;
+			}
+			.bulk-steps :global(.ess-step__meta) {
+				display: none;
+			}
+			.bulk-split {
+				grid-template-columns: minmax(0, 1fr) 420px;
+			}
+			.bulk-split .ess-card-head {
+				flex-wrap: nowrap;
+				align-items: flex-start;
+			}
+			.bulk-split .side {
+				gap: 8px;
+			}
+			.next-steps {
+				padding-top: 6px;
+			}
+			.bulk-split .side .card-title {
+				margin-bottom: 4px;
+			}
+			.queue-hint {
+				gap: 8px;
+				padding: 8px 10px;
+			}
+			.queue-figure {
+				margin: 2px 0;
+			}
+			.next-steps strong {
+				font-size: 12.5px;
+				margin-bottom: 4px;
+			}
+			.queue-hint :global(.ess-tile) {
+				display: none;
+			}
+			.queue-hint .ess-caption {
+				font-size: 12px;
+			}
+			.queue-figure {
+				padding: 4px 0;
+				align-items: center;
+			}
+			.queue-figure > div {
+				display: flex;
+				align-items: baseline;
+				gap: 6px;
+			}
+			.queue-figure :global(.ess-figure__value) {
+				font-size: 18px;
+			}
+			.next-steps ol {
+				gap: 3px;
+			}
+			.next-steps li {
+				font-size: 12px;
+			}
+			.next-steps li span {
+				width: 16px;
+				height: 16px;
+				font-size: 10px;
+			}
 		}
 	}
 </style>

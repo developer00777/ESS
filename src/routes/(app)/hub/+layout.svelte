@@ -198,15 +198,17 @@
 	   left under the header and tabs, and each page's main block (marked
 	   .hub-fill) stretches to the bottom. Long lists scroll inside cards. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.page {
-			flex: 1 1 0%;
-			min-height: 0;
-			display: flex;
-			flex-direction: column;
-		}
-		.page > :global(.hub-fill) {
-			flex: 1 1 0%;
-			min-height: 0;
+		@container ess-fill (min-width: 0px) {
+			.page {
+				flex: 1 1 0%;
+				min-height: 0;
+				display: flex;
+				flex-direction: column;
+			}
+			.page > :global(.hub-fill) {
+				flex: 1 1 0%;
+				min-height: 0;
+			}
 		}
 	}
 	/* Short laptop screens: a tighter header, search and tab row. */
@@ -299,7 +301,7 @@
 	}
 
 	@media (min-width: 1101px) {
-		@container ess-main (min-width: 1075px) {
+		@container ess-fill (min-width: 1075px) {
 			.own-tabs {
 				padding-right: calc(var(--topbar-w, 380px) + 14px);
 				min-height: 38px;

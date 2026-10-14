@@ -300,19 +300,21 @@
 	   The team card takes the height left after the search and the help
 	   row; a long contact list scrolls inside it. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.layout > :not(.grow) {
-			flex: none;
-		}
-		.layout > .grow {
-			flex: 1 1 0%;
-			min-height: 120px;
-		}
-		.people:has(> .fill-empty) {
-			display: flex;
-			flex-direction: column;
-		}
-		.people > .fill-empty {
-			margin: auto 0;
+		@container ess-fill (min-width: 0px) {
+			.layout > :not(.grow) {
+				flex: none;
+			}
+			.layout > .grow {
+				flex: 1 1 0%;
+				min-height: 120px;
+			}
+			.people:has(> .fill-empty) {
+				display: flex;
+				flex-direction: column;
+			}
+			.people > .fill-empty {
+				margin: auto 0;
+			}
 		}
 	}
 	@media (min-width: 1101px) and (max-height: 760px) {

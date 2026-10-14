@@ -258,9 +258,11 @@
 	}
 	/* Desktop: the hub layout stretches this card to the bottom edge. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.chats {
-			height: auto;
-			min-height: 0;
+		@container ess-fill (min-width: 0px) {
+			.chats {
+				height: auto;
+				min-height: 0;
+			}
 		}
 	}
 	.inbox {

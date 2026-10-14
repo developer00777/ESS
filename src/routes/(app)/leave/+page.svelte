@@ -633,31 +633,33 @@
 		padding: 20px 16px;
 	}
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.fill-split {
-			grid-template-rows: minmax(0, 1fr);
-		}
-		.fill-col {
-			min-height: 0;
-		}
-		.fill-col > .grow {
-			flex: 1 1 0%;
-			min-height: 150px;
-		}
-		.fill-col > :not(.grow) {
-			flex: none;
-		}
-		/* An empty list centres its message in the space it was given. */
-		.grow .ess-scroll:not(.table-wrap):not(.detail) {
-			display: flex;
-			flex-direction: column;
-		}
-		.grow .fill-empty {
-			margin: auto 0;
-		}
-		.calendar-section {
-			display: flex;
-			flex-direction: column;
-			min-height: 0;
+		@container ess-fill (min-width: 0px) {
+			.fill-split {
+				grid-template-rows: minmax(0, 1fr);
+			}
+			.fill-col {
+				min-height: 0;
+			}
+			.fill-col > .grow {
+				flex: 1 1 0%;
+				min-height: 150px;
+			}
+			.fill-col > :not(.grow) {
+				flex: none;
+			}
+			/* An empty list centres its message in the space it was given. */
+			.grow .ess-scroll:not(.table-wrap):not(.detail) {
+				display: flex;
+				flex-direction: column;
+			}
+			.grow .fill-empty {
+				margin: auto 0;
+			}
+			.calendar-section {
+				display: flex;
+				flex-direction: column;
+				min-height: 0;
+			}
 		}
 	}
 

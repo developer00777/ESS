@@ -605,129 +605,133 @@
 		}
 	}
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.layout {
-			grid-template-rows: minmax(0, 1fr);
-		}
-		.main {
-			display: flex;
-			flex-direction: column;
-			min-height: 0;
-		}
-		.main > * {
-			flex: 1 1 0%;
-			min-height: 0;
-		}
-		.docs {
-			grid-template-rows: minmax(0, 1fr);
-			align-items: stretch;
-		}
-		.docs > .list,
-		.docs > .doc {
-			min-height: 0;
-			overflow: auto;
-			overscroll-behavior: contain;
-			scrollbar-width: thin;
-		}
-		.docs > .list {
-			align-content: start;
-		}
-		.docs--leave {
-			grid-template-rows: auto minmax(0, 1fr);
-		}
-		/* Eleven long titles: a denser list, the rule count beside the
-		   title instead of under it. */
-		.docs--workplace {
-			grid-template-columns: 280px minmax(0, 1fr);
-		}
-		.docs--workplace .list {
-			padding: 10px 8px;
-			gap: 1px;
-		}
-		.docs--workplace .list-h {
-			padding: 0 8px 6px;
-		}
-		.docs--workplace .doc-link {
-			padding: 5px 8px;
-			gap: 9px;
-		}
-		.docs--workplace .doc-link .ess-tile--sm {
-			width: 26px;
-			height: 26px;
-			font-size: 13px;
-		}
-		.docs--workplace .doc-link .ess-row__body {
-			display: flex;
-			align-items: baseline;
-			gap: 8px;
-		}
-		.docs--workplace .doc-link .ess-row__title {
-			flex: 1 1 auto;
-			line-height: 1.3;
-		}
-		.docs--workplace .doc-link .ess-row__meta {
-			flex: none;
-			font-size: 11.5px;
-			color: var(--ess-text-muted);
-		}
-		.docs--workplace .list :global(.chev) {
-			display: none;
-		}
-		.docs--leave > .list--chips {
-			overflow: visible;
-		}
-		.fill-col {
-			min-height: 0;
-		}
-		.fill-col > .grow {
-			flex: 1 1 0%;
-			min-height: 120px;
-		}
-		.fill-col > :not(.grow) {
-			flex: none;
-		}
-		.upcoming-list {
-			display: flex;
-			flex-direction: column;
-		}
-		.upcoming-list > .fill-empty {
-			margin: auto 0;
-			text-align: center;
-		}
-		/* A lone notice (no shift group / no calendar) sits in the middle
-		   of the card rather than at the top of an empty one. */
-		.holidays-doc:has(> .ess-notice:only-child) {
-			align-content: center;
-			justify-content: center;
-		}
-		.holidays-doc > .ess-notice:only-child {
-			max-width: 560px;
+		@container ess-fill (min-width: 0px) {
+			.layout {
+				grid-template-rows: minmax(0, 1fr);
+			}
+			.main {
+				display: flex;
+				flex-direction: column;
+				min-height: 0;
+			}
+			.main > * {
+				flex: 1 1 0%;
+				min-height: 0;
+			}
+			.docs {
+				grid-template-rows: minmax(0, 1fr);
+				align-items: stretch;
+			}
+			.docs > .list,
+			.docs > .doc {
+				min-height: 0;
+				overflow: auto;
+				overscroll-behavior: contain;
+				scrollbar-width: thin;
+			}
+			.docs > .list {
+				align-content: start;
+			}
+			.docs--leave {
+				grid-template-rows: auto minmax(0, 1fr);
+			}
+			/* Eleven long titles: a denser list, the rule count beside the
+			   title instead of under it. */
+			.docs--workplace {
+				grid-template-columns: 280px minmax(0, 1fr);
+			}
+			.docs--workplace .list {
+				padding: 10px 8px;
+				gap: 1px;
+			}
+			.docs--workplace .list-h {
+				padding: 0 8px 6px;
+			}
+			.docs--workplace .doc-link {
+				padding: 5px 8px;
+				gap: 9px;
+			}
+			.docs--workplace .doc-link .ess-tile--sm {
+				width: 26px;
+				height: 26px;
+				font-size: 13px;
+			}
+			.docs--workplace .doc-link .ess-row__body {
+				display: flex;
+				align-items: baseline;
+				gap: 8px;
+			}
+			.docs--workplace .doc-link .ess-row__title {
+				flex: 1 1 auto;
+				line-height: 1.3;
+			}
+			.docs--workplace .doc-link .ess-row__meta {
+				flex: none;
+				font-size: 11.5px;
+				color: var(--ess-text-muted);
+			}
+			.docs--workplace .list :global(.chev) {
+				display: none;
+			}
+			.docs--leave > .list--chips {
+				overflow: visible;
+			}
+			.fill-col {
+				min-height: 0;
+			}
+			.fill-col > .grow {
+				flex: 1 1 0%;
+				min-height: 120px;
+			}
+			.fill-col > :not(.grow) {
+				flex: none;
+			}
+			.upcoming-list {
+				display: flex;
+				flex-direction: column;
+			}
+			.upcoming-list > .fill-empty {
+				margin: auto 0;
+				text-align: center;
+			}
+			/* A lone notice (no shift group / no calendar) sits in the middle
+			   of the card rather than at the top of an empty one. */
+			.holidays-doc:has(> .ess-notice:only-child) {
+				align-content: center;
+				justify-content: center;
+			}
+			.holidays-doc > .ess-notice:only-child {
+				max-width: 560px;
+			}
 		}
 	}
 	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
-		.doc {
-			gap: 10px;
-			padding: 12px 16px;
-		}
-		.doc-head {
-			padding-bottom: 8px;
-		}
-		.doc-title {
-			font-size: 18px;
-		}
-		.doc-sub {
-			font-size: 13px;
-		}
-		.doc .ess-notice {
-			padding: 9px 12px;
-			font-size: 13px;
-		}
-		.rule-list {
-			gap: 6px;
-			font-size: 13.5px;
-			line-height: 1.45;
-		}
-		.rule-list li {
-			padding: 7px 12px 7px 9px;
+		@container ess-fill (min-width: 0px) {
+			.doc {
+				gap: 10px;
+				padding: 12px 16px;
+			}
+			.doc-head {
+				padding-bottom: 8px;
+			}
+			.doc-title {
+				font-size: 18px;
+			}
+			.doc-sub {
+				font-size: 13px;
+			}
+			.doc .ess-notice {
+				padding: 9px 12px;
+				font-size: 13px;
+			}
+			.rule-list {
+				gap: 6px;
+				font-size: 13.5px;
+				line-height: 1.45;
+			}
+			.rule-list li {
+				padding: 7px 12px 7px 9px;
+			}
 		}
 	}
 

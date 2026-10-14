@@ -471,12 +471,14 @@
 <style>
 	/* ---------- one-screen home ---------- */
 	@media (min-width: 721px) and (min-height: 480px) {
-		/* Fills the screen; if the panels truly can't fit, the page scrolls
-		   rather than cutting them off. */
-		:global(.ess-content:has(> .home)) { display:flex; flex-direction:column; overflow:auto; padding-bottom:12px; }
-		/* Grows to fill the screen, never shrinks below what its cards need. */
-		:global(.ess-content > .home) { flex:1 0 auto; }
-		.home :global(.planner) { max-height:58vh; }
+		@container ess-fill (min-width: 0px) {
+			/* Fills the screen; if the panels truly can't fit, the page scrolls
+			   rather than cutting them off. */
+			:global(.ess-content:has(> .home)) { display:flex; flex-direction:column; overflow:auto; padding-bottom:12px; }
+			/* Grows to fill the screen, never shrinks below what its cards need. */
+			:global(.ess-content > .home) { flex:1 0 auto; }
+			.home :global(.planner) { max-height:58vh; }
+		}
 	}
 
 	.home {
@@ -789,7 +791,7 @@
 	/* Desktop: the greeting row shares its line with the floating top-bar
 	   cluster on the right. */
 	@media (min-width: 1101px) {
-		@container ess-main (min-width: 1075px) {
+		@container ess-fill (min-width: 1075px) {
 			.top {
 				flex-wrap: nowrap;
 				min-height: 38px;
@@ -970,25 +972,27 @@
 
 	/* Desktop: the view fills the screen; long lists scroll in their card. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.home:has(> .insights) {
-			grid-template-rows: auto minmax(0, 1fr);
-		}
-		.insights {
-			height: 100%;
-		}
-		.ins-grid {
-			flex: 1 1 0%;
-		}
-		.ins-grid > .ins-card,
-		.ins-col > .ins-card {
-			flex: 1 1 0%;
-		}
-		.ins-col > .req-card {
-			flex: 0 1 auto;
-			max-height: 45%;
-		}
-		.ins-body {
-			flex: 1 1 0%;
+		@container ess-fill (min-width: 0px) {
+			.home:has(> .insights) {
+				grid-template-rows: auto minmax(0, 1fr);
+			}
+			.insights {
+				height: 100%;
+			}
+			.ins-grid {
+				flex: 1 1 0%;
+			}
+			.ins-grid > .ins-card,
+			.ins-col > .ins-card {
+				flex: 1 1 0%;
+			}
+			.ins-col > .req-card {
+				flex: 0 1 auto;
+				max-height: 45%;
+			}
+			.ins-body {
+				flex: 1 1 0%;
+			}
 		}
 	}
 	@media (min-width: 721px) and (max-height: 760px) {
@@ -1037,7 +1041,7 @@
 	/* Desktop: the figures take the room left in the row and show as many
 	   as fit on one line; the rest wrap onto a hidden second line. */
 	@media (min-width: 1101px) {
-		@container ess-main (min-width: 1075px) {
+		@container ess-fill (min-width: 1075px) {
 			.top .figures {
 				flex: 1 1 auto;
 				min-width: 0;
@@ -1051,7 +1055,7 @@
 		}
 	}
 	@media (min-width: 1101px) and (max-height: 760px) {
-		@container ess-main (min-width: 1075px) {
+		@container ess-fill (min-width: 1075px) {
 			.top .figures {
 				height: 46px;
 			}

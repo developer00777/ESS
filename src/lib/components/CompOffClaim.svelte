@@ -382,60 +382,62 @@
 	/* The title sits beside the icon, above the balance, with the request
 	   button on the right: one band instead of a heading row plus a row. */
 	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
-		.comp-off {
-			display: grid;
-			grid-template-columns: auto minmax(0, 1fr) auto;
-			column-gap: 8px;
-			align-items: center;
-		}
-		.comp-off > :global(*) {
-			grid-column: 1 / -1;
-		}
-		.comp-off .ess-card-head {
-			grid-column: 2;
-			grid-row: 1;
-			margin-bottom: 0;
-			white-space: nowrap;
-		}
-		.comp-off .ess-card-head .ess-h2 {
-			font-size: 13.5px;
-		}
-		.comp-off .info {
-			margin-left: 4px;
-		}
-		.comp-off .balance {
-			display: contents;
-		}
-		.balance .ess-tile {
-			grid-column: 1;
-			grid-row: 1 / span 2;
-		}
-		.balance-body {
-			grid-column: 2 / -1;
-			grid-row: 2;
-			display: flex;
-			flex-wrap: wrap;
-			align-items: baseline;
-			column-gap: 8px;
-		}
-		.balance > .ess-btn {
-			grid-column: 3;
-			grid-row: 1;
-		}
-		.balance .ess-tile {
-			width: 28px;
-			height: 28px;
-		}
-		.balance-body strong {
-			font-size: 17px;
-		}
-		.balance-body span {
-			font-size: 11.5px;
-		}
-		.balance .ess-btn {
-			height: 28px;
-			padding: 0 10px;
-			font-size: 12.5px;
+		@container ess-fill (min-width: 0px) {
+			.comp-off {
+				display: grid;
+				grid-template-columns: auto minmax(0, 1fr) auto;
+				column-gap: 8px;
+				align-items: center;
+			}
+			.comp-off > :global(*) {
+				grid-column: 1 / -1;
+			}
+			.comp-off .ess-card-head {
+				grid-column: 2;
+				grid-row: 1;
+				margin-bottom: 0;
+				white-space: nowrap;
+			}
+			.comp-off .ess-card-head .ess-h2 {
+				font-size: 13.5px;
+			}
+			.comp-off .info {
+				margin-left: 4px;
+			}
+			.comp-off .balance {
+				display: contents;
+			}
+			.balance .ess-tile {
+				grid-column: 1;
+				grid-row: 1 / span 2;
+			}
+			.balance-body {
+				grid-column: 2 / -1;
+				grid-row: 2;
+				display: flex;
+				flex-wrap: wrap;
+				align-items: baseline;
+				column-gap: 8px;
+			}
+			.balance > .ess-btn {
+				grid-column: 3;
+				grid-row: 1;
+			}
+			.balance .ess-tile {
+				width: 28px;
+				height: 28px;
+			}
+			.balance-body strong {
+				font-size: 17px;
+			}
+			.balance-body span {
+				font-size: 11.5px;
+			}
+			.balance .ess-btn {
+				height: 28px;
+				padding: 0 10px;
+				font-size: 12.5px;
+			}
 		}
 	}
 </style>

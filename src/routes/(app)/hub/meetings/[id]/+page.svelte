@@ -338,39 +338,41 @@
 	   height and their lists scroll inside them; the add-item form and
 	   the publish bar stay at the bottom of the action items card. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.page {
-			display: flex;
-			flex-direction: column;
-		}
-		.main-split {
-			flex: 1 1 0%;
-			min-height: 0;
-		}
-		.main-split .ess-stack > .share {
-			flex: 1 1 0%;
-			min-height: 150px;
-		}
-		.main-split .ess-stack > .items-card {
-			flex-grow: 1.5;
-		}
-		.main-split .ess-stack > .fixed {
-			flex: 0 0 auto;
-		}
-		.guest > .ess-notice {
-			align-self: start;
-		}
-		.items {
-			align-content: start;
-			margin: 0 -4px;
-			padding: 2px 4px;
-		}
-		.publish {
-			position: static;
-			box-shadow: none;
-		}
-		.fill-body:has(> .empty:only-child) {
-			display: grid;
-			align-content: center;
+		@container ess-fill (min-width: 0px) {
+			.page {
+				display: flex;
+				flex-direction: column;
+			}
+			.main-split {
+				flex: 1 1 0%;
+				min-height: 0;
+			}
+			.main-split .ess-stack > .share {
+				flex: 1 1 0%;
+				min-height: 150px;
+			}
+			.main-split .ess-stack > .items-card {
+				flex-grow: 1.5;
+			}
+			.main-split .ess-stack > .fixed {
+				flex: 0 0 auto;
+			}
+			.guest > .ess-notice {
+				align-self: start;
+			}
+			.items {
+				align-content: start;
+				margin: 0 -4px;
+				padding: 2px 4px;
+			}
+			.publish {
+				position: static;
+				box-shadow: none;
+			}
+			.fill-body:has(> .empty:only-child) {
+				display: grid;
+				align-content: center;
+			}
 		}
 	}
 	.back {

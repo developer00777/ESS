@@ -1058,96 +1058,98 @@
 	   panes scroll on their own; the published list keeps its natural height
 	   up to a cap and scrolls inside after that. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.pol-body {
-			display: flex;
-			flex-direction: column;
-		}
-		.publish {
-			flex: 1 1 0%;
-			min-height: 230px;
-			display: flex;
-			flex-direction: column;
-			overflow: hidden;
-		}
-		.pub-grid {
-			flex: 1 1 0%;
-			min-height: 0;
-			align-items: stretch;
-		}
-		.doc,
-		.fields {
-			min-height: 0;
-			overflow: auto;
-			overscroll-behavior: contain;
-			scrollbar-width: thin;
-		}
-		.doc {
-			display: flex;
-			flex-direction: column;
-		}
-		.doc > :global(*) {
-			flex-shrink: 0;
-		}
-		.doc .doc-preview {
-			flex: 1 1 0%;
-			min-height: 180px;
-			max-height: none;
-		}
-		.doc-preview iframe {
-			height: 100%;
-		}
-		.doc-preview img {
-			height: 100%;
-			max-height: none;
-		}
-		.doc,
-		.fields {
-			padding: 10px 12px;
-			gap: 8px;
-		}
-		.doc .file-drop {
-			flex: 1 1 auto;
-			padding: 10px 14px;
-			grid-template-columns: auto minmax(0, 1fr);
-			justify-items: start;
-			align-content: center;
-			column-gap: 14px;
-			text-align: left;
-		}
-		.file-drop .ess-tile {
-			grid-row: span 3;
-			align-self: center;
-		}
-		.file-drop > :global(*:not(.ess-tile)) {
-			grid-column: 2;
-		}
-		.fields:has(> .waiting) {
-			align-content: center;
-		}
-		.fields .waiting {
-			min-height: 100%;
-			align-content: center;
-			padding: 8px 12px;
-		}
-		.current {
-			flex: 0 1 auto;
-			min-height: 96px;
-			max-height: 42%;
-			display: flex;
-			flex-direction: column;
-			overflow: hidden;
-		}
-		.current-table {
-			flex: 1 1 auto;
-			min-height: 0;
-			overflow: auto;
-			overscroll-behavior: contain;
-			scrollbar-width: thin;
-		}
-		.current-table th {
-			position: sticky;
-			top: 0;
-			z-index: 1;
+		@container ess-fill (min-width: 0px) {
+			.pol-body {
+				display: flex;
+				flex-direction: column;
+			}
+			.publish {
+				flex: 1 1 0%;
+				min-height: 230px;
+				display: flex;
+				flex-direction: column;
+				overflow: hidden;
+			}
+			.pub-grid {
+				flex: 1 1 0%;
+				min-height: 0;
+				align-items: stretch;
+			}
+			.doc,
+			.fields {
+				min-height: 0;
+				overflow: auto;
+				overscroll-behavior: contain;
+				scrollbar-width: thin;
+			}
+			.doc {
+				display: flex;
+				flex-direction: column;
+			}
+			.doc > :global(*) {
+				flex-shrink: 0;
+			}
+			.doc .doc-preview {
+				flex: 1 1 0%;
+				min-height: 180px;
+				max-height: none;
+			}
+			.doc-preview iframe {
+				height: 100%;
+			}
+			.doc-preview img {
+				height: 100%;
+				max-height: none;
+			}
+			.doc,
+			.fields {
+				padding: 10px 12px;
+				gap: 8px;
+			}
+			.doc .file-drop {
+				flex: 1 1 auto;
+				padding: 10px 14px;
+				grid-template-columns: auto minmax(0, 1fr);
+				justify-items: start;
+				align-content: center;
+				column-gap: 14px;
+				text-align: left;
+			}
+			.file-drop .ess-tile {
+				grid-row: span 3;
+				align-self: center;
+			}
+			.file-drop > :global(*:not(.ess-tile)) {
+				grid-column: 2;
+			}
+			.fields:has(> .waiting) {
+				align-content: center;
+			}
+			.fields .waiting {
+				min-height: 100%;
+				align-content: center;
+				padding: 8px 12px;
+			}
+			.current {
+				flex: 0 1 auto;
+				min-height: 96px;
+				max-height: 42%;
+				display: flex;
+				flex-direction: column;
+				overflow: hidden;
+			}
+			.current-table {
+				flex: 1 1 auto;
+				min-height: 0;
+				overflow: auto;
+				overscroll-behavior: contain;
+				scrollbar-width: thin;
+			}
+			.current-table th {
+				position: sticky;
+				top: 0;
+				z-index: 1;
+			}
 		}
 	}
 
@@ -1155,91 +1157,93 @@
 	   one line, headings share a line with their captions and the empty
 	   states lie flat, so both cards fit without scrolling. */
 	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
-		.pol-body {
-			gap: 10px;
-		}
-		.kinds :global(.ess-tab) {
-			padding-top: 4px;
-			padding-bottom: 4px;
-		}
-		.publish {
-			min-height: 170px;
-		}
-		.pub-head {
-			margin-bottom: 8px;
-			align-items: center;
-		}
-		.pub-head .ess-caption,
-		.current .ess-caption {
-			font-size: 12px;
-		}
-		.steps .ess-step {
-			display: flex;
-			align-items: center;
-			gap: 0;
-		}
-		.steps .ess-step__label {
-			position: relative;
-			z-index: 1;
-			padding: 0 10px 0 6px;
-			background: var(--ess-surface);
-			font-size: 13px;
-			white-space: nowrap;
-		}
-		.pub-grid {
-			gap: 10px;
-		}
-		.doc,
-		.fields {
-			padding: 8px 12px;
-			gap: 6px;
-		}
-		.doc .ess-h3 {
-			font-size: 14px;
-		}
-		.doc .doc-preview {
-			min-height: 110px;
-		}
-		.doc .file-drop {
-			grid-template-columns: auto minmax(0, 1fr) auto;
-			padding: 8px 12px;
-			row-gap: 2px;
-		}
-		.file-drop .ess-tile {
-			grid-row: span 2;
-		}
-		.file-drop > :global(.ess-btn) {
-			grid-column: 3;
-			grid-row: 1 / span 2;
-			align-self: center;
-		}
-		.file-drop > span:not(.ess-tile):not(.ess-btn) {
-			font-size: 12.5px;
-			max-width: 48ch;
-		}
-		.fields .waiting {
-			grid-template-columns: auto minmax(0, 1fr);
-			justify-items: start;
-			column-gap: 12px;
-			row-gap: 2px;
-			text-align: left;
-		}
-		.waiting .ess-tile {
-			grid-row: span 2;
-			align-self: center;
-		}
-		.waiting span:not(.ess-tile) {
-			font-size: 12.5px;
-			max-width: 52ch;
-		}
-		.current {
-			min-height: 0;
-		}
-		.current .ess-card-head > div {
-			display: flex;
-			align-items: baseline;
-			flex-wrap: wrap;
-			gap: 2px 10px;
+		@container ess-fill (min-width: 0px) {
+			.pol-body {
+				gap: 10px;
+			}
+			.kinds :global(.ess-tab) {
+				padding-top: 4px;
+				padding-bottom: 4px;
+			}
+			.publish {
+				min-height: 170px;
+			}
+			.pub-head {
+				margin-bottom: 8px;
+				align-items: center;
+			}
+			.pub-head .ess-caption,
+			.current .ess-caption {
+				font-size: 12px;
+			}
+			.steps .ess-step {
+				display: flex;
+				align-items: center;
+				gap: 0;
+			}
+			.steps .ess-step__label {
+				position: relative;
+				z-index: 1;
+				padding: 0 10px 0 6px;
+				background: var(--ess-surface);
+				font-size: 13px;
+				white-space: nowrap;
+			}
+			.pub-grid {
+				gap: 10px;
+			}
+			.doc,
+			.fields {
+				padding: 8px 12px;
+				gap: 6px;
+			}
+			.doc .ess-h3 {
+				font-size: 14px;
+			}
+			.doc .doc-preview {
+				min-height: 110px;
+			}
+			.doc .file-drop {
+				grid-template-columns: auto minmax(0, 1fr) auto;
+				padding: 8px 12px;
+				row-gap: 2px;
+			}
+			.file-drop .ess-tile {
+				grid-row: span 2;
+			}
+			.file-drop > :global(.ess-btn) {
+				grid-column: 3;
+				grid-row: 1 / span 2;
+				align-self: center;
+			}
+			.file-drop > span:not(.ess-tile):not(.ess-btn) {
+				font-size: 12.5px;
+				max-width: 48ch;
+			}
+			.fields .waiting {
+				grid-template-columns: auto minmax(0, 1fr);
+				justify-items: start;
+				column-gap: 12px;
+				row-gap: 2px;
+				text-align: left;
+			}
+			.waiting .ess-tile {
+				grid-row: span 2;
+				align-self: center;
+			}
+			.waiting span:not(.ess-tile) {
+				font-size: 12.5px;
+				max-width: 52ch;
+			}
+			.current {
+				min-height: 0;
+			}
+			.current .ess-card-head > div {
+				display: flex;
+				align-items: baseline;
+				flex-wrap: wrap;
+				gap: 2px 10px;
+			}
 		}
 	}
 

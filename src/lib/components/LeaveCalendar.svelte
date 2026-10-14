@@ -735,28 +735,30 @@
 	   if there is too little the grid scrolls inside the card rather than
 	   the page. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.calendar-box.large {
-			flex: 1 1 0%;
-			min-height: 0;
-			display: flex;
-			flex-direction: column;
-		}
-		.calendar-box.large > :not(.month-grid) {
-			flex: none;
-		}
-		.calendar-box.large .month-grid {
-			flex: 1 1 0%;
-			min-height: 0;
-			grid-auto-rows: minmax(42px, 1fr);
-			overflow: auto;
-			scrollbar-width: thin;
-		}
-		.calendar-box.large .month-grid .day-cell {
-			min-height: 0;
-		}
-		.calendar-box.large .day-detail {
-			max-height: 22%;
-			overflow: auto;
+		@container ess-fill (min-width: 0px) {
+			.calendar-box.large {
+				flex: 1 1 0%;
+				min-height: 0;
+				display: flex;
+				flex-direction: column;
+			}
+			.calendar-box.large > :not(.month-grid) {
+				flex: none;
+			}
+			.calendar-box.large .month-grid {
+				flex: 1 1 0%;
+				min-height: 0;
+				grid-auto-rows: minmax(42px, 1fr);
+				overflow: auto;
+				scrollbar-width: thin;
+			}
+			.calendar-box.large .month-grid .day-cell {
+				min-height: 0;
+			}
+			.calendar-box.large .day-detail {
+				max-height: 22%;
+				overflow: auto;
+			}
 		}
 	}
 

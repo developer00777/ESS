@@ -375,19 +375,21 @@
 	   A page that does not opt in keeps its natural height and the workspace
 	   scrolls as before. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.admin-body {
-			display: flex;
-			flex-direction: column;
-		}
-		.admin-body > :global(*) {
-			flex-shrink: 0;
-		}
-		.admin-body > :global(.ess-fill) {
-			flex: 1 1 0px;
-			min-height: 0;
-		}
-		:global(.ess-content) > .admin-body:not(:has(> :global(.ess-fill))) {
-			flex: 1 0 auto;
+		@container ess-fill (min-width: 0px) {
+			.admin-body {
+				display: flex;
+				flex-direction: column;
+			}
+			.admin-body > :global(*) {
+				flex-shrink: 0;
+			}
+			.admin-body > :global(.ess-fill) {
+				flex: 1 1 0px;
+				min-height: 0;
+			}
+			:global(.ess-content) > .admin-body:not(:has(> :global(.ess-fill))) {
+				flex: 1 0 auto;
+			}
 		}
 	}
 

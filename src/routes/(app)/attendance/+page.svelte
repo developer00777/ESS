@@ -271,68 +271,72 @@
 		min-width: 0;
 	}
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.layout {
-			grid-template-rows: minmax(0, 1fr);
-		}
-		.fill-col {
-			min-height: 0;
-		}
-		.fill-col > :global(*) {
-			flex: none;
-		}
-		.main-col > :global(.calendar-box),
-		.main-col > :global(.records-box),
-		.main-col > :global(.queue) {
-			flex: 1 1 0%;
-			min-height: 0;
-		}
-		.main-col > :global(.queue) {
-			overflow: auto;
-			overscroll-behavior: contain;
-			scrollbar-width: thin;
-		}
-		.side-col {
-			overflow-y: auto;
-			overscroll-behavior: contain;
-			scrollbar-width: thin;
-		}
-		.side-col > .dev-card {
-			flex: 1 1 0%;
-			min-height: 140px;
+		@container ess-fill (min-width: 0px) {
+			.layout {
+				grid-template-rows: minmax(0, 1fr);
+			}
+			.fill-col {
+				min-height: 0;
+			}
+			.fill-col > :global(*) {
+				flex: none;
+			}
+			.main-col > :global(.calendar-box),
+			.main-col > :global(.records-box),
+			.main-col > :global(.queue) {
+				flex: 1 1 0%;
+				min-height: 0;
+			}
+			.main-col > :global(.queue) {
+				overflow: auto;
+				overscroll-behavior: contain;
+				scrollbar-width: thin;
+			}
+			.side-col {
+				overflow-y: auto;
+				overscroll-behavior: contain;
+				scrollbar-width: thin;
+			}
+			.side-col > .dev-card {
+				flex: 1 1 0%;
+				min-height: 140px;
+			}
 		}
 	}
 	/* Short laptop screens (about 1280x580): the aside's cards tighten so
 	   the day detail, comp-off balance and deviations all fit. */
 	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
-		.fill-col {
-			gap: 8px;
-		}
-		.side-col > .dev-card {
-			min-height: 112px;
-		}
-		.dev {
-			padding-top: 6px;
-			padding-bottom: 6px;
-		}
-		.allowance {
-			font-size: 12px;
-		}
-		.side-col {
-			gap: 6px;
-		}
-		.dev-card .ess-card-head {
-			margin-bottom: 6px;
-		}
-		.allowance-row {
-			margin-bottom: 4px;
-		}
-		.metrics .ess-metric {
-			padding-top: 3px;
-			padding-bottom: 3px;
-		}
-		.metrics .ess-tile {
-			width: 28px;
-			height: 28px;
+		@container ess-fill (min-width: 0px) {
+			.fill-col {
+				gap: 8px;
+			}
+			.side-col > .dev-card {
+				min-height: 112px;
+			}
+			.dev {
+				padding-top: 6px;
+				padding-bottom: 6px;
+			}
+			.allowance {
+				font-size: 12px;
+			}
+			.side-col {
+				gap: 6px;
+			}
+			.dev-card .ess-card-head {
+				margin-bottom: 6px;
+			}
+			.allowance-row {
+				margin-bottom: 4px;
+			}
+			.metrics .ess-metric {
+				padding-top: 3px;
+				padding-bottom: 3px;
+			}
+			.metrics .ess-tile {
+				width: 28px;
+				height: 28px;
+			}
 		}
 	}
 

@@ -293,60 +293,66 @@
 	   scroll past a point), unread chats take the rest. A card with nothing
 	   in it takes a smaller share, so a full list gets the room. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.today .ess-stack > .grow {
-			flex: 3 1 0%;
-			min-height: 120px;
-		}
-		.today .ess-stack > .grow.is-empty {
-			flex-grow: 1;
-			min-height: 96px;
-		}
-		.today .ess-stack > .fixed {
-			flex: 0 0 auto;
-		}
-		.today .ess-stack > .meet {
-			flex: 0 1 auto;
-			min-height: 120px;
-			max-height: 52%;
-		}
-		.strip-wrap {
-			flex: 0 1 auto;
-			min-height: 0;
-			overflow: auto;
-			overscroll-behavior: contain;
-			scrollbar-width: thin;
-		}
-		.today .ess-stack > .chats {
-			flex: 1 1 0%;
-			min-height: 110px;
-		}
-		.body:has(> .empty:only-child) {
-			display: grid;
-			align-content: center;
-			justify-content: center;
+		@container ess-fill (min-width: 0px) {
+			.today .ess-stack > .grow {
+				flex: 3 1 0%;
+				min-height: 120px;
+			}
+			.today .ess-stack > .grow.is-empty {
+				flex-grow: 1;
+				min-height: 96px;
+			}
+			.today .ess-stack > .fixed {
+				flex: 0 0 auto;
+			}
+			.today .ess-stack > .meet {
+				flex: 0 1 auto;
+				min-height: 120px;
+				max-height: 52%;
+			}
+			.strip-wrap {
+				flex: 0 1 auto;
+				min-height: 0;
+				overflow: auto;
+				overscroll-behavior: contain;
+				scrollbar-width: thin;
+			}
+			.today .ess-stack > .chats {
+				flex: 1 1 0%;
+				min-height: 110px;
+			}
+			.body:has(> .empty:only-child) {
+				display: grid;
+				align-content: center;
+				justify-content: center;
+			}
 		}
 	}
 	/* Taller screens give an empty card more room: stack the icon over the line. */
 	@media (min-width: 1101px) and (min-height: 761px) {
-		.body > .empty:only-child {
-			flex-direction: column;
-			gap: 10px;
-			max-width: 420px;
-			text-align: center;
-		}
-		.body > .empty:only-child .empty-ic {
-			width: 44px;
-			height: 44px;
+		@container ess-fill (min-width: 0px) {
+			.body > .empty:only-child {
+				flex-direction: column;
+				gap: 10px;
+				max-width: 420px;
+				text-align: center;
+			}
+			.body > .empty:only-child .empty-ic {
+				width: 44px;
+				height: 44px;
+			}
 		}
 	}
 	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 760px) {
-		.quick-card {
-			padding-top: 8px;
-			padding-bottom: 8px;
-		}
-		.chat {
-			padding-top: 7px;
-			padding-bottom: 7px;
+		@container ess-fill (min-width: 0px) {
+			.quick-card {
+				padding-top: 8px;
+				padding-bottom: 8px;
+			}
+			.chat {
+				padding-top: 7px;
+				padding-bottom: 7px;
+			}
 		}
 	}
 	@media (max-width: 720px) {

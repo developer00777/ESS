@@ -310,36 +310,38 @@
 		min-width: 0;
 	}
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.apply {
-			grid-template-rows: minmax(0, 1fr);
-		}
-		.fill-col {
-			min-height: 0;
-		}
-		.fill-col > .grow {
-			flex: 1 1 0%;
-			min-height: 0;
-		}
-		.fill-col > :not(.grow) {
-			flex: none;
-		}
-		.impact {
-			overflow: auto;
-			scrollbar-width: thin;
-		}
-		/* The reason box takes whatever height the form has spare. */
-		.form .form-body {
-			display: flex;
-			flex-direction: column;
-		}
-		.reason-field {
-			flex: 1 0 auto;
-			display: flex;
-			flex-direction: column;
-		}
-		.reason-field .ess-textarea {
-			flex: 1 1 auto;
-			min-height: 64px;
+		@container ess-fill (min-width: 0px) {
+			.apply {
+				grid-template-rows: minmax(0, 1fr);
+			}
+			.fill-col {
+				min-height: 0;
+			}
+			.fill-col > .grow {
+				flex: 1 1 0%;
+				min-height: 0;
+			}
+			.fill-col > :not(.grow) {
+				flex: none;
+			}
+			.impact {
+				overflow: auto;
+				scrollbar-width: thin;
+			}
+			/* The reason box takes whatever height the form has spare. */
+			.form .form-body {
+				display: flex;
+				flex-direction: column;
+			}
+			.reason-field {
+				flex: 1 0 auto;
+				display: flex;
+				flex-direction: column;
+			}
+			.reason-field .ess-textarea {
+				flex: 1 1 auto;
+				min-height: 64px;
+			}
 		}
 	}
 

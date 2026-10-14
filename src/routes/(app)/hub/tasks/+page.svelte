@@ -243,48 +243,50 @@
 	/* Desktop: the card fills the rest of the screen; the list (or each
 	   board column) scrolls inside it instead of growing the page. */
 	@media (min-width: 1101px) and (min-height: 480px) {
-		.page {
-			display: flex;
-			flex-direction: column;
-		}
-		.board-card {
-			display: flex;
-			flex: 1 1 0%;
-		}
-		.board-card > :global(.board-wrap) {
-			flex: 1 1 0%;
-			min-height: 0;
-			display: flex;
-			flex-direction: column;
-		}
-		.board-card :global(.board) {
-			flex: 1 1 0%;
-			min-height: 0;
-			align-items: stretch;
-			padding-bottom: 4px;
-		}
-		.board-card :global(.col) {
-			min-height: 0;
-		}
-		.board-card :global([data-zone-list]) {
-			flex: 1 1 0%;
-			min-height: 0;
-			overflow-y: auto;
-			overscroll-behavior: contain;
-			scrollbar-width: thin;
-			margin: 0 -4px;
-			padding: 0 4px 2px;
-		}
-		.list {
-			align-content: start;
-			padding-right: 2px;
-		}
-		.list:has(> .empty) {
-			grid-template-rows: auto minmax(0, 1fr);
-		}
-		.list:has(> .empty) .empty {
-			display: grid;
-			place-items: center;
+		@container ess-fill (min-width: 0px) {
+			.page {
+				display: flex;
+				flex-direction: column;
+			}
+			.board-card {
+				display: flex;
+				flex: 1 1 0%;
+			}
+			.board-card > :global(.board-wrap) {
+				flex: 1 1 0%;
+				min-height: 0;
+				display: flex;
+				flex-direction: column;
+			}
+			.board-card :global(.board) {
+				flex: 1 1 0%;
+				min-height: 0;
+				align-items: stretch;
+				padding-bottom: 4px;
+			}
+			.board-card :global(.col) {
+				min-height: 0;
+			}
+			.board-card :global([data-zone-list]) {
+				flex: 1 1 0%;
+				min-height: 0;
+				overflow-y: auto;
+				overscroll-behavior: contain;
+				scrollbar-width: thin;
+				margin: 0 -4px;
+				padding: 0 4px 2px;
+			}
+			.list {
+				align-content: start;
+				padding-right: 2px;
+			}
+			.list:has(> .empty) {
+				grid-template-rows: auto minmax(0, 1fr);
+			}
+			.list:has(> .empty) .empty {
+				display: grid;
+				place-items: center;
+			}
 		}
 	}
 	.toolbar {
