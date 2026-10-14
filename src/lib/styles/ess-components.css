@@ -1760,10 +1760,15 @@ button.ess-row:hover {
    PAGE SHELL — sidebar + top bar + content
 ------------------------------------------------------------ */
 
+/* --ess-zoom is the large-display zoom times the person's text size; the
+   height is divided by it so the zoomed workspace still fills the screen. */
 .ess-shell {
+	--ui-zoom: 1;
+	--ess-zoom: calc(var(--ui-zoom) * var(--ess-text-scale, 1));
+	zoom: var(--ess-zoom);
 	display: flex;
 	height: 100vh;
-	height: 100dvh;
+	height: calc(100dvh / var(--ess-zoom));
 	min-height: 0;
 	overflow: hidden;
 	background: var(--ess-canvas);
@@ -1776,7 +1781,7 @@ button.ess-row:hover {
 		background: var(--ess-backdrop);
 	}
 	.ess-shell {
-		height: calc(100dvh - 2 * var(--ess-shell-inset));
+		height: calc((100dvh - 2 * var(--ess-shell-inset) * var(--ess-zoom)) / var(--ess-zoom));
 		margin: var(--ess-shell-inset) var(--ess-shell-inset) var(--ess-shell-inset) var(--ess-shell-inset-left);
 		padding-left: var(--ess-shell-pad-left);
 		border: 1px solid var(--ess-shell-border);
@@ -1789,12 +1794,10 @@ button.ess-row:hover {
 
 /* Large displays: the whole interface scales up with the window, so a big
    monitor shows the same layout larger instead of tiny text in a sea of
-   space. The height is divided by the zoom so it still fills the screen. */
+   space. */
 @media (min-width: 1800px) and (min-height: 900px) {
 	.ess-shell {
 		--ui-zoom: 1.15;
-		zoom: var(--ui-zoom);
-		height: calc((100dvh - 2 * var(--ess-shell-inset) * var(--ui-zoom)) / var(--ui-zoom));
 	}
 }
 @media (min-width: 2300px) and (min-height: 1150px) {

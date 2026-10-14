@@ -45,7 +45,8 @@
 
 	/* Dock behaviour (desktop and tablet): the rail hides off the left edge
 	   and slides in when the pointer reaches the edge, or when it takes
-	   keyboard focus; it slides away shortly after the pointer leaves. */
+	   keyboard focus; it slides away shortly after the pointer leaves.
+	   A fixed dock (data-ess-dock="fixed") stays out; CSS handles it. */
 	let shown = $state(false);
 	let hideTimer: ReturnType<typeof setTimeout> | undefined;
 	function reveal() {
@@ -318,6 +319,17 @@
 			box-shadow:
 				0 1px 2px rgba(20, 22, 40, 0.06),
 				0 24px 50px -16px rgba(20, 22, 40, 0.35);
+		}
+	}
+	/* Fixed dock (account menu): always out, beside the workspace, which
+	   moves right to make room (--ess-shell-inset-left). */
+	@media (min-width: 721px) {
+		:global([data-ess-dock='fixed']) .dock-edge {
+			display: none;
+		}
+		:global([data-ess-dock='fixed']) .rail {
+			transform: translateY(-50%);
+			opacity: 1;
 		}
 	}
 	@media (min-width: 721px) and (prefers-reduced-motion: reduce) {

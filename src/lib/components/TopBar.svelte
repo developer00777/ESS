@@ -9,6 +9,8 @@
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import Sun from '@lucide/svelte/icons/sun';
 	import Moon from '@lucide/svelte/icons/moon';
+	import PanelLeft from '@lucide/svelte/icons/panel-left';
+	import PanelLeftDashed from '@lucide/svelte/icons/panel-left-dashed';
 	import Avatar from './Avatar.svelte';
 	import { hub } from '$lib/hub/client.svelte';
 	import type { Role } from '$lib/server/auth';
@@ -18,7 +20,7 @@
 	 * section links, a search pill (Champ Hub's command palette), the team's
 	 * faces, Add employee for people who may create logins, settings,
 	 * announcements and the person's round avatar on the right. The avatar
-	 * opens profile, password, theme and sign-out.
+	 * opens profile, password, theme, text size, dock and sign-out.
 	 */
 	interface Props {
 		fullName: string;
@@ -102,6 +104,47 @@
 		}
 	}
 
+	/* Text size: a bar per step, each taller than the last. The choice is a
+	   multiplier on the workspace zoom (--ess-text-scale, see .ess-shell). */
+	const TEXT_STEPS = [0.9, 1, 1.1, 1.2, 1.3];
+	let textStep = $state(1);
+
+	/* The dock either floats (slides in from the left edge) or stays fixed. */
+	let dock = $state<'floating' | 'fixed'>('floating');
+
+	$effect(() => {
+		const root = document.documentElement;
+		const scale = parseFloat(root.style.getPropertyValue('--ess-text-scale')) || 1;
+		const i = TEXT_STEPS.indexOf(scale);
+		textStep = i === -1 ? 1 : i;
+		dock = root.getAttribute('data-ess-dock') === 'fixed' ? 'fixed' : 'floating';
+	});
+
+	function setTextStep(i: number) {
+		textStep = Math.max(0, Math.min(TEXT_STEPS.length - 1, i));
+		const scale = TEXT_STEPS[textStep];
+		const root = document.documentElement;
+		if (scale === 1) root.style.removeProperty('--ess-text-scale');
+		else root.style.setProperty('--ess-text-scale', String(scale));
+		try {
+			if (scale === 1) localStorage.removeItem('essTextScale');
+			else localStorage.setItem('essTextScale', String(scale));
+		} catch {
+			/* not remembered in private mode */
+		}
+	}
+
+	function setDock(next: 'floating' | 'fixed') {
+		dock = next;
+		if (next === 'fixed') document.documentElement.setAttribute('data-ess-dock', 'fixed');
+		else document.documentElement.removeAttribute('data-ess-dock');
+		try {
+			localStorage.setItem('essDock', next);
+		} catch {
+			/* not remembered in private mode */
+		}
+	}
+
 	async function openSearch() {
 		// Search lives in Champ Hub's command palette; open it wherever we are.
 		if (location.pathname.startsWith('/hub')) hub.paletteOpen = true;
@@ -179,9 +222,36 @@
 					<a role="menuitem" href="/profile" onclick={() => (menuOpen = false)}><User size={15} /> My profile</a>
 					<a role="menuitem" href="/change-password" onclick={() => (menuOpen = false)}><KeyRound size={15} /> Change password</a>
 					<div class="menu-sep"></div>
-					<div class="theme" role="group" aria-label="Appearance">
+					<div class="seg" role="group" aria-label="Appearance">
 						<button type="button" aria-pressed={theme === 'light'} onclick={() => setTheme('light')}><Sun size={14} /> Light</button>
 						<button type="button" aria-pressed={theme === 'dark'} onclick={() => setTheme('dark')}><Moon size={14} /> Dark</button>
+					</div>
+					<div class="pref">
+						<span class="pref-label">Text size <b>{Math.round(TEXT_STEPS[textStep] * 100)}%</b></span>
+						<div class="text-size" role="group" aria-label="Text size">
+							<button type="button" class="ts-step sm" aria-label="Smaller text" disabled={textStep === 0} onclick={() => setTextStep(textStep - 1)}>A</button>
+							<div class="bars">
+								{#each TEXT_STEPS as s, i (s)}
+									<button
+										type="button"
+										class="bar"
+										class:on={i <= textStep}
+										style="height: {36 + i * 16}%"
+										aria-label="{Math.round(s * 100)}%"
+										aria-pressed={i === textStep}
+										onclick={() => setTextStep(i)}
+									></button>
+								{/each}
+							</div>
+							<button type="button" class="ts-step lg" aria-label="Larger text" disabled={textStep === TEXT_STEPS.length - 1} onclick={() => setTextStep(textStep + 1)}>A</button>
+						</div>
+					</div>
+					<div class="pref">
+						<span class="pref-label">Dock</span>
+						<div class="seg" role="group" aria-label="Dock">
+							<button type="button" aria-pressed={dock === 'floating'} onclick={() => setDock('floating')}><PanelLeftDashed size={14} /> Floating</button>
+							<button type="button" aria-pressed={dock === 'fixed'} onclick={() => setDock('fixed')}><PanelLeft size={14} /> Fixed</button>
+						</div>
 					</div>
 					<div class="menu-sep"></div>
 					<form method="POST" action="/logout">
@@ -430,7 +500,7 @@
 		background: var(--ess-border);
 		margin: 4px 0;
 	}
-	.theme {
+	.seg {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		gap: 2px;
@@ -438,7 +508,7 @@
 		background: var(--ess-sunken);
 		border-radius: 9px;
 	}
-	.theme button {
+	.seg button {
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -453,10 +523,88 @@
 		font-weight: 500;
 		cursor: pointer;
 	}
-	.theme button[aria-pressed='true'] {
+	.seg button[aria-pressed='true'] {
 		background: var(--ess-surface);
 		color: var(--ess-primary-text);
 		box-shadow: 0 1px 2px rgba(20, 22, 40, 0.08);
+	}
+
+	/* ---------- text size and dock, under the theme ---------- */
+	.pref {
+		display: grid;
+		gap: 5px;
+		padding: 6px 2px 0;
+	}
+	.pref-label {
+		display: flex;
+		justify-content: space-between;
+		padding: 0 8px;
+		font-size: 12px;
+		color: var(--ess-text-muted);
+	}
+	.pref-label b {
+		font-weight: 600;
+		color: var(--ess-text-secondary);
+		font-variant-numeric: tabular-nums;
+	}
+	.text-size {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 6px 8px;
+		background: var(--ess-sunken);
+		border-radius: 9px;
+	}
+	.ts-step {
+		display: grid;
+		place-items: center;
+		width: 24px;
+		height: 24px;
+		padding: 0;
+		border: none;
+		border-radius: 6px;
+		background: transparent;
+		color: var(--ess-text-secondary);
+		font: inherit;
+		font-weight: 600;
+		line-height: 1;
+		cursor: pointer;
+	}
+	.ts-step.sm {
+		font-size: 11px;
+	}
+	.ts-step.lg {
+		font-size: 16px;
+	}
+	.ts-step:hover:not(:disabled) {
+		background: var(--ess-surface);
+		color: var(--ess-text);
+	}
+	.ts-step:disabled {
+		opacity: 0.35;
+		cursor: default;
+	}
+	.bars {
+		flex: 1;
+		display: flex;
+		align-items: flex-end;
+		gap: 4px;
+		height: 24px;
+	}
+	.bar {
+		flex: 1;
+		padding: 0;
+		border: none;
+		border-radius: 3px;
+		background: color-mix(in srgb, var(--ess-text) 14%, transparent);
+		cursor: pointer;
+		transition: background var(--ess-t-fast);
+	}
+	.bar:hover {
+		background: color-mix(in srgb, var(--ess-primary) 45%, transparent);
+	}
+	.bar.on {
+		background: var(--ess-primary);
 	}
 
 	/* Narrower laptops: the rail carries the sections. */

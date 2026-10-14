@@ -23,6 +23,12 @@
 				if (theme === 'dark') document.documentElement.setAttribute('data-ess-theme', 'dark');
 				if (localStorage.getItem('essShell') === 'rail')
 					document.documentElement.setAttribute('data-ess-shell', 'rail');
+				// Text size and dock, from the account menu (TopBar).
+				var textScale = parseFloat(localStorage.getItem('essTextScale') || '');
+				if (textScale >= 0.8 && textScale <= 1.5)
+					document.documentElement.style.setProperty('--ess-text-scale', String(textScale));
+				if (localStorage.getItem('essDock') === 'fixed')
+					document.documentElement.setAttribute('data-ess-dock', 'fixed');
 
 				// Appearance settings (Super Admin only, set at /admin/tweaks).
 				// Applied pre-paint so previewing never flashes the default first.

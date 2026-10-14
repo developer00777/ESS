@@ -215,6 +215,8 @@
 	--ess-page-pad-x: 18px;
 	--ess-page-pad-y: 6px;
 	--ess-aside-width: 360px;
+	/* The person's text size (account menu); scales the whole workspace. */
+	--ess-text-scale: 1;
 
 	/* ---------- Motion ---------- */
 	--ess-t-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -350,6 +352,14 @@
    element is nested inside body (overscroll, short viewports). */
 body:has([data-ess-theme='dark']) {
 	background: #06070c;
+}
+
+/* Fixed dock (account menu): the icon dock stays out and the workspace
+   moves right to sit beside it instead of under it. */
+@media (min-width: 721px) {
+	[data-ess-dock='fixed'] {
+		--ess-shell-inset-left: calc(var(--ess-rail-left) + var(--ess-rail-width) + 10px);
+	}
 }
 
 /* Phones drop the floating workspace and fill the screen. */
