@@ -142,6 +142,13 @@ export const users = pgTable('users', {
 	 */
 	temporaryPassword: text('temporary_password'),
 	/**
+	 * The person's Clerk user id (`user_…`) once their login exists in Clerk.
+	 * The Clerk user carries this row's `id` as its `externalId`, so the two are
+	 * linked from both sides; see src/lib/server/clerk.ts and
+	 * scripts/migrate-to-clerk.ts.
+	 */
+	clerkUserId: varchar('clerk_user_id', { length: 64 }).unique(),
+	/**
 	 * A named role a Super Admin created ("IT Support", "Operations"), adding
 	 * privileges on top of the base `role`. Null = base role only. See
 	 * src/lib/capabilities.ts.

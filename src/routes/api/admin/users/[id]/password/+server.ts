@@ -7,6 +7,7 @@ import { hasCap } from '$lib/server/capabilities';
 import { hashPassword } from '$lib/server/auth';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
+import { mirrorPasswordToClerk } from '$lib/server/clerk';
 
 // Admin-issued password reset for another user (no knowledge of their current password
 // required). Authorization mirrors canActOnUser: Super Admin/Admin may reset anyone,
@@ -63,6 +64,9 @@ export const PUT: RequestHandler = async (event) => {
 		})
 		.where(eq(users.id, targetUserId))
 		.returning();
+
+	// The reset also ends every Clerk session the person has open.
+	await mirrorPasswordToClerk(updated.id, newPassword, { signOutOtherSessions: true });
 
 	await logActivity({
 		actorUserId: actor.id,

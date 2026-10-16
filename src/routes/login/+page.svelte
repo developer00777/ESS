@@ -7,6 +7,10 @@
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
 	import Info from '@lucide/svelte/icons/info';
 	import AuthLayout from '$lib/components/AuthLayout.svelte';
+	import { SignIn } from 'svelte-clerk';
+
+	// Set by the root layout while Clerk is the sign-in (AUTH_PROVIDER=clerk).
+	let { data } = $props();
 
 	let email = $state('');
 	let password = $state('');
@@ -46,6 +50,11 @@
 	cardTitle="Sign in"
 	cardSub="Access your Champ HR account to manage your leave, attendance and more."
 >
+	{#if data.clerk}
+		<div class="clerk-signin">
+			<SignIn routing="hash" fallbackRedirectUrl="/dashboard" />
+		</div>
+	{:else}
 	<form onsubmit={handleSubmit}>
 		<label>
 			<span>Work email</span>
@@ -75,6 +84,7 @@
 			{#if !submitting}<ArrowRight size={18} />{/if}
 		</button>
 	</form>
+	{/if}
 
 	<div class="note">
 		<span class="i"><Info size={18} /></span>
@@ -86,6 +96,11 @@
 </AuthLayout>
 
 <style>
+	.clerk-signin {
+		display: flex;
+		justify-content: center;
+	}
+
 	form {
 		display: flex;
 		flex-direction: column;
