@@ -12,6 +12,7 @@ import {
 } from '$lib/server/auth';
 import { requireUser } from '$lib/server/rbac';
 import { logActivity } from '$lib/server/db/mongo';
+import { clerk, clerkAuthActive, mirrorPasswordToClerk } from '$lib/server/clerk';
 
 export const POST: RequestHandler = async (event) => {
 	const actor = requireUser(event);
@@ -29,7 +30,14 @@ export const POST: RequestHandler = async (event) => {
 		throw error(401, 'Authentication required');
 	}
 
-	const currentOk = await verifyPassword(dbUser.passwordHash, currentPassword);
+	// Under Clerk the person may have reset their password through Clerk's own
+	// "Forgot password?", which Postgres never sees; Clerk then has the say.
+	let currentOk = await verifyPassword(dbUser.passwordHash, currentPassword);
+	if (!currentOk && clerkAuthActive() && dbUser.clerkUserId) {
+		currentOk = await clerk()
+			.users.verifyPassword({ userId: dbUser.clerkUserId, password: currentPassword })
+			.then(() => true, () => false);
+	}
 	if (!currentOk) {
 		throw error(401, 'Current password is incorrect');
 	}
@@ -50,6 +58,10 @@ export const POST: RequestHandler = async (event) => {
 		.where(eq(users.id, actor.id))
 		.returning();
 
+	// Other browsers signed in as this person are signed out (Clerk only; the
+	// portal's own tokens are not revocable per user).
+	await mirrorPasswordToClerk(actor.id, newPassword, { signOutOtherSessions: true });
+
 	const sessionUser = {
 		id: updated.id,
 		email: updated.email,
@@ -59,9 +71,11 @@ export const POST: RequestHandler = async (event) => {
 		mustChangePassword: updated.mustChangePassword
 	};
 
-	const accessToken = await issueAccessToken(sessionUser);
-	const refreshToken = await issueRefreshToken(updated.id);
-	setAuthCookies(event.cookies, accessToken, refreshToken);
+	if (!clerkAuthActive()) {
+		const accessToken = await issueAccessToken(sessionUser);
+		const refreshToken = await issueRefreshToken(updated.id);
+		setAuthCookies(event.cookies, accessToken, refreshToken);
+	}
 
 	await logActivity({
 		actorUserId: actor.id,

@@ -7,6 +7,7 @@ import { hashPassword } from '$lib/server/auth';
 import { randomBytes } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
+import { mirrorPasswordToClerk } from '$lib/server/clerk';
 
 export const POST: RequestHandler = async (event) => {
 	const actor = requireRole(event, ['super_admin', 'admin', 'team_lead']);
@@ -53,6 +54,7 @@ export const POST: RequestHandler = async (event) => {
 			temporaryPassword: tempPassword
 		})
 		.returning();
+	await mirrorPasswordToClerk(created.id, tempPassword);
 
 	await logActivity({
 		actorUserId: actor.id,
