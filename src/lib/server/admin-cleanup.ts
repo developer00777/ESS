@@ -19,7 +19,6 @@ import {
 } from '$lib/server/db/schema';
 import { deleteProfilePicture } from '$lib/server/db/mongo';
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
-import { deleteClerkUser } from './clerk';
 
 /**
  * Destructive admin operations.
@@ -137,9 +136,6 @@ export async function deleteEmployee(userId: string): Promise<DeleteEmployeeResu
 
 		return { deletedApplications: apps.length, deletedAttendance: att.length };
 	});
-
-	// Their Clerk login goes too, so the address can't sign in to an empty account.
-	await deleteClerkUser(target.clerkUserId);
 
 	// Mongo isn't in the transaction; do it after the row is definitely gone.
 	await deleteProfilePicture(userId);

@@ -3,7 +3,6 @@ import { db } from '$lib/server/db/postgres';
 import { customRoles, employeeProfiles, holidayCalendars, shiftGroups, teams, users } from '$lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { hashPassword, type Role, type SessionUser } from '$lib/server/auth';
-import { mirrorPasswordToClerk } from '$lib/server/clerk';
 import { logActivity } from '$lib/server/db/mongo';
 import { queueLoginEmails } from '$lib/server/login-emails';
 import { hasCap, invalidateCapabilities } from '$lib/server/capabilities';
@@ -163,7 +162,6 @@ export async function createLogin(actor: SessionUser, input: NewLogin, opts: { s
 			temporaryPassword: tempPassword
 		})
 		.returning();
-	await mirrorPasswordToClerk(created.id, tempPassword);
 
 	await db.insert(employeeProfiles).values({
 		userId: created.id,
