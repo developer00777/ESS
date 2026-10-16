@@ -1,4 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
+import { sequence } from '@sveltejs/kit/hooks';
+import { withClerkHandler } from 'svelte-clerk/server';
 import {
 	getAccessTokenCookie,
 	getRefreshTokenCookie,
@@ -18,6 +20,7 @@ import { loadCapabilities } from '$lib/server/capabilities';
 import { startChatScheduler } from '$lib/server/chat/scheduler';
 import { startLoginEmailSender } from '$lib/server/login-emails';
 import type { SessionUser } from '$lib/server/auth';
+import { clerkAuthActive, authorizedParties, userForClerkId } from '$lib/server/clerk';
 
 // Kicks off the ProHance attendance poller with the server process. No-op
 // unless PROHANCE_BASE_URL + Prohance_API_KEY are set; guarded internally
@@ -50,7 +53,8 @@ if (!g.__essRejectionNet) {
 	});
 }
 
-export const handle: Handle = async ({ event, resolve }) => {
+/** The portal's own sign-in: a 15-minute access JWT plus a rotating refresh token. */
+const legacyHandle: Handle = async ({ event, resolve }) => {
 	event.locals.user = null;
 
 	const accessToken = getAccessTokenCookie(event.cookies);
@@ -88,4 +92,43 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	return resolve(event);
+};
+
+/**
+ * Clerk sign-in (AUTH_PROVIDER=clerk, see src/lib/server/clerk.ts). Clerk's
+ * handler verifies the session and puts `locals.auth` on the request; this
+ * maps the Clerk user to its Postgres row. isActive and the role are read from
+ * the database on every request, so deactivating or demoting someone takes
+ * effect at once.
+ */
+const essUserFromClerk: Handle = async ({ event, resolve }) => {
+	event.locals.user = null;
+	const { userId } = event.locals.auth!();
+	if (userId) {
+		const dbUser = await userForClerkId(userId).catch((err) => {
+			console.error('[clerk] could not resolve', userId, err);
+			return null;
+		});
+		if (dbUser?.isActive) {
+			event.locals.user = await withCapabilities({
+				id: dbUser.id,
+				email: dbUser.email,
+				role: dbUser.role,
+				fullName: dbUser.fullName,
+				teamId: dbUser.teamId,
+				mustChangePassword: dbUser.mustChangePassword
+			});
+		}
+	}
+	return resolve(event);
+};
+
+let clerkHandle: Handle | null = null;
+
+// Which sign-in runs is decided per request, so flipping AUTH_PROVIDER (or
+// rolling back) is a Railway variable change plus restart, not a rebuild.
+export const handle: Handle = (input) => {
+	if (!clerkAuthActive()) return legacyHandle(input);
+	clerkHandle ??= sequence(withClerkHandler({ authorizedParties: authorizedParties() }), essUserFromClerk);
+	return clerkHandle(input);
 };

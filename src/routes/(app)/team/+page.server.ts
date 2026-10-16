@@ -18,6 +18,7 @@ import {
 } from '$lib/server/db/schema';
 import { eq, and, inArray, lte, gte, desc, isNotNull } from 'drizzle-orm';
 import { hashPassword } from '$lib/server/auth';
+import { mirrorPasswordToClerk } from '$lib/server/clerk';
 import { randomBytes } from 'node:crypto';
 import { logActivity, getPasswordActivity, getUsersWithProfilePicture } from '$lib/server/db/mongo';
 import { canActOnUser } from '$lib/server/rbac';
@@ -766,6 +767,11 @@ export const actions: Actions = {
 				.returning();
 
 			rowIdToUserId.set(row.id, createdUser.id);
+			// One bad address must not stop the rest of the batch; whoever is
+			// missing from Clerk is picked up by scripts/migrate-to-clerk.ts.
+			await mirrorPasswordToClerk(createdUser.id, temporaryPassword).catch((err) =>
+				console.error('[clerk] bulk create sync failed for', createdUser.email, err)
+			);
 
 			await db.insert(employeeProfiles).values({
 				userId: createdUser.id,
@@ -965,6 +971,9 @@ export const actions: Actions = {
 					updatedAt: new Date()
 				})
 				.where(eq(users.id, account.id));
+			await mirrorPasswordToClerk(account.id, temporaryPassword, { signOutOtherSessions: true }).catch((err) =>
+				console.error('[clerk] reissue sync failed for', account.email, err)
+			);
 			reissuedCount++;
 
 			// An account whose login id isn't an address can't be mailed — and can't

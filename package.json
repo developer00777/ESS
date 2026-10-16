@@ -19,7 +19,8 @@
 		"db:seed": "tsx src/lib/server/db/seed.ts",
 		"import-token:generate": "tsx src/lib/server/db/generate-import-token.ts",
 		"diagnose:logins": "tsx src/lib/server/db/diagnose-logins.ts",
-		"backfill:profiles": "tsx --import ./scripts/env-shim-register.mjs src/lib/server/db/backfill-profiles-from-sheet.ts"
+		"backfill:profiles": "tsx --import ./scripts/env-shim-register.mjs src/lib/server/db/backfill-profiles-from-sheet.ts",
+		"clerk:migrate": "tsx --import ./scripts/env-shim-register.mjs scripts/migrate-to-clerk.ts"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-node": "^5.5.7",
@@ -36,6 +37,7 @@
 		"vitest": "^4.1.10"
 	},
 	"dependencies": {
+		"@clerk/backend": "^3.25.0",
 		"@lucide/svelte": "^1.27.0",
 		"@node-rs/argon2": "^2.0.2",
 		"drizzle-orm": "^0.45.2",
@@ -45,6 +47,7 @@
 		"mongodb": "^7.5.0",
 		"motion": "^13.4.0",
 		"pg": "^8.22.0",
+		"svelte-clerk": "^1.2.0",
 		"web-push": "^3.6.7"
 	}
 }

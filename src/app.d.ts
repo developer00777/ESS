@@ -7,6 +7,8 @@ declare global {
 		// interface Error {}
 		interface Locals {
 			user: SessionUser | null;
+			/** Set by Clerk's handler, only while AUTH_PROVIDER=clerk (src/hooks.server.ts). */
+			auth?: (options?: import('@clerk/shared/types').PendingSessionOptions) => import('@clerk/backend').SessionAuthObject;
 		}
 		// interface PageData {}
 		interface PageState {
