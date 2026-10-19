@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { tick } from 'svelte';
 	import LayoutGrid from '@lucide/svelte/icons/layout-grid';
+	import ChartColumn from '@lucide/svelte/icons/chart-column';
 	import Users from '@lucide/svelte/icons/users';
 	import Clock from '@lucide/svelte/icons/clock';
 	import Calendar from '@lucide/svelte/icons/calendar';
@@ -26,6 +27,7 @@
 
 	const ICONS: Record<AdminTabId, typeof Users> = {
 		overview: LayoutGrid,
+		analytics: ChartColumn,
 		people: Users,
 		biometric: Clock,
 		balances: Calendar,

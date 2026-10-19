@@ -16,6 +16,7 @@ import type { CapabilityKey } from './capabilities';
 
 export type AdminTabId =
 	| 'overview'
+	| 'analytics'
 	| 'people'
 	| 'biometric'
 	| 'balances'
@@ -52,6 +53,16 @@ export const ADMIN_TABS: AdminTab[] = [
 		blurb: 'What needs your attention across the portal, worked out from live data.',
 		group: 0,
 		caps: []
+	},
+	{
+		id: 'analytics',
+		href: '/admin/analytics',
+		label: 'HR analytics',
+		heading: 'Your workforce, at a glance.',
+		category: 'People',
+		blurb: 'Headcount, hiring and exits, diversity, absence, engagement, meetings and tasks — from live data.',
+		group: 0,
+		caps: ['people.analytics']
 	},
 	{
 		id: 'people',
