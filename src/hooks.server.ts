@@ -19,6 +19,7 @@ import { startAnnouncementScheduler } from '$lib/server/announcements';
 import { loadCapabilities } from '$lib/server/capabilities';
 import { startChatScheduler } from '$lib/server/chat/scheduler';
 import { startLoginEmailSender } from '$lib/server/login-emails';
+import { startClerkAccountSync } from '$lib/server/clerk-sync';
 import type { SessionUser } from '$lib/server/auth';
 import { clerkAuthActive, authorizedParties, userForClerkId } from '$lib/server/clerk';
 
@@ -35,6 +36,10 @@ startChatScheduler();
 
 // Approved login emails go out one at a time at the cadence HR set.
 startLoginEmailSender();
+
+// Copies every existing login into Clerk (same password) once Clerk keys are
+// set, then hourly picks up anyone missing. No-op without keys.
+startClerkAccountSync();
 
 /** Privileges ride along on the request user (src/lib/capabilities.ts). */
 async function withCapabilities(user: SessionUser): Promise<SessionUser> {
