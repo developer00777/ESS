@@ -23,6 +23,7 @@ import { summaryOf } from '$lib/announcements';
 import { hasCap } from '$lib/server/capabilities';
 import { champConfigured } from '$lib/server/champ/chat';
 import { loadPlanner } from './planner.server';
+import { loadMyLeave } from './my-leave.server';
 import { loadShiftsFor, officeToday } from '$lib/server/shifts';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -216,14 +217,17 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	]);
 
 	// --- Absence planner + onboarding ---
-	// Whose leave shows follows the approval chain, the same reporting lines
-	// /api/leave/[id]/approve checks when a decision is sent.
+	// Who shows is set by role (see planner.server.ts); the reviewable lists
+	// only mark which of those requests the viewer may decide now.
 	const [manageable, hrReviewable, feed] = await Promise.all([
 		reviewableUserIds(user, 'manager'),
 		reviewableUserIds(user, 'hr'),
 		loadFeed(user.id, now)
 	]);
-	const planner = await loadPlanner(user, { manager: manageable, hr: hrReviewable }, url.searchParams.get('m'), now);
+	const [planner, leaveOverview] = await Promise.all([
+		loadPlanner(user, { manager: manageable, hr: hrReviewable }, url.searchParams.get('m'), now),
+		loadMyLeave(user, now)
+	]);
 
 	// --- Future events: today's meetings still to come, then event
 	// announcements and holidays from the feed's "Coming up" list. ---
@@ -313,6 +317,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		})),
 		upcomingHolidays: upcomingHolidays.map((h) => ({ ...h, date: dateKey(h.date) })),
 		planner,
+		leaveOverview,
 		events,
 		toApprove: planner.leaves.filter((l) => l.reviewable).length,
 		// Champ's suggested prompts only offer what this person may do; the

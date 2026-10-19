@@ -8,14 +8,21 @@
 	 * Selecting a bar opens its details in a side sheet; when the request is
 	 * in the viewer's queue they can approve or reject it right there, through
 	 * the same /api/leave/[id]/approve endpoint the Leave page uses.
+	 *
+	 * Under the grid sits the viewer's own leave (MyLeaveRail), and dragging
+	 * across your own row opens a plan for those days (PlanLeaveSheet).
 	 */
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import Search from '@lucide/svelte/icons/search';
 	import X from '@lucide/svelte/icons/x';
+	import PanelBottom from '@lucide/svelte/icons/panel-bottom';
 	import { goto, invalidateAll } from '$app/navigation';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import SideSheet from '$lib/components/hub/SideSheet.svelte';
+	import MyLeaveRail from './MyLeaveRail.svelte';
+	import PlanLeaveSheet from './PlanLeaveSheet.svelte';
+	import type { MyLeave } from '$lib/leave-planning';
 
 	type Tone = 'blue' | 'purple' | 'green' | 'yellow' | 'pink';
 	type Person = {
@@ -48,9 +55,10 @@
 			leaves: Leave[];
 			legend: { name: string; tone: Tone }[];
 		};
+		me?: MyLeave;
 	}
 
-	let { planner }: Props = $props();
+	let { planner, me }: Props = $props();
 
 	const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -136,6 +144,95 @@
 		return { s, e: e + 1, len: e - s + 1, clipStart: l.start < first, clipEnd: l.end.slice(0, 7) > planner.month.key };
 	}
 
+	/* ---------- my leave ---------- */
+	// Open unless this browser closed it last time.
+	const RAIL_KEY = 'ess.planner.myLeave';
+	let showRail = $state(true);
+	$effect(() => {
+		try {
+			showRail = localStorage.getItem(RAIL_KEY) !== '0';
+		} catch {
+			/* storage blocked: keep it open */
+		}
+	});
+	function toggleRail() {
+		showRail = !showRail;
+		try {
+			localStorage.setItem(RAIL_KEY, showRail ? '1' : '0');
+		} catch {
+			/* not remembered, still toggled */
+		}
+	}
+
+	/* ---------- planning on your own row ---------- */
+	// Press a day on your own row and drag; letting go opens the plan sheet.
+	let dragFrom = $state<number | null>(null);
+	let dragTo = $state<number | null>(null);
+	let plan = $state<{ start: string; end: string; typeId?: string } | null>(null);
+	const selLo = $derived(dragFrom !== null && dragTo !== null ? Math.min(dragFrom, dragTo) : 0);
+	const selHi = $derived(dragFrom !== null && dragTo !== null ? Math.max(dragFrom, dragTo) : 0);
+
+	function openPlan(start: string, end: string, typeId?: string) {
+		plan = { start, end, typeId };
+	}
+	function pickStart(n: number, e: PointerEvent) {
+		if (e.button !== 0) return;
+		e.preventDefault();
+		dragFrom = dragTo = n;
+	}
+	function pickOver(n: number) {
+		if (dragFrom !== null) dragTo = n;
+	}
+	function pickEnd() {
+		if (dragFrom === null || dragTo === null) return;
+		openPlan(days[selLo - 1].key, days[selHi - 1].key);
+		dragFrom = dragTo = null;
+	}
+
+	/** Your month at a glance, in the subtitle when your row is the only one. */
+	const myMonth = $derived.by(() => {
+		const meRow = planner.people.length === 1 ? planner.people[0] : null;
+		if (!meRow?.isMe) return null;
+		const offs = [...meRow.offDays].filter((c) => c === '1').length;
+		const hols = meRow.holidays.filter((h) => meRow.offDays[h.day - 1] !== '1');
+		let leave = 0;
+		for (const l of planner.leaves) {
+			const sp = span(l);
+			for (let n = sp.s; n < sp.e; n++) if (meRow.offDays[n - 1] !== '1') leave++;
+		}
+		return { working: planner.month.days - offs - hols.length, offs, hols, leave };
+	});
+
+	/** Everyone else's leave on the planner, for "also away" in the plan sheet. */
+	const othersAway = $derived(
+		planner.leaves
+			.filter((l) => !planner.people.find((p) => p.id === l.userId)?.isMe)
+			.map((l) => ({ name: nameOf(l.userId), start: l.start, end: l.end, status: l.status }))
+	);
+
+	/** Overlapping requests for one person go on separate lines of their row. */
+	function lanesFor(list: Leave[]) {
+		const ends: string[] = [];
+		const lane = new Map<string, number>();
+		for (const l of [...list].sort((a, b) => a.start.localeCompare(b.start))) {
+			let i = ends.findIndex((e) => e < l.start);
+			if (i === -1) i = ends.push(l.end) - 1;
+			else ends[i] = l.end;
+			lane.set(l.id, i + 1);
+		}
+		return { lane, count: Math.max(1, ends.length) };
+	}
+
+	/** "Earned Leave" → "EL", for bars too short for the full name. */
+	const shortName = (name: string) =>
+		name
+			.split(/\s+/)
+			.filter(Boolean)
+			.map((w) => w[0])
+			.join('')
+			.slice(0, 3)
+			.toUpperCase();
+
 	/* ---------- detail + decisions ---------- */
 	const nameOf = (id: string) => planner.people.find((p) => p.id === id)?.fullName ?? 'Someone';
 	let selected = $state<Leave | null>(null);
@@ -198,14 +295,21 @@
 	}
 </script>
 
+<svelte:window onpointerup={pickEnd} />
+
 <section class="planner ess-card" aria-labelledby="planner-h">
 	<header class="head">
 		<div class="title">
 			<h2 id="planner-h">Absence planner</h2>
 			<p>
-				{#if todayIndex}{awayToday} away today ·{/if}
-				{pendingCount} pending
-				{#if planner.people.length > 1}· {planner.people.length} people{/if}
+				{#if myMonth}
+					{myMonth.working} working days · {myMonth.offs} week offs · {myMonth.leave} on leave · {myMonth.hols.length}
+					{myMonth.hols.length === 1 ? 'holiday' : 'holidays'}
+				{:else}
+					{#if todayIndex}{awayToday} away today ·{/if}
+					{pendingCount} pending
+					{#if planner.people.length > 1}· {planner.people.length} people{/if}
+				{/if}
 			</p>
 		</div>
 
@@ -234,73 +338,100 @@
 			{#if planner.people.length > 1}
 				<button type="button" class="chip" aria-pressed={awayOnly} onclick={() => (awayOnly = !awayOnly)}>Away only</button>
 			{/if}
+			{#if me}
+				<button type="button" class="chip with-ic" aria-pressed={showRail} onclick={toggleRail} title={showRail ? 'Hide my leave' : 'Show my leave'}>
+					<PanelBottom size={14} /> My leave
+				</button>
+			{/if}
 		</div>
 	</header>
 
-	<div class="scroller" role="region" aria-label="Absences in {monthLabel}" tabindex="-1">
-		<div class="grid" style="--days: {planner.month.days}">
-			<div class="row hrow">
-				<div class="who who-h">Employee</div>
-				{#each days as d (d.key)}
-					<div class="dh" class:weekend={d.weekend} class:today={d.n === todayIndex} aria-hidden="true">
-						<span class="dow">{d.dow}</span>
-						<span class="dn">{d.n}</span>
-					</div>
-				{/each}
-			</div>
-
-			{#each rows as p (p.id)}
-				{@const mine = leavesByUser.get(p.id) ?? []}
-				<div class="row">
-					<div class="who">
-						<Avatar userId={p.id} fullName={p.fullName} hasPicture={p.hasPicture} size="sm" />
-						<span class="who-text">
-							<span class="name">{p.fullName}{#if p.isMe}<span class="me"> · You</span>{/if}</span>
-							<span class="role">{p.designation ?? '—'}</span>
-						</span>
-					</div>
-					{#each days as d, i (d.key)}
-						{@const hol = p.holidays.find((h) => h.day === d.n)}
-						<span
-							class="cell"
-							class:off={p.offDays[i] === '1'}
-							class:hol={!!hol}
-							class:today={d.n === todayIndex}
-							style="grid-column: {i + 2}"
-							title={hol ? hol.name : p.offDays[i] === '1' ? 'Week off' : undefined}
-						></span>
-					{/each}
-					{#each mine as l (l.id)}
-						{@const sp = span(l)}
-						<button
-							type="button"
-							class="bar"
-							data-tone={l.tone}
-							class:pending={l.status === 'pending'}
-							class:clip-s={sp.clipStart}
-							class:clip-e={sp.clipEnd}
-							class:act={l.reviewable}
-							style="grid-column: {sp.s + 1} / {sp.e + 1}"
-							onclick={() => open(l)}
-							aria-label="{p.fullName}: {l.typeName}, {fmtRange(l)}, {l.status === 'pending' ? 'pending' : 'approved'}{l.reviewable
-								? ', waiting on you'
-								: ''}"
-						>
-							{#if sp.len >= 3}
-								<span class="bar-name">{l.typeName}</span>
-								<span class="bar-status">{l.status === 'pending' ? 'Pending' : 'Approved'}</span>
-							{:else if sp.len === 2}
-								<span class="bar-name">{l.typeName}</span>
-							{/if}
-						</button>
+	<div class="body">
+		<div class="scroller" role="region" aria-label="Absences in {monthLabel}" tabindex="-1">
+			<div class="grid" style="--days: {planner.month.days}">
+				<div class="row hrow">
+					<div class="who who-h">Employee</div>
+					{#each days as d (d.key)}
+						<div class="dh" class:weekend={d.weekend} class:today={d.n === todayIndex} aria-hidden="true">
+							<span class="dow">{d.dow}</span>
+							<span class="dn">{d.n}</span>
+						</div>
 					{/each}
 				</div>
-			{:else}
-				<p class="none">
-					{planner.people.length === 0 ? 'No one to show yet.' : 'No one matches these filters.'}
-				</p>
-			{/each}
+
+				{#each rows as p (p.id)}
+					{@const mine = leavesByUser.get(p.id) ?? []}
+					{@const lanes = lanesFor(mine)}
+					<div class="row" style="--lanes: {lanes.count}">
+						<div class="who">
+							<Avatar userId={p.id} fullName={p.fullName} hasPicture={p.hasPicture} size="sm" />
+							<span class="who-text">
+								<span class="name">{p.fullName}{#if p.isMe}<span class="me">&nbsp;· You</span>{/if}</span>
+								<span class="role">{p.designation ?? '—'}</span>
+							</span>
+						</div>
+						{#each days as d, i (d.key)}
+							{@const hol = p.holidays.find((h) => h.day === d.n)}
+							{#if p.isMe && me}
+								<button
+									type="button"
+									class="cell pick"
+									class:off={p.offDays[i] === '1'}
+									class:hol={!!hol}
+									class:today={d.n === todayIndex}
+									class:sel={selLo > 0 && d.n >= selLo && d.n <= selHi}
+									style="grid-column: {i + 2}"
+									title={hol ? `${hol.name} · drag to plan` : p.offDays[i] === '1' ? 'Week off' : 'Drag to plan time off'}
+									aria-label="Plan time off from {fmtDay(d.key)}{hol ? ` (${hol.name})` : ''}"
+									onpointerdown={(e) => pickStart(d.n, e)}
+									onpointerenter={() => pickOver(d.n)}
+									onclick={(e) => e.detail === 0 && openPlan(d.key, d.key)}
+								></button>
+							{:else}
+								<span
+									class="cell"
+									class:off={p.offDays[i] === '1'}
+									class:hol={!!hol}
+									class:today={d.n === todayIndex}
+									style="grid-column: {i + 2}"
+									title={hol ? hol.name : p.offDays[i] === '1' ? 'Week off' : undefined}
+								></span>
+							{/if}
+						{/each}
+						{#each mine as l (l.id)}
+							{@const sp = span(l)}
+							<button
+								type="button"
+								class="bar"
+								data-tone={l.tone}
+								class:pending={l.status === 'pending'}
+								class:clip-s={sp.clipStart}
+								class:clip-e={sp.clipEnd}
+								class:act={l.reviewable}
+								style="grid-column: {sp.s + 1} / {sp.e + 1}; grid-row: {lanes.lane.get(l.id)}"
+								title="{l.typeName} · {fmtRange(l)} · {l.status === 'pending' ? 'Pending' : 'Approved'}"
+								onclick={() => open(l)}
+								aria-label="{p.fullName}: {l.typeName}, {fmtRange(l)}, {l.status === 'pending' ? 'pending' : 'approved'}{l.reviewable
+									? ', waiting on you'
+									: ''}"
+							>
+								<!-- Which label shows depends on the bar's own width (see .bar). -->
+								<span class="bar-name full">{l.typeName}</span>
+								<span class="bar-name short" aria-hidden="true">{shortName(l.typeName)}</span>
+								{#if l.status === 'pending'}<span class="bar-status">Pending</span>{/if}
+							</button>
+						{/each}
+					</div>
+				{:else}
+					<p class="none">
+						{planner.people.length === 0 ? 'No one to show yet.' : 'No one matches these filters.'}
+					</p>
+				{/each}
+			</div>
 		</div>
+		{#if me && showRail}
+			<MyLeaveRail {me} onplan={openPlan} />
+		{/if}
 	</div>
 
 	<footer class="legend" aria-label="Legend">
@@ -321,8 +452,13 @@
 		<span class="key static"><span class="swatch pending-sw"></span>Pending</span>
 		<span class="key static"><span class="swatch off-sw"></span>Week off</span>
 		<span class="key static"><span class="swatch hol-sw"></span>Holiday</span>
+		{#if me}<span class="hint">Drag across your row to plan time off</span>{/if}
 	</footer>
 </section>
+
+{#if plan && me}
+	<PlanLeaveSheet {me} start={plan.start} end={plan.end} typeId={plan.typeId} others={othersAway} onclose={() => (plan = null)} />
+{/if}
 
 {#if selected}
 	<SideSheet label="Leave details" onclose={close}>
@@ -390,8 +526,8 @@
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
-		padding: 16px 18px 12px;
-		gap: 12px;
+		padding: 10px 16px 8px;
+		gap: 8px;
 	}
 
 	/* ---------- head ---------- */
@@ -509,15 +645,28 @@
 		padding: 0 12px;
 		background: var(--ess-sunken);
 	}
+	.chip.with-ic {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+	}
 	.chip[aria-pressed='true'] {
 		background: var(--ess-primary-soft);
 		color: var(--ess-primary-text);
 	}
-	/* ---------- grid ---------- */
+	/* ---------- grid + my leave ---------- */
+	/* The card grows to fit every row and My leave under them; the page
+	   scrolls, never the planner. */
+	.body {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
 	.scroller {
-		flex: 1;
-		min-height: 0;
-		overflow: auto;
+		min-width: 0;
+		/* Sideways only, when the month is wider than the screen. */
+		overflow-x: auto;
 		overscroll-behavior: contain;
 		margin: 0 -4px;
 		padding: 0 4px;
@@ -527,28 +676,35 @@
 	.grid {
 		--who: 210px;
 		--cell-min: 26px;
+		--lane-h: 26px;
 		display: flex;
 		flex-direction: column;
-		gap: 4px;
+		gap: 2px;
 		min-width: calc(var(--who) + var(--days) * (var(--cell-min) + 3px));
 	}
 
+	/* One line per lane: a person with overlapping requests gets a taller
+	   row rather than bars drawn over each other. Names and day cells span
+	   every lane; each bar sits on its own (set inline). */
 	.row {
 		display: grid;
 		grid-template-columns: var(--who) repeat(var(--days), minmax(var(--cell-min), 1fr));
-		column-gap: 3px;
-		align-items: center;
-		height: 38px;
+		grid-template-rows: repeat(var(--lanes, 1), var(--lane-h));
+		gap: 3px;
+		padding: 2px 0;
 	}
 	.row > :global(*) {
-		grid-row: 1;
+		grid-row: 1 / -1;
 	}
 
 	.hrow {
 		position: sticky;
 		top: 0;
 		z-index: 3;
-		height: 40px;
+		grid-template-rows: 1fr;
+		align-items: center;
+		height: 34px;
+		padding: 0;
 		/* Frosted so rows scrolling under it blur rather than show through. */
 		background: var(--ess-glass-solid);
 		-webkit-backdrop-filter: blur(16px) saturate(160%);
@@ -611,7 +767,7 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		height: 36px;
+		height: 32px;
 		border-radius: 10px;
 		line-height: 1.15;
 		font-variant-numeric: tabular-nums;
@@ -639,7 +795,6 @@
 	}
 
 	.cell {
-		height: 30px;
 		border-radius: 7px;
 		background: var(--ess-cell);
 	}
@@ -659,6 +814,23 @@
 	.cell.today {
 		box-shadow: inset 0 0 0 1.5px var(--ess-primary-ring);
 	}
+	.cell.pick {
+		display: block;
+		padding: 0;
+		border: 0;
+		cursor: cell;
+		touch-action: none;
+		transition:
+			box-shadow var(--ess-t-fast),
+			background var(--ess-t-fast);
+	}
+	.cell.pick:hover {
+		box-shadow: inset 0 0 0 1.5px var(--ess-primary);
+	}
+	.cell.sel {
+		background: var(--ess-primary-soft);
+		box-shadow: inset 0 0 0 1.5px var(--ess-primary);
+	}
 
 	/* ---------- bars ---------- */
 	.bar {
@@ -667,9 +839,8 @@
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		height: 30px;
 		min-width: 0;
-		padding: 0 8px;
+		padding: 0 3px;
 		border: 1px solid var(--line);
 		border-radius: 8px;
 		background: var(--fill);
@@ -680,6 +851,8 @@
 		text-align: left;
 		cursor: pointer;
 		overflow: hidden;
+		/* The labels below answer to the bar's width, at any text size. */
+		container-type: inline-size;
 		transition:
 			transform var(--ess-t-fast),
 			box-shadow var(--ess-t-fast);
@@ -739,9 +912,39 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
+	.bar-name.full {
+		padding-left: 4px;
+	}
+	.bar-name.short,
+	.bar-status {
+		display: none;
+	}
+	/* Too narrow for "Earned Leave": show "EL", centred. */
+	@container (max-width: 84px) {
+		.bar-name.full {
+			display: none;
+		}
+		.bar-name.short {
+			display: inline;
+			margin: 0 auto;
+		}
+	}
+	/* A single day on a narrow grid. */
+	@container (max-width: 22px) {
+		.bar-name.short {
+			font-size: 9.5px;
+			letter-spacing: -0.03em;
+		}
+	}
+	/* Wide enough for the name and a "Pending" tag side by side. */
+	@container (min-width: 170px) {
+		.bar-status {
+			display: inline;
+		}
+	}
 	.bar-status {
 		flex-shrink: 0;
-		margin-left: auto;
+		margin: 0 1px 0 auto;
 		padding: 1px 6px;
 		border-radius: 999px;
 		background: color-mix(in srgb, var(--ess-surface) 70%, transparent);
@@ -761,9 +964,8 @@
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
-		gap: 4px 14px;
-		padding-top: 2px;
-		font-size: 12px;
+		gap: 2px 14px;
+		font-size: 11.5px;
 		color: var(--ess-text-secondary);
 	}
 	.key {
@@ -786,6 +988,11 @@
 		text-decoration: line-through;
 	}
 	.key-note {
+		color: var(--ess-text-muted);
+	}
+	.hint {
+		margin-left: auto;
+		font-size: 11.5px;
 		color: var(--ess-text-muted);
 	}
 	.swatch {
@@ -919,10 +1126,11 @@
 		.grid {
 			--who: 170px;
 			--cell-min: 24px;
+			--lane-h: 24px;
 			gap: 3px;
 		}
 		.row {
-			height: 30px;
+			padding: 3px 0;
 		}
 		.hrow {
 			height: 32px;
@@ -938,7 +1146,6 @@
 			font-size: 11.5px;
 		}
 		.cell {
-			height: 24px;
 			border-radius: 6px;
 		}
 	}

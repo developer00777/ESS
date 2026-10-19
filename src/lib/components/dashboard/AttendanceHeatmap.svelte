@@ -3,6 +3,10 @@
 	 * Dashboard panel: the viewer's last 13 weeks of punches
 	 * (buildAttendanceHeatmap in $lib/dashboard-analytics), one column per
 	 * week with Monday on top, and this month's totals underneath.
+	 *
+	 * On the laptop dashboard it never scrolls: it reads its own height and,
+	 * as that shrinks, folds the totals into one line under the title, drops
+	 * the day hint and key, then tightens the squares.
 	 */
 	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 
@@ -34,62 +38,74 @@
 </script>
 
 <section class="ess-card panel" aria-labelledby="att-h">
-	<header class="p-head">
-		<div>
-			<h2 id="att-h">My attendance</h2>
-			<p>Last 13 weeks of punches</p>
-		</div>
-		<a class="more" href="/attendance" aria-label="Open attendance"><ArrowUpRight size={16} /></a>
-	</header>
+	<div class="fit">
+		<header class="p-head">
+			<div>
+				<h2 id="att-h">My attendance</h2>
+				<p>Last 13 weeks of punches</p>
+				<p class="p-stats">
+					This month: {analytics.recordedDays} days · {analytics.recordedHours} hrs ·
+					{#if missingCheckOuts > 0}<a href="/attendance">{missingCheckOuts} missing</a>{:else}0 missing{/if}
+				</p>
+			</div>
+			<a class="more" href="/attendance" aria-label="Open attendance"><ArrowUpRight size={16} /></a>
+		</header>
 
-	<div class="map">
-		<div class="months" aria-hidden="true">
-			{#each monthLabels as m, i (i)}<span>{m}</span>{/each}
-		</div>
-		<div class="body">
-			<div class="weekdays" aria-hidden="true">
-				{#each ['M', '', 'W', '', 'F', '', 'S'] as d, i (i)}<span>{d}</span>{/each}
+		<div class="map">
+			<div class="months" aria-hidden="true">
+				{#each monthLabels as m, i (i)}<span>{m}</span>{/each}
 			</div>
-			<div class="grid" role="group" aria-label="Attendance over the last 13 weeks, Monday through Sunday, oldest week first">
-				{#each analytics.heatmap as cell (cell.date)}
-					<button
-						type="button"
-						data-level={cell.level}
-						class:today={cell.date === analytics.today}
-						aria-pressed={selected === cell.date}
-						aria-label="{cell.label}: {describe(cell)}"
-						title="{cell.label}: {describe(cell)}"
-						onclick={() => (selected = selected === cell.date ? null : cell.date)}
-					></button>
-				{/each}
+			<div class="body">
+				<div class="weekdays" aria-hidden="true">
+					{#each ['M', '', 'W', '', 'F', '', 'S'] as d, i (i)}<span>{d}</span>{/each}
+				</div>
+				<div class="grid" role="group" aria-label="Attendance over the last 13 weeks, Monday through Sunday, oldest week first">
+					{#each analytics.heatmap as cell (cell.date)}
+						<button
+							type="button"
+							data-level={cell.level}
+							class:today={cell.date === analytics.today}
+							aria-pressed={selected === cell.date}
+							aria-label="{cell.label}: {describe(cell)}"
+							title="{cell.label}: {describe(cell)}"
+							onclick={() => (selected = selected === cell.date ? null : cell.date)}
+						></button>
+					{/each}
+				</div>
+			</div>
+			<div class="foot">
+				<p class="detail" aria-live="polite">
+					{#if selectedCell}<b>{selectedCell.label}</b> · {describe(selectedCell)}{:else}Select a day for its hours{/if}
+				</p>
+				<span class="legend" aria-hidden="true">Less <i data-level="0"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i> More</span>
 			</div>
 		</div>
-		<div class="foot">
-			<p class="detail" aria-live="polite">
-				{#if selectedCell}<b>{selectedCell.label}</b> · {describe(selectedCell)}{:else}Select a day for its hours{/if}
-			</p>
-			<span class="legend" aria-hidden="true">Less <i data-level="0"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i> More</span>
-		</div>
+
+		<dl class="stats">
+			<div title="Days with a punch this month"><dt>Days</dt><dd>{analytics.recordedDays}</dd></div>
+			<div title="Recorded hours this month"><dt>Hours</dt><dd>{analytics.recordedHours}</dd></div>
+			<div class:warn={missingCheckOuts > 0} title="Recent days with a check-in but no check-out">
+				<dt>Missing</dt>
+				<dd>{#if missingCheckOuts > 0}<a href="/attendance">{missingCheckOuts}</a>{:else}0{/if}</dd>
+			</div>
+		</dl>
 	</div>
-
-	<dl class="stats">
-		<div title="Days with a punch this month"><dt>Days</dt><dd>{analytics.recordedDays}</dd></div>
-		<div title="Recorded hours this month"><dt>Hours</dt><dd>{analytics.recordedHours}</dd></div>
-		<div class:warn={missingCheckOuts > 0} title="Recent days with a check-in but no check-out">
-			<dt>Missing</dt>
-			<dd>{#if missingCheckOuts > 0}<a href="/attendance">{missingCheckOuts}</a>{:else}0{/if}</dd>
-		</div>
-	</dl>
 </section>
 
 <style>
 	.panel {
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
 		min-height: 0;
 		min-width: 0;
 		padding: 16px 18px;
+	}
+	.fit {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		gap: 10px;
+		min-height: 0;
 	}
 	.p-head {
 		display: flex;
@@ -273,8 +289,10 @@
 	/* Laptop-height screens: a little denser so the dashboard still fits. */
 	@media (min-width: 721px) and (max-height: 820px) {
 		.panel {
-			gap: 8px;
 			padding: 14px 16px;
+		}
+		.fit {
+			gap: 8px;
 		}
 		.grid,
 		.weekdays {
@@ -296,7 +314,6 @@
 	@media (min-width: 721px) and (max-height: 760px) {
 		.panel {
 			padding: 10px 14px;
-			gap: 8px;
 		}
 		.p-head p {
 			display: none;
@@ -334,6 +351,59 @@
 			font-size: 15px;
 		}
 	}
+	.p-head .p-stats {
+		display: none;
+	}
+	.p-stats a {
+		color: var(--ess-warning);
+		font-weight: 600;
+	}
+
+	/* Laptop dashboard: the panel is as tall as its row, so its contents
+	   size to the room inside it rather than to themselves, and the steps
+	   below keep everything in view without scrolling. Narrower layouts
+	   stack the panels at their natural height. */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		.fit {
+			container-type: size;
+			overflow: hidden;
+		}
+	}
+	@container (max-height: 270px) {
+		.p-head p {
+			display: none;
+		}
+		.p-head .p-stats {
+			display: block;
+		}
+		.stats {
+			display: none;
+		}
+	}
+	@container (max-height: 200px) {
+		.foot {
+			display: none;
+		}
+	}
+	@container (max-height: 150px) {
+		.p-head h2,
+		.p-head .p-stats {
+			line-height: 1.25;
+		}
+		.more {
+			width: 26px;
+			height: 26px;
+		}
+		.grid,
+		.weekdays {
+			grid-template-rows: repeat(7, 8px);
+			gap: 2px;
+		}
+		.weekdays {
+			font-size: 8px;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.grid button {
 			transition: none;

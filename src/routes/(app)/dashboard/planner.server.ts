@@ -3,10 +3,10 @@
  * upcoming events. Read-only: approving or rejecting still goes through
  * /api/leave/[id]/approve, which re-checks the reporting line.
  *
- * Whose leave appears follows the rules the Leave page already applies —
- * Super Admin sees everyone, a Team Lead their team, and anyone in an
- * approval chain the people whose requests reach them. An employee with no
- * one reporting to them sees their own row only.
+ * Whose leave appears: Super Admin sees everyone, a Team Lead their own
+ * team, and every other employee their own row only. Sitting in someone's
+ * approval chain doesn't widen this — those requests are decided from the
+ * Leave page.
  */
 import { db } from '$lib/server/db/postgres';
 import {
@@ -29,6 +29,13 @@ const dateKey = (v: string | Date) => (v instanceof Date ? keyOf(v) : String(v).
 /** Five calendar fills; leave types take them in a stable (name) order. */
 export const PLANNER_TONES = ['blue', 'purple', 'green', 'yellow', 'pink'] as const;
 export type PlannerTone = (typeof PLANNER_TONES)[number];
+
+/** Each leave type's fill, so the grid and the My leave panel agree. */
+export function toneMapFor(types: { id: string; name: string }[]) {
+	return new Map(
+		[...types].sort((a, b) => a.name.localeCompare(b.name)).map((t, i) => [t.id, PLANNER_TONES[i % PLANNER_TONES.length]])
+	);
+}
 
 export type PlannerPerson = {
 	id: string;
@@ -90,16 +97,14 @@ export async function loadPlanner(
 	if (user.role === 'super_admin') {
 		const rows = await db.select({ id: users.id }).from(users).where(eq(users.isActive, true));
 		scopeIds = rows.map((r) => r.id);
+	} else if (user.role === 'team_lead' && user.teamId) {
+		const team = await db
+			.select({ id: users.id })
+			.from(users)
+			.where(and(eq(users.teamId, user.teamId), eq(users.isActive, true)));
+		scopeIds = [...new Set([user.id, ...team.map((t) => t.id)])];
 	} else {
-		const ids = new Set<string>([user.id, ...reviewable.manager, ...reviewable.hr]);
-		if (user.role === 'team_lead' && user.teamId) {
-			const team = await db
-				.select({ id: users.id })
-				.from(users)
-				.where(and(eq(users.teamId, user.teamId), eq(users.isActive, true)));
-			for (const t of team) ids.add(t.id);
-		}
-		scopeIds = [...ids];
+		scopeIds = [user.id];
 	}
 
 	const people = await db
@@ -142,9 +147,7 @@ export async function loadPlanner(
 		loadWeekOffFor(ids)
 	]);
 
-	const toneOf = new Map(
-		[...types].sort((a, b) => a.name.localeCompare(b.name)).map((t, i) => [t.id, PLANNER_TONES[i % PLANNER_TONES.length]])
-	);
+	const toneOf = toneMapFor(types);
 	const manager = new Set(reviewable.manager);
 	const hr = new Set(reviewable.hr);
 

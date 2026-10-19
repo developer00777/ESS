@@ -234,7 +234,7 @@
 	</header>
 
 	{#if view === 'today'}
-		<AbsencePlanner planner={data.planner} />
+		<AbsencePlanner planner={data.planner} me={data.leaveOverview} />
 
 	<div class="lower">
 		<FutureEvents events={data.events} />
@@ -477,15 +477,14 @@
 			:global(.ess-content:has(> .home)) { display:flex; flex-direction:column; overflow:auto; padding-bottom:12px; }
 			/* Grows to fill the screen, never shrinks below what its cards need. */
 			:global(.ess-content > .home) { flex:1 0 auto; }
-			.home :global(.planner) { max-height:58vh; }
 		}
 	}
 
 	.home {
 		display: grid;
-		/* The planner takes the height its rows need, scrolling inside once
-		   it runs out of room; the panels below take the rest. */
-		grid-template-rows: auto minmax(220px, max-content) minmax(250px, 1fr);
+		/* The planner takes all the height its rows and My leave need — the
+		   page scrolls, not the planner; the panels below take the rest. */
+		grid-template-rows: auto max-content minmax(250px, 1fr);
 		gap: 14px;
 		min-height: 0;
 	}
@@ -565,21 +564,25 @@
 		height: 100%;
 	}
 
-	/* Short laptop screens (about 1280×580): slimmer title row, the planner
-	   capped so the panels keep their room, the drawer link tighter. */
-	@media (min-width: 721px) and (max-height: 760px) {
+	/* Short laptop screens: the planner still takes its full height; the
+	   page holds the screen's height and the panels below give way, so the
+	   whole home stays on one screen. Only where the panels sit in one row —
+	   narrower layouts stack them and the page scrolls. */
+	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
 		.home {
-			grid-template-rows: auto minmax(0, max-content) minmax(0, 1fr);
-			gap: 12px;
+			grid-template-rows: auto max-content minmax(160px, 1fr);
 		}
-		.home :global(.planner) {
-			max-height: 44vh;
-		}
-		/* Shorter still (a bookmarks bar, a smaller window): the page holds
-		   its height and each panel scrolls inside rather than the page. */
 		:global(.ess-content > .home) {
 			flex: 1 1 auto;
 			min-height: 0;
+		}
+	}
+
+	/* Short laptop screens (about 1280×580): slimmer title row and panels,
+	   the drawer link tighter. */
+	@media (min-width: 721px) and (max-height: 760px) {
+		.home {
+			gap: 12px;
 		}
 		.lower > :global(*) {
 			overflow-y: auto;
@@ -620,9 +623,6 @@
 	@media (max-width: 720px), (max-height: 479px) {
 		.home {
 			grid-template-rows: auto;
-		}
-		.home :global(.planner) {
-			max-height: 70vh;
 		}
 		.lower {
 			grid-template-columns: 1fr;
