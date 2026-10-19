@@ -379,7 +379,6 @@ export async function loadHrAnalytics(opts: { months: number; department: string
 	// ---------- headline figures ----------
 	const hires = headcount.reduce((s, h) => s + h.hires, 0);
 	const exits = headcount.reduce((s, h) => s + h.exits, 0);
-	const avgHeadcount = headcount.reduce((s, h) => s + h.headcount, 0) / headcount.length;
 	const lastWith = <T>(list: T[], pick: (x: T) => number | null) => {
 		for (let i = list.length - 1; i >= 0; i--) {
 			const v = pick(list[i]);
@@ -399,15 +398,13 @@ export async function loadHrAnalytics(opts: { months: number; department: string
 			active: active.length,
 			hires,
 			exits,
-			// Over the whole window, annualised, so 6 and 24 months compare.
-			turnoverAnnual: avgHeadcount > 0 ? Math.round(((exits / avgHeadcount) * (12 / opts.months)) * 1000) / 10 : 0,
 			engagement: lastWith(engagement, (e) => e.score),
 			unplanned: lastWith(absence, (a) => a.unplanned),
 			medianAge: ages.length ? ages[Math.floor(ages.length / 2)] : null
 		},
 		headcount,
 		engagement,
-		absence: absence.map((a, i) => ({ ...a, turnover: headcount[i].turnover })),
+		absence,
 		gender: {
 			overall: genderOrder.map((g) => ({ name: g, count: genderTotals.get(g) ?? 0 })),
 			byGroup: [...genderByDept]

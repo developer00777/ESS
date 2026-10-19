@@ -75,9 +75,8 @@
 	/* ---------- headcount & movement ---------- */
 	const net = $derived(a.totals.hires - a.totals.exits);
 
-	/* ---------- absence & turnover ---------- */
+	/* ---------- absence ---------- */
 	const unplanned = $derived(latest(a.absence, (x) => x.unplanned));
-	const turnover = $derived(latest(a.absence, (x) => (x.scheduled || x.turnover ? x.turnover : null)));
 
 	/* ---------- headcount grouping ---------- */
 	type GroupBy = keyof typeof a.groups;
@@ -170,11 +169,6 @@
 			<span class="k-sub">{a.totals.exits ? `${a.totals.hires} ${a.totals.hires === 1 ? 'hire' : 'hires'} for ${a.totals.exits} ${a.totals.exits === 1 ? 'exit' : 'exits'}` : 'No exits in this period'}</span>
 		</div>
 		<div class="kpi">
-			<span class="k-label">Turnover</span>
-			<b class="k-value">{fmt(a.totals.turnoverAnnual)}%</b>
-			<span class="k-sub">Annualised · {a.months} months</span>
-		</div>
-		<div class="kpi">
 			<span class="k-label">Unplanned absence</span>
 			<b class="k-value">{unplanned ? `${fmt(unplanned.value)}%` : '—'}</b>
 			{#if unplanned?.delta != null}<Delta value={unplanned.delta} unit=" pts" vs={unplanned.vs} upIsGood={false} />{:else}<span class="k-sub">{unplanned ? unplanned.label : 'No attendance feed yet'}</span>{/if}
@@ -249,8 +243,8 @@
 			{/snippet}
 		</ChartCard>
 
-		<!-- ---------- absence and turnover: two questions, two small charts ---------- -->
-		<ChartCard title="Absenteeism & turnover" sub="Each month, as a share of working days and of headcount" note="Unplanned: no punch and no approved leave, on days the attendance feed has data. Turnover: exits ÷ average headcount.">
+		<!-- ---------- absenteeism ---------- -->
+		<ChartCard title="Absenteeism" sub="Each month, as a share of scheduled working days" note="Unplanned: no punch and no approved leave, on days the attendance feed has data. On leave: approved leave days.">
 			{#snippet chart()}
 				<div class="minis">
 					<div class="mini-chart">
@@ -264,29 +258,21 @@
 							label="Unplanned absence and leave by month, in percent"
 							{labels}
 							unit="%"
-							height={82}
+							height={150}
 							series={[
 								{ name: 'Unplanned', color: S1, values: a.absence.map((x) => x.unplanned) },
 								{ name: 'On leave', color: S2, values: a.absence.map((x) => x.leave) }
 							]}
 						/>
 					</div>
-					<div class="mini-chart">
-						<div class="mini-head">
-							<span class="mini-title">Turnover</span>
-							<b>{turnover ? `${fmt(turnover.value)}%` : '—'}</b>
-							{#if turnover?.delta != null}<Delta value={turnover.delta} unit=" pts" vs={turnover.vs} upIsGood={false} />{/if}
-						</div>
-						<LineChart label="Turnover by month, in percent" {labels} unit="%" height={82} series={[{ name: 'Turnover', color: S3, values: a.absence.map((x) => x.turnover) }]} />
-					</div>
 				</div>
 			{/snippet}
 			{#snippet table()}
 				<table>
-					<thead><tr><th>Month</th><th>Unplanned</th><th>On leave</th><th>Turnover</th></tr></thead>
+					<thead><tr><th>Month</th><th>Unplanned</th><th>On leave</th><th>Scheduled days</th></tr></thead>
 					<tbody>
 						{#each a.absence as x (x.key)}
-							<tr><td>{x.label}</td><td>{pctFmt(x.unplanned)}</td><td>{x.leave}%</td><td>{x.turnover}%</td></tr>
+							<tr><td>{x.label}</td><td>{pctFmt(x.unplanned)}</td><td>{x.leave}%</td><td>{x.scheduled.toLocaleString()}</td></tr>
 						{/each}
 					</tbody>
 				</table>
@@ -578,7 +564,7 @@
 	/* ---------- headline figures ---------- */
 	.kpis {
 		display: grid;
-		grid-template-columns: 1.4fr repeat(5, minmax(0, 1fr));
+		grid-template-columns: 1.4fr repeat(4, minmax(0, 1fr));
 		gap: 10px;
 	}
 	.kpi {
@@ -771,7 +757,7 @@
 		font-variant-numeric: tabular-nums;
 	}
 
-	/* ---------- absence & turnover minis ---------- */
+	/* ---------- absence ---------- */
 	.minis {
 		display: flex;
 		flex: 1 1 auto;
