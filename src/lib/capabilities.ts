@@ -16,7 +16,7 @@
 
 import type { Role } from './server/auth';
 
-export type CapabilityGroup = 'People' | 'Attendance & leave' | 'Policies' | 'Communication' | 'Tasks & meetings' | 'Champ' | 'System';
+export type CapabilityGroup = 'People' | 'Attendance & leave' | 'Payroll' | 'Policies' | 'Communication' | 'Tasks & meetings' | 'Champ' | 'System';
 
 export type Capability = {
 	key: string;
@@ -45,6 +45,9 @@ export const CAPABILITIES = [
 	{ key: 'attendance.device_sync', label: 'Run the device sync', group: 'Attendance & leave', description: 'Trigger a ProHance attendance sync by hand and see its status.', grantable: true },
 	{ key: 'leave.set_balances', label: 'Set leave balances', group: 'Attendance & leave', description: 'Upload opening balances such as the HRone carry-forward.', grantable: true },
 	{ key: 'leave.week_off_rosters', label: 'Author week-off rosters', group: 'Attendance & leave', description: 'Create, publish and delete week-off rosters.', grantable: true },
+	// --- Payroll
+	{ key: 'payroll.view', label: 'See payroll', group: 'Payroll', description: 'Open Payroll: the month-wise attendance tracker and the salary report, and download them as CSV or Excel.', grantable: true },
+	{ key: 'payroll.manage', label: 'Edit payroll', group: 'Payroll', description: 'Stop or hold a salary, set last working days, add HR comments and correct opening leave balances for a payroll month.', grantable: true },
 	// --- Policies
 	{ key: 'policies.publish', label: 'Publish policies and holidays', group: 'Policies', description: 'Publish the holiday calendar and leave policy, and change leave types.', grantable: true },
 	{ key: 'org.view', label: 'See the org chart', group: 'Policies', description: 'The reporting hierarchy for the whole company.', grantable: true },
@@ -153,6 +156,12 @@ export function canOpenAdmin(caps: readonly string[]): boolean {
 
 /** Ready-made starting points for the roles people ask for most. */
 export const ROLE_PRESETS: { name: string; description: string; baseRole: Exclude<Role, 'super_admin'>; capabilities: CapabilityKey[] }[] = [
+	{
+		name: 'Finance',
+		description: 'Runs payroll: the attendance tracker, the salary report and its downloads.',
+		baseRole: 'employee',
+		capabilities: ['payroll.view', 'payroll.manage', 'people.directory']
+	},
 	{
 		name: 'IT Support',
 		description: 'Looks after logins, passwords and the biometric devices.',

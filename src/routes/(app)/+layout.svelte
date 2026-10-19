@@ -46,6 +46,7 @@
 		hasPicture={data.hasProfilePicture}
 		pictureVersion={data.profilePictureVersion}
 		canAdmin={data.canAdmin}
+		canPayroll={data.canPayroll}
 		{adminIssueCount}
 		{chatBadge}
 	/>

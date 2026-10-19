@@ -1,12 +1,18 @@
 <script lang="ts">
 	import FileText from '@lucide/svelte/icons/file-text';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import PayrollDashboard from '$lib/components/payroll/PayrollDashboard.svelte';
+
+	let { data } = $props();
 </script>
 
 <svelte:head>
 	<title>Payroll — Champ HR</title>
 </svelte:head>
 
+{#if data.payroll}
+	<PayrollDashboard report={data.payroll} canManage={data.canManage} cycles={data.cycles} />
+{:else}
 <PageHeader crumb={['Payroll']} title="Your payslips, when they’re ready." sub="Payroll is not available in the portal yet." compact />
 
 <section class="empty ess-card ess-fill">
@@ -26,6 +32,7 @@
 		<a href="/dashboard" class="ess-btn ess-btn--secondary">Return to Today</a>
 	</div>
 </section>
+{/if}
 
 <style>
 	/* One card that fills the workspace with its message centred, so the

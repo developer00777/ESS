@@ -2,9 +2,18 @@ import { MongoClient } from 'mongodb';
 import { env } from '$env/dynamic/private';
 
 const client = new MongoClient(env.MONGO_URL ?? 'mongodb://localhost:27017/champ_hr');
-const clientPromise = client.connect();
+
+// Connected on first use, not on import: the build's route analysis imports
+// this module with no database around, and an import-time connect that later
+// fails is an unhandled rejection that kills the build. A failed attempt is
+// forgotten so the next call tries again instead of failing forever.
+let clientPromise: Promise<MongoClient> | null = null;
 
 export async function getMongo() {
+	clientPromise ??= client.connect().catch((err) => {
+		clientPromise = null;
+		throw err;
+	});
 	const c = await clientPromise;
 	return c.db();
 }

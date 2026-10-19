@@ -25,6 +25,8 @@
 		pictureVersion?: number | null;
 		/** Whether this login may open Admin Controls at all. */
 		canAdmin?: boolean;
+		/** Whether this login holds "See payroll" (payroll.view). */
+		canPayroll?: boolean;
 		/** Open admin problems, shown on the Admin Controls row. */
 		adminIssueCount?: number;
 		/** Champ Hub: unread chat plus requests, minutes and due work; red when urgent. */
@@ -39,6 +41,7 @@
 		hasPicture = false,
 		pictureVersion,
 		canAdmin = false,
+		canPayroll = false,
 		adminIssueCount = 0,
 		chatBadge = { count: 0, urgent: false }
 	}: Props = $props();
@@ -69,9 +72,9 @@
 		{ href: '/policies', label: 'Policies', icon: FileText },
 		...(role !== 'employee' ? [{ href: '/team', label: 'Team', icon: Users }] : []),
 		...(canAdmin ? [{ href: '/admin', label: 'Admin Controls', icon: ShieldUser }] : []),
-		/* Payroll is not built yet. The row stays so people know where it will
-		   live, and opens an honest "not available yet" page. */
-		{ href: '/payroll', label: 'Payroll', icon: Wallet, soon: true }
+		/* Payroll is live for those who run it; for everyone else payslips
+		   are not in the portal yet, and the row says so. */
+		{ href: '/payroll', label: 'Payroll', icon: Wallet, soon: !canPayroll }
 	]);
 
 	const isActive = (href: string) =>

@@ -246,6 +246,9 @@ export const employeeProfiles = pgTable('employee_profiles', {
 	floorDetails: text('floor_details'),
 	dateOfJoining: date('date_of_joining'),
 	dateOfConfirmation: date('date_of_confirmation'),
+	// Last working day, set when someone leaves. Payroll reads it: days after
+	// it are unpaid, and a leaver lands on the Stop Salary list for that cycle.
+	lastWorkingDay: date('last_working_day'),
 	officeTimings: text('office_timings'),
 	shiftType: text('shift_type'),
 	shiftGroupId: uuid('shift_group_id').references(() => shiftGroups.id),
@@ -900,6 +903,41 @@ export const customRoles = pgTable('custom_roles', {
 });
 
 /** Small key-value settings the app owns, such as the web push keys. */
+// --- Payroll (Payroll → tracker and salary report) ---
+
+/**
+ * What Finance decides per person per payroll cycle, on top of what the
+ * portal computes from attendance and leave (src/lib/server/payroll.ts).
+ * `cycleKey` is the cycle's end month, 'YYYY-MM' (26th → 25th, see
+ * $lib/attendance-cycle). One row per person per cycle, only when something
+ * was set — no row means "pay as computed".
+ */
+export const payrollAdjustments = pgTable(
+	'payroll_adjustments',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: uuid('user_id')
+			.references(() => users.id, { onDelete: 'cascade' })
+			.notNull(),
+		cycleKey: varchar('cycle_key', { length: 7 }).notNull(),
+		// 'pay' | 'stop' | 'hold' | 'sabbatical'. Null = decided by the portal:
+		// a leaver whose last working day falls on or before the cycle's end is
+		// stopped, everyone else is paid.
+		salaryAction: text('salary_action'),
+		// The HR Comments sheet: a short category ("Maternity Leave", "Salary
+		// revert") and its detail.
+		comment: text('comment'),
+		remarks: text('remarks'),
+		// Replaces the computed opening leave balance for this cycle, when
+		// Finance has the figure from the previous month's report.
+		openingBalance: numeric('opening_balance', { precision: 6, scale: 2 }),
+		updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(t) => [uniqueIndex('payroll_adjustments_user_cycle').on(t.userId, t.cycleKey)]
+);
+
 export const appSettings = pgTable('app_settings', {
 	key: text('key').primaryKey(),
 	value: jsonb('value').notNull(),
