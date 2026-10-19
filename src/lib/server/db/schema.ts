@@ -938,6 +938,47 @@ export const payrollAdjustments = pgTable(
 	(t) => [uniqueIndex('payroll_adjustments_user_cycle').on(t.userId, t.cycleKey)]
 );
 
+/**
+ * Manual edits to a payroll sheet before it is downloaded (Payroll → Preview).
+ * One row per edited cell: `rowKey` is the sheet row's key (a user id, or
+ * `<cycle>:<user id>` on Stop Salary, or `manual:<uuid>` for a row Finance
+ * added) and `column` the sheet's header text. Two marker columns record a
+ * whole-row change: `__removed__` drops a computed row, `__added__` creates a
+ * manual one. `original` is what the portal had computed when the edit was made.
+ */
+export const payrollCellOverrides = pgTable(
+	'payroll_cell_overrides',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		cycleKey: varchar('cycle_key', { length: 7 }).notNull(),
+		sheet: varchar('sheet', { length: 32 }).notNull(),
+		rowKey: varchar('row_key', { length: 96 }).notNull(),
+		column: text('column').notNull(),
+		value: text('value'),
+		original: text('original'),
+		updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(t) => [uniqueIndex('payroll_cell_overrides_cell').on(t.cycleKey, t.sheet, t.rowKey, t.column)]
+);
+
+/**
+ * The A/B check: HR's manually made report for a month compared with the
+ * portal's own computation (before manual edits). One row per upload; the
+ * file itself is not kept, only the comparison.
+ */
+export const payrollReconciliations = pgTable('payroll_reconciliations', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	cycleKey: varchar('cycle_key', { length: 7 }).notNull(),
+	fileName: text('file_name').notNull(),
+	comparedCells: integer('compared_cells').notNull(),
+	matchedCells: integer('matched_cells').notNull(),
+	result: jsonb('result').notNull(),
+	uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
 export const appSettings = pgTable('app_settings', {
 	key: text('key').primaryKey(),
 	value: jsonb('value').notNull(),

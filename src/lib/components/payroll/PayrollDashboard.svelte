@@ -5,8 +5,8 @@
 	 * downloadable as CSV, with the whole report as one .xlsx.
 	 */
 	import { goto } from '$app/navigation';
-	import Download from '@lucide/svelte/icons/download';
-	import FileSpreadsheet from '@lucide/svelte/icons/file-spreadsheet';
+	import { invalidateAll } from '$app/navigation';
+	import Eye from '@lucide/svelte/icons/eye';
 	import Search from '@lucide/svelte/icons/search';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import type { PayrollReport } from '$lib/server/payroll';
@@ -14,10 +14,12 @@
 	import PayrollTracker from './PayrollTracker.svelte';
 	import PayrollSheets from './PayrollSheets.svelte';
 	import PayrollPersonSheet from './PayrollPersonSheet.svelte';
+	import PayrollSheetPreview from './PayrollSheetPreview.svelte';
+	import PayrollAbCheck from './PayrollAbCheck.svelte';
 
 	let { report, canManage, cycles }: { report: PayrollReport; canManage: boolean; cycles: { key: string; label: string }[] } = $props();
 
-	type Tab = 'overview' | 'tracker' | 'leave-balance' | 'to-be-paid' | 'lop' | 'stop-salary' | 'hr-comments';
+	type Tab = 'overview' | 'tracker' | 'leave-balance' | 'to-be-paid' | 'lop' | 'stop-salary' | 'hr-comments' | 'ab';
 	const TABS: { key: Tab; label: string }[] = [
 		{ key: 'overview', label: 'Overview' },
 		{ key: 'tracker', label: 'Tracker' },
@@ -25,7 +27,8 @@
 		{ key: 'to-be-paid', label: 'To be paid' },
 		{ key: 'lop', label: 'LOP' },
 		{ key: 'stop-salary', label: 'Stop salary' },
-		{ key: 'hr-comments', label: 'HR comments' }
+		{ key: 'hr-comments', label: 'HR comments' },
+		{ key: 'ab', label: 'A/B check' }
 	];
 	let tab = $state<Tab>('overview');
 	let query = $state('');
@@ -48,9 +51,11 @@
 	});
 	const opened = $derived(openId ? report.employees.find((e) => e.userId === openId) ?? null : null);
 
-	const exportUrl = (sheet: string) => `/api/payroll/export?cycle=${report.cycleKey}&sheet=${sheet}`;
-	const csvSheet = $derived(tab === 'overview' ? 'tracker' : tab);
-	const csvLabel = $derived(TABS.find((t) => t.key === csvSheet)?.label ?? '');
+	// Nothing downloads straight from the dashboard: the Preview shows the file
+	// first (with any manual edits) and the download starts from there.
+	type SheetKey = Exclude<Tab, 'overview' | 'ab'>;
+	let previewOf = $state<SheetKey | null>(null);
+	const previewSheet = $derived<SheetKey>(tab === 'overview' || tab === 'ab' ? 'leave-balance' : tab);
 </script>
 
 <PageHeader crumb={['Payroll']} title={`Payroll · ${report.shortLabel}`} sub={report.cycleLabel} compact>
@@ -85,14 +90,9 @@
 		{#each teams as t (t)}<option value={t}>{t}</option>{/each}
 	</select>
 	<span class="count">{employees.length} of {report.employees.length} people</span>
-	<div class="downloads">
-		<a class="ess-btn ess-btn--secondary ess-btn--sm" href={exportUrl(csvSheet)} download title={`Download ${csvLabel} as CSV`}>
-			<Download size={15} /> {csvLabel} CSV
-		</a>
-		<a class="ess-btn ess-btn--primary ess-btn--sm" href={exportUrl('workbook')} download title="The salary report and attendance tracker as one Excel workbook">
-			<FileSpreadsheet size={15} /> Salary report (.xlsx)
-		</a>
-	</div>
+	<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={() => (previewOf = previewSheet)} title="See the file before it downloads; edit by hand if needed">
+		<Eye size={15} /> Preview &amp; download
+	</button>
 </div>
 
 <div class="body">
@@ -100,12 +100,27 @@
 		<div class="ess-card empty">No one is on the payroll for {report.cycleLabel}.</div>
 	{:else if tab === 'overview'}
 		<PayrollOverview {report} {employees} />
+	{:else if tab === 'ab'}
+		<PayrollAbCheck cycleKey={report.cycleKey} label={report.shortLabel} {canManage} />
 	{:else if tab === 'tracker'}
 		<PayrollTracker {report} {employees} onopen={(id) => (openId = id)} />
 	{:else}
 		<PayrollSheets sheet={tab} {report} {employees} {canManage} onopen={(id) => (openId = id)} />
 	{/if}
 </div>
+
+{#if previewOf}
+	<PayrollSheetPreview
+		cycleKey={report.cycleKey}
+		label={`${report.shortLabel} · ${report.cycleLabel}`}
+		initial={previewOf}
+		canEdit={canManage}
+		onclose={(changed) => {
+			previewOf = null;
+			if (changed) void invalidateAll();
+		}}
+	/>
+{/if}
 
 {#if opened}
 	<PayrollPersonSheet person={opened} {report} {canManage} onclose={() => (openId = null)} />
@@ -138,10 +153,7 @@
 		font-size: 12.5px;
 		color: var(--ess-text-secondary);
 	}
-	.downloads {
-		display: flex;
-		gap: 8px;
-	}
+
 	.body {
 		display: flex;
 		flex-direction: column;
