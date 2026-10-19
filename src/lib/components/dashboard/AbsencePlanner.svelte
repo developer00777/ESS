@@ -655,8 +655,9 @@
 		color: var(--ess-primary-text);
 	}
 	/* ---------- grid + my leave ---------- */
-	/* The card grows to fit every row and My leave under them; the page
-	   scrolls, never the planner. */
+	/* Two areas, one above the other and never layered: the calendar in its
+	   own height-capped scroll box (day header pinned inside it), and My
+	   leave always in full below it. The cap is what keeps the card small. */
 	.body {
 		display: flex;
 		flex-direction: column;
@@ -665,12 +666,31 @@
 
 	.scroller {
 		min-width: 0;
-		/* Sideways only, when the month is wider than the screen. */
-		overflow-x: auto;
+		/* Down through people past the cap; sideways when the month is wider
+		   than the screen. */
+		overflow: auto;
 		overscroll-behavior: contain;
+		scrollbar-width: thin;
 		margin: 0 -4px;
 		padding: 0 4px;
 		outline: none;
+	}
+	/* Laptops: six or so rows show, the rest scroll. Phones and tablets:
+	   half the screen. */
+	@media (min-width: 1101px) {
+		.scroller {
+			max-height: clamp(180px, calc(58vh - 230px), 420px);
+		}
+	}
+	@media (min-width: 1101px) and (max-height: 800px) {
+		.scroller {
+			max-height: 170px;
+		}
+	}
+	@media (max-width: 1100px) {
+		.scroller {
+			max-height: 50vh;
+		}
 	}
 
 	.grid {
@@ -705,8 +725,8 @@
 		align-items: center;
 		height: 34px;
 		padding: 0;
-		/* Frosted so rows scrolling under it blur rather than show through. */
-		background: var(--ess-glass-solid);
+		/* Solid: rows scrolling under it are hidden, not seen through. */
+		background: var(--ess-surface);
 		-webkit-backdrop-filter: blur(16px) saturate(160%);
 		backdrop-filter: blur(16px) saturate(160%);
 	}
@@ -724,10 +744,11 @@
 		padding-right: 10px;
 		background: transparent;
 	}
-	/* Narrow screens scroll the grid sideways under the names: frost them. */
+	/* Narrow screens scroll the grid sideways under the names: back them
+	   solid so bars pass behind rather than through. */
 	@media (max-width: 1100px) {
 		.who {
-			background: var(--ess-glass-solid);
+			background: var(--ess-surface);
 			-webkit-backdrop-filter: blur(16px) saturate(160%);
 			backdrop-filter: blur(16px) saturate(160%);
 		}

@@ -482,8 +482,8 @@
 
 	.home {
 		display: grid;
-		/* The planner takes all the height its rows and My leave need — the
-		   page scrolls, not the planner; the panels below take the rest. */
+		/* The planner's calendar scrolls inside a capped box, so the card stays
+		   compact; the panels below take the rest. */
 		grid-template-rows: auto max-content minmax(250px, 1fr);
 		gap: 14px;
 		min-height: 0;
@@ -564,10 +564,10 @@
 		height: 100%;
 	}
 
-	/* Short laptop screens: the planner still takes its full height; the
-	   page holds the screen's height and the panels below give way, so the
-	   whole home stays on one screen. Only where the panels sit in one row —
-	   narrower layouts stack them and the page scrolls. */
+	/* Short laptop screens: the page holds the screen's height and the
+	   panels below give way, so the whole home stays on one screen. Only
+	   where the panels sit in one row — narrower layouts stack them and the
+	   page scrolls. */
 	@media (min-width: 1101px) and (min-height: 480px) and (max-height: 800px) {
 		.home {
 			grid-template-rows: auto max-content minmax(160px, 1fr);

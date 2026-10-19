@@ -205,6 +205,12 @@
 		grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 		gap: 10px;
 	}
+	/* Laptops: all five in one row, so the strip stays one block tall. */
+	@media (min-width: 1101px) {
+		.rail {
+			grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+		}
+	}
 	.blk {
 		display: flex;
 		flex-direction: column;
