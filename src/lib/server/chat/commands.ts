@@ -9,6 +9,7 @@ import { membership } from './access';
 import { workStatuses } from './presence';
 import { parseTaskCommand } from '$lib/tasks/rules';
 import { matchName } from '$lib/server/name-match';
+import { notHidden } from '$lib/server/hidden-users';
 
 /**
  * Slash commands. The ESS lookups (/balance, /whoisout, /leave) answer with a
@@ -44,7 +45,7 @@ export async function runCommand(viewer: SessionUser, channelId: string, text: s
 
 		case 'whoisout': {
 			if (!viewer.teamId) return privateReply(viewer, channelId, 'You are not on a team yet, so there is nobody to list.');
-			const team = await db.select({ id: users.id, fullName: users.fullName }).from(users).where(and(eq(users.teamId, viewer.teamId), eq(users.isActive, true)));
+			const team = await db.select({ id: users.id, fullName: users.fullName }).from(users).where(and(eq(users.teamId, viewer.teamId), eq(users.isActive, true), notHidden));
 			const work = await workStatuses(now);
 			const out = team
 				.filter((p) => p.id !== viewer.id)

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { db } from './db/postgres';
 import { payrollCellOverrides, users } from './db/schema';
 import { logActivity } from './db/mongo';
+import { notHidden } from './hidden-users';
 import { ADDED_COLUMN, REMOVED_COLUMN, type CellOverride } from '$lib/payroll-sheet';
 import type { SheetKey } from './payroll-export';
 
@@ -24,7 +25,7 @@ export async function loadOverrides(cycleKey: string): Promise<Partial<Record<Sh
 			at: payrollCellOverrides.updatedAt
 		})
 		.from(payrollCellOverrides)
-		.leftJoin(users, eq(users.id, payrollCellOverrides.updatedBy))
+		.leftJoin(users, and(eq(users.id, payrollCellOverrides.updatedBy), notHidden))
 		.where(eq(payrollCellOverrides.cycleKey, cycleKey));
 	const out: Partial<Record<SheetKey, CellOverride[]>> = {};
 	for (const r of rows) {

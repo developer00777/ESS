@@ -4,6 +4,7 @@ import { leaveTypes, leaveAllocations, users, employeeProfiles } from '$lib/serv
 import { and, desc, eq, isNotNull } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { gateAdminPage } from '$lib/server/capabilities';
+import { notHidden } from '$lib/server/hidden-users';
 
 /**
  * HR leave-balance upload — Super Admin and Admin (HR).
@@ -59,8 +60,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.innerJoin(users, eq(leaveAllocations.userId, users.id))
 		.leftJoin(employeeProfiles, eq(employeeProfiles.userId, leaveAllocations.userId))
 		.innerJoin(leaveTypes, eq(leaveAllocations.leaveTypeId, leaveTypes.id))
-		.leftJoin(setter, eq(leaveAllocations.hrSetBy, setter.id))
-		.where(and(eq(leaveAllocations.isHrSet, true), isNotNull(leaveAllocations.hrSetAt)))
+		.leftJoin(setter, and(eq(leaveAllocations.hrSetBy, setter.id), eq(setter.hidden, false)))
+		.where(and(notHidden, eq(leaveAllocations.isHrSet, true), isNotNull(leaveAllocations.hrSetAt)))
 		.orderBy(desc(leaveAllocations.hrSetAt))
 		.limit(50);
 

@@ -8,6 +8,7 @@ import { logActivity } from '$lib/server/db/mongo';
 import { queueLoginEmails } from '$lib/server/login-emails';
 import { hasCap, invalidateCapabilities } from '$lib/server/capabilities';
 import { CHIEF_PICK } from '$lib/chief';
+import { notHidden } from '$lib/server/hidden-users';
 
 /**
  * Creating one login. Shared by the People form and Champ's "create a login"
@@ -119,7 +120,7 @@ export async function createLogin(actor: SessionUser, input: NewLogin, opts: { s
 			reportsToChief = true;
 		} else {
 			if (!UUID.test(input.reportsTo)) return fail('Pick a reporting manager from the list');
-			const [m] = await db.select({ id: users.id }).from(users).where(eq(users.id, input.reportsTo)).limit(1);
+			const [m] = await db.select({ id: users.id }).from(users).where(and(eq(users.id, input.reportsTo), notHidden)).limit(1);
 			if (!m) return fail('That reporting manager no longer exists');
 			reportsTo = m.id;
 		}
@@ -128,7 +129,7 @@ export async function createLogin(actor: SessionUser, input: NewLogin, opts: { s
 	let hrUserId: string | null = null;
 	if (input.hrUserId) {
 		if (!UUID.test(input.hrUserId)) return fail('Pick a concerned HR from the list');
-		const [hr] = await db.select({ id: users.id }).from(users).where(eq(users.id, input.hrUserId)).limit(1);
+		const [hr] = await db.select({ id: users.id }).from(users).where(and(eq(users.id, input.hrUserId), notHidden)).limit(1);
 		if (!hr) return fail('That HR person no longer exists');
 		hrUserId = hr.id;
 	}

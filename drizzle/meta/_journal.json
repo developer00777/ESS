@@ -218,6 +218,13 @@
       "when": 1792599773822,
       "tag": "0030_auto_team_lead",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792605938457,
+      "tag": "0031_hidden_users",
+      "breakpoints": true
     }
   ]
 }

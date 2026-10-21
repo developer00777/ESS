@@ -28,6 +28,7 @@ import {
 import { and, eq, gte, inArray, isNotNull, isNull, lte, ne, sql } from 'drizzle-orm';
 import { loadWeekOffFor } from '$lib/server/week-off';
 import { officeToday } from '$lib/server/shifts';
+import { notHidden } from '$lib/server/hidden-users';
 import { officeDateKey } from '$lib/shift-hours';
 import {
 	AGE_BANDS,
@@ -86,7 +87,8 @@ export async function loadHrAnalytics(opts: { months: number; department: string
 		.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
 		.leftJoin(teams, eq(teams.id, users.teamId))
 		.leftJoin(departments, eq(departments.id, teams.departmentId))
-		.leftJoin(shiftGroups, eq(shiftGroups.id, employeeProfiles.shiftGroupId));
+		.leftJoin(shiftGroups, eq(shiftGroups.id, employeeProfiles.shiftGroupId))
+		.where(notHidden);
 
 	const everyone = rows.map((r) => ({
 		...r,

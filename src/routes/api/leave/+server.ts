@@ -10,13 +10,14 @@ import {
 } from '$lib/server/db/schema';
 import { requireUser } from '$lib/server/rbac';
 import { leaveReach } from '$lib/server/org-scope';
-import { and, eq, gte, lte, inArray, sql } from 'drizzle-orm';
+import { and, eq, gte, lte, inArray, or, sql } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { checkPinkLeaveEligibility, monthBounds } from '$lib/server/leave-eligibility';
 import { weekOffResolverForUser } from '$lib/server/week-off';
 import { isCompOffLeaveCode, spendableCredits, consumeCredits } from '$lib/server/comp-off';
 import { workingDaysInRange } from '$lib/week-off';
 import { notifyNewRequest, notifyDecision } from '$lib/server/chat/cards';
+import { notHidden } from '$lib/server/hidden-users';
 
 /** Leave is booked in half days; float subtraction otherwise yields 2.9999… */
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -254,7 +255,8 @@ export const GET: RequestHandler = async (event) => {
 			.select({ application: leaveApplications, applicant: applicantColumns })
 			.from(leaveApplications)
 			.innerJoin(users, eq(leaveApplications.userId, users.id));
-		const rows = reach.ids === null ? await base : await base.where(inArray(leaveApplications.userId, reach.ids));
+		const visible = or(notHidden, eq(users.id, user.id));
+		const rows = await base.where(reach.ids === null ? visible : and(visible, inArray(leaveApplications.userId, reach.ids)));
 		return json({
 			applications: rows.map((r) => (reach.detail(r.application.userId) ? r : { ...r, application: { ...r.application, reason: null } }))
 		});

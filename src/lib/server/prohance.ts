@@ -2,6 +2,7 @@ import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db/postgres';
 import { prohanceDays, prohanceSyncs, employeeProfiles, users } from '$lib/server/db/schema';
 import { normalizeEmpCode } from '$lib/server/easytime-import';
+import { notHidden } from '$lib/server/hidden-users';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
 /**
@@ -275,7 +276,8 @@ async function applyRows(rows: ProhanceDayRow[], syncId: string) {
 	const profiles = await db
 		.select({ userId: employeeProfiles.userId, employeeCode: employeeProfiles.employeeCode })
 		.from(employeeProfiles)
-		.where(inArray(employeeProfiles.employeeCode, codes));
+		.innerJoin(users, eq(users.id, employeeProfiles.userId))
+		.where(and(notHidden, inArray(employeeProfiles.employeeCode, codes)));
 	const userByCode = new Map(
 		profiles
 			.filter((p): p is { userId: string; employeeCode: string } => Boolean(p.employeeCode))
@@ -289,7 +291,7 @@ async function applyRows(rows: ProhanceDayRow[], syncId: string) {
 	// portal user are used — this feeds attendance, so an ambiguous match is
 	// worse than no match.
 	const localpart = (s: string) => s.split('@')[0].trim().toLowerCase();
-	const portalUsers = await db.select({ id: users.id, email: users.email }).from(users);
+	const portalUsers = await db.select({ id: users.id, email: users.email }).from(users).where(notHidden);
 	const byLocalpart = new Map<string, string | null>();
 	for (const u of portalUsers) {
 		const lp = localpart(u.email);
@@ -440,10 +442,14 @@ async function rematchUnmatchedRows(): Promise<number> {
 	const profiles = await db
 		.select({ userId: employeeProfiles.userId, employeeCode: employeeProfiles.employeeCode })
 		.from(employeeProfiles)
+		.innerJoin(users, eq(users.id, employeeProfiles.userId))
 		.where(
-			inArray(
-				employeeProfiles.employeeCode,
-				orphans.map((o) => o.empCode)
+			and(
+				notHidden,
+				inArray(
+					employeeProfiles.employeeCode,
+					orphans.map((o) => o.empCode)
+				)
 			)
 		);
 	const userByCode = new Map(
@@ -453,7 +459,7 @@ async function rematchUnmatchedRows(): Promise<number> {
 	);
 
 	const localpart = (s: string) => s.split('@')[0].trim().toLowerCase();
-	const portalUsers = await db.select({ id: users.id, email: users.email }).from(users);
+	const portalUsers = await db.select({ id: users.id, email: users.email }).from(users).where(notHidden);
 	const byLocalpart = new Map<string, string | null>();
 	for (const u of portalUsers) {
 		const lp = localpart(u.email);

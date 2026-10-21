@@ -3,6 +3,7 @@ import { getMongo, type ActivityLogEntry } from '$lib/server/db/mongo';
 import { db } from '$lib/server/db/postgres';
 import { users } from '$lib/server/db/schema';
 import { inArray } from 'drizzle-orm';
+import { hiddenFrom } from '$lib/server/hidden-users';
 
 /**
  * The overview's "Recent admin activity": the last few things administrators
@@ -130,7 +131,7 @@ function describe(e: ActivityLogEntry): { title: string; meta: string } {
 	}
 }
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
 	let entries: ActivityLogEntry[] = [];
 	try {
 		const mongo = await getMongo();
@@ -145,11 +146,11 @@ export const load: PageServerLoad = async () => {
 	}
 
 	const actorIds = [...new Set(entries.map((e) => e.actorUserId).filter(Boolean))];
-	const actors = actorIds.length ? await db.select({ id: users.id, fullName: users.fullName, email: users.email }).from(users).where(inArray(users.id, actorIds)) : [];
+	const actors = actorIds.length ? await db.select({ id: users.id, fullName: users.fullName, email: users.email, hidden: users.hidden }).from(users).where(inArray(users.id, actorIds)) : [];
 	const byId = new Map(actors.map((a) => [a.id, a]));
 
 	return {
-		recentActivity: entries.map((e, i) => {
+		recentActivity: entries.filter((e) => !hiddenFrom(locals.user!.id, byId.get(e.actorUserId))).map((e, i) => {
 			const who = byId.get(e.actorUserId);
 			const { title, meta } = describe(e);
 			return {

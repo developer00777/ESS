@@ -7,6 +7,7 @@ import { and, eq } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { canReviewStage, isSingleStageFor } from '$lib/server/approval-chain';
 import { notifyNewRequest, notifyDecision } from '$lib/server/chat/cards';
+import { hiddenFrom } from '$lib/server/hidden-users';
 import { deviceUtcOffsetMinutes } from '$lib/server/easytime-import';
 import { loadShiftsFor } from '$lib/server/shifts';
 
@@ -51,7 +52,7 @@ export const POST: RequestHandler = async (event) => {
 	const stage = deviation.status === 'manager_approved' ? 'hr' : 'manager';
 
 	const [requester] = await db.select().from(users).where(eq(users.id, deviation.userId)).limit(1);
-	if (!requester) throw error(404, 'Requesting employee not found');
+	if (!requester || hiddenFrom(reviewer.id, requester)) throw error(404, 'Requesting employee not found');
 
 	// When no distinct manager exists, HR stands in for the manager stage as well
 	// and one approval has to finish the job — otherwise the same person approves

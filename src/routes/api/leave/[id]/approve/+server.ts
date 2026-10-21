@@ -15,6 +15,7 @@ import { logActivity } from '$lib/server/db/mongo';
 import { canReviewStage, isSingleStageFor } from '$lib/server/approval-chain';
 import { isCompOffLeaveCode, consumeCredits, releaseCredits } from '$lib/server/comp-off';
 import { notifyNewRequest, notifyDecision } from '$lib/server/chat/cards';
+import { hiddenFrom } from '$lib/server/hidden-users';
 
 const newStatusFor = (decision: 'approve' | 'reject') =>
 	decision === 'approve' ? ('approved' as const) : ('rejected' as const);
@@ -62,7 +63,7 @@ export const POST: RequestHandler = async (event) => {
 	}
 
 	const [applicant] = await db.select().from(users).where(eq(users.id, application.userId)).limit(1);
-	if (!applicant) throw error(404, 'Applicant not found');
+	if (!applicant || hiddenFrom(approver.id, applicant)) throw error(404, 'Applicant not found');
 
 	// Leave runs manager → HR → approved. `escalated` is the middle of that
 	// chain: the manager has signed off and HR has yet to.

@@ -3,7 +3,8 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { users, teams } from '$lib/server/db/schema';
 import { requireRole, canCreateRole } from '$lib/server/rbac';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import { notHidden } from '$lib/server/hidden-users';
 import { logActivity } from '$lib/server/db/mongo';
 import { addNewLoginToClerk, newLoginCredentials } from '$lib/server/clerk';
 
@@ -35,6 +36,8 @@ export const POST: RequestHandler = async (event) => {
 	// A temporary password, or none while Clerk is the sign-in (the person signs
 	// in with an emailed code and chooses their own, see password-state.ts).
 	const { temporaryPassword: tempPassword, passwordHash } = await newLoginCredentials();
+	// The hidden developer login is nobody's manager.
+	const [creator] = await db.select({ hidden: users.hidden }).from(users).where(eq(users.id, actor.id)).limit(1);
 
 	const [created] = await db
 		.insert(users)
@@ -44,7 +47,7 @@ export const POST: RequestHandler = async (event) => {
 			role,
 			fullName,
 			teamId: resolvedTeamId,
-			reportsTo: actor.id,
+			reportsTo: creator?.hidden ? null : actor.id,
 			isActive: true,
 			mustChangePassword: true,
 			// Readable on the Team roster until this person sets their own password,
@@ -70,8 +73,8 @@ export const GET: RequestHandler = async (event) => {
 
 	const rows =
 		actor.role === 'super_admin' || actor.role === 'admin'
-			? await db.select().from(users)
-			: await db.select().from(users).where(eq(users.teamId, actor.teamId ?? ''));
+			? await db.select().from(users).where(notHidden)
+			: await db.select().from(users).where(and(eq(users.teamId, actor.teamId ?? ''), notHidden));
 
 	return json({
 		users: rows.map((u) => ({

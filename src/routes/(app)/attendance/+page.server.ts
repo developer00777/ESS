@@ -29,6 +29,7 @@ import { deviceUtcOffsetMinutes } from '$lib/server/easytime-import';
 import { loadWeekOffFor } from '$lib/server/week-off';
 import { reviewableUserIds } from '$lib/server/approval-chain';
 import { prohancePresence } from '$lib/attendance-markers';
+import { notHidden } from '$lib/server/hidden-users';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -325,18 +326,21 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 						.from(attendanceDeviations)
 						.innerJoin(usersTable, eq(attendanceDeviations.userId, usersTable.id))
 						.where(
-							or(
-								and(
-									inArray(attendanceDeviations.status, ['pending', 'needs_manager_approval']),
-									manageable.length
-										? inArray(attendanceDeviations.userId, manageable)
-										: sql`false`
-								),
-								and(
-									eq(attendanceDeviations.status, 'manager_approved'),
-									hrReviewable.length
-										? inArray(attendanceDeviations.userId, hrReviewable)
-										: sql`false`
+							and(
+								notHidden,
+								or(
+									and(
+										inArray(attendanceDeviations.status, ['pending', 'needs_manager_approval']),
+										manageable.length
+											? inArray(attendanceDeviations.userId, manageable)
+											: sql`false`
+									),
+									and(
+										eq(attendanceDeviations.status, 'manager_approved'),
+										hrReviewable.length
+											? inArray(attendanceDeviations.userId, hrReviewable)
+											: sql`false`
+									)
 								)
 							)
 						)
@@ -353,14 +357,17 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 						.from(compOffCredits)
 						.innerJoin(usersTable, eq(compOffCredits.userId, usersTable.id))
 						.where(
-							or(
-								and(
-									eq(compOffCredits.status, 'pending'),
-									manageable.length ? inArray(compOffCredits.userId, manageable) : sql`false`
-								),
-								and(
-									eq(compOffCredits.status, 'manager_approved'),
-									hrReviewable.length ? inArray(compOffCredits.userId, hrReviewable) : sql`false`
+							and(
+								notHidden,
+								or(
+									and(
+										eq(compOffCredits.status, 'pending'),
+										manageable.length ? inArray(compOffCredits.userId, manageable) : sql`false`
+									),
+									and(
+										eq(compOffCredits.status, 'manager_approved'),
+										hrReviewable.length ? inArray(compOffCredits.userId, hrReviewable) : sql`false`
+									)
 								)
 							)
 						)

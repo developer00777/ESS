@@ -12,9 +12,12 @@ import * as schema from './schema';
  *                       Clerk with an emailed code and chooses one then
  * DEVELOPER_FULL_NAME   optional, "Developer" by default
  *
- * Created once, when missing. An existing login with that email is left as it
- * is — its role, password and active flag are managed in the portal like
- * anyone else's — so removing the variable or demoting the account sticks.
+ * It is a hidden login (users.hidden): a Super Admin that no list, count,
+ * chart or picker shows, and that other Super Admins cannot open, edit or
+ * delete. It is not a person in the organisation.
+ *
+ * Created once, when missing, and marked hidden on every boot. Its password
+ * and active flag are otherwise left as they are.
  * Never stops the boot: a failure is logged and the portal starts anyway.
  */
 
@@ -31,7 +34,8 @@ async function main() {
 	try {
 		const [existing] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, email)).limit(1);
 		if (existing) {
-			console.log(`Developer login (${email}) already present, leaving it as it is.`);
+			await db.update(schema.users).set({ hidden: true }).where(eq(schema.users.id, existing.id));
+			console.log(`Developer login (${email}) already present, kept hidden.`);
 			return;
 		}
 		const password = process.env.DEVELOPER_PASSWORD;
@@ -43,6 +47,7 @@ async function main() {
 				role: 'super_admin',
 				fullName: process.env.DEVELOPER_FULL_NAME?.trim() || 'Developer',
 				isActive: true,
+				hidden: true,
 				// Without a password they choose one right after the first sign-in.
 				mustChangePassword: !password
 			})

@@ -8,6 +8,7 @@ import {
 } from '$lib/server/db/schema';
 import { and, count, desc, eq, gte, isNotNull, isNull, max, min, sql } from 'drizzle-orm';
 import { gateAdminPage } from '$lib/server/capabilities';
+import { notHidden } from '$lib/server/hidden-users';
 
 /**
  * Manual biometric report upload — Super Admin and Admin (HR).
@@ -39,7 +40,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 				uploadedByName: users.fullName
 			})
 			.from(attendanceImports)
-			.leftJoin(users, eq(attendanceImports.uploadedBy, users.id))
+			.leftJoin(users, and(eq(attendanceImports.uploadedBy, users.id), notHidden))
 			.where(isNotNull(attendanceImports.uploadedBy))
 			.orderBy(desc(attendanceImports.createdAt))
 			.limit(15),

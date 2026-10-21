@@ -11,6 +11,7 @@ import { postToChannel } from '$lib/server/chat/messages';
 import { istDateKey } from '$lib/chat/rules';
 import { assignMode, rankBetween, STATUS_LABEL, TASK_PRIORITIES, TASK_STATUSES, type Reach, type TaskPriority, type TaskStatus } from '$lib/tasks/rules';
 import type { AssignableGroups, PersonRef, TaskDetail, TaskView } from '$lib/tasks/types';
+import { hiddenFrom } from '$lib/server/hidden-users';
 
 /**
  * Champ Hub tasks: the one place that decides who may see, give, move and
@@ -27,7 +28,7 @@ const MAX_DESC = 4000;
 
 /* ---------- the org, briefly cached ---------- */
 
-type OrgPerson = { id: string; fullName: string; reportsTo: string | null; role: string; isActive: boolean; teamId: string | null; email: string; designation: string | null };
+type OrgPerson = { id: string; fullName: string; reportsTo: string | null; role: string; isActive: boolean; hidden: boolean; teamId: string | null; email: string; designation: string | null };
 type Org = { byId: Map<string, OrgPerson>; children: Map<string, string[]>; at: number };
 
 let orgCache: Org | null = null;
@@ -35,7 +36,7 @@ let orgCache: Org | null = null;
 export async function loadOrg(): Promise<Org> {
 	if (orgCache && Date.now() - orgCache.at < 30_000) return orgCache;
 	const rows = await db
-		.select({ id: users.id, fullName: users.fullName, reportsTo: users.reportsTo, role: users.role, isActive: users.isActive, teamId: users.teamId, email: users.email, designation: employeeProfiles.designation })
+		.select({ id: users.id, fullName: users.fullName, reportsTo: users.reportsTo, role: users.role, isActive: users.isActive, hidden: users.hidden, teamId: users.teamId, email: users.email, designation: employeeProfiles.designation })
 		.from(users)
 		.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id));
 	const byId = new Map(rows.map((r) => [r.id, r]));
@@ -96,7 +97,7 @@ export async function assignableFor(user: SessionUser, reach?: Reach): Promise<A
 	const r = reach ?? (await reachFor(user));
 	const direct: AssignableGroups['direct'] = [];
 	const approval: AssignableGroups['approval'] = [];
-	const people = [...org.byId.values()].filter((p) => p.isActive).sort((a, b) => a.fullName.localeCompare(b.fullName));
+	const people = [...org.byId.values()].filter((p) => p.isActive && !hiddenFrom(user.id, p)).sort((a, b) => a.fullName.localeCompare(b.fullName));
 	for (const p of people) {
 		const lead = p.reportsTo && org.byId.get(p.reportsTo)?.isActive ? p.reportsTo : null;
 		if (assignMode(r, p.id, lead) === 'direct') direct.push({ id: p.id, fullName: p.fullName });
@@ -209,7 +210,7 @@ export async function myTasks(viewer: SessionUser): Promise<TaskView[]> {
 export async function teamTasks(viewer: SessionUser, leadId = viewer.id): Promise<Result<{ lanes: { person: PersonRef & { title: string | null }; tasks: TaskView[] }[]; unassigned: TaskView[] }>> {
 	if (leadId !== viewer.id && !hasCap(viewer, 'tasks.view_all') && viewer.role !== 'super_admin') return { ok: false, message: 'You can only see your own team', status: 403 };
 	const org = await loadOrg();
-	const reports = (org.children.get(leadId) ?? []).map((id) => org.byId.get(id)!).filter((p) => p?.isActive).sort((a, b) => a.fullName.localeCompare(b.fullName));
+	const reports = (org.children.get(leadId) ?? []).map((id) => org.byId.get(id)!).filter((p) => p?.isActive && !hiddenFrom(viewer.id, p)).sort((a, b) => a.fullName.localeCompare(b.fullName));
 	const ids = reports.map((p) => p.id);
 	const rows = ids.length ? await db.select().from(tasks).where(and(inArray(tasks.assigneeId, ids), visibleDone())).orderBy(...ORDER) : [];
 	const loose = await db.select().from(tasks).where(and(isNull(tasks.assigneeId), eq(tasks.createdBy, leadId), sql`${tasks.status} <> 'done'`)).orderBy(...ORDER);
@@ -348,7 +349,7 @@ export async function createTask(viewer: SessionUser, input: CreateInput, opts: 
 	if (assigneeId) {
 		if (!UUID.test(assigneeId)) return { ok: false, message: 'That person no longer exists' };
 		const target = (await loadOrg()).byId.get(assigneeId);
-		if (!target?.isActive) return { ok: false, message: 'That person no longer exists' };
+		if (!target?.isActive || hiddenFrom(viewer.id, target)) return { ok: false, message: 'That person no longer exists' };
 		approverId = await approverFor(await reachFor(viewer), assigneeId);
 	}
 
@@ -489,7 +490,7 @@ export async function moveTask(viewer: SessionUser, id: string, input: MoveInput
 
 	if (input.assigneeId !== undefined && input.assigneeId !== t.assigneeId) {
 		const target = input.assigneeId;
-		if (target && (!UUID.test(target) || !org.byId.get(target)?.isActive)) return { ok: false, message: 'That person no longer exists' };
+		if (target && (!UUID.test(target) || !org.byId.get(target)?.isActive || hiddenFrom(viewer.id, org.byId.get(target)))) return { ok: false, message: 'That person no longer exists' };
 		assigneeId = target;
 		// A new owner may have a different lead to approve it.
 		approverId = await approverFor(reach, target);

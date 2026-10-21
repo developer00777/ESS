@@ -5,6 +5,7 @@ import { logActivity } from '$lib/server/db/mongo';
 import { GRANTABLE_KEYS } from '$lib/capabilities';
 import type { Role, SessionUser } from '$lib/server/auth';
 import { hasCap, invalidateCapabilities } from '$lib/server/capabilities';
+import { hiddenFrom, notHidden } from '$lib/server/hidden-users';
 
 /**
  * Named roles: creating, changing and deleting them, and giving them to
@@ -126,7 +127,7 @@ export async function assignNamedRole(
 	if (!UUID.test(userId)) return { ok: false, message: 'That person no longer exists' };
 	if (userId === actor.id) return { ok: false, message: 'You cannot change your own role' };
 	const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-	if (!target) return { ok: false, message: 'That person no longer exists' };
+	if (!target || hiddenFrom(actor.id, target)) return { ok: false, message: 'That person no longer exists' };
 
 	let named: typeof customRoles.$inferSelect | undefined;
 	if (roleId) {
@@ -137,7 +138,7 @@ export async function assignNamedRole(
 			const others = await db
 				.select({ id: users.id })
 				.from(users)
-				.where(and(eq(users.role, 'super_admin'), ne(users.id, userId), eq(users.isActive, true)));
+				.where(and(eq(users.role, 'super_admin'), ne(users.id, userId), eq(users.isActive, true), notHidden));
 			if (others.length === 0) return { ok: false, message: 'They are the only Super Admin, so their role cannot change' };
 		}
 	}

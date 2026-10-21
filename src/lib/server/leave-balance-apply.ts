@@ -12,6 +12,7 @@ import { db } from '$lib/server/db/postgres';
 import { leaveAllocations, leaveTypes, employeeProfiles, users } from '$lib/server/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
 import { normalizeEmpCode } from '$lib/server/easytime-import';
+import { notHidden } from '$lib/server/hidden-users';
 import type { ParsedBalance } from '$lib/server/leave-balance-sheet';
 
 const norm = (v: string) => v.replace(/\s+/g, ' ').trim().toLowerCase();
@@ -83,6 +84,7 @@ export async function resolveLeaveBalances(
 				})
 				.from(employeeProfiles)
 				.innerJoin(users, eq(users.id, employeeProfiles.userId))
+				.where(notHidden)
 		: [];
 	const byCode = new Map(
 		profiles

@@ -25,6 +25,7 @@ import { champConfigured } from '$lib/server/champ/chat';
 import { loadPlanner } from './planner.server';
 import { loadMyLeave } from './my-leave.server';
 import { loadShiftsFor, officeToday } from '$lib/server/shifts';
+import { notHidden } from '$lib/server/hidden-users';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -180,7 +181,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			.innerJoin(users, eq(leaveApplications.userId, users.id));
 
 		approvalQueue = await base
-			.where(and(eq(leaveApplications.status, 'pending'), inArray(leaveApplications.userId, manageable)))
+			.where(and(notHidden, eq(leaveApplications.status, 'pending'), inArray(leaveApplications.userId, manageable)))
 			.orderBy(desc(leaveApplications.createdAt));
 	}
 

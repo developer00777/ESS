@@ -3,7 +3,8 @@ import type { Actions, PageServerLoad } from './$types';
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db/postgres';
 import { users } from '$lib/server/db/schema';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
+import { notHidden } from '$lib/server/hidden-users';
 import { gateAdminPage } from '$lib/server/capabilities';
 import { readStatus, zoomConfigured } from '$lib/server/zoom/client';
 import { linkZoomUser, reconcileZoom, zoomLinks } from '$lib/server/meetings/service';
@@ -18,7 +19,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const [status, links, people] = await Promise.all([
 		readStatus(),
 		zoomLinks(),
-		db.select({ id: users.id, fullName: users.fullName }).from(users).where(eq(users.isActive, true)).orderBy(asc(users.fullName))
+		db.select({ id: users.id, fullName: users.fullName }).from(users).where(and(eq(users.isActive, true), notHidden)).orderBy(asc(users.fullName))
 	]);
 	return {
 		configured: zoomConfigured(),

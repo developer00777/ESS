@@ -18,6 +18,7 @@ import {
 } from './db/schema';
 import { cycleDates, cycleForKey, cycleLabel, shiftCycle, type AttendanceCycle } from '$lib/attendance-cycle';
 import { loadShifts, officeToday } from './shifts';
+import { notHidden } from './hidden-users';
 import { currentRosterByUser, loadWeekOffFor } from './week-off';
 import { ensureLeaveAllocations } from './leave-accrual';
 import {
@@ -151,7 +152,7 @@ export async function loadPayroll(cycleKey: string, now = new Date()): Promise<P
 		.leftJoin(teams, eq(teams.id, users.teamId))
 		.leftJoin(departments, eq(departments.id, teams.departmentId))
 		.leftJoin(manager, eq(manager.id, users.reportsTo))
-		.where(or(eq(users.isActive, true), gte(employeeProfiles.lastWorkingDay, cycle.startDate)));
+		.where(and(notHidden, or(eq(users.isActive, true), gte(employeeProfiles.lastWorkingDay, cycle.startDate))));
 
 	const roster = people
 		.map((p) => ({ ...p, doj: dateKey(p.doj), lwd: dateKey(p.lwd) }))
@@ -385,7 +386,7 @@ async function loadStopSalary(cycle: AttendanceCycle, current: PayrollEmployee[]
 			})
 			.from(users)
 			.innerJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
-			.where(and(gte(employeeProfiles.lastWorkingDay, oldest.startDate), lte(employeeProfiles.lastWorkingDay, earlier[0].endDate))),
+			.where(and(notHidden, gte(employeeProfiles.lastWorkingDay, oldest.startDate), lte(employeeProfiles.lastWorkingDay, earlier[0].endDate))),
 		db
 			.select({
 				userId: payrollAdjustments.userId,
@@ -402,7 +403,7 @@ async function loadStopSalary(cycle: AttendanceCycle, current: PayrollEmployee[]
 			.from(payrollAdjustments)
 			.innerJoin(users, eq(users.id, payrollAdjustments.userId))
 			.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
-			.where(inArray(payrollAdjustments.cycleKey, earlier.map((c) => c.key)))
+			.where(and(notHidden, inArray(payrollAdjustments.cycleKey, earlier.map((c) => c.key))))
 	]);
 
 	for (const c of earlier) {

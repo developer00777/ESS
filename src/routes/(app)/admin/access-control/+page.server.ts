@@ -2,7 +2,8 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { customRoles, teams, users } from '$lib/server/db/schema';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
+import { notHidden } from '$lib/server/hidden-users';
 import { alias } from 'drizzle-orm/pg-core';
 import { gateAdminPage, hasCap } from '$lib/server/capabilities';
 import { assignNamedRole, deleteNamedRole, saveNamedRole } from '$lib/server/roles';
@@ -33,12 +34,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 				canResolveGrievances: teams.canResolveGrievances
 			})
 			.from(teams)
-			.leftJoin(lead, eq(lead.id, teams.teamLeadId))
+			.leftJoin(lead, and(eq(lead.id, teams.teamLeadId), eq(lead.hidden, false)))
 			.orderBy(asc(teams.name)),
 		db
 			.select({ id: users.id, fullName: users.fullName, email: users.email, role: users.role, customRoleId: users.customRoleId })
 			.from(users)
-			.where(eq(users.isActive, true))
+			.where(and(eq(users.isActive, true), notHidden))
 			.orderBy(asc(users.fullName)),
 		db.select().from(customRoles).orderBy(asc(customRoles.name))
 	]);

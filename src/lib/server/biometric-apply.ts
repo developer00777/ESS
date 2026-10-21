@@ -7,6 +7,7 @@ import {
 	users
 } from '$lib/server/db/schema';
 import { normalizeEmpCode } from '$lib/server/easytime-import';
+import { notHidden } from '$lib/server/hidden-users';
 import { lockAttendanceImports } from '$lib/server/easytime-ingest';
 import { addDays, instantFor, type ParsedBiometricDay } from '$lib/server/biometric-sheet';
 import { and, eq, inArray } from 'drizzle-orm';
@@ -73,7 +74,7 @@ export async function resolveBiometricDays(days: ParsedBiometricDay[]): Promise<
 				})
 				.from(employeeProfiles)
 				.innerJoin(users, eq(employeeProfiles.userId, users.id))
-				.where(inArray(employeeProfiles.employeeCode, codes))
+				.where(and(notHidden, inArray(employeeProfiles.employeeCode, codes)))
 		: [];
 
 	const byCode = new Map(

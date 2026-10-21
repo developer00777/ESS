@@ -11,6 +11,7 @@ import {
 import { and, desc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { sendEmail, isMailerConfigured } from '$lib/server/mailer';
 import { badgeFor, buildFeed, istDate, summaryOf, type Feed, type FeedHoliday, type FeedPost } from '$lib/announcements';
+import { notHidden } from '$lib/server/hidden-users';
 
 type Announcement = typeof announcements.$inferSelect;
 
@@ -202,7 +203,7 @@ export async function loadMembers(): Promise<Member[]> {
 		})
 		.from(users)
 		.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
-		.where(eq(users.isActive, true));
+		.where(and(eq(users.isActive, true), notHidden));
 }
 
 export async function loadAdminList() {
@@ -213,6 +214,8 @@ export async function loadAdminList() {
 			acks: sql<number>`count(${announcementReads.acknowledgedAt})::int`.as('acks')
 		})
 		.from(announcementReads)
+		.innerJoin(users, eq(users.id, announcementReads.userId))
+		.where(notHidden)
 		.groupBy(announcementReads.announcementId)
 		.as('counts');
 
@@ -374,7 +377,8 @@ export async function loadStaleConfirmations(now = new Date()) {
 		db
 			.select({ id: announcementReads.announcementId, n: sql<number>`count(${announcementReads.acknowledgedAt})::int` })
 			.from(announcementReads)
-			.where(inArray(announcementReads.announcementId, rows.map((r) => r.id)))
+			.innerJoin(users, eq(users.id, announcementReads.userId))
+			.where(and(inArray(announcementReads.announcementId, rows.map((r) => r.id)), notHidden))
 			.groupBy(announcementReads.announcementId)
 	]);
 	const ackBy = new Map(acks.map((a) => [a.id, a.n]));

@@ -9,6 +9,7 @@ import { hasCap } from '$lib/server/capabilities';
 import { logActivity } from '$lib/server/db/mongo';
 import { invalidateOrgScope, todayIst } from '$lib/server/org-scope';
 import type { SessionUser } from '$lib/server/auth';
+import { hiddenFrom } from '$lib/server/hidden-users';
 
 /**
  * Manager delegations: "approve my team's requests while I'm away"
@@ -31,7 +32,12 @@ export const GET: RequestHandler = async (event) => {
 	if (all && !mayManageOthers(user)) throw error(403, 'Only HR can list every delegation');
 	const from = alias(users, 'from_user');
 	const to = alias(users, 'to_user');
-	const live = and(isNull(delegations.revokedAt), gte(delegations.endsOn, todayIst()));
+	const live = and(
+		isNull(delegations.revokedAt),
+		gte(delegations.endsOn, todayIst()),
+		or(eq(from.hidden, false), eq(from.id, user.id)),
+		or(eq(to.hidden, false), eq(to.id, user.id))
+	);
 	const rows = await db
 		.select({
 			id: delegations.id,
@@ -70,8 +76,8 @@ export const POST: RequestHandler = async (event) => {
 	const days = (Date.parse(endsOn) - Date.parse(startsOn)) / 86_400_000 + 1;
 	if (days > MAX_DAYS) throw error(400, `Keep a delegation to ${MAX_DAYS} days or fewer`);
 
-	const people = await db.select({ id: users.id, isActive: users.isActive }).from(users).where(or(eq(users.id, fromId), eq(users.id, toId)));
-	if (people.length !== 2 || people.some((p) => !p.isActive)) throw error(404, 'Both people must have active logins');
+	const people = await db.select({ id: users.id, isActive: users.isActive, hidden: users.hidden }).from(users).where(or(eq(users.id, fromId), eq(users.id, toId)));
+	if (people.length !== 2 || people.some((p) => !p.isActive || hiddenFrom(actor.id, p))) throw error(404, 'Both people must have active logins');
 
 	const [row] = await db.insert(delegations).values({ fromId, toId, startsOn, endsOn, reason: reason || null, createdBy: actor.id }).returning();
 	await logActivity({

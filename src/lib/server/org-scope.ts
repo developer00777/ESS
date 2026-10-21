@@ -2,6 +2,7 @@ import { db } from '$lib/server/db/postgres';
 import { delegations, employeeProfiles, teams, users } from '$lib/server/db/schema';
 import { eq, isNull } from 'drizzle-orm';
 import type { SessionUser } from '$lib/server/auth';
+import { notHidden } from './hidden-users';
 import { officeToday } from '$lib/server/shifts';
 import {
 	actingFor,
@@ -66,7 +67,11 @@ export async function loadOrgScope(): Promise<OrgSnapshot> {
 				reportsToChief: employeeProfiles.reportsToChief
 			})
 			.from(users)
-			.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id)),
+			.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
+			// Hidden logins are never in anyone's reach. Their own access still
+			// works: a Super Admin is org-wide without a snapshot row, and a
+			// missing actor just has no relations.
+			.where(notHidden),
 		db.select({ id: teams.id, teamLeadId: teams.teamLeadId }).from(teams),
 		loadDelegations()
 	]);

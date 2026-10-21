@@ -18,6 +18,7 @@ import {
 	membership
 } from './access';
 import { describeDmRule } from '$lib/chat/policy';
+import { notHidden } from '$lib/server/hidden-users';
 
 export type SidebarChannel = {
 	id: string;
@@ -98,7 +99,7 @@ export async function sidebarFor(user: SessionUser): Promise<{ channels: Sidebar
 				.select({ channelId: chatMembers.channelId, id: users.id, fullName: users.fullName, isActive: users.isActive })
 				.from(chatMembers)
 				.innerJoin(users, eq(users.id, chatMembers.userId))
-				.where(and(inArray(chatMembers.channelId, convIds), sql`${chatMembers.userId} <> ${user.id}`))
+				.where(and(inArray(chatMembers.channelId, convIds), sql`${chatMembers.userId} <> ${user.id}`, notHidden))
 		: [];
 
 	const announcementBadge = await loadBadge(user.id);
@@ -236,7 +237,7 @@ export async function createChannel(
 export async function browseChannels(user: SessionUser) {
 	return db.execute(sql`
 		select c.id, c.name, c.topic, c.team_id as "teamId",
-			(select count(*)::int from chat_members x where x.channel_id = c.id) as members
+			(select count(*)::int from chat_members x join users u on u.id = x.user_id where x.channel_id = c.id and u.hidden = false) as members
 		from chat_channels c
 		where c.kind = 'channel' and c.is_private = false and c.archived_at is null and c.source = 'manual'
 			and not exists (select 1 from chat_members m where m.channel_id = c.id and m.user_id = ${user.id})
@@ -267,7 +268,7 @@ export async function addMembers(user: SessionUser, channelId: string, ids: stri
 	const { c, ok } = await canManage(user, channelId);
 	if (!c) return { ok: false, message: 'That conversation no longer exists' };
 	if (!ok) return { ok: false, message: c.source !== 'manual' ? 'Members of this channel follow the roster' : 'Only the channel creator or HR can add people' };
-	let people = (await loadPeople(ids)).filter((p) => p.isActive);
+	let people = (await loadPeople(ids)).filter((p) => p.isActive && !p.hidden);
 	if (c.teamId) people = people.filter((p) => p.teamId === c.teamId);
 	if (people.length) await db.insert(chatMembers).values(people.map((p) => ({ channelId, userId: p.id }))).onConflictDoNothing();
 	await announceChannelChange(channelId);
@@ -310,6 +311,6 @@ export async function channelMembers(channelId: string) {
 		.select({ id: users.id, fullName: users.fullName, role: users.role, isActive: users.isActive, memberRole: chatMembers.role })
 		.from(chatMembers)
 		.innerJoin(users, eq(users.id, chatMembers.userId))
-		.where(eq(chatMembers.channelId, channelId))
+		.where(and(eq(chatMembers.channelId, channelId), notHidden))
 		.orderBy(users.fullName);
 }

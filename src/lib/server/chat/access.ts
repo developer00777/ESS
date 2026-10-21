@@ -7,6 +7,7 @@ import { dmKey } from '$lib/chat/rules';
 import { DEFAULT_CHAT_POLICY, normalisePolicy, type ChatPolicy } from '$lib/chat/policy';
 import { appSettings } from '$lib/server/db/schema';
 import { publish } from './bus';
+import { notHidden } from '$lib/server/hidden-users';
 
 /**
  * Who may talk to whom, and the one-of-a-kind conversations: DMs, each
@@ -26,6 +27,7 @@ export type Person = {
 	reportsTo: string | null;
 	hrUserId: string | null;
 	isActive: boolean;
+	hidden?: boolean;
 };
 
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -42,7 +44,8 @@ export async function loadPeople(ids?: string[]): Promise<Person[]> {
 			teamId: users.teamId,
 			reportsTo: users.reportsTo,
 			hrUserId: employeeProfiles.hrUserId,
-			isActive: users.isActive
+			isActive: users.isActive,
+			hidden: users.hidden
 		})
 		.from(users)
 		.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id));
@@ -54,7 +57,7 @@ export async function loadPeople(ids?: string[]): Promise<Person[]> {
  * `policy` is what HR set in Admin Controls › Chat rules.
  */
 export function dmAllowed(actor: Person, target: Person, anyone: boolean, policy: ChatPolicy = DEFAULT_CHAT_POLICY): boolean {
-	if (actor.id === target.id || !target.isActive) return false;
+	if (actor.id === target.id || !target.isActive || target.hidden) return false;
 	if (anyone || policy.dm.everyone) return true;
 	const d = policy.dm;
 	return (
@@ -139,7 +142,7 @@ export async function deskResponders(ownerId: string): Promise<string[]> {
 	const hr = await db
 		.select({ id: users.id })
 		.from(users)
-		.where(and(eq(users.isActive, true), inArray(users.role, ['admin', 'super_admin'])));
+		.where(and(eq(users.isActive, true), inArray(users.role, ['admin', 'super_admin']), notHidden));
 	return hr.map((h) => h.id).filter((id) => id !== ownerId);
 }
 

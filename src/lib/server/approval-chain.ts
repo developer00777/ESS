@@ -26,6 +26,7 @@ import { users, employeeProfiles, teams } from '$lib/server/db/schema';
 import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import { actingForManager, loadOrgScope, todayIst } from '$lib/server/org-scope';
 import { activeDelegations, resolveTeamLead } from '$lib/org-scope';
+import { notHidden } from '$lib/server/hidden-users';
 
 /** Roles that act as HR for the second stage (same list as org-scope.ts). */
 const HR_ROLES = ['admin', 'super_admin'] as const;
@@ -66,7 +67,7 @@ export async function managersFor(userIds: string[]): Promise<Map<string, Review
 		? await db
 				.select({ id: users.id, fullName: users.fullName, role: users.role, isActive: users.isActive })
 				.from(users)
-				.where(inArray(users.id, managerIds))
+				.where(and(inArray(users.id, managerIds), notHidden))
 		: [];
 	const managerById = new Map(managerRows.map((m) => [m.id, m]));
 
@@ -82,7 +83,7 @@ export async function managersFor(userIds: string[]): Promise<Map<string, Review
 		? await db
 				.select({ id: users.id, fullName: users.fullName, role: users.role, teamId: users.teamId, isActive: users.isActive })
 				.from(users)
-				.where(designatedIds.length ? or(inArray(users.teamId, teamIds), inArray(users.id, designatedIds)) : inArray(users.teamId, teamIds))
+				.where(and(notHidden, designatedIds.length ? or(inArray(users.teamId, teamIds), inArray(users.id, designatedIds)) : inArray(users.teamId, teamIds)))
 		: [];
 	const memberById = new Map(memberRows.map((m) => [m.id, m]));
 	const leadByTeam = new Map<string, (typeof memberRows)[number]>();
@@ -234,7 +235,8 @@ export async function assignedHrFor(userId: string): Promise<string | null> {
 	const [row] = await db
 		.select({ hrUserId: employeeProfiles.hrUserId })
 		.from(employeeProfiles)
-		.where(eq(employeeProfiles.userId, userId))
+		.innerJoin(users, eq(users.id, employeeProfiles.hrUserId))
+		.where(and(eq(employeeProfiles.userId, userId), notHidden))
 		.limit(1);
 	return row?.hrUserId ?? null;
 }
@@ -249,7 +251,7 @@ export async function reviewableUserIds(
 	actor: { id: string; role: string; teamId: string | null },
 	stage: ApprovalStage
 ): Promise<string[]> {
-	const everyone = await db.select({ id: users.id }).from(users).where(eq(users.isActive, true));
+	const everyone = await db.select({ id: users.id }).from(users).where(and(eq(users.isActive, true), notHidden));
 	const candidateIds = everyone.map((u) => u.id).filter((id) => id !== actor.id);
 
 	const isHr = (HR_ROLES as readonly string[]).includes(actor.role);
@@ -261,7 +263,8 @@ export async function reviewableUserIds(
 			? await db
 					.select({ userId: employeeProfiles.userId, hrUserId: employeeProfiles.hrUserId })
 					.from(employeeProfiles)
-					.where(inArray(employeeProfiles.userId, candidateIds))
+					.innerJoin(users, eq(users.id, employeeProfiles.hrUserId))
+					.where(and(inArray(employeeProfiles.userId, candidateIds), notHidden))
 			: [];
 		const hrByUser = new Map(rows.map((r) => [r.userId, r.hrUserId]));
 

@@ -7,6 +7,7 @@ import { logActivity } from '$lib/server/db/mongo';
 import { isMailerConfigured, sendWelcomeEmail } from '$lib/server/mailer';
 import { clerkAuthActive } from '$lib/server/clerk';
 import { postToFeed } from '$lib/server/chat/cards';
+import { notHidden } from '$lib/server/hidden-users';
 
 /**
  * Login emails wait for an admin.
@@ -118,13 +119,13 @@ export type LoginEmailRow = {
 };
 
 export async function listLoginEmails(): Promise<{ rows: LoginEmailRow[]; settings: LoginEmailSettings; mailerConfigured: boolean; nextSendAt: string | null }> {
-	const requester = sql<string | null>`(select full_name from users r where r.id = ${loginEmails.requestedBy})`;
-	const approver = sql<string | null>`(select full_name from users a where a.id = ${loginEmails.approvedBy})`;
+	const requester = sql<string | null>`(select full_name from users r where r.id = ${loginEmails.requestedBy} and r.hidden = false)`;
+	const approver = sql<string | null>`(select full_name from users a where a.id = ${loginEmails.approvedBy} and a.hidden = false)`;
 	const rows = await db
 		.select({ q: loginEmails, fullName: users.fullName, email: users.email, mustChange: users.mustChangePassword, requestedBy: requester, approvedBy: approver })
 		.from(loginEmails)
 		.innerJoin(users, eq(users.id, loginEmails.userId))
-		.where(or(inArray(loginEmails.status, ['pending', 'approved', 'sending', 'failed']), sql`${loginEmails.createdAt} > now() - interval '14 days'`))
+		.where(and(notHidden, or(inArray(loginEmails.status, ['pending', 'approved', 'sending', 'failed']), sql`${loginEmails.createdAt} > now() - interval '14 days'`)))
 		.orderBy(desc(loginEmails.createdAt))
 		.limit(500);
 	const approvedOrder = rows

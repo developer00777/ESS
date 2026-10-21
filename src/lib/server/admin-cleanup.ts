@@ -22,6 +22,7 @@ import {
 import { deleteProfilePicture } from '$lib/server/db/mongo';
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { deleteClerkUser } from './clerk';
+import { notHidden } from './hidden-users';
 
 /**
  * Destructive admin operations.
@@ -265,7 +266,7 @@ export async function previewCleanup(keepUserId: string): Promise<CleanupPreview
 		db
 			.select({ id: users.id, fullName: users.fullName, email: users.email })
 			.from(users)
-			.where(ne(users.id, keepUserId)),
+			.where(and(ne(users.id, keepUserId), notHidden)),
 		db.select({ n: sql<number>`count(*)::int` }).from(leaveApplications),
 		db.select({ n: sql<number>`count(*)::int` }).from(attendance),
 		db.select({ n: sql<number>`count(*)::int` }).from(bulkImports),
@@ -301,7 +302,8 @@ export async function runCleanup(
 	// Employee deletion reuses deleteEmployee so the FK handling stays in one
 	// place — a second implementation would inevitably drift from the first.
 	if (options.otherEmployees) {
-		const others = await db.select({ id: users.id }).from(users).where(ne(users.id, keepUserId));
+		// The hidden developer login is not an employee and survives a reset.
+		const others = await db.select({ id: users.id }).from(users).where(and(ne(users.id, keepUserId), notHidden));
 		for (const u of others) await deleteEmployee(u.id);
 		counts.employees = others.length;
 	}

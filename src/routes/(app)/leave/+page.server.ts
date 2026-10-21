@@ -17,6 +17,7 @@ import { managerFor, reviewableUserIds } from '$lib/server/approval-chain';
 import { leaveReach } from '$lib/server/org-scope';
 import type { SessionUser } from '$lib/server/auth';
 import { getUsersWithProfilePicture } from '$lib/server/db/mongo';
+import { notHidden } from '$lib/server/hidden-users';
 
 /**
  * Every role reads the same published holiday calendar rows and the same
@@ -82,7 +83,8 @@ async function loadCalendarEvents(user: SessionUser) {
 	// Someone else's cancelled leave is left off; one's own stays visible.
 	const reach = await leaveReach(user);
 	const notCancelled = or(eq(leaveApplications.userId, user.id), ne(leaveApplications.status, 'cancelled'));
-	leaveEvents = await base.where(reach.ids === null ? notCancelled : and(inArray(leaveApplications.userId, reach.ids), notCancelled));
+	const visible = and(notCancelled, or(notHidden, eq(users.id, user.id)));
+	leaveEvents = await base.where(reach.ids === null ? visible : and(inArray(leaveApplications.userId, reach.ids), visible));
 	// Type and reason only where the viewer has a relationship that grants them;
 	// otherwise the day reads as plain "Leave" with no reason sent at all.
 	leaveEvents = leaveEvents.map((e) =>
@@ -227,14 +229,17 @@ export const load: PageServerLoad = async ({ locals }) => {
 				.innerJoin(leaveTypes, eq(leaveApplications.leaveTypeId, leaveTypes.id))
 				.innerJoin(users, eq(leaveApplications.userId, users.id))
 				.where(
-					or(
-						and(
-							eq(leaveApplications.status, 'pending'),
-							manageable.length ? inArray(leaveApplications.userId, manageable) : sql`false`
-						),
-						and(
-							eq(leaveApplications.status, 'escalated'),
-							hrReviewable.length ? inArray(leaveApplications.userId, hrReviewable) : sql`false`
+					and(
+						notHidden,
+						or(
+							and(
+								eq(leaveApplications.status, 'pending'),
+								manageable.length ? inArray(leaveApplications.userId, manageable) : sql`false`
+							),
+							and(
+								eq(leaveApplications.status, 'escalated'),
+								hrReviewable.length ? inArray(leaveApplications.userId, hrReviewable) : sql`false`
+							)
 						)
 					)
 				);
@@ -250,7 +255,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.from(leaveApplications)
 			.innerJoin(leaveTypes, eq(leaveApplications.leaveTypeId, leaveTypes.id))
 			.innerJoin(users, eq(leaveApplications.userId, users.id))
-			.where(inArray(leaveApplications.status, ['approved', 'rejected']))
+			.where(and(notHidden, inArray(leaveApplications.status, ['approved', 'rejected'])))
 			.orderBy(desc(leaveApplications.decidedAt))
 			.limit(50);
 	}

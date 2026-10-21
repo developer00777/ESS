@@ -12,6 +12,7 @@ import { actionLines, assignMode, TASK_PRIORITIES, type Reach, type TaskPriority
 import type { MeetingItemView, MeetingRowView, MeetingSummary, MeetingView, PersonRef } from '$lib/tasks/types';
 import { assignableFor, createTask, loadOrg, reachFor, treeOf, type Result } from '$lib/server/tasks/service';
 import { extractItems, type Attendee } from './extract';
+import { hiddenFrom, notHidden } from '$lib/server/hidden-users';
 import { createZoomMeeting, defaultZoomHost, deleteZoomMeeting, listSummaries, zoomUserCheck, meetingSummary, pastParticipants, recordStatus, zoomConfigured, zoomStartUrl, ZoomError, type ZoomSummary } from '$lib/server/zoom/client';
 
 /**
@@ -68,7 +69,7 @@ async function rowsToViews(viewer: SessionUser, rows: Row[], reach?: Reach): Pro
 			state: m.state,
 			source: m.source === 'pasted' ? 'pasted' : 'zoom',
 			host: m.hostId ? person(m.hostId) : null,
-			attendees: m.attendeeIds.slice(0, 12).map(person),
+			attendees: m.attendeeIds.filter((id) => !hiddenFrom(viewer.id, org.byId.get(id))).slice(0, 12).map(person),
 			guestCount: m.guestNames.length,
 			itemCount: kept.length,
 			itemsNeedingOwner: kept.filter((i) => !i.ownerId && !i.taskId).length,
@@ -279,7 +280,7 @@ async function teamFor(hostId: string | null): Promise<{ id: string; fullName: s
 		for (const p of org.children.get(host.reportsTo) ?? []) ids.add(p);
 	}
 	ids.add(hostId);
-	return [...ids].map((id) => org.byId.get(id)).filter((p) => p?.isActive).map((p) => ({ id: p!.id, fullName: p!.fullName }));
+	return [...ids].map((id) => org.byId.get(id)).filter((p) => p?.isActive && !hiddenFrom(hostId, p)).map((p) => ({ id: p!.id, fullName: p!.fullName }));
 }
 
 async function writeItems(m: Row, summary: MeetingSummary, attendees: Attendee[]) {
@@ -487,6 +488,7 @@ export async function zoomLinks() {
 		.select({ id: zoomUserLinks.id, zoomKey: zoomUserLinks.zoomKey, userId: zoomUserLinks.userId, fullName: users.fullName, createdAt: zoomUserLinks.createdAt })
 		.from(zoomUserLinks)
 		.innerJoin(users, eq(users.id, zoomUserLinks.userId))
+		.where(notHidden)
 		.orderBy(asc(zoomUserLinks.zoomKey));
 	// Names Zoom used in recent meetings that matched nobody.
 	const recent = await db
@@ -627,7 +629,7 @@ export async function scheduleMeeting(viewer: SessionUser, input: ScheduleInput)
 	if (startsAt.getTime() < Date.now() - 5 * 60_000) return { ok: false, message: 'That time has already passed' };
 	const duration = Math.min(Math.max(Math.round(input.durationMin || 30), 10), 480);
 	const org = await loadOrg();
-	const invited = [...new Set(input.attendeeIds.filter((id) => UUID.test(id) && id !== viewer.id && org.byId.get(id)?.isActive))].slice(0, 200);
+	const invited = [...new Set(input.attendeeIds.filter((id) => UUID.test(id) && id !== viewer.id && org.byId.get(id)?.isActive && !org.byId.get(id)?.hidden))].slice(0, 200);
 	const agenda = input.agenda?.trim().slice(0, 2000) || null;
 
 	let zoomMeetingId: string | null = null;

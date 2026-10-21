@@ -11,6 +11,7 @@ import { hasCap, invalidateCapabilities } from '$lib/server/capabilities';
 import { syncMembershipFor } from '$lib/server/chat/sync';
 import { invalidateOrgScope, userCanReach } from '$lib/server/org-scope';
 import { invalidateOrg } from '$lib/server/tasks/service';
+import { hiddenFrom, notHidden } from '$lib/server/hidden-users';
 
 const ROLES: Role[] = ['super_admin', 'admin', 'team_lead', 'employee'];
 
@@ -49,7 +50,7 @@ export const PUT: RequestHandler = async (event) => {
 	const body = await event.request.json();
 
 	const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-	if (!target) throw error(404, 'Employee not found');
+	if (!target || hiddenFrom(actor.id, target)) throw error(404, 'Employee not found');
 
 	if (viaPrivilege) {
 		if (target.role === 'admin' || target.role === 'super_admin') {
@@ -99,7 +100,7 @@ export const PUT: RequestHandler = async (event) => {
 			const remaining = await db
 				.select({ id: users.id })
 				.from(users)
-				.where(and(eq(users.role, 'super_admin'), ne(users.id, userId)));
+				.where(and(eq(users.role, 'super_admin'), ne(users.id, userId), notHidden));
 			if (remaining.length === 0) {
 				throw error(400, 'Cannot change the role of the only Super Admin account');
 			}
@@ -153,7 +154,7 @@ export const PUT: RequestHandler = async (event) => {
 			const [manager] = await db
 				.select({ id: users.id, teamId: users.teamId })
 				.from(users)
-				.where(eq(users.id, managerId))
+				.where(and(eq(users.id, managerId), notHidden))
 				.limit(1);
 			if (!manager) throw error(404, 'Reporting manager not found');
 
@@ -224,7 +225,7 @@ export const PUT: RequestHandler = async (event) => {
 		const hrId: string | null = body.hrUserId || null;
 		if (hrId) {
 			if (hrId === userId) throw error(400, 'Someone cannot be their own HR contact');
-			const [hr] = await db.select({ id: users.id }).from(users).where(eq(users.id, hrId)).limit(1);
+			const [hr] = await db.select({ id: users.id }).from(users).where(and(eq(users.id, hrId), notHidden)).limit(1);
 			if (!hr) throw error(404, 'HR contact not found');
 		}
 		changes.hrUserId = { from: profile.hrUserId, to: hrId };

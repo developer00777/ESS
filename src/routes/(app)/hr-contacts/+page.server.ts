@@ -1,7 +1,8 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { users, employeeProfiles } from '$lib/server/db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
+import { notHidden } from '$lib/server/hidden-users';
 import { getUsersWithProfilePicture } from '$lib/server/db/mongo';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -19,7 +20,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const superAdmins = await db
 		.select({ id: users.id })
 		.from(users)
-		.where(eq(users.role, 'super_admin'));
+		.where(and(eq(users.role, 'super_admin'), notHidden));
 	superAdmins.forEach((a) => idsToShow.add(a.id));
 	idsToShow.delete(user.id);
 
@@ -41,7 +42,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		})
 		.from(users)
 		.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
-		.where(inArray(users.id, [...idsToShow]));
+		.where(and(inArray(users.id, [...idsToShow]), notHidden));
 
 	const withPicture = await getUsersWithProfilePicture(rows.map((r) => r.id));
 

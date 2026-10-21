@@ -28,6 +28,7 @@ import { CHIEF_PICK } from '$lib/chief';
 import { summaryOf } from '$lib/announcements';
 import { istDateKey, parseDay } from '$lib/chat/rules';
 import type { ChampCard, ChampReport } from '$lib/champ';
+import { notHidden } from '$lib/server/hidden-users';
 
 /**
  * Champ's tools for ESS. Each one reads with the asker's own reach: a tool the
@@ -99,7 +100,7 @@ async function findPerson(query: string, scope?: string[]) {
 	const rows = await db
 		.select({ id: users.id, fullName: users.fullName, email: users.email })
 		.from(users)
-		.where(and(eq(users.isActive, true), or(eq(sql`lower(${users.email})`, q.toLowerCase()), ilike(users.fullName, `%${q.replace(/[%_]/g, '')}%`))))
+		.where(and(eq(users.isActive, true), notHidden, or(eq(sql`lower(${users.email})`, q.toLowerCase()), ilike(users.fullName, `%${q.replace(/[%_]/g, '')}%`))))
 		.limit(10);
 	const inScope = scope ? rows.filter((r) => scope.includes(r.id)) : rows;
 	const exact = inScope.filter((r) => r.email.toLowerCase() === q.toLowerCase() || r.fullName.toLowerCase() === q.toLowerCase());
@@ -400,11 +401,11 @@ async function teamScope(c: Caller, teamName?: string): Promise<{ ids: string[];
 	if (isHrLike(c) && teamName) {
 		const [t] = await db.select({ id: teams.id, name: teams.name }).from(teams).where(ilike(teams.name, `%${teamName.replace(/[%_]/g, '')}%`)).limit(1);
 		if (!t) return null;
-		const ids = await db.select({ id: users.id }).from(users).where(and(eq(users.teamId, t.id), eq(users.isActive, true)));
+		const ids = await db.select({ id: users.id }).from(users).where(and(eq(users.teamId, t.id), eq(users.isActive, true), notHidden));
 		return { ids: ids.map((i) => i.id), label: t.name };
 	}
 	if (!c.user.teamId) return null;
-	const ids = await db.select({ id: users.id }).from(users).where(and(eq(users.teamId, c.user.teamId), eq(users.isActive, true)));
+	const ids = await db.select({ id: users.id }).from(users).where(and(eq(users.teamId, c.user.teamId), eq(users.isActive, true), notHidden));
 	const [t] = await db.select({ name: teams.name }).from(teams).where(eq(teams.id, c.user.teamId)).limit(1);
 	return { ids: ids.map((i) => i.id), label: t?.name ?? 'your team' };
 }
@@ -531,7 +532,7 @@ const peopleSearch: Tool = {
 			.from(users)
 			.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
 			.leftJoin(teams, eq(teams.id, users.teamId));
-		const active = eq(users.isActive, true);
+		const active = and(eq(users.isActive, true), notHidden);
 		let where;
 		if (f === 'no_manager') where = and(active, isNull(users.reportsTo), or(isNull(employeeProfiles.reportsToChief), eq(employeeProfiles.reportsToChief, false)), sql`${users.role} <> 'super_admin'`);
 		else if (f === 'no_hr') where = and(active, isNull(employeeProfiles.hrUserId));
@@ -616,7 +617,7 @@ const buildReport: Tool = {
 			left join users hr on hr.id = p.hr_user_id
 			left join shift_groups sg on sg.id = p.shift_group_id
 			left join custom_roles cr on cr.id = u.custom_role_id
-			where u.is_active
+			where u.is_active and u.hidden = false
 				${team ? sql`and t.name ilike ${'%' + team.replace(/[%_]/g, '') + '%'}` : sql``}
 				${['employee', 'team_lead', 'admin', 'super_admin'].includes(role) ? sql`and u.role = ${role}` : sql``}
 			order by u.full_name
@@ -788,7 +789,7 @@ const listRoles: Tool = {
 	allowed: (c) => c.mode === 'panel' && (hasCap(c.user, 'access.view') || hasCap(c.user, 'system.roles')),
 	run: async () => {
 		const named = await db.select().from(customRoles);
-		const counts = await db.execute(sql`select custom_role_id as id, count(*)::int as n from users where is_active group by custom_role_id`);
+		const counts = await db.execute(sql`select custom_role_id as id, count(*)::int as n from users where is_active and hidden = false group by custom_role_id`);
 		const byId = new Map((counts.rows as { id: string | null; n: number }[]).map((r) => [r.id, r.n]));
 		const label = (k: string) => CAPABILITIES.find((c) => c.key === k)?.label ?? k;
 		return {

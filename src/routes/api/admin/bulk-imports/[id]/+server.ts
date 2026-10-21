@@ -2,8 +2,9 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { bulkImports, bulkImportRows, users } from '$lib/server/db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { requireCap } from '$lib/server/capabilities';
+import { notHidden } from '$lib/server/hidden-users';
 
 export const GET: RequestHandler = async (event) => {
 	requireCap(event, 'people.bulk_import');
@@ -17,7 +18,7 @@ export const GET: RequestHandler = async (event) => {
 	const existingUserIds = [...new Set(rows.map((r) => r.existingUserId).filter((id): id is string => Boolean(id)))];
 	const existingUsers =
 		existingUserIds.length > 0
-			? await db.select({ id: users.id, fullName: users.fullName, email: users.email }).from(users).where(inArray(users.id, existingUserIds))
+			? await db.select({ id: users.id, fullName: users.fullName, email: users.email }).from(users).where(and(notHidden, inArray(users.id, existingUserIds)))
 			: [];
 	const existingUserById = new Map(existingUsers.map((u) => [u.id, u]));
 

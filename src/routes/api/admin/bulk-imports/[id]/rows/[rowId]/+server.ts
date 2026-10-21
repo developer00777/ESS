@@ -62,12 +62,12 @@ export const PATCH: RequestHandler = async (event) => {
 		}
 
 		const [clashingUser] = await db
-			.select({ fullName: users.fullName })
+			.select({ fullName: users.fullName, hidden: users.hidden })
 			.from(users)
 			.where(eq(users.email, officialEmail))
 			.limit(1);
 		if (clashingUser) {
-			throw error(400, `"${officialEmail}" already belongs to an existing account (${clashingUser.fullName})`);
+			throw error(400, clashingUser.hidden ? `"${officialEmail}" is not available` : `"${officialEmail}" already belongs to an existing account (${clashingUser.fullName})`);
 		}
 
 		patch.officialEmail = officialEmail;

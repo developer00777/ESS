@@ -13,6 +13,7 @@ import { and, count, countDistinct, desc, eq, isNotNull, lt, sql } from 'drizzle
 import { buildOrgTree } from '$lib/org-chart';
 import type { AdminFacts } from '$lib/admin-issues';
 import { loadStaleConfirmations } from '$lib/server/announcements';
+import { notHidden } from '$lib/server/hidden-users';
 
 const DAY = 86_400_000;
 
@@ -52,7 +53,7 @@ export async function loadAdminFacts(now = new Date()): Promise<AdminFacts> {
 			})
 			.from(users)
 			.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
-			.where(eq(users.isActive, true)),
+			.where(and(eq(users.isActive, true), notHidden)),
 		db
 			.select({ createdAt: attendanceImports.createdAt })
 			.from(attendanceImports)
@@ -80,6 +81,7 @@ export async function loadAdminFacts(now = new Date()): Promise<AdminFacts> {
 			.where(
 				and(
 					eq(users.isActive, true),
+					notHidden,
 					eq(users.mustChangePassword, true),
 					isNotNull(users.temporaryPassword),
 					lt(users.createdAt, twoWeeksAgo)
@@ -105,7 +107,8 @@ export async function loadAdminFacts(now = new Date()): Promise<AdminFacts> {
 		// Ask HR questions still open.
 		db.execute(sql`
 			select
-				(select count(distinct author_id)::int from chat_messages where created_at > now() - interval '7 days' and author_id is not null) as people,
+				(select count(distinct author_id)::int from chat_messages where created_at > now() - interval '7 days' and author_id is not null
+					and author_id in (select u.id from users u where u.hidden = false)) as people,
 				(select count(*)::int from chat_messages where created_at > now() - interval '7 days' and author_id is not null) as messages,
 				(select count(*)::int from chat_channels where kind = 'desk' and desk_status = 'open'
 					and exists (select 1 from chat_messages m where m.channel_id = chat_channels.id)) as desk

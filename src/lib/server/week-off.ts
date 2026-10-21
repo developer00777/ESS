@@ -8,6 +8,7 @@
 
 import { db } from '$lib/server/db/postgres';
 import { weekOffRosters, weekOffAssignments, users } from '$lib/server/db/schema';
+import { hiddenFrom } from './hidden-users';
 import { eq, inArray, or, isNull, and } from 'drizzle-orm';
 import {
 	makeWeekOffResolver,
@@ -211,12 +212,13 @@ export async function canAssignTo(
 	actor: { id: string; role: string; teamId: string | null },
 	targetUserId: string
 ): Promise<boolean> {
-	if (actor.role === 'super_admin' || actor.role === 'admin') return true;
-	if (actor.role !== 'team_lead') return false;
+	if (actor.role !== 'super_admin' && actor.role !== 'admin' && actor.role !== 'team_lead') return false;
 	const [target] = await db
-		.select({ teamId: users.teamId })
+		.select({ id: users.id, teamId: users.teamId, hidden: users.hidden })
 		.from(users)
 		.where(eq(users.id, targetUserId))
 		.limit(1);
-	return Boolean(target && actor.teamId && target.teamId === actor.teamId);
+	if (!target || hiddenFrom(actor.id, target)) return false;
+	if (actor.role === 'super_admin' || actor.role === 'admin') return true;
+	return Boolean(actor.teamId && target.teamId === actor.teamId);
 }

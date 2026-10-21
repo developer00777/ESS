@@ -18,6 +18,7 @@ import {
 } from '$lib/server/db/schema';
 import { eq, and, or, inArray, lte, gte, desc, isNotNull, sql } from 'drizzle-orm';
 import { hashPassword } from '$lib/server/auth';
+import { notHidden } from '$lib/server/hidden-users';
 import { addNewLoginToClerk, clerkAuthActive, ensureClerkAccount, mirrorPasswordToClerk, newLoginCredentials } from '$lib/server/clerk';
 import { randomBytes } from 'node:crypto';
 import { logActivity, getPasswordActivity, getUsersWithProfilePicture } from '$lib/server/db/mongo';
@@ -173,16 +174,19 @@ export const load: PageServerLoad = async ({ locals }) => {
 	// details) lists everyone.
 	const seesEveryone = reach === null;
 	const roster = seesEveryone
-		? await db.select().from(users)
+		? await db.select().from(users).where(notHidden)
 		: await db
 				.select()
 				.from(users)
 				.where(
-					// The whole-team half is only what Team Leads already had; an
-					// Employee-role manager gets their reports, not their teammates.
-					user.role === 'employee'
-						? inArray(users.id, reach ?? [user.id])
-						: or(eq(users.teamId, user.teamId ?? ''), inArray(users.id, reach ?? [user.id]))
+					and(
+						notHidden,
+						// The whole-team half is only what Team Leads already had; an
+						// Employee-role manager gets their reports, not their teammates.
+						user.role === 'employee'
+							? inArray(users.id, reach ?? [user.id])
+							: or(eq(users.teamId, user.teamId ?? ''), inArray(users.id, reach ?? [user.id]))
+					)
 				);
 
 	const today = new Date().toISOString().slice(0, 10);
@@ -216,7 +220,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.innerJoin(users, eq(leaveApplications.userId, users.id))
 		.where(
 			// What this person can decide now, per the approval chain.
-			and(eq(leaveApplications.status, 'pending'), manageable.length ? inArray(leaveApplications.userId, manageable) : sql`false`)
+			and(notHidden, eq(leaveApplications.status, 'pending'), manageable.length ? inArray(leaveApplications.userId, manageable) : sql`false`)
 		);
 
 	const year = new Date().getFullYear();
@@ -305,7 +309,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const allPeople = await db
 		.select({ id: users.id, fullName: users.fullName, role: users.role, teamId: users.teamId })
 		.from(users)
-		.where(eq(users.isActive, true))
+		.where(and(eq(users.isActive, true), notHidden))
 		.orderBy(users.fullName);
 	const nameById = new Map(allPeople.map((p) => [p.id, p.fullName]));
 
@@ -441,7 +445,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		];
 		const involvedUsers =
 			involvedIds.length > 0
-				? await db.select({ id: users.id, fullName: users.fullName, email: users.email }).from(users).where(inArray(users.id, involvedIds))
+				? await db.select({ id: users.id, fullName: users.fullName, email: users.email }).from(users).where(and(inArray(users.id, involvedIds), notHidden))
 				: [];
 		const byId = new Map(involvedUsers.map((u) => [u.id, u]));
 
@@ -567,7 +571,7 @@ export const actions: Actions = {
 		// the case where the sheet lists a different email for someone who already has a
 		// real login (e.g. their actual account uses a different domain). Surfaced as a
 		// review flag rather than silently creating a duplicate account for the same person.
-		const allExistingUsers = await db.select({ id: users.id, fullName: users.fullName, email: users.email }).from(users);
+		const allExistingUsers = await db.select({ id: users.id, fullName: users.fullName, email: users.email }).from(users).where(notHidden);
 
 		// The employee code is unique and is the attendance join key, so a code
 		// already taken by someone else has to be caught before apply — otherwise
@@ -898,7 +902,7 @@ export const actions: Actions = {
 		// just this batch — the dotted line often points at someone senior who was
 		// already onboarded. Unresolvable names (people outside the roster, or a
 		// title like "Chief") keep their raw text and simply carry no code.
-		const allUsers = await db.select({ id: users.id, fullName: users.fullName }).from(users);
+		const allUsers = await db.select({ id: users.id, fullName: users.fullName }).from(users).where(notHidden);
 		const candidates = allUsers.map((u) => ({ key: u.id, fullName: u.fullName }));
 
 		for (const row of rows) {

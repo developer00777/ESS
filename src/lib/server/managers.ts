@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db/postgres';
 import { employeeProfiles, users } from '$lib/server/db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
+import { notHidden } from './hidden-users';
 import { formatManager, matchNameWithCodeTieBreak } from '$lib/server/name-match';
 
 export interface ResolvedManager {
@@ -55,7 +56,7 @@ export async function resolveManagers(sources: ManagerSources): Promise<Resolved
 				})
 				.from(users)
 				.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
-				.where(inArray(users.id, ids))
+				.where(and(inArray(users.id, ids), notHidden))
 		: [];
 
 	const byId = new Map(rows.map((r) => [r.id, r]));
@@ -79,6 +80,7 @@ export async function resolveManagers(sources: ManagerSources): Promise<Resolved
 				})
 				.from(users)
 				.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
+				.where(notHidden)
 		: [];
 
 	const build = (id: string | null, raw: string | null): ResolvedManager | null => {

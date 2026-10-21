@@ -6,6 +6,7 @@ import { requireUser, canActOnUser } from '$lib/server/rbac';
 import { hasCap } from '$lib/server/capabilities';
 import { hashPassword } from '$lib/server/auth';
 import { eq } from 'drizzle-orm';
+import { hiddenFrom } from '$lib/server/hidden-users';
 import { logActivity } from '$lib/server/db/mongo';
 import { mirrorPasswordToClerk } from '$lib/server/clerk';
 import { userCanReach } from '$lib/server/org-scope';
@@ -32,7 +33,7 @@ export const PUT: RequestHandler = async (event) => {
 
 	if (!/^[0-9a-f-]{36}$/i.test(targetUserId)) throw error(404, 'User not found');
 	const [target] = await db.select().from(users).where(eq(users.id, targetUserId)).limit(1);
-	if (!target) {
+	if (!target || hiddenFrom(actor.id, target)) {
 		throw error(404, 'User not found');
 	}
 

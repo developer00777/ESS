@@ -8,6 +8,7 @@ import { logActivity } from '$lib/server/db/mongo';
 import { evaluateCompOffEligibility } from '$lib/server/comp-off';
 import { canReviewStage, isSingleStageFor } from '$lib/server/approval-chain';
 import { notifyNewRequest, notifyDecision } from '$lib/server/chat/cards';
+import { hiddenFrom } from '$lib/server/hidden-users';
 
 /**
  * SOP §1: verify attendance, confirm 7+ hours, then credit the comp-off.
@@ -63,7 +64,7 @@ export const POST: RequestHandler = async (event) => {
 	const stage = credit.status === 'manager_approved' || isReversal ? 'hr' : 'manager';
 
 	const [claimant] = await db.select().from(users).where(eq(users.id, credit.userId)).limit(1);
-	if (!claimant) throw error(404, 'Claiming employee not found');
+	if (!claimant || hiddenFrom(approver.id, claimant)) throw error(404, 'Claiming employee not found');
 
 	// No distinct manager to give the first sign-off means HR covers both stages,
 	// so this one approval credits the day. Without this the same person had to

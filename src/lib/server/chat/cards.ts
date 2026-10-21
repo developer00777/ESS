@@ -15,6 +15,7 @@ import { canReviewStage, managerFor, reportsToChief, assignedHrFor } from '$lib/
 import { ensureSystemFeed } from './access';
 import { publish } from './bus';
 import { deliverNotification } from './notify';
+import { notHidden } from '$lib/server/hidden-users';
 
 /**
  * ESS cards in Champ Chat. A leave request, attendance correction or comp-off
@@ -43,7 +44,7 @@ async function allHr(exclude: string): Promise<string[]> {
 	const rows = await db
 		.select({ id: users.id })
 		.from(users)
-		.where(and(eq(users.isActive, true), inArray(users.role, [...HR_ROLES])));
+		.where(and(eq(users.isActive, true), inArray(users.role, [...HR_ROLES]), notHidden));
 	return rows.map((r) => r.id).filter((id) => id !== exclude);
 }
 

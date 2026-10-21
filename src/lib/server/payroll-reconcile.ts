@@ -1,7 +1,8 @@
 import ExcelJS from 'exceljs';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { db } from './db/postgres';
 import { payrollReconciliations, users } from './db/schema';
+import { notHidden } from './hidden-users';
 import {
 	columnId,
 	compareSheet,
@@ -364,7 +365,7 @@ export async function listRuns(cycleKey?: string) {
 			by: users.fullName
 		})
 		.from(payrollReconciliations)
-		.leftJoin(users, eq(users.id, payrollReconciliations.uploadedBy))
+		.leftJoin(users, and(eq(users.id, payrollReconciliations.uploadedBy), notHidden))
 		.where(cycleKey ? eq(payrollReconciliations.cycleKey, cycleKey) : undefined)
 		.orderBy(desc(payrollReconciliations.createdAt))
 		.limit(50);

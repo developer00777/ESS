@@ -10,6 +10,7 @@ import { canOpenAdmin } from '$lib/capabilities';
 import { loadBadge } from '$lib/server/announcements';
 import { sidebarFor } from '$lib/server/chat/channels';
 import { teamPageAccess } from '$lib/server/team-access';
+import { notHidden } from '$lib/server/hidden-users';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
 	if (!locals.user) {
@@ -48,6 +49,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	if (role !== 'employee') {
 		const where = and(
 			eq(users.isActive, true),
+			notHidden,
 			ne(users.id, locals.user.id),
 			or(locals.user.teamId ? eq(users.teamId, locals.user.teamId) : sql`false`, eq(users.reportsTo, locals.user.id))
 		);

@@ -18,6 +18,7 @@ import { isMailerConfigured, sendEmail } from '$lib/server/mailer';
 import { getMongo } from '$lib/server/db/mongo';
 import { istDateKey } from '$lib/chat/rules';
 import { hasLocalStream, publish } from './bus';
+import { notHidden } from '$lib/server/hidden-users';
 import { onlineSet, workStatuses } from './presence';
 
 /**
@@ -195,7 +196,7 @@ export async function postCelebrations(now = new Date()) {
 		.from(users)
 		.innerJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
 		.leftJoin(chatPrefs, eq(chatPrefs.userId, users.id))
-		.where(eq(users.isActive, true));
+		.where(and(eq(users.isActive, true), notHidden));
 	const { postToChannel } = await import('./messages');
 	for (const p of rows) {
 		if (p.opted === false) continue;

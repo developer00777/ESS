@@ -19,7 +19,7 @@ export const load: PageServerLoad = async ({ locals, url, depends }) => {
 	if (!r.ok) throw error(r.status ?? 403, r.message);
 	const leads = seeAll
 		? [...org.children.entries()]
-				.filter(([id, kids]) => kids.length > 0 && org.byId.get(id)?.isActive)
+				.filter(([id, kids]) => kids.length > 0 && org.byId.get(id)?.isActive && !org.byId.get(id)?.hidden)
 				.map(([id]) => ({ id, fullName: org.byId.get(id)!.fullName }))
 				.sort((a, b) => a.fullName.localeCompare(b.fullName))
 		: [];

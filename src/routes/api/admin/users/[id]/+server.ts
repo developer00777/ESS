@@ -4,7 +4,8 @@ import { db } from '$lib/server/db/postgres';
 import { users } from '$lib/server/db/schema';
 import { logActivity } from '$lib/server/db/mongo';
 import { deleteEmployee } from '$lib/server/admin-cleanup';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import { hiddenFrom, notHidden } from '$lib/server/hidden-users';
 import { requireCap } from '$lib/server/capabilities';
 
 /**
@@ -24,12 +25,12 @@ export const DELETE: RequestHandler = async (event) => {
 	}
 
 	const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-	if (!target) throw error(404, 'Employee not found');
+	if (!target || hiddenFrom(actor.id, target)) throw error(404, 'Employee not found');
 
 	// Refuse to remove the last super admin — the portal would have no one who
 	// can administer it.
 	if (target.role === 'super_admin') {
-		const admins = await db.select({ id: users.id }).from(users).where(eq(users.role, 'super_admin'));
+		const admins = await db.select({ id: users.id }).from(users).where(and(eq(users.role, 'super_admin'), notHidden));
 		if (admins.length <= 1) {
 			throw error(400, 'Cannot delete the only Super Admin account');
 		}

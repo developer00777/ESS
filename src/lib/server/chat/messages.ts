@@ -19,6 +19,7 @@ import { publish } from './bus';
 import { channelMemberIds, membership } from './access';
 import { deliverNotification } from './notify';
 import { resolveCards, type CardRef, type ResolvedCard } from './cards';
+import { notHidden } from '$lib/server/hidden-users';
 
 export const MAX_BODY = 4000;
 
@@ -59,7 +60,7 @@ async function serialize(viewer: SessionUser, rows: Row[]): Promise<ChatMessageV
 			.select({ messageId: chatReactions.messageId, emoji: chatReactions.emoji, userId: chatReactions.userId, name: users.fullName })
 			.from(chatReactions)
 			.innerJoin(users, eq(users.id, chatReactions.userId))
-			.where(inArray(chatReactions.messageId, ids)),
+			.where(and(inArray(chatReactions.messageId, ids), or(notHidden, eq(chatReactions.userId, viewer.id)))),
 		db.select({ messageId: chatSaved.messageId }).from(chatSaved).where(and(inArray(chatSaved.messageId, ids), eq(chatSaved.userId, viewer.id))),
 		db.select().from(chatPollVotes).where(inArray(chatPollVotes.messageId, ids))
 	]);
@@ -433,7 +434,7 @@ export async function reportMessage(viewer: SessionUser, id: string, reason: str
 	const mods = await db
 		.select({ id: users.id })
 		.from(users)
-		.where(and(eq(users.isActive, true), inArray(users.role, ['admin', 'super_admin'])));
+		.where(and(eq(users.isActive, true), inArray(users.role, ['admin', 'super_admin']), notHidden));
 	const { postToFeed } = await import('./cards');
 	for (const mod of mods) {
 		if (mod.id === m.authorId) continue;

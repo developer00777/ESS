@@ -17,11 +17,12 @@ import {
 	holidayCalendars,
 	holidays
 } from '$lib/server/db/schema';
-import { and, eq, gte, inArray, lte } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, or } from 'drizzle-orm';
 import { getUsersWithProfilePicture } from '$lib/server/db/mongo';
 import { loadWeekOffFor } from '$lib/server/week-off';
 import type { SessionUser } from '$lib/server/auth';
 import { leaveReach } from '$lib/server/org-scope';
+import { notHidden } from '$lib/server/hidden-users';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const keyOf = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -122,7 +123,7 @@ export async function loadPlanner(
 		})
 		.from(users)
 		.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
-		.where(and(inArray(users.id, scopeIds), eq(users.isActive, true)));
+		.where(and(inArray(users.id, scopeIds), eq(users.isActive, true), or(notHidden, eq(users.id, user.id))));
 
 	const ids = people.map((p) => p.id);
 

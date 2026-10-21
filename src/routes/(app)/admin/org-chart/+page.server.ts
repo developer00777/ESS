@@ -1,7 +1,8 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { employeeProfiles, teams, users } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import { notHidden } from '$lib/server/hidden-users';
 import { buildOrgTree, type OrgPerson } from '$lib/org-chart';
 import { gateAdminPage } from '$lib/server/capabilities';
 
@@ -30,7 +31,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.from(users)
 		.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
 		.leftJoin(teams, eq(teams.id, users.teamId))
-		.where(eq(users.isActive, true));
+		.where(and(eq(users.isActive, true), notHidden));
 
 	const teamNameById = new Map(rows.map((r) => [r.id, r.teamName]));
 
