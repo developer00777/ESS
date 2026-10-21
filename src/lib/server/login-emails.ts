@@ -5,6 +5,7 @@ import type { SessionUser } from '$lib/server/auth';
 import { hasCap } from '$lib/server/capabilities';
 import { logActivity } from '$lib/server/db/mongo';
 import { isMailerConfigured, sendWelcomeEmail } from '$lib/server/mailer';
+import { clerkAuthActive } from '$lib/server/clerk';
 import { postToFeed } from '$lib/server/chat/cards';
 
 /**
@@ -19,7 +20,9 @@ import { postToFeed } from '$lib/server/chat/cards';
  *
  * The temporary password is read from users.temporary_password at the moment
  * of sending, so the email always carries the password that works now, and a
- * person who has already signed in and chosen their own is skipped.
+ * person who has already signed in and chosen their own is skipped. While
+ * Clerk is the sign-in the email carries no password at all, only how to sign
+ * in with the code Clerk emails them.
  */
 
 export type LoginEmailSource = 'single' | 'bulk' | 'reissue' | 'champ';
@@ -110,7 +113,7 @@ export type LoginEmailRow = {
 	error: string | null;
 	/** Where it stands in the sending order, for approved ones. */
 	position: number | null;
-	/** Still has a temporary password, i.e. has not signed in yet. */
+	/** Has not signed in and chosen their own password yet. */
 	waitingToSignIn: boolean;
 };
 
@@ -118,7 +121,7 @@ export async function listLoginEmails(): Promise<{ rows: LoginEmailRow[]; settin
 	const requester = sql<string | null>`(select full_name from users r where r.id = ${loginEmails.requestedBy})`;
 	const approver = sql<string | null>`(select full_name from users a where a.id = ${loginEmails.approvedBy})`;
 	const rows = await db
-		.select({ q: loginEmails, fullName: users.fullName, email: users.email, temp: users.temporaryPassword, requestedBy: requester, approvedBy: approver })
+		.select({ q: loginEmails, fullName: users.fullName, email: users.email, mustChange: users.mustChangePassword, requestedBy: requester, approvedBy: approver })
 		.from(loginEmails)
 		.innerJoin(users, eq(users.id, loginEmails.userId))
 		.where(or(inArray(loginEmails.status, ['pending', 'approved', 'sending', 'failed']), sql`${loginEmails.createdAt} > now() - interval '14 days'`))
@@ -150,7 +153,7 @@ export async function listLoginEmails(): Promise<{ rows: LoginEmailRow[]; settin
 			sentAt: r.q.sentAt?.toISOString() ?? null,
 			error: r.q.error,
 			position: r.q.status === 'approved' ? approvedOrder.indexOf(r.q.id) + 1 : null,
-			waitingToSignIn: !!r.temp
+			waitingToSignIn: r.mustChange
 		}))
 	};
 }
@@ -253,16 +256,23 @@ export async function sendNextLoginEmail(now = new Date()): Promise<'sent' | 'fa
 		await finish('skipped', 'The login has been deactivated');
 		return 'skipped';
 	}
-	if (!u.mustChange || !u.temp) {
+	if (!u.mustChange) {
 		await finish('skipped', 'They have already signed in and set their own password');
 		return 'skipped';
+	}
+	// With Clerk as the sign-in the email carries no password: the person signs
+	// in with an emailed code and chooses their own (password-state.ts).
+	const temporaryPassword = clerkAuthActive() ? null : u.temp;
+	if (!clerkAuthActive() && !u.temp) {
+		await finish('failed', 'This login has no password yet (it was made while Clerk was the sign-in). Re-issue it to give it a temporary password, or switch the sign-in back to Clerk.');
+		return 'failed';
 	}
 	const to = job.sendTo || (looksLikeEmail(u.email) ? u.email : null);
 	if (!to) {
 		await finish('failed', `"${u.email}" is not an email address. Correct it on the roster, then retry.`);
 		return 'failed';
 	}
-	const mail = await sendWelcomeEmail({ fullName: u.fullName, username: u.email, temporaryPassword: u.temp, to });
+	const mail = await sendWelcomeEmail({ fullName: u.fullName, username: u.email, temporaryPassword, to });
 	await finish(mail.ok ? 'sent' : 'failed', mail.ok ? null : (mail.error ?? 'The mail provider refused it'));
 	await logActivity({
 		actorUserId: 'system',

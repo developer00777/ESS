@@ -13,7 +13,7 @@ import {
 	holidayCalendars,
 	holidays
 } from '$lib/server/db/schema';
-import { eq, and, gte, lt, sql, desc } from 'drizzle-orm';
+import { eq, and, gte, lt, sql, desc, inArray } from 'drizzle-orm';
 import { getUsersWithProfilePicture } from '$lib/server/db/mongo';
 import { ensureLeaveAllocations } from '$lib/server/leave-accrual';
 import { meetingsToday } from '$lib/server/meetings/service';
@@ -165,17 +165,23 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		applicant: { id: string; fullName: string; teamId: string | null };
 	}> = [];
 
-	if (user.role === 'team_lead' || user.role === 'super_admin') {
+	// The queue is what this person can actually decide at the manager stage —
+	// the same list the approve endpoint checks (approval-chain.ts), including
+	// reports outside their team and requests they cover by delegation.
+	const [manageable, hrReviewable] = await Promise.all([
+		reviewableUserIds(user, 'manager'),
+		reviewableUserIds(user, 'hr')
+	]);
+	if (manageable.length > 0) {
 		const base = db
 			.select({ application: leaveApplications, type: leaveTypes, applicant: applicantColumns })
 			.from(leaveApplications)
 			.innerJoin(leaveTypes, eq(leaveApplications.leaveTypeId, leaveTypes.id))
 			.innerJoin(users, eq(leaveApplications.userId, users.id));
 
-		approvalQueue =
-			user.role === 'super_admin'
-				? await base.where(eq(leaveApplications.status, 'pending')).orderBy(desc(leaveApplications.createdAt))
-				: await base.where(and(eq(leaveApplications.status, 'pending'), eq(users.teamId, user.teamId ?? ''))).orderBy(desc(leaveApplications.createdAt));
+		approvalQueue = await base
+			.where(and(eq(leaveApplications.status, 'pending'), inArray(leaveApplications.userId, manageable)))
+			.orderBy(desc(leaveApplications.createdAt));
 	}
 
 	let upcomingHolidays: (typeof holidays.$inferSelect)[] = [];
@@ -219,11 +225,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	// --- Absence planner + onboarding ---
 	// Who shows is set by role (see planner.server.ts); the reviewable lists
 	// only mark which of those requests the viewer may decide now.
-	const [manageable, hrReviewable, feed] = await Promise.all([
-		reviewableUserIds(user, 'manager'),
-		reviewableUserIds(user, 'hr'),
-		loadFeed(user.id, now)
-	]);
+	const feed = await loadFeed(user.id, now);
 	const [planner, leaveOverview] = await Promise.all([
 		loadPlanner(user, { manager: manageable, hr: hrReviewable }, url.searchParams.get('m'), now),
 		loadMyLeave(user, now)
@@ -311,6 +313,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		latestRequest,
 		activity: activity.slice(0, 6),
 		meetingsToday: todaysMeetings,
+		canApproveQueue: manageable.length > 0,
 		approvalQueue: approvalQueue.map((r) => ({
 			...r,
 			applicantHasPicture: applicantsWithPictures.has(r.applicant.id)

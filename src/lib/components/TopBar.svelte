@@ -34,6 +34,8 @@
 		activePath?: string;
 		role?: Role;
 		canAdmin?: boolean;
+		/** Whether the Team page is open to them (src/lib/server/team-access.ts). */
+		canTeam?: boolean;
 		teamPeek?: { people: { id: string; fullName: string; hasPicture: boolean }[]; total: number } | null;
 		/** Where Add employee goes, or null when this login cannot create logins. */
 		addEmployeeHref?: string | null;
@@ -49,6 +51,7 @@
 		activePath = '',
 		role = 'employee',
 		canAdmin = false,
+		canTeam,
 		teamPeek = null,
 		addEmployeeHref = null
 	}: Props = $props();
@@ -60,7 +63,7 @@
 		{ href: '/leave', label: 'Leave' },
 		{ href: '/attendance', label: 'Attendance' },
 		{ href: '/policies', label: 'Policies' },
-		...(role !== 'employee' ? [{ href: '/team', label: 'Team' }] : []),
+		...((canTeam ?? role !== 'employee') ? [{ href: '/team', label: 'Team' }] : []),
 		...(canAdmin ? [{ href: '/admin', label: 'Admin' }] : [])
 	]);
 	const isActive = (href: string) =>

@@ -8,6 +8,7 @@ import { hashPassword } from '$lib/server/auth';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { mirrorPasswordToClerk } from '$lib/server/clerk';
+import { userCanReach } from '$lib/server/org-scope';
 
 // Admin-issued password reset for another user (no knowledge of their current password
 // required). Authorization mirrors canActOnUser: Super Admin/Admin may reset anyone,
@@ -39,7 +40,14 @@ export const PUT: RequestHandler = async (event) => {
 		if (target.role === 'admin' || target.role === 'super_admin') {
 			throw error(403, 'Only an HR Admin or Super Admin can reset an admin account password');
 		}
-	} else if (!canActOnUser(actor, target.id, target.teamId)) {
+	} else if (
+		!canActOnUser(
+			actor,
+			target.id,
+			target.teamId,
+			actor.role === 'team_lead' && (await userCanReach(actor, target.id, 'person.reset_password')) ? new Set([target.id]) : undefined
+		)
+	) {
 		throw error(403, 'Insufficient privileges to reset this user\'s password');
 	}
 

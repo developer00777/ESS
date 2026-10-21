@@ -204,6 +204,20 @@
       "when": 1792442024116,
       "tag": "0028_payroll_edits_and_ab_check",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792443639388,
+      "tag": "0029_org_scope_delegations",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792599773822,
+      "tag": "0030_auto_team_lead",
+      "breakpoints": true
     }
   ]
 }

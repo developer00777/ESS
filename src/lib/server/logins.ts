@@ -2,8 +2,8 @@ import { randomBytes } from 'node:crypto';
 import { db } from '$lib/server/db/postgres';
 import { customRoles, employeeProfiles, holidayCalendars, shiftGroups, teams, users } from '$lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
-import { hashPassword, type Role, type SessionUser } from '$lib/server/auth';
-import { mirrorPasswordToClerk } from '$lib/server/clerk';
+import { type Role, type SessionUser } from '$lib/server/auth';
+import { addNewLoginToClerk, newLoginCredentials } from '$lib/server/clerk';
 import { logActivity } from '$lib/server/db/mongo';
 import { queueLoginEmails } from '$lib/server/login-emails';
 import { hasCap, invalidateCapabilities } from '$lib/server/capabilities';
@@ -50,7 +50,8 @@ export type CreateResult =
 			success: true;
 			userId: string;
 			email: string;
-			tempPassword: string;
+			/** Null when Clerk is the sign-in: the person chooses their own. */
+			tempPassword: string | null;
 			/** Always false now: the welcome email waits for an admin's approval. */
 			emailSent: boolean;
 			emailError: string | null;
@@ -143,8 +144,9 @@ export async function createLogin(actor: SessionUser, input: NewLogin, opts: { s
 	const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
 	if (existing) return fail('A login with that email already exists');
 
-	const tempPassword = generateTemporaryPassword();
-	const passwordHash = await hashPassword(tempPassword);
+	// With Clerk as the sign-in there is no temporary password: the person signs
+	// in with an emailed code and chooses their own (password-state.ts).
+	const { temporaryPassword: tempPassword, passwordHash } = await newLoginCredentials();
 
 	const [created] = await db
 		.insert(users)
@@ -163,7 +165,7 @@ export async function createLogin(actor: SessionUser, input: NewLogin, opts: { s
 			temporaryPassword: tempPassword
 		})
 		.returning();
-	await mirrorPasswordToClerk(created.id, tempPassword);
+	await addNewLoginToClerk(created.id, tempPassword);
 
 	await db.insert(employeeProfiles).values({
 		userId: created.id,

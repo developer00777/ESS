@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db } from './db/postgres';
 import { users } from './db/schema';
 import { clerk, clerkConfigured, splitName } from './clerk';
+import { hasPassword } from './password-state';
 
 /**
  * Gives every active portal login a Clerk account with the SAME password and
@@ -88,13 +89,15 @@ export async function syncClerkAccounts(
 			}
 
 			if (existing) await clerk().users.deleteUser(existing);
+			// Someone who has not chosen a password yet gets a passwordless account:
+			// they sign in with the emailed code and choose one in the portal.
 			const created = await clerk().users.createUser({
 				externalId: u.id,
 				emailAddress: [u.email],
 				...splitName(u.fullName),
-				passwordDigest: u.passwordHash,
-				passwordHasher: 'argon2id',
-				skipPasswordChecks: true
+				...(hasPassword(u.passwordHash)
+					? { passwordDigest: u.passwordHash, passwordHasher: 'argon2id' as const, skipPasswordChecks: true }
+					: { skipPasswordRequirement: true })
 			});
 			await db.update(users).set({ clerkUserId: created.id }).where(eq(users.id, u.id));
 			if (existing) r.recreated++;

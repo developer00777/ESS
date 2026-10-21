@@ -55,7 +55,7 @@ export async function applyCard(event: RequestEvent, kind: ChampCardKind, action
 			void syncMembershipFor(r.userId).catch(() => {});
 			result = {
 				ok: true,
-				message: `Created. The welcome email to ${r.email} waits for an admin to approve it in Admin Controls › People. Temporary password: ${r.tempPassword}`
+				message: `Created. The welcome email to ${r.email} waits for an admin to approve it in Admin Controls › People. ${r.tempPassword ? `Temporary password: ${r.tempPassword}` : 'No password is set: they sign in with a code sent to their email, then choose their own.'}`
 			};
 			break;
 		}

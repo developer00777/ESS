@@ -29,16 +29,23 @@ export function isTeamLead(user: SessionUser): boolean {
 	return user.role === 'team_lead';
 }
 
-/** True if `user` may act on behalf of `targetUserId` (self, or their team lead / admin / super admin). */
+/**
+ * True if `user` may act on behalf of `targetUserId`: themselves, an admin or
+ * super admin, or a Team Lead over their own team — or over someone in
+ * `lineReach`, the people the org scope gives them edit reach on (their direct
+ * reports in another team; see $lib/server/org-scope).
+ */
 export function canActOnUser(
 	user: SessionUser,
 	targetUserId: string,
-	targetTeamId: string | null
+	targetTeamId: string | null,
+	lineReach?: ReadonlySet<string>
 ): boolean {
 	if (user.id === targetUserId) return true;
 	if (isSuperAdmin(user)) return true;
 	if (isAdmin(user)) return true;
 	if (isTeamLead(user) && targetTeamId && user.teamId === targetTeamId) return true;
+	if (isTeamLead(user) && lineReach?.has(targetUserId)) return true;
 	return false;
 }
 

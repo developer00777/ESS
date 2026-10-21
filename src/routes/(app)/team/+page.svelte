@@ -26,7 +26,7 @@
 	import LoginEmailQueue from '$lib/components/LoginEmailQueue.svelte';
 	import { WEEKDAY_LABELS, DEFAULT_WEEKDAYS_OFF, weekdaysOffOn } from '$lib/week-off';
 	import { BASE_ROLE_LABEL } from '$lib/capabilities';
-	import { CHIEF_PICK } from '$lib/chief';
+	import { CHIEF_PICK, isChiefReference } from '$lib/chief';
 
 	import type { ActionData, PageData } from './$types';
 
@@ -120,6 +120,12 @@
 	let showBulkImport = $state(false);
 	let bulkImportFile = $state<File | null>(null);
 	let uploadingBulk = $state(false);
+	/** "Replace file" swaps out the import under review; "Upload another" adds one. */
+	let replacing = $state(false);
+	function openUpload(replace: boolean) {
+		replacing = replace;
+		showBulkImport = true;
+	}
 	let selectedImportId = $state<string | null>(null);
 
 	type ReviewRow = {
@@ -139,6 +145,9 @@
 	};
 
 	let reviewImport = $state<{ id: string; filename: string; status: string; appliedAt: string | null } | null>(null);
+	const replaceable = $derived(reviewImport?.status === 'pending_review');
+	let issuesFirst = $state<string[]>([]);
+	const displayRows = $derived(issuesFirst.map((id) => rowById.get(id)).filter((r): r is ReviewRow => Boolean(r)));
 	let reviewRows = $state<ReviewRow[]>([]);
 	let loadingReview = $state(false);
 	let savingRowId = $state<string | null>(null);
@@ -164,6 +173,11 @@
 			if (res.ok) {
 				reviewImport = body.import;
 				reviewRows = body.rows;
+				// Rows that need attention first. Fixed once per load, so a row
+				// doesn't jump away the moment it is fixed.
+				issuesFirst = [...(body.rows as ReviewRow[])]
+					.sort((a, b) => Number(b.status === 'needs_review') - Number(a.status === 'needs_review'))
+					.map((r) => r.id);
 				selectedImportId = importId;
 			}
 		} finally {
@@ -188,7 +202,9 @@
 			});
 			const body = await res.json();
 			if (res.ok) {
-				reviewRows = reviewRows.map((r) => (r.id === rowId ? { ...r, ...body.row } : r));
+				// Picking a manager can make that row a Team Lead too.
+				const manager = body.promotedManager;
+				reviewRows = reviewRows.map((r) => (r.id === rowId ? { ...r, ...body.row } : manager && r.id === manager.id ? { ...r, ...manager } : r));
 				const { [rowId]: _cleared, ...rest } = rowErrors;
 				rowErrors = rest;
 			} else {
@@ -211,7 +227,13 @@
 
 	function onManagerChange(rowId: string, e: Event) {
 		const value = (e.target as HTMLSelectElement).value;
-		patchRow(rowId, { reportsToRowId: value === '' ? null : value });
+		if (value === CHIEF_PICK) patchRow(rowId, { reportsToChief: true });
+		else patchRow(rowId, { reportsToRowId: value === '' ? null : value });
+	}
+
+	/** The sheet put this row under Chief and nobody has picked a person instead. */
+	function reportsToChief(row: ReviewRow): boolean {
+		return !row.reportsToRowId && isChiefReference(row.reportingAuthorityRaw);
 	}
 
 	function resolveDuplicate(rowId: string, decision: 'link' | 'create_new') {
@@ -219,7 +241,7 @@
 	}
 
 	function managerName(row: ReviewRow): string {
-		if (!row.reportsToRowId) return '—';
+		if (!row.reportsToRowId) return reportsToChief(row) ? 'Chief' : '—';
 		return rowById.get(row.reportsToRowId)?.fullName ?? 'Unknown';
 	}
 
@@ -620,7 +642,12 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 			<span class="ess-notice__icon"><UserPlus size={15} /></span>
 			<div class="ess-notice__body">
 				<strong>Created {form.email}</strong>
-				Temporary password: <code class="code">{form.tempPassword}</code>. Their login email waits for an admin to approve it{data.canApproveLogins ? ' in Login delivery' : ''}. Nothing has been emailed yet.
+				{#if form.tempPassword}
+					Temporary password: <code class="code">{form.tempPassword}</code>.
+				{:else}
+					No password is set: they sign in with a code sent to their email, then choose their own.
+				{/if}
+				Their login email waits for an admin to approve it{data.canApproveLogins ? ' in Login delivery' : ''}. Nothing has been emailed yet.
 			</div>
 		</div>
 	{:else if form?.message}
@@ -1258,10 +1285,24 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 						<h2 class="ess-h2">Import preview</h2>
 						<p class="ess-caption">Upload any HR spreadsheet — the sheet and columns are detected automatically. Each new login gets its own temporary password and must be changed on first sign-in.</p>
 					</div>
-					<button class="ess-btn ess-btn--secondary" onclick={() => (showBulkImport = !showBulkImport)}>
-						<UploadCloud size={16} />
-						{showBulkImport ? 'Close' : reviewImport ? 'Replace file' : 'Upload spreadsheet'}
-					</button>
+					{#if showBulkImport}
+						<button class="ess-btn ess-btn--secondary" onclick={() => (showBulkImport = false)}>
+							<X size={16} /> Close
+						</button>
+					{:else if replaceable}
+						<div class="upload-actions">
+							<button class="ess-btn ess-btn--secondary" onclick={() => openUpload(true)}>
+								<UploadCloud size={16} /> Replace file
+							</button>
+							<button class="ess-btn ess-btn--ghost" onclick={() => openUpload(false)}>
+								<Plus size={16} /> Upload another
+							</button>
+						</div>
+					{:else}
+						<button class="ess-btn ess-btn--secondary" onclick={() => openUpload(false)}>
+							<UploadCloud size={16} /> Upload spreadsheet
+						</button>
+					{/if}
 				</div>
 
 				{#if showBulkImport}
@@ -1282,6 +1323,10 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 						}}
 						class="upload-form"
 					>
+						{#if replacing && reviewImport}
+							<input type="hidden" name="replaceImportId" value={reviewImport.id} />
+							<p class="ess-caption grow">Replaces <strong>{reviewImport.filename}</strong>, which is removed from review once the new file is read.</p>
+						{/if}
 						<label class="ess-field grow">
 							<span class="ess-label">Spreadsheet (.xlsx)</span>
 							<input class="ess-input" type="file" name="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onchange={onBulkFileChange} required />
@@ -1332,7 +1377,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 							<p>Could not email {form.bulkImportApplied.emailFailures.length} login(s) — copy these down now and pass them on directly. They are not recoverable after you leave this screen; re-issue the batch if you lose them.</p>
 							<ul class="fail-list">
 								{#each form.bulkImportApplied.emailFailures as failure (failure.email)}
-									<li><strong>{failure.email}</strong> — <code class="code">{failure.temporaryPassword}</code><span class="fail-reason">{failure.error}</span></li>
+									<li><strong>{failure.email}</strong>{#if failure.temporaryPassword} — <code class="code">{failure.temporaryPassword}</code>{/if}<span class="fail-reason">{failure.error}</span></li>
 								{/each}
 							</ul>
 						</div>
@@ -1364,7 +1409,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 							<p>{form.bulkImportReissued.emailFailures.length} of them have no usable email address, so nothing was queued for them — copy these down now and pass them on directly:</p>
 							<ul class="fail-list">
 								{#each form.bulkImportReissued.emailFailures as failure (failure.email)}
-									<li><strong>{failure.email}</strong> — <code class="code">{failure.temporaryPassword}</code><span class="fail-reason">{failure.error}</span></li>
+									<li><strong>{failure.email}</strong>{#if failure.temporaryPassword} — <code class="code">{failure.temporaryPassword}</code>{/if}<span class="fail-reason">{failure.error}</span></li>
 								{/each}
 							</ul>
 						</div>
@@ -1417,7 +1462,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 									</tr>
 								</thead>
 								<tbody>
-									{#each reviewRows as row (row.id)}
+									{#each displayRows as row (row.id)}
 										<tr class:attention={row.status === 'needs_review'}>
 											<td><strong>{row.fullName}</strong></td>
 											<td class="code-cell">{row.employeeCode ?? '—'}</td>
@@ -1443,8 +1488,9 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 												{#if locked || row.status === 'skipped_existing'}
 													{managerName(row)}
 												{:else}
-													<select class="ess-select" value={row.reportsToRowId ?? ''} onchange={(e) => onManagerChange(row.id, e)} disabled={savingRowId === row.id}>
+													<select class="ess-select" value={row.reportsToRowId ?? (reportsToChief(row) ? CHIEF_PICK : '')} onchange={(e) => onManagerChange(row.id, e)} disabled={savingRowId === row.id}>
 														<option value="">— none —</option>
+														<option value={CHIEF_PICK}>Chief</option>
 														{#each reviewRows.filter((r) => r.id !== row.id) as candidate (candidate.id)}
 															<option value={candidate.id}>{candidate.fullName}</option>
 														{/each}
@@ -2348,6 +2394,12 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 		max-width: 760px;
 		margin: 4px auto 24px;
 	}
+	.upload-actions {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
 	.upload-form {
 		display: flex;
 		align-items: flex-end;

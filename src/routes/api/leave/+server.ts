@@ -9,6 +9,7 @@ import {
 	users
 } from '$lib/server/db/schema';
 import { requireUser } from '$lib/server/rbac';
+import { leaveReach } from '$lib/server/org-scope';
 import { and, eq, gte, lte, inArray, sql } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
 import { checkPinkLeaveEligibility, monthBounds } from '$lib/server/leave-eligibility';
@@ -237,7 +238,7 @@ export const GET: RequestHandler = async (event) => {
 	const user = requireUser(event);
 	const scope = event.url.searchParams.get('scope'); // 'mine' | 'team'
 
-	if (scope === 'team' && (user.role === 'team_lead' || user.role === 'super_admin')) {
+	if (scope === 'team') {
 		const applicantColumns = {
 			id: users.id,
 			fullName: users.fullName,
@@ -245,19 +246,18 @@ export const GET: RequestHandler = async (event) => {
 			role: users.role,
 			teamId: users.teamId
 		};
-		const rows =
-			user.role === 'super_admin'
-				? await db
-						.select({ application: leaveApplications, applicant: applicantColumns })
-						.from(leaveApplications)
-						.innerJoin(users, eq(leaveApplications.userId, users.id))
-				: await db
-						.select({ application: leaveApplications, applicant: applicantColumns })
-						.from(leaveApplications)
-						.innerJoin(users, eq(leaveApplications.userId, users.id))
-						.where(eq(users.teamId, user.teamId ?? ''));
-
-		return json({ applications: rows });
+		// Same reach as the Leave calendar (src/lib/server/org-scope.ts): reports
+		// in any team, concerned HR, a covering delegate, a Team Lead's team —
+		// with the reason only where a relationship grants it.
+		const reach = await leaveReach(user);
+		const base = db
+			.select({ application: leaveApplications, applicant: applicantColumns })
+			.from(leaveApplications)
+			.innerJoin(users, eq(leaveApplications.userId, users.id));
+		const rows = reach.ids === null ? await base : await base.where(inArray(leaveApplications.userId, reach.ids));
+		return json({
+			applications: rows.map((r) => (reach.detail(r.application.userId) ? r : { ...r, application: { ...r.application, reason: null } }))
+		});
 	}
 
 	const rows = await db

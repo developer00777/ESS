@@ -29,6 +29,17 @@ describe('buildWelcomeEmail', () => {
 		}
 	});
 
+	test('with Clerk as the sign-in: no password, the emailed-code sign-in instead', () => {
+		const mail = buildWelcomeEmail({ ...BASE, temporaryPassword: null });
+
+		for (const body of [mail.html, mail.text]) {
+			expect(body).toContain('priya.r@championsmail.com');
+			expect(body).toContain('6-digit code');
+			expect(body).not.toContain('aB3-xY7_qZ');
+			expect(body).not.toMatch(/temporary password/i);
+		}
+	});
+
 	test('greets by first name only', () => {
 		const mail = buildWelcomeEmail(BASE);
 		expect(mail.text).toContain('Hi Priya,');

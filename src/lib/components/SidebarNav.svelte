@@ -27,6 +27,8 @@
 		canAdmin?: boolean;
 		/** Whether this login holds "See payroll" (payroll.view). */
 		canPayroll?: boolean;
+		/** Whether the Team page is open to them (src/lib/server/team-access.ts). */
+		canTeam?: boolean;
 		/** Open admin problems, shown on the Admin Controls row. */
 		adminIssueCount?: number;
 		/** Champ Hub: unread chat plus requests, minutes and due work; red when urgent. */
@@ -42,6 +44,7 @@
 		pictureVersion,
 		canAdmin = false,
 		canPayroll = false,
+		canTeam,
 		adminIssueCount = 0,
 		chatBadge = { count: 0, urgent: false }
 	}: Props = $props();
@@ -70,7 +73,7 @@
 		{ href: '/leave', label: 'Leave', icon: Calendar },
 		{ href: '/attendance', label: 'Attendance', icon: Clock },
 		{ href: '/policies', label: 'Policies', icon: FileText },
-		...(role !== 'employee' ? [{ href: '/team', label: 'Team', icon: Users }] : []),
+		...((canTeam ?? role !== 'employee') ? [{ href: '/team', label: 'Team', icon: Users }] : []),
 		...(canAdmin ? [{ href: '/admin', label: 'Admin Controls', icon: ShieldUser }] : []),
 		/* Payroll is live for those who run it; for everyone else payslips
 		   are not in the portal yet, and the row says so. */

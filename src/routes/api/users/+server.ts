@@ -3,11 +3,9 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db/postgres';
 import { users, teams } from '$lib/server/db/schema';
 import { requireRole, canCreateRole } from '$lib/server/rbac';
-import { hashPassword } from '$lib/server/auth';
-import { randomBytes } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '$lib/server/db/mongo';
-import { mirrorPasswordToClerk } from '$lib/server/clerk';
+import { addNewLoginToClerk, newLoginCredentials } from '$lib/server/clerk';
 
 export const POST: RequestHandler = async (event) => {
 	const actor = requireRole(event, ['super_admin', 'admin', 'team_lead']);
@@ -34,9 +32,9 @@ export const POST: RequestHandler = async (event) => {
 		}
 	}
 
-	// Temporary password — in production this would be an emailed invite/reset link.
-	const tempPassword = randomBytes(9).toString('base64url');
-	const passwordHash = await hashPassword(tempPassword);
+	// A temporary password, or none while Clerk is the sign-in (the person signs
+	// in with an emailed code and chooses their own, see password-state.ts).
+	const { temporaryPassword: tempPassword, passwordHash } = await newLoginCredentials();
 
 	const [created] = await db
 		.insert(users)
@@ -54,7 +52,7 @@ export const POST: RequestHandler = async (event) => {
 			temporaryPassword: tempPassword
 		})
 		.returning();
-	await mirrorPasswordToClerk(created.id, tempPassword);
+	await addNewLoginToClerk(created.id, tempPassword);
 
 	await logActivity({
 		actorUserId: actor.id,

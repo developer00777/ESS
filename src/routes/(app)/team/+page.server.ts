@@ -16,12 +16,15 @@ import {
 	prohanceDays,
 	customRoles
 } from '$lib/server/db/schema';
-import { eq, and, inArray, lte, gte, desc, isNotNull } from 'drizzle-orm';
+import { eq, and, or, inArray, lte, gte, desc, isNotNull, sql } from 'drizzle-orm';
 import { hashPassword } from '$lib/server/auth';
-import { mirrorPasswordToClerk } from '$lib/server/clerk';
+import { addNewLoginToClerk, clerkAuthActive, ensureClerkAccount, mirrorPasswordToClerk, newLoginCredentials } from '$lib/server/clerk';
 import { randomBytes } from 'node:crypto';
 import { logActivity, getPasswordActivity, getUsersWithProfilePicture } from '$lib/server/db/mongo';
 import { canActOnUser } from '$lib/server/rbac';
+import { scopeIds } from '$lib/server/org-scope';
+import { teamPageAccess } from '$lib/server/team-access';
+import { reviewableUserIds } from '$lib/server/approval-chain';
 import { hasCap, hasAnyCap, requireCap } from '$lib/server/capabilities';
 import { createLogin, creatableBaseRoles } from '$lib/server/logins';
 import { syncMembershipFor } from '$lib/server/chat/sync';
@@ -113,14 +116,15 @@ async function backfillProfile(
  */
 function canViewTemporaryPassword(
 	viewer: SessionUser,
-	target: { id: string; role: Role; teamId: string | null }
+	target: { id: string; role: Role; teamId: string | null },
+	lineReach?: ReadonlySet<string>
 ): boolean {
 	// A named role holding the reset privilege (IT Support) sees the pending
 	// password of the accounts it may reset: Employees and Team Leads.
 	if (viewer.role !== 'super_admin' && viewer.role !== 'admin' && hasCap(viewer, 'people.reset_password')) {
 		return target.role === 'employee' || target.role === 'team_lead';
 	}
-	return canEditPersonSettings(viewer, target);
+	return canEditPersonSettings(viewer, target, lineReach);
 }
 
 /**
@@ -134,13 +138,14 @@ function canViewTemporaryPassword(
  */
 function canEditPersonSettings(
 	viewer: SessionUser,
-	target: { id: string; role: Role; teamId: string | null }
+	target: { id: string; role: Role; teamId: string | null },
+	lineReach?: ReadonlySet<string>
 ): boolean {
 	// Same reach as the settings endpoint's privilege path.
 	if (viewer.role !== 'super_admin' && viewer.role !== 'admin' && hasCap(viewer, 'people.edit_settings')) {
 		return target.role === 'employee' || target.role === 'team_lead';
 	}
-	if (!canActOnUser(viewer, target.id, target.teamId)) return false;
+	if (!canActOnUser(viewer, target.id, target.teamId, lineReach)) return false;
 	if (viewer.role === 'team_lead' && target.role !== 'employee' && target.id !== viewer.id) {
 		return false;
 	}
@@ -156,24 +161,29 @@ const PASSWORD_ACTION_LABELS: Record<string, string> = {
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = locals.user!;
-	// Team Leads always reach their team. Anyone else needs a People privilege
-	// — an HR Admin by default, or a named role such as IT Support.
-	const peopleCaps = hasAnyCap(user, [
-		'people.directory',
-		'people.create_login',
-		'people.reset_password',
-		'people.password_activity',
-		'people.bulk_import',
-		'people.send_logins'
-	]);
-	if (user.role === 'employee' && !peopleCaps) {
-		throw redirect(303, '/dashboard');
-	}
-	const seesEveryone = hasCap(user, 'people.directory');
-
+	// Who the page is for (src/lib/server/team-access.ts): Team Leads and up,
+	// People privileges, and Employee-role managers, concerned HR or delegates.
+	// The roster is additive: the team as before, plus everyone the org scope
+	// reaches (reports in other teams, skip-levels, people they are concerned HR
+	// for, a covering delegate's people). Nobody loses access.
+	const access = await teamPageAccess(user);
+	if (!access.allowed) throw redirect(303, '/dashboard');
+	const reach = access.reach;
+	// Org-wide reach (people.directory, or a privilege opening everyone's job
+	// details) lists everyone.
+	const seesEveryone = reach === null;
 	const roster = seesEveryone
 		? await db.select().from(users)
-		: await db.select().from(users).where(eq(users.teamId, user.teamId ?? ''));
+		: await db
+				.select()
+				.from(users)
+				.where(
+					// The whole-team half is only what Team Leads already had; an
+					// Employee-role manager gets their reports, not their teammates.
+					user.role === 'employee'
+						? inArray(users.id, reach ?? [user.id])
+						: or(eq(users.teamId, user.teamId ?? ''), inArray(users.id, reach ?? [user.id]))
+				);
 
 	const today = new Date().toISOString().slice(0, 10);
 	const todaysAttendance = await db.select().from(attendance).where(eq(attendance.date, today));
@@ -196,14 +206,17 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.map((p) => [p.userId, p])
 	);
 
+	const manageable = await reviewableUserIds(user, 'manager');
+	// A Team Lead's edit reach beyond their own team: their direct reports
+	// elsewhere (org scope). The settings and password endpoints use the same.
+	const lineReach = user.role === 'team_lead' ? new Set((await scopeIds(user, 'person.edit_settings')) ?? []) : undefined;
 	const pendingApprovalRows = await db
 		.select({ application: leaveApplications, applicant: users })
 		.from(leaveApplications)
 		.innerJoin(users, eq(leaveApplications.userId, users.id))
 		.where(
-			user.role === 'super_admin'
-				? eq(leaveApplications.status, 'pending')
-				: and(eq(leaveApplications.status, 'pending'), eq(users.teamId, user.teamId ?? ''))
+			// What this person can decide now, per the approval chain.
+			and(eq(leaveApplications.status, 'pending'), manageable.length ? inArray(leaveApplications.userId, manageable) : sql`false`)
 		);
 
 	const year = new Date().getFullYear();
@@ -376,11 +389,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 		// the same authorization the reset endpoint applies — so it never hands a
 		// Team Lead a credential they couldn't replace anyway. Null the instant the
 		// person changes their password.
-		temporaryPassword: canViewTemporaryPassword(user, r) ? r.temporaryPassword : null,
+		temporaryPassword: canViewTemporaryPassword(user, r, lineReach) ? r.temporaryPassword : null,
 		// Whether this viewer may open the settings panel on this row. Decided
 		// here rather than from a blanket isSuperAdmin so a Team Lead is offered
 		// exactly the rows the settings endpoint will actually accept.
-		canEditSettings: canEditPersonSettings(user, r),
+		canEditSettings: canEditPersonSettings(user, r, lineReach),
 		leaveLeft: balanceByUser.get(r.id) ?? 0,
 		status: attendanceByUser.get(r.id)?.checkInAt
 			? attendanceByUser.get(r.id)?.checkOutAt
@@ -517,6 +530,9 @@ export const actions: Actions = {
 		const actor = requireCap(event, 'people.bulk_import');
 		const form = await event.request.formData();
 		const file = form.get('file');
+		// "Replace file" names the import under review it takes the place of;
+		// "Upload another" leaves it out, and both stay up for review.
+		const replaceImportId = String(form.get('replaceImportId') ?? '');
 
 		if (!(file instanceof File) || file.size === 0) {
 			return { bulkImportError: 'Choose an .xlsx file to upload' };
@@ -651,7 +667,9 @@ export const actions: Actions = {
 		for (let i = 0; i < parsedRows.length; i++) {
 			const suggestedIndex = suggestReportsToIndex(parsedRows[i].reportingAuthorityRaw, parsedRows, i);
 			const hasRawAuthority = Boolean(parsedRows[i].reportingAuthorityRaw);
-			const needsReviewForReportingLine = hasRawAuthority && suggestedIndex === null;
+			// "Chief" is not a row to find: it is recorded as reporting to Chief.
+			const needsReviewForReportingLine =
+				hasRawAuthority && suggestedIndex === null && !isChiefReference(parsedRows[i].reportingAuthorityRaw);
 			const alreadyDecided = insertedRows[i].status !== 'ready';
 
 			if (suggestedIndex !== null || (needsReviewForReportingLine && !alreadyDecided)) {
@@ -663,6 +681,39 @@ export const actions: Actions = {
 					})
 					.where(eq(bulkImportRows.id, insertedRows[i].id));
 			}
+		}
+
+		// The preview shows the access they will get: anyone the sheet puts under
+		// Chief, or whom another row reports to, is a Team Lead — the same rule the
+		// database applies to live logins (drizzle/0030_auto_team_lead.sql). Only
+		// Employees move; the Role column stays editable before applying.
+		await db
+			.update(bulkImportRows)
+			.set({ role: 'team_lead' })
+			.where(
+				and(
+					eq(bulkImportRows.importId, importRow.id),
+					eq(bulkImportRows.role, 'employee'),
+					sql`(${bulkImportRows.id} in (select reports_to_row_id from bulk_import_rows where import_id = ${importRow.id} and reports_to_row_id is not null)
+						or lower(trim(${bulkImportRows.reportingAuthorityRaw})) in ('chief', 'cheif', 'the chief'))`
+				)
+			);
+
+		// The replaced sheet goes only once its successor parsed, and only while
+		// it is still unapplied: an applied import is the record of who was made.
+		let replaced: string | null = null;
+		if (/^[0-9a-f-]{36}$/i.test(replaceImportId) && replaceImportId !== importRow.id) {
+			replaced = await db.transaction(async (tx) => {
+				const [old] = await tx
+					.select({ id: bulkImports.id, filename: bulkImports.filename })
+					.from(bulkImports)
+					.where(and(eq(bulkImports.id, replaceImportId), eq(bulkImports.status, 'pending_review')))
+					.limit(1);
+				if (!old) return null;
+				await tx.delete(bulkImportRows).where(eq(bulkImportRows.importId, old.id));
+				await tx.delete(bulkImports).where(eq(bulkImports.id, old.id));
+				return old.filename;
+			});
 		}
 
 		await logActivity({
@@ -677,7 +728,8 @@ export const actions: Actions = {
 				// mapping was decided by the model rather than known headers.
 				sheetName: parseResult.sheetName,
 				strategy: parseResult.strategy,
-				note: parseResult.note
+				note: parseResult.note,
+				replaced
 			}
 		});
 
@@ -723,7 +775,7 @@ export const actions: Actions = {
 		// with a mail that never landed, that account is stranded — nobody, Super
 		// Admin included, can say what it is. Carried only for the sends that
 		// actually failed, and only to the person who just ran the import.
-		const emailFailures: { email: string; error: string; temporaryPassword: string }[] = [];
+		const emailFailures: { email: string; error: string; temporaryPassword: string | null }[] = [];
 		const emailedCount = 0;
 		const queuedUserIds: string[] = [];
 
@@ -746,8 +798,9 @@ export const actions: Actions = {
 			// Hashed per row, not once per batch: each person gets their own
 			// password, so each needs its own hash. Argon2 at these parameters costs
 			// roughly 50ms, which is the dominant per-row cost of a large import.
-			const temporaryPassword = generateTemporaryPassword();
-			const passwordHash = await hashPassword(temporaryPassword);
+			// With Clerk as the sign-in nobody is given one: they sign in with an
+			// emailed code and choose their own (password-state.ts).
+			const { temporaryPassword, passwordHash } = await newLoginCredentials();
 
 			const [createdUser] = await db
 				.insert(users)
@@ -769,7 +822,7 @@ export const actions: Actions = {
 			rowIdToUserId.set(row.id, createdUser.id);
 			// One bad address must not stop the rest of the batch; whoever is
 			// missing from Clerk is picked up by scripts/migrate-to-clerk.ts.
-			await mirrorPasswordToClerk(createdUser.id, temporaryPassword).catch((err) =>
+			await addNewLoginToClerk(createdUser.id, temporaryPassword).catch((err) =>
 				console.error('[clerk] bulk create sync failed for', createdUser.email, err)
 			);
 
@@ -948,7 +1001,7 @@ export const actions: Actions = {
 		// People who already signed in and chose their own password. Left untouched.
 		let alreadyOnboardedCount = 0;
 		let inactiveCount = 0;
-		const emailFailures: { email: string; error: string; temporaryPassword: string }[] = [];
+		const emailFailures: { email: string; error: string; temporaryPassword: string | null }[] = [];
 
 		for (const account of accounts) {
 			if (!account.mustChangePassword) {
@@ -960,20 +1013,27 @@ export const actions: Actions = {
 				continue;
 			}
 
-			const temporaryPassword = generateTemporaryPassword();
-			const passwordHash = await hashPassword(temporaryPassword);
-			await db
-				.update(users)
-				.set({
-					passwordHash,
-					mustChangePassword: true,
-					temporaryPassword,
-					updatedAt: new Date()
-				})
-				.where(eq(users.id, account.id));
-			await mirrorPasswordToClerk(account.id, temporaryPassword, { signOutOtherSessions: true }).catch((err) =>
-				console.error('[clerk] reissue sync failed for', account.email, err)
-			);
+			// With Clerk as the sign-in there is no password to re-issue: the login
+			// email goes out again and the person signs in with an emailed code.
+			const clerkSignIn = clerkAuthActive();
+			const temporaryPassword = clerkSignIn ? null : generateTemporaryPassword();
+			if (temporaryPassword) {
+				const passwordHash = await hashPassword(temporaryPassword);
+				await db
+					.update(users)
+					.set({
+						passwordHash,
+						mustChangePassword: true,
+						temporaryPassword,
+						updatedAt: new Date()
+					})
+					.where(eq(users.id, account.id));
+				await mirrorPasswordToClerk(account.id, temporaryPassword, { signOutOtherSessions: true }).catch((err) =>
+					console.error('[clerk] reissue sync failed for', account.email, err)
+				);
+			} else {
+				await ensureClerkAccount(account.id);
+			}
 			reissuedCount++;
 
 			// An account whose login id isn't an address can't be mailed — and can't
@@ -986,7 +1046,9 @@ export const actions: Actions = {
 			else
 				emailFailures.push({
 					email: account.email,
-					error: `"${account.email}" is not an email address — correct it on the roster, then pass this password on directly`,
+					error: temporaryPassword
+						? `"${account.email}" is not an email address — correct it on the roster, then pass this password on directly`
+						: `"${account.email}" is not an email address — correct it on the roster; they sign in with a code sent to that address`,
 					temporaryPassword
 				});
 

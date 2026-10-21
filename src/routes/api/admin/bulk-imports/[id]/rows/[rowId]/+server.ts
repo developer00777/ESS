@@ -5,6 +5,7 @@ import { bulkImports, bulkImportRows, users } from '$lib/server/db/schema';
 import { looksLikeEmail } from '$lib/server/bulk-import';
 import { eq, and, ne } from 'drizzle-orm';
 import { requireCap } from '$lib/server/capabilities';
+import { isChiefReference } from '$lib/chief';
 
 const VALID_ROLES = ['super_admin', 'admin', 'team_lead', 'employee'] as const;
 
@@ -93,6 +94,16 @@ export const PATCH: RequestHandler = async (event) => {
 			if (body.reportsToRowId === rowId) throw error(400, 'A row cannot report to itself');
 		}
 		patch.reportsToRowId = body.reportsToRowId;
+		// Clearing the manager of a row the sheet put under Chief means "nobody",
+		// so the sheet's "Chief" must not be read as the answer at apply.
+		if (body.reportsToRowId === null && isChiefReference(row.reportingAuthorityRaw)) patch.reportingAuthorityRaw = null;
+	}
+
+	// Reports to Chief, the head of the company: no row to point at, recorded
+	// the same way an upload records a sheet that says "Chief".
+	if (body.reportsToChief === true) {
+		patch.reportsToRowId = null;
+		patch.reportingAuthorityRaw = 'Chief';
 	}
 
 	// Explicit resolution for a row flagged as a possible existing-person match
@@ -113,7 +124,7 @@ export const PATCH: RequestHandler = async (event) => {
 	}
 
 	if (Object.keys(patch).length === 0) {
-		throw error(400, 'No recognized fields to update (officialEmail, role, reportsToRowId, duplicateDecision)');
+		throw error(400, 'No recognized fields to update (officialEmail, role, reportsToRowId, reportsToChief, duplicateDecision)');
 	}
 
 	// Editing email/role/manager on a row that only needed review for its REPORTING
@@ -123,7 +134,19 @@ export const PATCH: RequestHandler = async (event) => {
 		patch.status = 'ready';
 	}
 
+	// A newly chosen manager, or Chief, makes a Team Lead — as at upload. Only an
+	// Employee moves, and only on the change, so a role set by hand stays.
+	if (body.reportsToChief === true && row.role === 'employee' && !('role' in body)) patch.role = 'team_lead';
+	let promotedManager: typeof bulkImportRows.$inferSelect | null = null;
+	if (typeof patch.reportsToRowId === 'string' && patch.reportsToRowId !== row.reportsToRowId) {
+		[promotedManager] = await db
+			.update(bulkImportRows)
+			.set({ role: 'team_lead' })
+			.where(and(eq(bulkImportRows.id, patch.reportsToRowId), eq(bulkImportRows.role, 'employee')))
+			.returning();
+	}
+
 	const [updated] = await db.update(bulkImportRows).set(patch).where(eq(bulkImportRows.id, rowId)).returning();
 
-	return json({ row: updated });
+	return json({ row: updated, promotedManager: promotedManager ?? null });
 };

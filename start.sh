@@ -37,4 +37,10 @@ else
   echo "Super admin ($SUPER_ADMIN_EMAIL) already present, skipping seed."
 fi
 
+# Optional: the developer's Super Admin login (DEVELOPER_EMAIL, see
+# ensure-developer.ts). Created once when missing; never blocks the boot.
+if [ -n "$DEVELOPER_EMAIL" ]; then
+  npx tsx src/lib/server/db/ensure-developer.ts || true
+fi
+
 exec node build/index.js

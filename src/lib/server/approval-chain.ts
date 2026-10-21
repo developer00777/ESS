@@ -22,10 +22,12 @@
  */
 
 import { db } from '$lib/server/db/postgres';
-import { users, employeeProfiles } from '$lib/server/db/schema';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { users, employeeProfiles, teams } from '$lib/server/db/schema';
+import { and, eq, inArray, isNull, or } from 'drizzle-orm';
+import { actingForManager, loadOrgScope, todayIst } from '$lib/server/org-scope';
+import { activeDelegations, resolveTeamLead } from '$lib/org-scope';
 
-/** Roles that act as HR for the second stage. */
+/** Roles that act as HR for the second stage (same list as org-scope.ts). */
 const HR_ROLES = ['admin', 'super_admin'] as const;
 
 export type ApprovalStage = 'manager' | 'hr';
@@ -68,17 +70,29 @@ export async function managersFor(userIds: string[]): Promise<Map<string, Review
 		: [];
 	const managerById = new Map(managerRows.map((m) => [m.id, m]));
 
-	// Fallbacks, cheapest first: the team's lead, then anyone in HR.
+	// Fallbacks, cheapest first: the team's lead, then anyone in HR. "The
+	// team's lead" is the one org-scope.ts uses for visibility too
+	// (resolveTeamLead): the lead named on the team while active, else the
+	// team's Team-Lead-role member — never an inactive account, and never a
+	// different one depending on row order.
 	const teamIds = [...new Set(staff.map((s) => s.teamId).filter((t): t is string => Boolean(t)))];
-	const leadRows = teamIds.length
+	const teamRows = teamIds.length ? await db.select({ id: teams.id, teamLeadId: teams.teamLeadId }).from(teams).where(inArray(teams.id, teamIds)) : [];
+	const designatedIds = teamRows.map((t) => t.teamLeadId).filter((id): id is string => Boolean(id));
+	const memberRows = teamIds.length
 		? await db
-				.select({ id: users.id, fullName: users.fullName, role: users.role, teamId: users.teamId })
+				.select({ id: users.id, fullName: users.fullName, role: users.role, teamId: users.teamId, isActive: users.isActive })
 				.from(users)
-				.where(inArray(users.teamId, teamIds))
+				.where(designatedIds.length ? or(inArray(users.teamId, teamIds), inArray(users.id, designatedIds)) : inArray(users.teamId, teamIds))
 		: [];
-	const leadByTeam = new Map(
-		leadRows.filter((l) => l.role === 'team_lead').map((l) => [l.teamId as string, l])
-	);
+	const memberById = new Map(memberRows.map((m) => [m.id, m]));
+	const leadByTeam = new Map<string, (typeof memberRows)[number]>();
+	for (const teamId of teamIds) {
+		const designated = teamRows.find((t) => t.id === teamId)?.teamLeadId ?? null;
+		const pool = memberRows.filter((m) => m.teamId === teamId || m.id === designated);
+		const leadId = resolveTeamLead(designated, pool);
+		const lead = leadId ? memberById.get(leadId) : undefined;
+		if (lead) leadByTeam.set(teamId, lead);
+	}
 
 	for (const person of staff) {
 		const direct = person.reportsTo ? managerById.get(person.reportsTo) : undefined;
@@ -152,8 +166,13 @@ export async function canReviewStage(
 		return isHr;
 	}
 
+	// A live delegation lets someone stand in for the manager at this stage only
+	// (src/lib/org-scope.ts). Never the HR stage: that one stays with HR.
 	const manager = await managerFor(requesterId);
-	if (manager) return manager.userId === actor.id || actor.role === 'super_admin';
+	if (manager) {
+		if (actor.role === 'super_admin') return true;
+		return (await actingForManager(manager.userId)).includes(actor.id);
+	}
 
 	// Reports to Chief: the concerned HR takes the manager stage too.
 	if (await reportsToChief(requesterId)) {
@@ -257,6 +276,14 @@ export async function reviewableUserIds(
 
 	const managers = await managersFor(candidateIds);
 
+	// Managers whose manager-stage queue `actor` holds by delegation today.
+	const snap = await loadOrgScope();
+	const coveringFor = new Set(
+		activeDelegations(snap, todayIst())
+			.filter((d) => d.toId === actor.id)
+			.map((d) => d.fromId)
+	);
+
 	// Chief reporters' manager stage is their concerned HR's (see canReviewStage).
 	const chiefRows = candidateIds.length
 		? await db
@@ -275,7 +302,7 @@ export async function reviewableUserIds(
 
 	return candidateIds.filter((id) => {
 		const manager = managers.get(id);
-		if (manager) return manager.userId === actor.id || isSuperAdmin;
+		if (manager) return manager.userId === actor.id || coveringFor.has(manager.userId) || isSuperAdmin;
 		const assigned = chiefHr.get(id);
 		if (assigned) return assigned === actor.id || isSuperAdmin;
 		// Unassigned reporting line — HR is the safety net.

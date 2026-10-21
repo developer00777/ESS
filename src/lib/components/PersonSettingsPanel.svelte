@@ -269,8 +269,10 @@
 					{#if reportsTo === CHIEF_PICK}
 						Leave, comp-off and attendance corrections go straight to the
 						concerned HR{hrUserId ? '' : ' (any admin while none is set)'} for a single approval.
+						An Employee reporting to Chief becomes a Team Lead.
 					{:else}
-						Gives the first approval on leave, comp-off and attendance corrections.
+						Gives the first approval on leave, comp-off and attendance corrections. An
+						Employee picked here becomes a Team Lead; a Super Admin can change that back.
 					{/if}
 				</span>
 			</label>

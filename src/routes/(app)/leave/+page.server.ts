@@ -14,6 +14,8 @@ import { checkPinkLeaveEligibility, monthBounds } from '$lib/server/leave-eligib
 import { ensureLeaveAllocations } from '$lib/server/leave-accrual';
 import { loadWeekOffFor, currentRosterByUser } from '$lib/server/week-off';
 import { managerFor, reviewableUserIds } from '$lib/server/approval-chain';
+import { leaveReach } from '$lib/server/org-scope';
+import type { SessionUser } from '$lib/server/auth';
 import { getUsersWithProfilePicture } from '$lib/server/db/mongo';
 
 /**
@@ -22,7 +24,7 @@ import { getUsersWithProfilePicture } from '$lib/server/db/mongo';
  * There is exactly one calendar per shift group (Super Admin publishes it,
  * see (app)/admin/policies); nothing here creates a separate view of it.
  */
-async function loadCalendarEvents(user: { id: string; role: string; teamId: string | null }) {
+async function loadCalendarEvents(user: SessionUser) {
 	const [profile] = await db
 		.select()
 		.from(employeeProfiles)
@@ -74,17 +76,21 @@ async function loadCalendarEvents(user: { id: string; role: string; teamId: stri
 		.innerJoin(leaveTypes, eq(leaveApplications.leaveTypeId, leaveTypes.id))
 		.innerJoin(users, eq(leaveApplications.userId, users.id));
 
-	if (user.role === 'super_admin') {
-		leaveEvents = await base.where(ne(leaveApplications.status, 'cancelled'));
-	} else if (user.role === 'team_lead') {
-		leaveEvents = await base.where(
-			and(eq(users.teamId, user.teamId ?? ''), ne(leaveApplications.status, 'cancelled'))
-		);
-	} else {
-		leaveEvents = await base.where(eq(leaveApplications.userId, user.id));
-	}
+	// Whose leave shows follows the org scope (src/lib/org-scope.ts), not the
+	// team alone: a manager sees reports in other teams, concerned HR and a
+	// covering delegate see theirs, and a Team Lead keeps their whole team.
+	// Someone else's cancelled leave is left off; one's own stays visible.
+	const reach = await leaveReach(user);
+	const notCancelled = or(eq(leaveApplications.userId, user.id), ne(leaveApplications.status, 'cancelled'));
+	leaveEvents = await base.where(reach.ids === null ? notCancelled : and(inArray(leaveApplications.userId, reach.ids), notCancelled));
+	// Type and reason only where the viewer has a relationship that grants them;
+	// otherwise the day reads as plain "Leave" with no reason sent at all.
+	leaveEvents = leaveEvents.map((e) =>
+		reach.detail(e.application.userId) ? e : { ...e, application: { ...e.application, reason: null }, type: { ...e.type, name: 'Leave', code: null } }
+	);
+	const showsOthers = leaveEvents.some((e) => e.application.userId !== user.id) || reach.ids === null || (reach.ids?.length ?? 0) > 1;
 
-	return { calendarHolidays, leaveEvents };
+	return { calendarHolidays, leaveEvents, showsOthers };
 }
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -249,7 +255,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.limit(50);
 	}
 
-	const { calendarHolidays, leaveEvents } = await loadCalendarEvents(user);
+	const { calendarHolidays, leaveEvents, showsOthers } = await loadCalendarEvents(user);
 
 	// Who signs off this person's own requests, for the request-progress panel.
 	const manager = await managerFor(user.id);
@@ -294,6 +300,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		canReverseDecisions: user.role === 'super_admin',
 		calendarHolidays,
 		leaveEvents,
+		calendarShowsOthers: showsOthers,
 		weekOffRosters: rosters,
 		weekOffAssignments: assignmentsByUser.get(user.id) ?? [],
 		myWeekOff: myRoster

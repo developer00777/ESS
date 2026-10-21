@@ -1,4 +1,4 @@
-import type { Handle } from '@sveltejs/kit';
+import { redirect, type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { withClerkHandler } from 'svelte-clerk/server';
 import {
@@ -128,12 +128,23 @@ const essUserFromClerk: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
+/**
+ * Portal pages need a signed-in person. The (app) layout redirects too, but
+ * SvelteKit runs page loads alongside it, so a page reading locals.user.id
+ * would crash with a 500 before that redirect landed.
+ */
+const signedInOnly: Handle = ({ event, resolve }) => {
+	if (!event.locals.user && event.route.id?.startsWith('/(app)')) throw redirect(303, '/login');
+	return resolve(event);
+};
+
+const legacyGuarded = sequence(legacyHandle, signedInOnly);
 let clerkHandle: Handle | null = null;
 
 // Which sign-in runs is decided per request, so flipping AUTH_PROVIDER (or
 // rolling back) is a Railway variable change plus restart, not a rebuild.
 export const handle: Handle = (input) => {
-	if (!clerkAuthActive()) return legacyHandle(input);
-	clerkHandle ??= sequence(withClerkHandler({ authorizedParties: authorizedParties() }), essUserFromClerk);
+	if (!clerkAuthActive()) return legacyGuarded(input);
+	clerkHandle ??= sequence(withClerkHandler({ authorizedParties: authorizedParties() }), essUserFromClerk, signedInOnly);
 	return clerkHandle(input);
 };

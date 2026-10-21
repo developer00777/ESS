@@ -112,7 +112,11 @@ export interface WelcomeEmailInput {
 	fullName: string;
 	/** The employee's login id — this portal authenticates by email address. */
 	username: string;
-	temporaryPassword: string;
+	/**
+	 * Null while Clerk is the sign-in: there is no password to hand over, the
+	 * email explains the emailed-code sign-in instead.
+	 */
+	temporaryPassword: string | null;
 	/**
 	 * Delivery address, when it differs from the login id. Normally omitted so
 	 * credentials go to the account's own mailbox; set during a dry run to route
@@ -157,10 +161,18 @@ export function buildWelcomeEmail(input: WelcomeEmailInput): { subject: string; 
 		'',
 		`Portal:   ${portalUrl}`,
 		`Username: ${input.username}`,
-		`Password: ${input.temporaryPassword}`,
-		'',
-		'You will be asked to set your own password the first time you sign in.',
-		'This temporary password stops working at that point.',
+		...(input.temporaryPassword
+			? [
+					`Password: ${input.temporaryPassword}`,
+					'',
+					'You will be asked to set your own password the first time you sign in.',
+					'This temporary password stops working at that point.'
+				]
+			: [
+					'',
+					'To sign in, open the portal and enter your work email address. We will',
+					'email you a 6-digit code; type it in, then choose your own password.'
+				]),
 		'',
 		'Please do not share these details with anyone. If you did not expect this',
 		'email, contact the HR team.',
@@ -187,9 +199,13 @@ export function buildWelcomeEmail(input: WelcomeEmailInput): { subject: string; 
 						<tr>
 							<td style="padding:16px 18px;font-size:14px;line-height:1.7;">
 								<strong style="color:#5b6478;">Username</strong><br />
-								<span style="font-family:Consolas,Menlo,monospace;">${escapeHtml(input.username)}</span><br />
+								<span style="font-family:Consolas,Menlo,monospace;">${escapeHtml(input.username)}</span>${
+									input.temporaryPassword
+										? `<br />
 								<strong style="color:#5b6478;">Temporary password</strong><br />
-								<span style="font-family:Consolas,Menlo,monospace;">${escapeHtml(input.temporaryPassword)}</span>
+								<span style="font-family:Consolas,Menlo,monospace;">${escapeHtml(input.temporaryPassword)}</span>`
+										: ''
+								}
 							</td>
 						</tr>
 					</table>
@@ -197,8 +213,11 @@ export function buildWelcomeEmail(input: WelcomeEmailInput): { subject: string; 
 						<a href="${escapeHtml(portalUrl)}" style="display:inline-block;padding:11px 20px;background:#2b3a67;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">Sign in to the portal</a>
 					</p>
 					<p style="margin:0 0 16px;font-size:14px;line-height:1.5;color:#5b6478;">
-						You will be asked to set your own password the first time you sign in — the
-						temporary one above stops working at that point.
+						${
+							input.temporaryPassword
+								? 'You will be asked to set your own password the first time you sign in — the temporary one above stops working at that point.'
+								: 'Enter your work email address on the sign-in page. We will email you a 6-digit code; type it in, then choose your own password.'
+						}
 					</p>
 					<p style="margin:0;font-size:13px;line-height:1.5;color:#8a92a6;">
 						Please do not share these details with anyone. If you did not expect this

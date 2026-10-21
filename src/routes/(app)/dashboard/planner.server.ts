@@ -21,6 +21,7 @@ import { and, eq, gte, inArray, lte } from 'drizzle-orm';
 import { getUsersWithProfilePicture } from '$lib/server/db/mongo';
 import { loadWeekOffFor } from '$lib/server/week-off';
 import type { SessionUser } from '$lib/server/auth';
+import { leaveReach } from '$lib/server/org-scope';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const keyOf = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -93,18 +94,17 @@ export async function loadPlanner(
 	const month = plannerMonth(monthParam, now);
 
 	// --- Who is on the planner ---
+	// Who is on the planner: the same reach as the Leave calendar
+	// (leaveReach) — a Team Lead's team as before, plus reports in other teams,
+	// people they are concerned HR for and anyone they cover by delegation.
+	// Reasons stay hidden unless the viewer can decide the request (below).
 	let scopeIds: string[];
-	if (user.role === 'super_admin') {
+	const reach = await leaveReach(user);
+	if (reach.ids === null) {
 		const rows = await db.select({ id: users.id }).from(users).where(eq(users.isActive, true));
 		scopeIds = rows.map((r) => r.id);
-	} else if (user.role === 'team_lead' && user.teamId) {
-		const team = await db
-			.select({ id: users.id })
-			.from(users)
-			.where(and(eq(users.teamId, user.teamId), eq(users.isActive, true)));
-		scopeIds = [...new Set([user.id, ...team.map((t) => t.id)])];
 	} else {
-		scopeIds = [user.id];
+		scopeIds = [...new Set([user.id, ...reach.ids])];
 	}
 
 	const people = await db

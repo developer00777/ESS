@@ -1,5 +1,9 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { eq } from 'drizzle-orm';
+import { db } from '$lib/server/db/postgres';
+import { users } from '$lib/server/db/schema';
+import { needsCurrentPassword } from '$lib/server/clerk';
 
 /**
  * Reached two ways: a new login is sent here until the temporary password is
@@ -10,5 +14,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
 		throw redirect(303, '/login');
 	}
-	return { user: locals.user, required: locals.user.mustChangePassword };
+	const [row] = await db
+		.select({ passwordHash: users.passwordHash, mustChangePassword: users.mustChangePassword })
+		.from(users)
+		.where(eq(users.id, locals.user.id))
+		.limit(1);
+	return {
+		user: locals.user,
+		required: locals.user.mustChangePassword,
+		// A first password after an emailed-code sign-in (Clerk) asks for no current one.
+		needsCurrent: row ? needsCurrentPassword(row) : true
+	};
 };

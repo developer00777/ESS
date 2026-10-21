@@ -38,7 +38,9 @@
 	});
 	const fmtNum = (n: number) => String(+n.toFixed(1));
 
-	const canApprove = $derived(data.user.role === 'team_lead' || data.user.role === 'super_admin');
+	// From the approval chain, not the role: an Employee-role manager or a
+	// covering delegate gets the queue too.
+	const canApprove = $derived(data.canApproveQueue);
 
 	/* Two views of the home page: Today (planner and panels) and Timeline &
 	   analytics (the day's timeline, what needs you, activity, request

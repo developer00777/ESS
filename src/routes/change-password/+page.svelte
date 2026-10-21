@@ -56,11 +56,12 @@
 	centered
 	headline="A fresh start, securely."
 	subtext={data.required ? 'Your account was just created. Choose a permanent password to continue.' : 'Choose a new password for your account.'}
-	cardTitle="Change password"
+	cardTitle={data.needsCurrent ? 'Change password' : 'Choose your password'}
 	cardSub={data.required ? 'This is required before you can open the portal.' : 'You will stay signed in on this device.'}
 	back={data.required ? undefined : { href: '/profile', label: 'Back' }}
 >
 	<form onsubmit={handleSubmit}>
+		{#if data.needsCurrent}
 		<label>
 			<span>{data.required ? 'Temporary password' : 'Current password'}</span>
 			<span class="field">
@@ -71,6 +72,7 @@
 				</button>
 			</span>
 		</label>
+		{/if}
 
 		<label>
 			<span>New password</span>
@@ -112,11 +114,11 @@
 	{#snippet aside()}
 		<StepTracker
 			steps={[
-				{ label: 'Current password', description: 'Confirm it is you' },
+				...(data.needsCurrent ? [{ label: 'Current password', description: 'Confirm it is you' }] : []),
 				{ label: 'New password', description: 'At least 8 characters' },
 				{ label: 'Confirm', description: 'Type it once more' }
 			]}
-			currentIndex={step}
+			currentIndex={data.needsCurrent ? step : Math.max(0, step - 1)}
 		/>
 	{/snippet}
 </AuthLayout>

@@ -9,6 +9,8 @@ import type { Role } from '$lib/server/auth';
 import { assignRoster, clearRoster } from '$lib/server/week-off';
 import { hasCap, invalidateCapabilities } from '$lib/server/capabilities';
 import { syncMembershipFor } from '$lib/server/chat/sync';
+import { invalidateOrgScope, userCanReach } from '$lib/server/org-scope';
+import { invalidateOrg } from '$lib/server/tasks/service';
 
 const ROLES: Role[] = ['super_admin', 'admin', 'team_lead', 'employee'];
 
@@ -53,7 +55,14 @@ export const PUT: RequestHandler = async (event) => {
 		if (target.role === 'admin' || target.role === 'super_admin') {
 			throw error(403, "Only an HR Admin or Super Admin can change an admin's settings");
 		}
-	} else if (!canActOnUser(actor, target.id, target.teamId)) {
+	} else if (
+		!canActOnUser(
+			actor,
+			target.id,
+			target.teamId,
+			actor.role === 'team_lead' && (await userCanReach(actor, target.id, 'person.edit_settings')) ? new Set([target.id]) : undefined
+		)
+	) {
 		throw error(403, "Insufficient privileges to change this employee's settings");
 	}
 	// A Team Lead runs their own team, not their peers: same-team is not enough
@@ -347,5 +356,9 @@ export const PUT: RequestHandler = async (event) => {
 
 	// loopBroken names whose reporting line was cleared to make room for this
 	// one, so the panel can say so rather than leaving it to be discovered.
+	// Reporting line, team, HR or role may have moved: let scopes and the
+	// task/meeting org snapshot see it now rather than in 30 seconds.
+	invalidateOrgScope();
+	invalidateOrg();
 	return json({ changed: true, changes, teamCreated, loopBroken });
 };

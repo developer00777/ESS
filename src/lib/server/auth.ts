@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import type { Cookies } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { storeRefreshToken, getUserIdForRefreshToken, revokeRefreshToken } from './db/redis';
+import { hasPassword } from './password-state';
 
 export type Role = 'super_admin' | 'admin' | 'team_lead' | 'employee';
 
@@ -42,6 +43,7 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(hash: string, password: string): Promise<boolean> {
+	if (!hasPassword(hash)) return false;
 	return verify(hash, password);
 }
 

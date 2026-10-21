@@ -10,7 +10,9 @@ import {
 	date,
 	jsonb,
 	pgEnum,
-	uniqueIndex
+	uniqueIndex,
+	index,
+	check
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 
@@ -156,7 +158,7 @@ export const users = pgTable('users', {
 	customRoleId: uuid('custom_role_id').references((): any => customRoles.id),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
-});
+}, (t) => [index('users_reports_to').on(t.reportsTo)]);
 
 // --- Employee profile (My Profile widget, §4.1) ---
 // Field set expanded to match the company's "Personal Master Data" HR record format.
@@ -275,7 +277,7 @@ export const employeeProfiles = pgTable('employee_profiles', {
 	salaryBand: text('salary_band'),
 
 	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
-});
+}, (t) => [index('employee_profiles_dotted_manager').on(t.dottedLineManagerId), index('employee_profiles_hr_user').on(t.hrUserId)]);
 
 // --- Leave (§4.2) ---
 
@@ -901,6 +903,41 @@ export const customRoles = pgTable('custom_roles', {
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
 });
+
+/**
+ * Manager delegations — "act for me while I am away".
+ *
+ * Time-boxed and one hop: while live, `toId` reaches the people whose manager
+ * stage `fromId` holds and may give that sign-off on their requests
+ * (src/lib/org-scope.ts, src/lib/server/approval-chain.ts). Responsibility
+ * stays with `fromId`; when the window closes nothing has to be undone.
+ * Revoking sets `revokedAt` rather than deleting, so the audit trail keeps
+ * who could approve what, and when.
+ */
+export const delegations = pgTable(
+	'delegations',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		fromId: uuid('from_id')
+			.references(() => users.id, { onDelete: 'cascade' })
+			.notNull(),
+		toId: uuid('to_id')
+			.references(() => users.id, { onDelete: 'cascade' })
+			.notNull(),
+		startsOn: date('starts_on').notNull(),
+		endsOn: date('ends_on').notNull(),
+		reason: text('reason'),
+		createdBy: uuid('created_by').references((): any => users.id, { onDelete: 'set null' }),
+		revokedAt: timestamp('revoked_at', { withTimezone: true }),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(t) => [
+		index('delegations_from_window').on(t.fromId, t.startsOn, t.endsOn),
+		index('delegations_to').on(t.toId),
+		check('delegations_window_valid', sql`${t.endsOn} >= ${t.startsOn}`),
+		check('delegations_not_self', sql`${t.fromId} <> ${t.toId}`)
+	]
+);
 
 /** Small key-value settings the app owns, such as the web push keys. */
 // --- Payroll (Payroll → tracker and salary report) ---

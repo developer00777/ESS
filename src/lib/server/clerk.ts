@@ -1,9 +1,12 @@
+import { randomBytes } from 'node:crypto';
 import { createClerkClient, type ClerkClient } from '@clerk/backend';
 import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
 import { db } from './db/postgres';
 import { users } from './db/schema';
 import { eq } from 'drizzle-orm';
+import { hashPassword } from './auth';
+import { NO_PASSWORD_YET, hasPassword } from './password-state';
 
 /**
  * Clerk as the portal's sign-in.
@@ -109,8 +112,19 @@ export async function mirrorPasswordToClerk(
 	try {
 		const [row] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
 		if (!row) return;
-		if (row.clerkUserId) {
-			await clerk().users.updateUser(row.clerkUserId, {
+		// A Clerk account made in the Dashboard with this email is linked, not
+		// duplicated: Clerk refuses a second account for the same address.
+		let clerkUserId = row.clerkUserId;
+		if (!clerkUserId) {
+			const { data } = await clerk().users.getUserList({ emailAddress: [row.email] });
+			clerkUserId = data[0]?.id ?? null;
+			if (clerkUserId) {
+				await clerk().users.updateUser(clerkUserId, { externalId: row.id });
+				await db.update(users).set({ clerkUserId }).where(eq(users.id, row.id));
+			}
+		}
+		if (clerkUserId) {
+			await clerk().users.updateUser(clerkUserId, {
 				password,
 				skipPasswordChecks: true,
 				signOutOfOtherSessions: opts.signOutOtherSessions ?? false
@@ -129,6 +143,64 @@ export async function mirrorPasswordToClerk(
 		console.error('[clerk] password sync failed for', userId, err);
 		if (clerkAuthActive()) throw err;
 	}
+}
+
+/**
+ * A Clerk account with no password, linked to the portal row. The person signs
+ * in with the code Clerk emails them and then chooses a password in the portal
+ * (password-state.ts). An existing Clerk account with the same email (made in
+ * the Dashboard) is linked instead. Never throws: the hourly account sync
+ * (clerk-sync.ts) picks up anyone a failure left out.
+ */
+export async function ensureClerkAccount(userId: string): Promise<void> {
+	if (!clerkConfigured()) return;
+	try {
+		const [row] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+		if (!row || row.clerkUserId) return;
+		const { data } = await clerk().users.getUserList({ emailAddress: [row.email] });
+		let clerkUserId = data[0]?.id;
+		if (clerkUserId) {
+			await clerk().users.updateUser(clerkUserId, { externalId: row.id });
+		} else {
+			const created = await clerk().users.createUser({
+				externalId: row.id,
+				emailAddress: [row.email],
+				...splitName(row.fullName),
+				skipPasswordRequirement: true
+			});
+			clerkUserId = created.id;
+		}
+		await db.update(users).set({ clerkUserId }).where(eq(users.id, row.id));
+	} catch (err) {
+		console.error('[clerk] could not create the account for', userId, err);
+	}
+}
+
+/**
+ * The first credentials of a brand-new login. With Clerk as the sign-in there
+ * is no made-up password (password-state.ts); otherwise a temporary one, as
+ * before, which the person replaces at their first sign-in.
+ */
+export async function newLoginCredentials(): Promise<{ temporaryPassword: string | null; passwordHash: string }> {
+	if (clerkAuthActive()) return { temporaryPassword: null, passwordHash: NO_PASSWORD_YET };
+	const temporaryPassword = randomBytes(9).toString('base64url');
+	return { temporaryPassword, passwordHash: await hashPassword(temporaryPassword) };
+}
+
+/** Puts a just-created login into Clerk, with whatever newLoginCredentials gave it. */
+export async function addNewLoginToClerk(userId: string, temporaryPassword: string | null): Promise<void> {
+	if (temporaryPassword) await mirrorPasswordToClerk(userId, temporaryPassword);
+	else await ensureClerkAccount(userId);
+}
+
+/**
+ * Whether choosing a new password must confirm the current one. Not for
+ * someone who has none yet, nor for a first sign-in through Clerk: they came
+ * in with an emailed code and were never told the temporary password.
+ */
+export function needsCurrentPassword(row: { passwordHash: string; mustChangePassword: boolean }): boolean {
+	if (!hasPassword(row.passwordHash)) return false;
+	return !(row.mustChangePassword && clerkAuthActive());
 }
 
 /** Remove the person's Clerk account (the portal row is being hard-deleted). */

@@ -15,7 +15,9 @@ import {
 	bulkImports,
 	bulkImportRows,
 	announcementReads,
-	announcements
+	announcements,
+	compOffCredits,
+	tasks
 } from '$lib/server/db/schema';
 import { deleteProfilePicture } from '$lib/server/db/mongo';
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
@@ -107,7 +109,18 @@ export async function deleteEmployee(userId: string): Promise<DeleteEmployeeResu
 			.select({ id: leaveApplications.id })
 			.from(leaveApplications)
 			.where(eq(leaveApplications.userId, userId));
+		// Comp-off credits point at the application that used them.
+		await tx.delete(compOffCredits).where(eq(compOffCredits.userId, userId));
 		if (ownApplications.length > 0) {
+			await tx
+				.update(compOffCredits)
+				.set({ usedApplicationId: null })
+				.where(
+					inArray(
+						compOffCredits.usedApplicationId,
+						ownApplications.map((a) => a.id)
+					)
+				);
 			await tx
 				.update(leaveLedger)
 				.set({ relatedApplicationId: null })
@@ -133,6 +146,14 @@ export async function deleteEmployee(userId: string): Promise<DeleteEmployeeResu
 		// Their posts stay up; they just no longer name an author.
 		await tx.update(announcements).set({ createdBy: null }).where(eq(announcements.createdBy, userId));
 		await tx.delete(employeeProfiles).where(eq(employeeProfiles.userId, userId));
+
+		// A task they gave someone stays with that person, who becomes its creator.
+		await tx
+			.update(tasks)
+			.set({ createdBy: sql`${tasks.assigneeId}` })
+			.where(and(eq(tasks.createdBy, userId), ne(tasks.assigneeId, userId)));
+
+		await clearRemainingReferences(tx, userId);
 		await tx.delete(users).where(eq(users.id, userId));
 
 		return { deletedApplications: apps.length, deletedAttendance: att.length };
@@ -150,6 +171,34 @@ export async function deleteEmployee(userId: string): Promise<DeleteEmployeeResu
 		deletedApplications: result.deletedApplications,
 		deletedAttendance: result.deletedAttendance
 	};
+}
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Every other column that points at users.id — chat memberships, reactions,
+ * tasks, meetings, Zoom links, and whatever a later table adds — read from the
+ * database's own foreign keys, so a new table can't make deletion fail again.
+ * A row that merely names them (a message they wrote, a roster they published)
+ * keeps the row with the reference cleared; a row that can't exist without
+ * them (a channel membership, a push subscription) is deleted.
+ */
+async function clearRemainingReferences(tx: Tx, userId: string): Promise<void> {
+	const refs = await tx.execute<{ tbl: string; col: string; notNull: boolean }>(sql`
+		select cl.relname as tbl, a.attname as col, a.attnotnull as "notNull"
+		from pg_constraint c
+		join pg_class cl on cl.oid = c.conrelid
+		join pg_attribute a on a.attrelid = c.conrelid and a.attnum = any(c.conkey)
+		where c.contype = 'f' and c.confrelid = 'users'::regclass and c.confdeltype in ('a', 'r')
+	`);
+	for (const { tbl, col, notNull } of refs.rows) {
+		if (tbl === 'users' && col === 'id') continue;
+		if (notNull) {
+			await tx.execute(sql`delete from ${sql.identifier(tbl)} where ${sql.identifier(col)} = ${userId}`);
+		} else {
+			await tx.execute(sql`update ${sql.identifier(tbl)} set ${sql.identifier(col)} = null where ${sql.identifier(col)} = ${userId}`);
+		}
+	}
 }
 
 /**

@@ -17,7 +17,9 @@
 
 	let { data } = $props();
 
-	const canSeeNames = $derived(data.user?.role === 'team_lead' || data.user?.role === 'super_admin');
+	// From what the calendar actually holds (the org scope), not the role: an
+	// Employee-role manager, concerned HR or a covering delegate sees names too.
+	const canSeeNames = $derived(Boolean(data.calendarShowsOthers));
 	// Approving is decided by assignment, not role: someone named as a colleague's
 	// concerned HR may hold no admin role at all, and gating the tab on role hid
 	// their queue entirely. The server builds the queue, so it decides.

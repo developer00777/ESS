@@ -9,6 +9,7 @@ import { deriveAdminIssues } from '$lib/admin-issues';
 import { canOpenAdmin } from '$lib/capabilities';
 import { loadBadge } from '$lib/server/announcements';
 import { sidebarFor } from '$lib/server/chat/channels';
+import { teamPageAccess } from '$lib/server/team-access';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
 	if (!locals.user) {
@@ -24,7 +25,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 
 	// The nav rail shows the signed-in user's avatar on every page, so this
 	// lives in the layout rather than being re-fetched per route.
-	const [picture, adminFacts, announcementBadge, chatSidebar] = await Promise.all([
+	const [picture, adminFacts, announcementBadge, chatSidebar, teamAccess] = await Promise.all([
 		getProfilePicture(locals.user.id),
 		// The Admin Controls entry carries a count of open problems, so an admin
 		// sees one is waiting without opening the section. Only admins pay for
@@ -35,7 +36,9 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		loadBadge(locals.user.id),
 		// The Champ Chat badge for the first paint; the live stream keeps it
 		// current after that.
-		sidebarFor(locals.user).catch(() => ({ badge: 0 }))
+		sidebarFor(locals.user).catch(() => ({ badge: 0 })),
+		// Whether the Team page is theirs — the same rule the page applies.
+		teamPageAccess(locals.user).catch(() => ({ allowed: role !== 'employee', reach: null }))
 	]);
 
 	// The top bar's team faces: whoever shares the person's team, or their
@@ -69,6 +72,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		adminIssueCount,
 		canAdmin: isAdmin,
 		canPayroll: caps.includes('payroll.view'),
+		canTeam: teamAccess.allowed,
 		announcementBadge,
 		chatBadge: { count: chatSidebar.badge, urgent: announcementBadge.urgent },
 		canUseChamp: true,

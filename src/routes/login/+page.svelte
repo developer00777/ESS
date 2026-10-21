@@ -50,7 +50,12 @@
 	cardTitle="Sign in"
 	cardSub="Access your Champ HR account to manage your leave, attendance and more."
 >
-	{#if data.clerk}
+	{#if data.clerk && data.noPortalAccount}
+		<form method="POST" action="/logout">
+			<p class="error" role="alert">This email is not set up on Champ HR, or its login has been turned off. Ask HR to add you, then sign in again.</p>
+			<button type="submit" class="ess-btn ess-btn--primary submit-btn">Use a different email <ArrowRight size={16} /></button>
+		</form>
+	{:else if data.clerk}
 		<div class="clerk-signin">
 			<SignIn routing="hash" fallbackRedirectUrl="/dashboard" />
 		</div>

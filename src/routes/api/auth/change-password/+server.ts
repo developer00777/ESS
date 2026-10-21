@@ -12,24 +12,9 @@ import {
 } from '$lib/server/auth';
 import { requireUser } from '$lib/server/rbac';
 import { logActivity } from '$lib/server/db/mongo';
-import { clerk, clerkAuthActive, mirrorPasswordToClerk } from '$lib/server/clerk';
+import { clerk, clerkAuthActive, mirrorPasswordToClerk, needsCurrentPassword } from '$lib/server/clerk';
 
-export const POST: RequestHandler = async (event) => {
-	const actor = requireUser(event);
-	const { currentPassword, newPassword } = await event.request.json();
-
-	if (typeof currentPassword !== 'string' || typeof newPassword !== 'string' || !newPassword) {
-		throw error(400, 'currentPassword and newPassword are required');
-	}
-	if (newPassword.length < 8) {
-		throw error(400, 'New password must be at least 8 characters');
-	}
-
-	const [dbUser] = await db.select().from(users).where(eq(users.id, actor.id)).limit(1);
-	if (!dbUser) {
-		throw error(401, 'Authentication required');
-	}
-
+async function checkCurrentPassword(dbUser: typeof users.$inferSelect, currentPassword: string) {
 	// Under Clerk the person may have reset their password through Clerk's own
 	// "Forgot password?", which Postgres never sees; Clerk then has the say.
 	let currentOk = await verifyPassword(dbUser.passwordHash, currentPassword);
@@ -40,6 +25,29 @@ export const POST: RequestHandler = async (event) => {
 	}
 	if (!currentOk) {
 		throw error(401, 'Current password is incorrect');
+	}
+}
+
+export const POST: RequestHandler = async (event) => {
+	const actor = requireUser(event);
+	const { currentPassword, newPassword } = await event.request.json();
+
+	if (typeof newPassword !== 'string' || !newPassword) {
+		throw error(400, 'newPassword is required');
+	}
+	if (newPassword.length < 8) {
+		throw error(400, 'New password must be at least 8 characters');
+	}
+
+	const [dbUser] = await db.select().from(users).where(eq(users.id, actor.id)).limit(1);
+	if (!dbUser) {
+		throw error(401, 'Authentication required');
+	}
+
+	// A first password chosen after signing in through Clerk needs no current
+	// one: they have none, or were never told it (see needsCurrentPassword).
+	if (needsCurrentPassword(dbUser)) {
+		await checkCurrentPassword(dbUser, typeof currentPassword === 'string' ? currentPassword : '');
 	}
 
 	const passwordHash = await hashPassword(newPassword);

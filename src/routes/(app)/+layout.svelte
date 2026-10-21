@@ -47,6 +47,7 @@
 		pictureVersion={data.profilePictureVersion}
 		canAdmin={data.canAdmin}
 		canPayroll={data.canPayroll}
+		canTeam={data.canTeam}
 		{adminIssueCount}
 		{chatBadge}
 	/>
@@ -61,6 +62,7 @@
 			activePath={page.url.pathname}
 			role={data.user.role}
 			canAdmin={data.canAdmin}
+			canTeam={data.canTeam}
 			teamPeek={data.teamPeek}
 			addEmployeeHref={data.addEmployeeHref}
 		/>
