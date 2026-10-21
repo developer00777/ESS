@@ -39,6 +39,9 @@
 	/* ---------- search, filter, zoom ---------- */
 	let q = $state('');
 	let dept = $state('');
+	// 10% to 100%: zero would draw nothing, and 100% is the chart at full size.
+	const MIN_ZOOM = 0.1;
+	const MAX_ZOOM = 1;
 	let zoom = $state(1);
 	const departments = $derived([...new Set(Object.values(teamNames).filter((t): t is string => !!t))].sort());
 
@@ -126,9 +129,9 @@
 					{#each departments as d (d)}<option value={d}>{d}</option>{/each}
 				</select>
 				<div class="zoom" role="group" aria-label="Zoom">
-					<button type="button" class="ess-icon-btn ess-icon-btn--bordered" onclick={() => (zoom = Math.max(0.5, +(zoom - 0.1).toFixed(2)))} aria-label="Zoom out"><Minus size={15} /></button>
+					<button type="button" class="ess-icon-btn ess-icon-btn--bordered" onclick={() => (zoom = Math.max(MIN_ZOOM, +(zoom - 0.1).toFixed(2)))} disabled={zoom <= MIN_ZOOM} aria-label="Zoom out"><Minus size={15} /></button>
 					<span class="ess-num">{Math.round(zoom * 100)}%</span>
-					<button type="button" class="ess-icon-btn ess-icon-btn--bordered" onclick={() => (zoom = Math.min(1.5, +(zoom + 0.1).toFixed(2)))} aria-label="Zoom in"><Plus size={15} /></button>
+					<button type="button" class="ess-icon-btn ess-icon-btn--bordered" onclick={() => (zoom = Math.min(MAX_ZOOM, +(zoom + 0.1).toFixed(2)))} disabled={zoom >= MAX_ZOOM} aria-label="Zoom in"><Plus size={15} /></button>
 					<button type="button" class="ess-icon-btn ess-icon-btn--bordered" onclick={() => (zoom = 1)} aria-label="Reset zoom"><Maximize size={15} /></button>
 				</div>
 			</div>
@@ -148,7 +151,7 @@
 				</div>
 			{:else}
 				<div class="canvas ess-scroll">
-					<div class="tree-wrap" style="transform: scale({zoom})">
+					<div class="tree-wrap" style="zoom: {zoom}">
 						<!--
 							Chief heads the chart as a position, not a person: there is no
 							account behind it, so it carries no code or role, and the people
@@ -333,8 +336,9 @@
 		padding: 10px 8px 16px;
 		border-top: 1px solid var(--ess-border-subtle);
 	}
+	/* CSS zoom, not a transform: the scroll area shrinks with the chart, so a
+	   zoomed-out chart isn't left in a canvas of empty scroll. */
 	.tree-wrap {
-		transform-origin: top left;
 		width: max-content;
 		min-width: 100%;
 	}
