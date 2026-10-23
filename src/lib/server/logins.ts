@@ -7,7 +7,7 @@ import { addNewLoginToClerk, newLoginCredentials } from '$lib/server/clerk';
 import { logActivity } from '$lib/server/db/mongo';
 import { queueLoginEmails } from '$lib/server/login-emails';
 import { hasCap, invalidateCapabilities } from '$lib/server/capabilities';
-import { CHIEF_PICK } from '$lib/chief';
+import { topFromPick, topLabel } from '$lib/chief';
 import { notHidden } from '$lib/server/hidden-users';
 
 /**
@@ -40,7 +40,7 @@ export type NewLogin = {
 	access: string;
 	shiftGroupId: string;
 	teamId?: string | null;
-	/** A user id, CHIEF_PICK, or empty for none. */
+	/** A user id, CHIEF_PICK or MAM_PICK, or empty for none. */
 	reportsTo?: string | null;
 	hrUserId?: string | null;
 };
@@ -114,11 +114,10 @@ export async function createLogin(actor: SessionUser, input: NewLogin, opts: { s
 
 	// --- Reporting line. A Team Lead's new joiner reports to them, as before.
 	let reportsTo: string | null = actor.role === 'team_lead' ? actor.id : null;
-	let reportsToChief = false;
+	const topPosition = actor.role === 'team_lead' ? null : topFromPick(input.reportsTo);
+	const reportsToChief = topPosition !== null;
 	if (actor.role !== 'team_lead' && input.reportsTo) {
-		if (input.reportsTo === CHIEF_PICK) {
-			reportsToChief = true;
-		} else {
+		if (!reportsToChief) {
 			if (!UUID.test(input.reportsTo)) return fail('Pick a reporting manager from the list');
 			const [m] = await db.select({ id: users.id }).from(users).where(and(eq(users.id, input.reportsTo), notHidden)).limit(1);
 			if (!m) return fail('That reporting manager no longer exists');
@@ -173,7 +172,8 @@ export async function createLogin(actor: SessionUser, input: NewLogin, opts: { s
 		shiftGroupId: input.shiftGroupId,
 		hrUserId,
 		reportsToChief,
-		directReportingAuthority: reportsToChief ? 'Chief' : null
+		topPosition: topPosition ?? 'chief',
+		directReportingAuthority: topPosition ? topLabel(topPosition) : null
 	});
 	invalidateCapabilities(created.id);
 

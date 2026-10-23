@@ -5,7 +5,7 @@ import { bulkImports, bulkImportRows, users } from '$lib/server/db/schema';
 import { looksLikeEmail } from '$lib/server/bulk-import';
 import { eq, and, ne } from 'drizzle-orm';
 import { requireCap } from '$lib/server/capabilities';
-import { isChiefReference } from '$lib/chief';
+import { isTopReference, topLabel } from '$lib/chief';
 
 const VALID_ROLES = ['super_admin', 'admin', 'team_lead', 'employee'] as const;
 
@@ -94,16 +94,16 @@ export const PATCH: RequestHandler = async (event) => {
 			if (body.reportsToRowId === rowId) throw error(400, 'A row cannot report to itself');
 		}
 		patch.reportsToRowId = body.reportsToRowId;
-		// Clearing the manager of a row the sheet put under Chief means "nobody",
-		// so the sheet's "Chief" must not be read as the answer at apply.
-		if (body.reportsToRowId === null && isChiefReference(row.reportingAuthorityRaw)) patch.reportingAuthorityRaw = null;
+		// Clearing the manager of a row the sheet put under Chief or Mam means
+		// "nobody", so the sheet's "Chief"/"Mam" must not be read as the answer at apply.
+		if (body.reportsToRowId === null && isTopReference(row.reportingAuthorityRaw)) patch.reportingAuthorityRaw = null;
 	}
 
-	// Reports to Chief, the head of the company: no row to point at, recorded
-	// the same way an upload records a sheet that says "Chief".
+	// Reports to Chief or Mam, the heads of the company: no row to point at,
+	// recorded the same way an upload records a sheet that says "Chief"/"Mam".
 	if (body.reportsToChief === true) {
 		patch.reportsToRowId = null;
-		patch.reportingAuthorityRaw = 'Chief';
+		patch.reportingAuthorityRaw = topLabel(body.topPosition);
 	}
 
 	// Explicit resolution for a row flagged as a possible existing-person match

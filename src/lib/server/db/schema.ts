@@ -272,10 +272,13 @@ export const employeeProfiles = pgTable('employee_profiles', {
 	// resolved link lives on users.reportsTo; this one has no equivalent there
 	// because a dotted line does not carry approval rights.
 	dottedLineManagerId: uuid('dotted_line_manager_id').references(() => users.id),
-	// Reports to Chief, the head of the company. Chief has no login, so this
-	// stands in for a users.reportsTo link: users.reportsTo stays null, and the
-	// person's requests go straight to their concerned HR (see src/lib/chief.ts).
+	// Reports to a top-level position — Chief or Mam, the heads of the company.
+	// Neither has a login, so this stands in for a users.reportsTo link:
+	// users.reportsTo stays null, and the person's requests go straight to their
+	// concerned HR (see src/lib/chief.ts). topPosition says which of the two;
+	// it is only read while reportsToChief is true.
 	reportsToChief: boolean('reports_to_chief').default(false).notNull(),
+	topPosition: text('top_position').default('chief').notNull(),
 	// The HR person who handles this employee's second-stage approvals. Set by a
 	// Super Admin from the roster; when null, any admin picks the request up.
 	// Assigning it puts the request in that person's queue first — it does not

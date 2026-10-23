@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { isChiefReference } from '$lib/chief';
+import { isTopReference, topPositionReference, TOP_REFERENCE_SPELLINGS } from '$lib/chief';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db/postgres';
 import {
@@ -294,6 +294,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 						shiftGroupId: employeeProfiles.shiftGroupId,
 						hrUserId: employeeProfiles.hrUserId,
 						reportsToChief: employeeProfiles.reportsToChief,
+						topPosition: employeeProfiles.topPosition,
 						officeTimings: employeeProfiles.officeTimings,
 						shiftType: employeeProfiles.shiftType
 					})
@@ -375,6 +376,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		reportsTo: r.reportsTo,
 		reportsToName: r.reportsTo ? (nameById.get(r.reportsTo) ?? null) : null,
 		reportsToChief: !r.reportsTo && Boolean(profileByUser.get(r.id)?.reportsToChief),
+		topPosition: profileByUser.get(r.id)?.topPosition ?? 'chief',
 		hrUserId: profileByUser.get(r.id)?.hrUserId ?? null,
 		hrName: profileByUser.get(r.id)?.hrUserId
 			? (nameById.get(profileByUser.get(r.id)!.hrUserId!) ?? null)
@@ -492,7 +494,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		// this page at all — the load redirects them above.
 		canAssignWeekOff: true,
 		isSuperAdmin: user.role === 'super_admin',
-		// Reporting to Chief moves approvals to HR, so it is an admin's call.
+		// Reporting to Chief or Mam moves approvals to HR, so it is an admin's call.
 		canPickChief: user.role === 'super_admin' || user.role === 'admin',
 		// The roster hides the delete control on your own row; the API refuses it too.
 		currentUserId: user.id,
@@ -671,9 +673,9 @@ export const actions: Actions = {
 		for (let i = 0; i < parsedRows.length; i++) {
 			const suggestedIndex = suggestReportsToIndex(parsedRows[i].reportingAuthorityRaw, parsedRows, i);
 			const hasRawAuthority = Boolean(parsedRows[i].reportingAuthorityRaw);
-			// "Chief" is not a row to find: it is recorded as reporting to Chief.
+			// "Chief" or "Mam" is not a row to find: it is recorded as reporting to that position.
 			const needsReviewForReportingLine =
-				hasRawAuthority && suggestedIndex === null && !isChiefReference(parsedRows[i].reportingAuthorityRaw);
+				hasRawAuthority && suggestedIndex === null && !isTopReference(parsedRows[i].reportingAuthorityRaw);
 			const alreadyDecided = insertedRows[i].status !== 'ready';
 
 			if (suggestedIndex !== null || (needsReviewForReportingLine && !alreadyDecided)) {
@@ -688,7 +690,7 @@ export const actions: Actions = {
 		}
 
 		// The preview shows the access they will get: anyone the sheet puts under
-		// Chief, or whom another row reports to, is a Team Lead — the same rule the
+		// Chief or Mam, or whom another row reports to, is a Team Lead — the same rule the
 		// database applies to live logins (drizzle/0030_auto_team_lead.sql). Only
 		// Employees move; the Role column stays editable before applying.
 		await db
@@ -699,7 +701,7 @@ export const actions: Actions = {
 					eq(bulkImportRows.importId, importRow.id),
 					eq(bulkImportRows.role, 'employee'),
 					sql`(${bulkImportRows.id} in (select reports_to_row_id from bulk_import_rows where import_id = ${importRow.id} and reports_to_row_id is not null)
-						or lower(trim(${bulkImportRows.reportingAuthorityRaw})) in ('chief', 'cheif', 'the chief'))`
+						or lower(trim(${bulkImportRows.reportingAuthorityRaw})) in (${sql.join(TOP_REFERENCE_SPELLINGS.map((t) => sql`${t}`), sql`, `)}))`
 				)
 			);
 
@@ -838,9 +840,10 @@ export const actions: Actions = {
 				designation: row.designation,
 				teamAndFloor: row.teamAndFloor,
 				directReportingAuthority: row.reportingAuthorityRaw,
-				// "Chief" in the sheet is the head of the company, not a person to
-				// link — recorded as a flag so approvals go straight to HR.
-				reportsToChief: !row.reportsToRowId && isChiefReference(row.reportingAuthorityRaw),
+				// "Chief" or "Mam" in the sheet is a head of the company, not a
+				// person to link — recorded as a flag so approvals go straight to HR.
+				reportsToChief: !row.reportsToRowId && isTopReference(row.reportingAuthorityRaw),
+				topPosition: topPositionReference(row.reportingAuthorityRaw) ?? 'chief',
 				dottedLineReportingAuthority: row.dottedLineAuthorityRaw,
 				// Everything else the spreadsheet carried.
 				...profileValuesFromImport(row.profileData)

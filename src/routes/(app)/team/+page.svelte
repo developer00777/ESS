@@ -26,7 +26,7 @@
 	import LoginEmailQueue from '$lib/components/LoginEmailQueue.svelte';
 	import { WEEKDAY_LABELS, DEFAULT_WEEKDAYS_OFF, weekdaysOffOn } from '$lib/week-off';
 	import { BASE_ROLE_LABEL } from '$lib/capabilities';
-	import { CHIEF_PICK, isChiefReference } from '$lib/chief';
+	import { CHIEF_PICK, MAM_PICK, topFromPick, topLabel, topPick, topPositionReference } from '$lib/chief';
 
 	import type { ActionData, PageData } from './$types';
 
@@ -227,13 +227,14 @@
 
 	function onManagerChange(rowId: string, e: Event) {
 		const value = (e.target as HTMLSelectElement).value;
-		if (value === CHIEF_PICK) patchRow(rowId, { reportsToChief: true });
+		const top = topFromPick(value);
+		if (top) patchRow(rowId, { reportsToChief: true, topPosition: top });
 		else patchRow(rowId, { reportsToRowId: value === '' ? null : value });
 	}
 
-	/** The sheet put this row under Chief and nobody has picked a person instead. */
-	function reportsToChief(row: ReviewRow): boolean {
-		return !row.reportsToRowId && isChiefReference(row.reportingAuthorityRaw);
+	/** The top position (Chief or Mam) the sheet put this row under, unless a person was picked instead. */
+	function topOfRow(row: ReviewRow) {
+		return row.reportsToRowId ? null : topPositionReference(row.reportingAuthorityRaw);
 	}
 
 	function resolveDuplicate(rowId: string, decision: 'link' | 'create_new') {
@@ -241,7 +242,10 @@
 	}
 
 	function managerName(row: ReviewRow): string {
-		if (!row.reportsToRowId) return reportsToChief(row) ? 'Chief' : '—';
+		if (!row.reportsToRowId) {
+			const top = topOfRow(row);
+			return top ? topLabel(top) : '—';
+		}
 		return rowById.get(row.reportsToRowId)?.fullName ?? 'Unknown';
 	}
 
@@ -725,7 +729,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 									{#if person.reportsToName}
 										{person.reportsToName}
 									{:else if person.reportsToChief}
-										<span class="chief" title="Approvals go straight to the concerned HR.">Chief</span>
+										<span class="chief" title="Approvals go straight to the concerned HR.">{topLabel(person.topPosition)}</span>
 									{:else}
 										<span class="missing" title="No reporting manager — approvals fall back to HR">Not set</span>
 									{/if}
@@ -855,7 +859,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 							<span class="ess-label">Reports to</span>
 							<select class="ess-select" name="reportsTo">
 								<option value="">— not set —</option>
-								{#if data.canPickChief}<option value={CHIEF_PICK}>Chief</option>{/if}
+								{#if data.canPickChief}<option value={CHIEF_PICK}>Chief</option><option value={MAM_PICK}>Mam</option>{/if}
 								{#each data.allPeople as p (p.id)}
 									<option value={p.id}>{p.fullName}</option>
 								{/each}
@@ -942,7 +946,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 							<dd>
 								<span>Reporting manager</span>
 								<strong>
-									{#if selected.reportsToName}{selected.reportsToName}{:else if selected.reportsToChief}Chief{:else}Not set{/if}
+									{#if selected.reportsToName}{selected.reportsToName}{:else if selected.reportsToChief}{topLabel(selected.topPosition)}{:else}Not set{/if}
 								</strong>
 							</dd>
 						</div>
@@ -1488,9 +1492,10 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 												{#if locked || row.status === 'skipped_existing'}
 													{managerName(row)}
 												{:else}
-													<select class="ess-select" value={row.reportsToRowId ?? (reportsToChief(row) ? CHIEF_PICK : '')} onchange={(e) => onManagerChange(row.id, e)} disabled={savingRowId === row.id}>
+													<select class="ess-select" value={row.reportsToRowId ?? (topOfRow(row) ? topPick(topOfRow(row)) : '')} onchange={(e) => onManagerChange(row.id, e)} disabled={savingRowId === row.id}>
 														<option value="">— none —</option>
 														<option value={CHIEF_PICK}>Chief</option>
+														<option value={MAM_PICK}>Mam</option>
 														{#each reviewRows.filter((r) => r.id !== row.id) as candidate (candidate.id)}
 															<option value={candidate.id}>{candidate.fullName}</option>
 														{/each}
