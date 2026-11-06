@@ -59,21 +59,12 @@ twice.
 - **Workers Paid plan** ($5/month). Containers need it.
 - For the final switch, the **`champ-hr.com` domain** added to the account.
 
-### 2.2 Create the database and the file bucket
+### 2.2 The database and the file bucket
 
-From `cloudflare/` on your PC:
-
-```powershell
-cd cloudflare
-npm install
-npx wrangler login
-npx wrangler d1 create champ-hr-ess
-npx wrangler r2 bucket create champ-hr-ess-files
-```
-
-`d1 create` prints a `database_id`. Paste it into `cloudflare/wrangler.jsonc`
-in place of `REPLACE_WITH_D1_DATABASE_ID`, and commit that change. Workers
-Builds deploys from the branch, so the id must be in git.
+Nothing to do: the first deploy creates the D1 database `champ-hr-ess` and the
+R2 bucket `champ-hr-ess-files` (wrangler provisions bindings that have no id),
+and later deploys keep using them. For the import in section 4 you need
+`npx wrangler login` once, from `cloudflare/`.
 
 ### 2.3 Secrets
 

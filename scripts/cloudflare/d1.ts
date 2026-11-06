@@ -7,9 +7,10 @@
  *   --remote           the real Cloudflare D1 and R2 (needs `npx wrangler login`
  *                      in cloudflare/ first)
  *
- * The database and bucket names and the D1 id are read from
- * cloudflare/wrangler.jsonc, so there is one place to change them.
+ * The database and bucket names are read from cloudflare/wrangler.jsonc; the
+ * live D1 id is looked up by name (`wrangler d1 list`).
  */
+import { execSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
@@ -28,6 +29,14 @@ function argValue(flag: string): string | undefined {
 	return i >= 0 ? process.argv[i + 1] : undefined;
 }
 
+/** The id of the D1 database the first deploy created (it is not in wrangler.jsonc). */
+function liveDatabaseId(name: string): string {
+	const out = execSync('npx wrangler d1 list --json', { cwd: 'cloudflare', encoding: 'utf8' });
+	const db = (JSON.parse(out.slice(out.indexOf('['))) as { name: string; uuid: string }[]).find((d) => d.name === name);
+	if (!db) throw new Error(`No D1 database "${name}" in this account yet. Deploy once first.`);
+	return db.uuid;
+}
+
 function workerConfig() {
 	const text = readFileSync(join('cloudflare', 'wrangler.jsonc'), 'utf8');
 	const pick = (re: RegExp, what: string) => {
@@ -35,13 +44,10 @@ function workerConfig() {
 		if (!v) throw new Error(`cloudflare/wrangler.jsonc has no ${what}`);
 		return v;
 	};
-	const databaseId = pick(/"database_id"\s*:\s*"([^"]+)"/, 'd1 database_id');
-	if (remote && databaseId.startsWith('REPLACE_')) {
-		throw new Error('Put the D1 database id in cloudflare/wrangler.jsonc first (npx wrangler d1 create champ-hr-ess).');
-	}
+	const databaseName = pick(/"database_name"\s*:\s*"([^"]+)"/, 'd1 database_name');
 	return {
-		databaseId,
-		databaseName: pick(/"database_name"\s*:\s*"([^"]+)"/, 'd1 database_name'),
+		databaseId: text.match(/"database_id"\s*:\s*"([^"]+)"/)?.[1] ?? (remote ? liveDatabaseId(databaseName) : 'local'),
+		databaseName,
 		bucketName: pick(/"binding"\s*:\s*"FILES"\s*,\s*"bucket_name"\s*:\s*"([^"]+)"/, 'FILES bucket')
 	};
 }

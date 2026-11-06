@@ -24,19 +24,19 @@
 	// Lets the Worker restart the container when vars/secrets change (new version).
 	"version_metadata": { "binding": "CF_VERSION_METADATA" },
 
-	// The database. Create it once with `npx wrangler d1 create champ-hr-ess`
-	// and paste the printed id here. The container applies migrations/ on start.
+	// The database. No database_id on purpose: the first deploy creates
+	// "champ-hr-ess" and later deploys keep using it. The container applies
+	// migrations/ on start.
 	"d1_databases": [
 		{
 			"binding": "DB",
 			"database_name": "champ-hr-ess",
-			"database_id": "REPLACE_WITH_D1_DATABASE_ID",
 			"migrations_dir": "../migrations"
 		}
 	],
 
 	// Uploaded files: policy documents, profile pictures, announcement and chat
-	// attachments. Create it once with `npx wrangler r2 bucket create champ-hr-ess-files`.
+	// attachments. Created by the first deploy, like the database.
 	"r2_buckets": [{ "binding": "FILES", "bucket_name": "champ-hr-ess-files" }],
 
 	// Keep-alive: restarts the container within 5 minutes if it ever stops.
