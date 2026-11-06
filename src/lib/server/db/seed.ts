@@ -1,16 +1,10 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
 import { eq } from 'drizzle-orm';
-import { hash } from '@node-rs/argon2';
+import { hashPassword } from '../password-hash';
 import * as schema from './schema';
+import { openScriptDb } from './script-db';
 
-const connectionString =
-	process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/champ_hr';
+const db = openScriptDb();
 
-const pool = new Pool({ connectionString });
-const db = drizzle(pool, { schema });
-
-const ARGON2_OPTS = { memoryCost: 19456, timeCost: 2, parallelism: 1 };
 
 // Set these in Railway (or .env locally) before seeding — no default credential or PII
 // ships in the repo. Whoever sets SUPER_ADMIN_EMAIL/PASSWORD owns first login; they fill
@@ -25,6 +19,18 @@ async function seed() {
 		throw new Error('SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD must be set to run the seed script');
 	}
 
+	// Seed exactly when the designated super admin is missing. Counting all users
+	// would wrongly skip seeding once any other real employee is added.
+	const [existing] = await db
+		.select({ id: schema.users.id })
+		.from(schema.users)
+		.where(eq(schema.users.email, SUPER_ADMIN_EMAIL.toLowerCase()))
+		.limit(1);
+	if (existing) {
+		console.log(`Super admin (${SUPER_ADMIN_EMAIL}) already present, skipping seed.`);
+		return;
+	}
+
 	console.log('Seeding Champ HR ESS Portal...');
 
 	const [dept] = await db
@@ -37,7 +43,7 @@ async function seed() {
 		.values({ name: 'HR Team', departmentId: dept.id })
 		.returning();
 
-	const superAdminPasswordHash = await hash(SUPER_ADMIN_PASSWORD, ARGON2_OPTS);
+	const superAdminPasswordHash = await hashPassword(SUPER_ADMIN_PASSWORD);
 	const [superAdmin] = await db
 		.insert(schema.users)
 		.values({
@@ -62,9 +68,8 @@ async function seed() {
 	// fictional Casual/Sick/Earned 12-day balances that shadowed the policy.
 
 	console.log('Seed complete:');
-	console.log(`  Super Admin: ${SUPER_ADMIN_EMAIL} / ${SUPER_ADMIN_PASSWORD}`);
-
-	await pool.end();
+	// Never the password: container logs are kept by Cloudflare.
+	console.log(`  Super Admin: ${SUPER_ADMIN_EMAIL}`);
 }
 
 seed().catch((err) => {

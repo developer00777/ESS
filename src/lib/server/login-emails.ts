@@ -1,9 +1,10 @@
-import { db } from '$lib/server/db/postgres';
+import { db } from '$lib/server/db/client';
 import { appSettings, customRoles, loginEmails, users } from '$lib/server/db/schema';
-import { and, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNotNull, lt, or, sql } from 'drizzle-orm';
+import { inArray } from '$lib/server/db/sql';
 import type { SessionUser } from '$lib/server/auth';
 import { hasCap } from '$lib/server/capabilities';
-import { logActivity } from '$lib/server/db/mongo';
+import { logActivity } from '$lib/server/db/store';
 import { isMailerConfigured, sendWelcomeEmail } from '$lib/server/mailer';
 import { clerkAuthActive } from '$lib/server/clerk';
 import { postToFeed } from '$lib/server/chat/cards';
@@ -61,7 +62,7 @@ export async function setCadence(actor: SessionUser, seconds: number): Promise<{
 
 /** People who can approve login emails, to be told something is waiting. */
 async function approverIds(): Promise<string[]> {
-	const named = await db.select({ id: customRoles.id }).from(customRoles).where(sql`'people.send_logins' = any(${customRoles.capabilities})`);
+	const named = await db.select({ id: customRoles.id }).from(customRoles).where(sql`exists (select 1 from json_each(${customRoles.capabilities}) where value = 'people.send_logins')`);
 	const rows = await db
 		.select({ id: users.id })
 		.from(users)
@@ -87,7 +88,7 @@ export async function queueLoginEmails(
 		ids.map((userId) => ({ userId, source: opts.source, requestedBy: opts.requestedBy, importId: opts.importId ?? null, sendTo: opts.sendTo || null }))
 	);
 	if (opts.notify !== false) {
-		const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(loginEmails).where(eq(loginEmails.status, 'pending'));
+		const [{ n }] = await db.select({ n: sql<number>`count(*)` }).from(loginEmails).where(eq(loginEmails.status, 'pending'));
 		const text = `${n} login ${n === 1 ? 'email is' : 'emails are'} waiting for approval before they go out.`;
 		for (const id of await approverIds()) {
 			await postToFeed(id, text, { type: 'notice', tone: 'warn', title: 'Login emails to approve', text, href: '/admin/people?view=logins' }, { notify: id !== opts.requestedBy });
@@ -125,7 +126,7 @@ export async function listLoginEmails(): Promise<{ rows: LoginEmailRow[]; settin
 		.select({ q: loginEmails, fullName: users.fullName, email: users.email, mustChange: users.mustChangePassword, requestedBy: requester, approvedBy: approver })
 		.from(loginEmails)
 		.innerJoin(users, eq(users.id, loginEmails.userId))
-		.where(and(notHidden, or(inArray(loginEmails.status, ['pending', 'approved', 'sending', 'failed']), sql`${loginEmails.createdAt} > now() - interval '14 days'`)))
+		.where(and(notHidden, or(inArray(loginEmails.status, ['pending', 'approved', 'sending', 'failed']), gt(loginEmails.createdAt, new Date(Date.now() - 14 * 86_400_000)))))
 		.orderBy(desc(loginEmails.createdAt))
 		.limit(500);
 	const approvedOrder = rows
@@ -161,7 +162,7 @@ export async function listLoginEmails(): Promise<{ rows: LoginEmailRow[]; settin
 
 /** Pending emails for the Admin Controls attention count. */
 export async function pendingCount(): Promise<number> {
-	const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(loginEmails).where(eq(loginEmails.status, 'pending'));
+	const [{ n }] = await db.select({ n: sql<number>`count(*)` }).from(loginEmails).where(eq(loginEmails.status, 'pending'));
 	return n;
 }
 
@@ -224,8 +225,8 @@ async function lastAttemptAt(): Promise<Date | null> {
 
 /**
  * Sends the next approved email if the cadence allows. Called every few
- * seconds by the scheduler; safe with several server processes because the
- * row is claimed with SKIP LOCKED before anything is sent.
+ * seconds by the scheduler; the row is claimed (approved → sending) before
+ * anything is sent, so it goes out once.
  */
 export async function sendNextLoginEmail(now = new Date()): Promise<'sent' | 'failed' | 'skipped' | 'waiting' | 'idle'> {
 	if (!isMailerConfigured()) return 'idle';
@@ -233,16 +234,19 @@ export async function sendNextLoginEmail(now = new Date()): Promise<'sent' | 'fa
 	const last = await lastAttemptAt();
 	if (last && now.getTime() - last.getTime() < cadenceSeconds * 1000) return 'waiting';
 
-	const claimed = await db.execute(sql`
-		update login_emails set status = 'sending', attempted_at = now()
-		where id = (
-			select id from login_emails where status = 'approved'
-			order by approved_at asc nulls last, created_at asc
-			for update skip locked limit 1
-		)
-		returning id, user_id as "userId", send_to as "sendTo"
-	`);
-	const job = (claimed.rows as { id: string; userId: string; sendTo: string | null }[])[0];
+	const [next] = await db
+		.select({ id: loginEmails.id })
+		.from(loginEmails)
+		.where(eq(loginEmails.status, 'approved'))
+		.orderBy(sql`${loginEmails.approvedAt} asc nulls last`, asc(loginEmails.createdAt))
+		.limit(1);
+	if (!next) return 'idle';
+	// Claimed only if still approved, so a second sender can never take the same row.
+	const [job] = await db
+		.update(loginEmails)
+		.set({ status: 'sending', attemptedAt: now })
+		.where(and(eq(loginEmails.id, next.id), eq(loginEmails.status, 'approved')))
+		.returning({ id: loginEmails.id, userId: loginEmails.userId, sendTo: loginEmails.sendTo });
 	if (!job) return 'idle';
 
 	const [u] = await db
@@ -288,7 +292,7 @@ export async function sendNextLoginEmail(now = new Date()): Promise<'sent' | 'fa
 
 /** A send interrupted by a restart is put back in line. */
 export async function recoverStuckSends() {
-	await db.update(loginEmails).set({ status: 'approved' }).where(and(eq(loginEmails.status, 'sending'), sql`${loginEmails.attemptedAt} < now() - interval '5 minutes'`));
+	await db.update(loginEmails).set({ status: 'approved' }).where(and(eq(loginEmails.status, 'sending'), lt(loginEmails.attemptedAt, new Date(Date.now() - 5 * 60_000))));
 }
 
 export function startLoginEmailSender() {

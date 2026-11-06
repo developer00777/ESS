@@ -1,13 +1,8 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
-import { inArray } from 'drizzle-orm';
+import { inArray } from './sql';
 import * as schema from './schema';
+import { openScriptDb } from './script-db';
 
-const connectionString =
-	process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/champ_hr';
-
-const pool = new Pool({ connectionString });
-const db = drizzle(pool, { schema });
+const db = openScriptDb();
 
 // Earlier deploys auto-seeded these placeholder demo accounts. Removing exactly this
 // known set (never anything else) so the real seed (the SUPER_ADMIN_EMAIL account,
@@ -28,7 +23,6 @@ async function clearPlaceholderAccounts() {
 
 	if (targets.length === 0) {
 		console.log('No placeholder accounts found — nothing to clear.');
-		await pool.end();
 		return;
 	}
 
@@ -146,7 +140,6 @@ async function clearPlaceholderAccounts() {
 	await db.delete(schema.users).where(inArray(schema.users.id, ids));
 
 	console.log('Placeholder accounts cleared.');
-	await pool.end();
 }
 
 clearPlaceholderAccounts().catch((err) => {

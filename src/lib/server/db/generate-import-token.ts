@@ -1,17 +1,12 @@
 import { randomBytes, createHash } from 'node:crypto';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
 import * as schema from './schema';
+import { openScriptDb } from './script-db';
 
 function hashImportToken(token: string): string {
 	return createHash('sha256').update(token).digest('hex');
 }
 
-const connectionString =
-	process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/champ_hr';
-
-const pool = new Pool({ connectionString });
-const db = drizzle(pool, { schema });
+const db = openScriptDb();
 
 async function main() {
 	const label = process.argv[2];
@@ -38,8 +33,6 @@ async function main() {
 	console.log('Configure the EasyTime Pro upload job to POST the exported file to:');
 	console.log('  <YOUR_APP_URL>/api/attendance/easytime-import');
 	console.log(`  Header: Authorization: Bearer ${token}\n`);
-
-	await pool.end();
 }
 
 main().catch((err) => {

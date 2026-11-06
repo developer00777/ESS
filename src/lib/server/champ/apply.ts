@@ -1,13 +1,16 @@
 import type { RequestEvent } from '@sveltejs/kit';
-import { db } from '$lib/server/db/postgres';
-import { sql } from 'drizzle-orm';
-import { logActivity } from '$lib/server/db/mongo';
+import { db } from '$lib/server/db/client';
+import { and, desc, eq, gt, ne, or } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/sqlite-core';
+import { tasks, users } from '$lib/server/db/schema';
+import { logActivity } from '$lib/server/db/store';
 import { createLogin } from '$lib/server/logins';
 import { saveNamedRole } from '$lib/server/roles';
 import { syncMembershipFor } from '$lib/server/chat/sync';
 import { decisionEndpoint, type RequestKind } from '$lib/server/chat/cards';
 import type { Role, SessionUser } from '$lib/server/auth';
 import type { ChampCardKind } from '$lib/champ';
+import { background } from '$lib/server/platform';
 
 /**
  * What a Champ card's button does. Wherever the portal already has an
@@ -52,7 +55,7 @@ export async function applyCard(event: RequestEvent, kind: ChampCardKind, action
 		case 'create_login': {
 			const r = await createLogin(user, payload as never, { source: 'champ' });
 			if (!r.success) return { ok: false, message: r.message };
-			void syncMembershipFor(r.userId).catch(() => {});
+			background(syncMembershipFor(r.userId).catch(() => {}));
 			result = {
 				ok: true,
 				message: `Created. The welcome email to ${r.email} waits for an admin to approve it in Admin Controls › People. ${r.tempPassword ? `Temporary password: ${r.tempPassword}` : 'No password is set: they sign in with a code sent to their email, then choose their own.'}`
@@ -93,22 +96,35 @@ export async function applyCard(event: RequestEvent, kind: ChampCardKind, action
  * list view of them the panel has always shown.
  */
 export async function listTasks(userId: string) {
-	const rows = await db.execute(
-		sql`
-			select t.id, t.title,
-				case when t.status = 'done' then 'done' when t.request_state = 'declined' then 'declined' else 'open' end as status,
-				t.request_note as note, t.due_date as "dueAt", t.created_at as "createdAt", t.completed_at as "decidedAt",
-				t.assignee_id = ${userId} as "mine", f.full_name as "fromName", coalesce(tu.full_name, 'Unassigned') as "toName"
-			from tasks t
-			join users f on f.id = t.created_by
-			left join users tu on tu.id = t.assignee_id
-			where (t.assignee_id = ${userId} or t.created_by = ${userId})
-				and (t.status <> 'done' or t.completed_at > now() - interval '14 days')
-			order by t.created_at desc
-			limit 60
-		`
-	);
-	return rows.rows;
+	const from = alias(users, 'task_from');
+	const to = alias(users, 'task_to');
+	const since = new Date(Date.now() - 14 * 86_400_000);
+	const rows = await db
+		.select({
+			id: tasks.id,
+			title: tasks.title,
+			status: tasks.status,
+			requestState: tasks.requestState,
+			note: tasks.requestNote,
+			dueAt: tasks.dueDate,
+			createdAt: tasks.createdAt,
+			decidedAt: tasks.completedAt,
+			assigneeId: tasks.assigneeId,
+			fromName: from.fullName,
+			toName: to.fullName
+		})
+		.from(tasks)
+		.innerJoin(from, eq(from.id, tasks.createdBy))
+		.leftJoin(to, eq(to.id, tasks.assigneeId))
+		.where(and(or(eq(tasks.assigneeId, userId), eq(tasks.createdBy, userId)), or(ne(tasks.status, 'done'), gt(tasks.completedAt, since))))
+		.orderBy(desc(tasks.createdAt))
+		.limit(60);
+	return rows.map(({ requestState, assigneeId, toName, ...r }) => ({
+		...r,
+		status: r.status === 'done' ? 'done' : requestState === 'declined' ? 'declined' : 'open',
+		mine: assigneeId === userId,
+		toName: toName ?? 'Unassigned'
+	}));
 }
 
 export async function decideTask(user: SessionUser, taskId: string, action: 'done' | 'decline' | 'withdraw', note: string): Promise<ApplyResult> {

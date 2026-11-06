@@ -5,8 +5,8 @@
 	"compatibility_date": "2026-10-01",
 	"observability": { "enabled": true },
 
-	// The portal AND its databases (Postgres, MongoDB, Redis) in one image.
-	// Data survives restarts through R2 backups — see ess-box.sh.
+	// The portal plus Redis in one image. Tables live in D1 and files in R2;
+	// the container reaches both through this Worker (see src/index.ts).
 	"containers": [
 		{
 			"class_name": "AppContainer",
@@ -24,18 +24,29 @@
 	// Lets the Worker restart the container when vars/secrets change (new version).
 	"version_metadata": { "binding": "CF_VERSION_METADATA" },
 
-	// Database backups. The container reaches this through the Worker (no API keys).
-	"r2_buckets": [{ "binding": "BACKUPS", "bucket_name": "champ-hr-ess-backups" }],
+	// The database. Create it once with `npx wrangler d1 create champ-hr-ess`
+	// and paste the printed id here. The container applies migrations/ on start.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "champ-hr-ess",
+			"database_id": "REPLACE_WITH_D1_DATABASE_ID",
+			"migrations_dir": "../migrations"
+		}
+	],
+
+	// Uploaded files: policy documents, profile pictures, announcement and chat
+	// attachments. Create it once with `npx wrangler r2 bucket create champ-hr-ess-files`.
+	"r2_buckets": [{ "binding": "FILES", "bucket_name": "champ-hr-ess-files" }],
 
 	// Keep-alive: restarts the container within 5 minutes if it ever stops.
 	"triggers": { "crons": ["*/5 * * * *"] },
 
 	// Plain settings. Everything secret (JWT_*, API keys) is added as a secret.
-	// DATABASE_URL / MONGO_URL / REDIS_URL are set inside the container.
+	// REDIS_URL and CF_BRIDGE_URL are set inside the container.
 	"vars": {
 		"NODE_ENV": "production",
 		"ORIGIN": "https://champ-hr-ess.deep-ae0.workers.dev",
-		"PORTAL_URL": "https://champ-hr-ess.deep-ae0.workers.dev",
-		"BACKUP_INTERVAL_MINUTES": "5"
+		"PORTAL_URL": "https://champ-hr-ess.deep-ae0.workers.dev"
 	}
 }

@@ -1,121 +1,90 @@
-# Moving the ESS portal to Cloudflare
+# Running the ESS portal on Cloudflare
 
 Branch: `feat/cloudflare-migration`
 
-The portal keeps **the same system design it has on Railway**: one API
-container plus three databases (Postgres, MongoDB, Redis). The app code is
-exactly what is on `main`. Only the place it runs changes.
-
-> An earlier attempt rewrote the app for Cloudflare Workers, replacing Mongo
-> with R2 and Redis with Durable Objects. It is kept on the branch
-> `feat/cloudflare-workers-native` for reference. It is **not** what this guide
-> deploys.
+Everything runs on Cloudflare: the app in a Cloudflare container, its tables
+in **D1**, uploaded files in **R2**, and **Redis** inside the container.
 
 ---
 
 ## 1. System design
 
 ```
-                 Railway today                              Cloudflare after the move
-  ┌───────────────────────────────────┐        ┌──────────────────────────────────────────┐
-  │  champ-hr.com                     │        │  champ-hr.com                             │
-  │        │                          │        │        │                                  │
-  │        ▼                          │        │        ▼                                  │
-  │  API container (Dockerfile)       │        │  Worker (cloudflare/src/index.ts)          │
-  │   SvelteKit on Node, port 3000    │        │        │  forwards every request           │
-  │   background jobs (setInterval)   │        │        ▼                                  │
-  │        │                          │        │  API container: the SAME Dockerfile        │
-  │        ├── Postgres               │        │   Cloudflare Containers, 1 instance,     │
-  │        ├── MongoDB                │        │   always on                              │
-  │        └── Redis                  │        └────────┼─────────────────────────────────┘
-  └───────────────────────────────────┘                 │  DATABASE_URL / MONGO_URL / REDIS_URL
-                                                        ▼
-                                          Postgres · MongoDB · Redis
-                                          (managed hosts or Railway, see 2.3)
+  champ-hr.com
+       │
+       ▼
+  Worker (cloudflare/src/index.ts)  ── forwards every request
+       │
+       ▼
+  Container: one instance, always on (cloudflare/Dockerfile)
+   ├─ SvelteKit app on Node, port 3000, background jobs on timers
+   └─ Redis on localhost: sign-in sessions, login rate limits, presence, caches
+       │
+       │  plain HTTP to 198.51.100.7, intercepted by the Worker, never leaves Cloudflare
+       ▼
+  Worker bridge (cloudflare/src/bridge.ts)
+   ├─ /d1/…     → DB     D1 "champ-hr-ess": every table
+   └─ /files/…  → FILES  R2 "champ-hr-ess-files": profile pictures, policy
+                         documents, announcement and chat attachments
 ```
 
-| Railway service | On Cloudflare                                                        |
-| --------------- | -------------------------------------------------------------------- |
-| API container   | **Cloudflare Containers**, built from the same `Dockerfile`, with a small Worker in front |
-| Postgres        | Stays a Postgres server. Cloudflare does not host Postgres.           |
-| MongoDB         | Stays a MongoDB server. Cloudflare does not host MongoDB.             |
-| Redis           | Stays a Redis server. Cloudflare does not host Redis.                 |
+| On Railway | On Cloudflare |
+| ---------- | ------------- |
+| API container | Cloudflare Containers, one `standard-2` instance |
+| Postgres | **D1** (SQLite). Schema: `src/lib/server/db/schema.ts`, migrations: `migrations/` |
+| MongoDB (activity log, uploaded files) | Activity log rows in **D1**, file bytes in **R2** (`src/lib/server/db/store.ts`) |
+| Redis | **Redis inside the container**, memory only |
 
-**Why the databases cannot run on Cloudflare:** a Cloudflare container's disk
-is wiped every time it restarts, which happens on every deploy. A database
-inside one would lose its data. So the three databases live on a host built
-for them, and the API container connects to them over the internet, the same
-way it does today through `DATABASE_URL`, `MONGO_URL` and `REDIS_URL`.
+**Why a bridge:** only a Worker can use D1 and R2 bindings. The app in the
+container sends each query and file operation to the Worker, which runs it
+with its bindings (`src/lib/server/cloudflare-bridge.ts` is the app's side).
+No API keys exist anywhere.
 
-What lives in `cloudflare/` (its own small package, not part of the app image):
+**What a restart loses:** nothing from D1 or R2. Redis is reset, so everyone
+signs in again after a deploy or restart.
 
-| File | What it does |
-| ---- | ------------ |
-| `wrangler.jsonc` | Builds `../Dockerfile`, runs **one** `standard-1` instance (½ vCPU, 4 GB), a cron every 5 minutes, and the plain settings (`ORIGIN`, `PORTAL_URL`) |
-| `src/index.ts` | Forwards every request to the container. Passes every secret to it as an environment variable. Keeps it awake permanently. Restarts it within 5 minutes if it ever stops. |
+**Backups:** D1 Time Travel restores the database to any minute of the last
+30 days (`npx wrangler d1 time-travel restore champ-hr-ess --timestamp=…`).
 
-Why exactly **one** instance: the background jobs (emails, reminders, Zoom,
-ProHance, Clerk sync) run inside the app. Two copies would send every email
-twice. This is the same as Railway's single service.
+**Why exactly one instance:** the background jobs (emails, reminders, Zoom,
+ProHance, Clerk sync) run inside the app. A second copy would send every email
+twice.
 
 ---
 
-## 2. Before you start
+## 2. One-time setup
 
 ### 2.1 Cloudflare account
 
-- **Workers Paid plan** ($5/month). Containers are not available on the free plan.
-- The **`champ-hr.com` domain added to the account** (nameservers pointed at
-  Cloudflare). If DNS is somewhere else: Cloudflare Dashboard → *Add a domain*,
-  then change the nameservers at your registrar.
+- **Workers Paid plan** ($5/month). Containers need it.
+- For the final switch, the **`champ-hr.com` domain** added to the account.
 
-### 2.2 Your PC
+### 2.2 Create the database and the file bucket
 
-- **Docker Desktop running.** `wrangler deploy` builds the image locally and
-  uploads it.
-- In the repo:
-  ```powershell
-  git checkout feat/cloudflare-migration
-  cd cloudflare
-  npm install
-  npx wrangler login
-  ```
+From `cloudflare/` on your PC:
 
-### 2.3 Where the three databases live
+```powershell
+cd cloudflare
+npm install
+npx wrangler login
+npx wrangler d1 create champ-hr-ess
+npx wrangler r2 bucket create champ-hr-ess-files
+```
 
-Each one needs a **public, password-protected URL** the container can reach.
-Choose **Mumbai / ap-south-1** wherever possible, close to the users.
+`d1 create` prints a `database_id`. Paste it into `cloudflare/wrangler.jsonc`
+in place of `REPLACE_WITH_D1_DATABASE_ID`, and commit that change. Workers
+Builds deploys from the branch, so the id must be in git.
 
-| Database | Option A: keep on Railway (no data move) | Option B: managed host |
-| -------- | ----------------------------------------- | ---------------------- |
-| Postgres | Railway → Postgres → *Settings → Networking → Public Networking* | Neon or Supabase |
-| MongoDB  | Railway → MongoDB → *Public Networking*  | MongoDB Atlas          |
-| Redis    | Railway → Redis → *Public Networking*    | Upstash Redis (`rediss://` URL) or Redis Cloud |
+### 2.3 Secrets
 
-- **Option A** is the least work: nothing moves, and only the API container
-  leaves Railway. Railway keeps billing for the three databases.
-- **Option B** moves everything off Railway. Copy the data once (section 5).
-
-You can mix: e.g. keep Postgres on Railway and move Mongo to Atlas.
-
-> Use the **public** URLs. The `*.railway.internal` addresses only work inside Railway.
-
----
-
-## 3. Settings and secrets
-
-Plain settings are in `cloudflare/wrangler.jsonc` → `vars`. Check that
-`ORIGIN` and `PORTAL_URL` say `https://champ-hr.com`.
-
-Everything else is a secret. Run each one from the `cloudflare/` folder:
-`npx wrangler secret put NAME` asks for the value. Copy the values from
-Railway → app service → *Variables*. Every secret is handed to the container
-as an environment variable, exactly like Railway's variables.
+Plain settings are in `cloudflare/wrangler.jsonc` → `vars`. Everything else is
+a secret: `npx wrangler secret put NAME` from `cloudflare/`, or the dashboard
+(*Workers & Pages → champ-hr-ess → Settings → Variables and Secrets*). Copy
+the values from Railway → app service → *Variables*.
 
 **Required**
 
 ```
-DATABASE_URL     MONGO_URL     REDIS_URL           (the public URLs from 2.3)
 JWT_SECRET       JWT_REFRESH_SECRET
 SUPER_ADMIN_EMAIL   SUPER_ADMIN_PASSWORD   SUPER_ADMIN_FULL_NAME
 ```
@@ -134,115 +103,107 @@ DEVELOPER_EMAIL  DEVELOPER_PASSWORD  DEVELOPER_FULL_NAME
 VAPID_PUBLIC_KEY  VAPID_PRIVATE_KEY
 ```
 
-> **Many at once:** put them in a JSON file **outside the repo**
-> (`{"JWT_SECRET": "...", ...}`), run `npx wrangler secret bulk C:\path\secrets.json`,
-> then delete the file.
-
-Leave `PROHANCE_POLL_MINUTES` set to `0` for now (see section 8).
+`DATABASE_URL`, `MONGO_URL` and `REDIS_URL` are **not** used any more. Delete
+them if they were set as secrets earlier. Keep `PROHANCE_POLL_MINUTES` at `0`
+for now (section 6).
 
 ---
 
-## 4. Deploy and test on the workers.dev address
+## 3. Deploy
 
-From `cloudflare/`:
+Push the branch (Workers Builds deploys it), or from `cloudflare/` run
+`npm run deploy`. On every start the container:
 
-```powershell
-npm run deploy
-```
-
-This builds the Docker image, uploads it, and prints a URL like
-`https://champ-hr-ess.<your-subdomain>.workers.dev`. The **first start takes a
-minute or two**: `start.sh` runs the migrations and the seed check, just as on Railway.
-
-To test on that URL, **temporarily** set `ORIGIN` and `PORTAL_URL` in
-`wrangler.jsonc` to it and deploy again. Otherwise sign-in and form posts are
-refused. If Clerk is on, also add the URL to Clerk's allowed origins and to
-`CLERK_AUTHORIZED_PARTIES`.
-
-> **Careful:** if the databases are the live ones, this test portal sends real
-> emails and runs the real background jobs **alongside Railway**. Either test
-> against a copy of the databases, or keep the test short. For a short test, you
-> can also leave `RESEND_API_KEY` unset until the switch.
-
-Check:
-
-- [ ] Sign in; open Dashboard, Leave, Attendance, Team, Admin, Payroll, Hub
-- [ ] Apply for leave, then approve it from a second login
-- [ ] Chat: a message appears live in another browser
-- [ ] Profile picture upload; an old announcement attachment / policy document opens (Mongo)
-- [ ] Payroll export downloads an .xlsx; a biometric / leave-balance upload previews
-- [ ] Logs: `npm run tail` shows the app's normal output and no crash loop
+1. checks that D1 and R2 answer through the bridge (it refuses to start otherwise),
+2. starts Redis,
+3. applies any new migration in `migrations/` (`src/lib/server/db/migrate.ts`,
+   all of it in one D1 batch, so a failure changes nothing),
+4. creates the super admin if that account does not exist, then starts the app.
 
 ---
 
-## 5. Copying the data (only if the databases move, Option B)
+## 4. Copy the Railway data in (once)
 
-Do this in a quiet hour, **right before** the switch in section 6, with the
-Railway app stopped so nothing changes during the copy.
+Do this in a quiet hour, **right before** the switch in section 5, with the
+Railway app service **stopped**, so nothing changes during the copy.
 
-```powershell
-# Postgres
-pg_dump  --format=custom --no-owner "<Railway Postgres public URL>" -f ess.dump
-pg_restore --no-owner --dbname "<new Postgres URL>" ess.dump
+1. Deploy once (section 3) so the container creates the tables.
+2. On Railway, turn on *Public Networking* for Postgres and MongoDB and copy
+   their public URLs.
+3. From the repo root:
 
-# MongoDB
-mongodump    --uri "<Railway Mongo public URL>" --archive=ess.mongo.gz --gzip
-mongorestore --uri "<Atlas URL>"                --archive=ess.mongo.gz --gzip
-```
+   ```powershell
+   $env:DATABASE_URL = "<Railway Postgres public URL>"
+   $env:MONGO_URL    = "<Railway MongoDB public URL>"
+   npx tsx scripts/cloudflare/import-to-d1.ts --remote --dry-run      # counts only
+   npx tsx scripts/cloudflare/import-to-d1.ts --remote --replace
+   ```
 
-Redis does not need copying. It only holds sign-in sessions, login rate limits
-and short-lived caches. The cost is that everyone signs in once more after the
-switch. Delete the dump files afterwards: they contain employee data.
+   `--replace` empties D1 first. The container's first start has already
+   seeded the super admin, and that row would clash with the copied one.
 
----
+The script (`scripts/cloudflare/import-to-d1.ts`):
 
-## 6. Switch `champ-hr.com` over
+- copies every Postgres table, converting each value (timestamps,
+  booleans, JSON),
+- copies the activity log into D1 and every uploaded file into R2,
+- keeps every id, so links between rows, chat attachments and
+  announcement files still resolve,
+- ends by checking every foreign key.
 
-1. Put `ORIGIN` and `PORTAL_URL` back to `https://champ-hr.com` in `wrangler.jsonc`.
-2. **Stop the Railway app service** (not the databases if you kept them),
-   so two copies never run the background jobs at once.
-3. Option B only: do the copy in section 5 and update the three URL secrets.
-4. `npm run deploy`
-5. Attach the domain: Cloudflare Dashboard → *Workers & Pages* → `champ-hr-ess`
-   → *Settings → Domains & Routes → Add → Custom domain* → `champ-hr.com`.
-   Cloudflare replaces the DNS record that pointed at Railway.
+Passwords are copied as their argon2 hashes and work unchanged.
 
-Webhooks (Clerk `/api/clerk/webhook`, Zoom `/api/zoom/webhook`, Resend) and the
-EasyTime bridge all use `champ-hr.com`, so they need no change.
+4. Restart the container so nobody keeps a session from before the copy:
+   change any variable or run `npm run deploy`.
 
-**Rollback:** remove the custom domain from the Worker, point DNS back at
-Railway, and start the Railway app service. If the databases stayed on Railway
-(Option A), nothing else is needed.
+Clear the two environment variables afterwards. They hold database passwords.
 
 ---
 
-## 7. Day-to-day
+## 5. Switch `champ-hr.com` over
 
-Run these from `cloudflare/`:
+1. Set `ORIGIN` and `PORTAL_URL` in `cloudflare/wrangler.jsonc` to `https://champ-hr.com`.
+2. Make sure the **Railway app service is stopped**, so two copies never run
+   the background jobs at once.
+3. Deploy.
+4. Cloudflare Dashboard → *Workers & Pages* → `champ-hr-ess` →
+   *Settings → Domains & Routes → Add → Custom domain* → `champ-hr.com`.
 
-| Task                    | How |
-| ----------------------- | --- |
-| Deploy app changes      | `npm run deploy` (rebuilds the Docker image from the repo) |
-| Live logs               | `npm run tail` |
-| Change a secret         | `npx wrangler secret put NAME`, then `npm run deploy` so the container restarts with it |
-| Restart the app         | `npm run deploy` |
-| New DB migration        | Nothing extra: `start.sh` runs it when the container starts, as on Railway |
-| Local development       | Unchanged: `docker compose up` in the repo root |
-| Run the Cloudflare setup locally | Put test values in `cloudflare/.dev.vars` (gitignored), then `npm run dev` |
+Webhooks (Clerk, Zoom, Resend) and the EasyTime bridge all call `champ-hr.com`,
+so they need no change.
 
-**Downtime on deploy:** with a single instance, each deploy restarts the
-container. Expect up to a minute of errors while `start.sh` runs, the same as
-a Railway redeploy.
+**Rollback:** remove the custom domain, point DNS back at Railway, and start the
+Railway app service. Railway's databases are untouched by the import (it only
+reads them), but anything entered on Cloudflare after the switch is not in them.
+
+---
+
+## 6. Day-to-day
+
+| Task | How |
+| ---- | --- |
+| Deploy app changes | push the branch, or `npm run deploy` in `cloudflare/` |
+| Live logs | `npm run tail` in `cloudflare/` |
+| Change a secret | change it; the Worker restarts the container on the next request |
+| Schema change | edit `schema.ts`, run `npm run db:generate`, commit the new file in `migrations/`; the container applies it on start |
+| Look at the data | `npx wrangler d1 execute champ-hr-ess --remote --command "select count(*) from users"` |
+| Restore the database | `npx wrangler d1 time-travel restore champ-hr-ess --timestamp=<ISO time>` |
+
+Local runs: `wrangler dev` cannot run containers on Windows (it needs WSL).
+`docker-compose.yml` and the root `Dockerfile` still describe the Railway
+Postgres setup and do not work with this branch.
+
+**Speed:** every query is a round trip from the container through the Worker to
+D1. A page that runs many queries one after another is slower than it was on
+localhost Postgres. Watch the slow pages after the switch.
 
 **Cost (check Cloudflare's current price list):** Workers Paid $5/month,
-plus Containers usage for one always-on `standard-1` instance (billed mainly
-for its memory, roughly $20–30/month), plus the database hosts. If the app's
-memory use stays well under 1 GB (watch it in the dashboard), `instance_type`
-`"basic"` (1 GB) costs much less.
+Containers for one always-on `standard-2` instance, plus D1 and R2 usage
+(small at this size).
 
 ---
 
-## 8. ⚠ ProHance
+## 7. ⚠ ProHance
 
 ProHance only accepts calls from **whitelisted IP addresses**, and Cloudflare
 containers have no fixed outgoing IP. Until a static IP is in place, keep
@@ -250,10 +211,10 @@ containers have no fixed outgoing IP. Until a static IP is in place, keep
 
 **Plan:** buy a dedicated egress (static) IP from Cloudflare.
 
-1. Confirm with Cloudflare sales that it covers outgoing traffic from
-   **Containers** (not only Zero Trust / Gateway traffic).
+1. Confirm with Cloudflare that it covers outgoing traffic from
+   **Containers**.
 2. Ask ProHance to whitelist that IP.
-3. `npx wrangler secret put PROHANCE_POLL_MINUTES` → `30`, then `npm run deploy`.
+3. Set `PROHANCE_POLL_MINUTES` to `30`.
 
 Nothing is lost while it is off. Each sync re-pulls from the 25th of the
 previous month, so the first run fills the gap. Use Admin → manual sync for

@@ -1,8 +1,8 @@
-# ESS portal + Postgres + MongoDB + Redis in one image, for Cloudflare Containers.
+# ESS portal + Redis in one image, for Cloudflare Containers.
 # Built by wrangler with the repo root as context (see wrangler.jsonc).
-# The entrypoint (cloudflare/ess-box.sh) explains how data survives restarts via R2.
+# The data is in D1 and R2, reached through the Worker (see ess-box.sh).
 
-# --- Build the app (same as ../Dockerfile) ---
+# --- Build the app ---
 FROM node:20-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -10,22 +10,13 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:20-slim AS node
-
-# --- Runtime: the official MongoDB 7 image (Ubuntu 22.04, ships mongod,
-# mongosh, mongodump, mongorestore) + Postgres 14 + Redis + curl (R2 bridge) ---
-FROM mongo:7 AS production
+# --- Runtime: Node 20 + Redis + curl (bridge health check) ---
+FROM node:20-slim AS production
 
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      postgresql postgresql-client redis-server curl ca-certificates util-linux \
+      redis-server curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
-
-# Node 20 from the official image.
-COPY --from=node /usr/local/bin/node /usr/local/bin/node
-COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
-RUN ln -sf ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
- && ln -sf ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -34,9 +25,10 @@ RUN npm ci
 ENV NODE_ENV=production
 
 COPY --from=build /app/build ./build
-COPY --from=build /app/drizzle ./drizzle
-COPY --from=build /app/drizzle.config.ts ./drizzle.config.ts
-COPY --from=build /app/src/lib/server/db ./src/lib/server/db
+COPY --from=build /app/migrations ./migrations
+# start.sh's migrate/seed scripts (they import the schema, the password hash
+# and the D1 bridge client from here).
+COPY --from=build /app/src/lib/server ./src/lib/server
 COPY start.sh ./start.sh
 COPY cloudflare/ess-box.sh /usr/local/bin/ess-box
 RUN chmod +x ./start.sh /usr/local/bin/ess-box

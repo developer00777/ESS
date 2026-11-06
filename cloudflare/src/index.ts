@@ -1,12 +1,16 @@
 /**
- * Runs the portal AND its databases on Cloudflare Containers. The image
- * (cloudflare/Dockerfile) holds the app plus Postgres, MongoDB and Redis on
- * localhost; cloudflare/ess-box.sh starts them and keeps the data in R2.
+ * Runs the portal on Cloudflare Containers, with its data in D1 and R2.
  *
- *   browser → this Worker → the one container (app + Postgres + Mongo + Redis)
- *                                   │ http://198.51.100.7/… (intercepted)
+ *   browser → this Worker → the one container (app + Redis on localhost)
+ *                                   │ http://198.51.100.7/… (intercepted, never leaves Cloudflare)
  *                                   ▼
- *                     r2Bridge() below → BACKUPS R2 binding
+ *                     bridge() below ─┬─ /d1/…     → DB    (D1: every table)
+ *                                     └─ /files/…  → FILES (R2: uploaded files)
+ *
+ * Only a Worker can use the D1 and R2 bindings, so the container's queries
+ * and file reads come back through here (src/lib/server/cloudflare-bridge.ts
+ * is the other end). No API keys are involved. Redis (sessions, rate limits,
+ * caches) lives in the container's memory and is reset on every restart.
  *
  * There is a single, always-on instance, like the one Railway service:
  *   - the app's background jobs (setInterval) run inside it, so a second copy
@@ -14,14 +18,13 @@
  *   - live chat keeps its open streams in memory.
  */
 import { Container, getContainer } from '@cloudflare/containers';
+import { BRIDGE_HOST, bridge, type BridgeEnv } from './bridge';
 
 // The containers library routes intercepted container traffic through this entrypoint.
 export { ContainerProxy } from '@cloudflare/containers';
 
-interface Env {
+interface Env extends BridgeEnv {
 	APP: DurableObjectNamespace<AppContainer>;
-	/** Database backups (Postgres + Mongo dumps), written by ess-box.sh through r2Bridge. */
-	BACKUPS: R2Bucket;
 	/** Which Worker version is live; a change means vars/secrets may have changed. */
 	CF_VERSION_METADATA: WorkerVersionMetadata;
 	/** Every var and secret, passed through to the container as environment variables. */
@@ -33,54 +36,6 @@ const CLIENT_IP_HEADER = 'x-portal-client-ip';
 
 /** Durable Object storage key: the Worker version the running container was started with. */
 const STARTED_VERSION_KEY = 'startedWithVersion';
-
-/**
- * Plain-HTTP requests from the container to this address never leave
- * Cloudflare: they are handed to r2Bridge. It is a reserved documentation
- * address (TEST-NET-2), so it can never collide with a real host.
- */
-const R2_BRIDGE_HOST = '198.51.100.7';
-const R2_PREFIX = 'ess/';
-const SAFE_KEY = /^[A-Za-z0-9._\-\/]+$/;
-
-/**
- * Key-less R2 access for the container, reachable only from inside it:
- *   GET /_ping        → 200 when the bucket answers
- *   HEAD/GET /<key>   → read  ess/<key>
- *   PUT /<key>        → write ess/<key> (needs Content-Length)
- */
-async function r2Bridge(req: Request, env: Env): Promise<Response> {
-	const path = decodeURIComponent(new URL(req.url).pathname).replace(/^\/+/, '');
-	if (path === '_ping') {
-		await env.BACKUPS.list({ limit: 1 });
-		return new Response('ok');
-	}
-	if (!path || !SAFE_KEY.test(path) || path.split('/').includes('..')) {
-		return new Response('bad key', { status: 400 });
-	}
-	const key = R2_PREFIX + path;
-
-	if (req.method === 'HEAD') {
-		const head = await env.BACKUPS.head(key);
-		return new Response(null, { status: head ? 200 : 404 });
-	}
-	if (req.method === 'GET') {
-		const obj = await env.BACKUPS.get(key);
-		if (!obj) return new Response('not found', { status: 404 });
-		return new Response(obj.body, { headers: { 'content-length': String(obj.size) } });
-	}
-	if (req.method === 'PUT') {
-		const length = Number(req.headers.get('content-length'));
-		if (!req.body || !Number.isFinite(length) || length <= 0) {
-			return new Response('content-length required', { status: 411 });
-		}
-		// Stream straight into R2 without buffering the dump in memory.
-		const { readable, writable } = new FixedLengthStream(length);
-		const [, put] = await Promise.all([req.body.pipeTo(writable), env.BACKUPS.put(key, readable)]);
-		return new Response(put?.etag ?? 'ok', { status: 201 });
-	}
-	return new Response('method not allowed', { status: 405 });
-}
 
 export class AppContainer extends Container<Env> {
 	defaultPort = 3000;
@@ -94,7 +49,13 @@ export class AppContainer extends Container<Env> {
 		for (const [key, value] of Object.entries(env)) {
 			if (typeof value === 'string') vars[key] = value;
 		}
-		this.envVars = { ...vars, ADDRESS_HEADER: CLIENT_IP_HEADER, PORT: '3000', HOST: '0.0.0.0' };
+		this.envVars = {
+			...vars,
+			CF_BRIDGE_URL: `http://${BRIDGE_HOST}`,
+			ADDRESS_HEADER: CLIENT_IP_HEADER,
+			PORT: '3000',
+			HOST: '0.0.0.0'
+		};
 	}
 
 	/** Never go to sleep: the background jobs must keep running with nobody on the site. */
@@ -116,8 +77,7 @@ export class AppContainer extends Container<Env> {
 	/**
 	 * The container only reads its env vars when it starts, and it never sleeps.
 	 * So after a deploy or a dashboard var/secret edit (= a new Worker version),
-	 * restart it once so the new settings actually take effect. SIGTERM lets
-	 * ess-box.sh take its final R2 backup before the databases go down.
+	 * restart it once so the new settings actually take effect.
 	 */
 	private async restartIfStale(): Promise<void> {
 		const started = await this.ctx.storage.get<string>(STARTED_VERSION_KEY);
@@ -152,13 +112,13 @@ export class AppContainer extends Container<Env> {
 	}
 }
 
-// Route the container's requests to R2_BRIDGE_HOST into r2Bridge.
+// Route the container's requests to BRIDGE_HOST into bridge().
 // This must be an ASSIGNMENT, not a `static outboundByHost = …` class field:
 // with target es2022 a class field defines its own property and skips the
 // library's static setter, so the handler never gets registered and the
 // request falls through to the internet (403 "direct IP access").
 AppContainer.outboundByHost = {
-	[R2_BRIDGE_HOST]: (req, env) => r2Bridge(req, env as unknown as Env)
+	[BRIDGE_HOST]: (req, env) => bridge(req, env as unknown as Env)
 };
 
 function app(env: Env) {
