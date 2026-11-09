@@ -18,10 +18,13 @@ DATA=/var/lib/ess
 mkdir -p "$DATA"
 
 # --- 0. D1 and R2 must answer before anything starts -------------------------
+# Give up after ~2 minutes: exiting lets the Worker start a fresh container
+# (with the bridge attached again) instead of sitting here not listening.
 ok=0
-for _ in $(seq 1 20); do
-  if curl -fsS -m 20 "$BRIDGE/_ping" >/dev/null 2>&1; then ok=1; break; fi
-  sleep 3
+for i in $(seq 1 15); do
+  if curl -fsS -m 6 "$BRIDGE/_ping" >/dev/null 2>&1; then ok=1; break; fi
+  log "D1/R2 bridge not answering yet (try $i/15)"
+  sleep 2
 done
 if [ "$ok" != 1 ]; then
   log "FATAL: D1/R2 bridge at $BRIDGE did not answer. Check the DB and FILES bindings in wrangler.jsonc."

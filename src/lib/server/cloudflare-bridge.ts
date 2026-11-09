@@ -47,7 +47,9 @@ async function post<T>(base: string, path: string, body: unknown): Promise<T> {
 		res = await fetch(base + path, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(body)
+			body: JSON.stringify(body),
+			// Never hang the boot (migrate/seed) or a page on a lost bridge.
+			signal: AbortSignal.timeout(60_000)
 		});
 	} catch (err) {
 		throw new BridgeError(`D1 bridge unreachable: ${err instanceof Error ? err.message : String(err)}`);

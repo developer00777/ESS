@@ -37,6 +37,30 @@ const CLIENT_IP_HEADER = 'x-portal-client-ip';
 /** Durable Object storage key: the Worker version the running container was started with. */
 const STARTED_VERSION_KEY = 'startedWithVersion';
 
+/** How long one request waits for a booting app before showing the "starting" page. */
+const BOOT_WAIT_MS = 90_000;
+/** Running but not listening for this long means the boot is stuck: restart the container. */
+const STUCK_AFTER_MS = 6 * 60_000;
+
+/** The containers library's reply when port 3000 refused the connection. */
+async function isNotListening(res: Response): Promise<boolean> {
+	if (res.status !== 500 || !res.headers.get('content-type')?.startsWith('text/plain')) return false;
+	const text = await res.clone().text();
+	return text.startsWith('Error proxying request to container') && text.includes('not listening');
+}
+
+/** Shown while the portal boots; the browser retries on its own. */
+function startingPage(): Response {
+	const html = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="10">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Starting up</title>
+<style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;color:#333}</style>
+</head><body><div><h1>The portal is starting up</h1><p>This takes about a minute. The page reloads on its own.</p></div></body></html>`;
+	return new Response(html, {
+		status: 503,
+		headers: { 'content-type': 'text/html; charset=utf-8', 'retry-after': '10', 'cache-control': 'no-store' }
+	});
+}
+
 export class AppContainer extends Container<Env> {
 	defaultPort = 3000;
 	sleepAfter = '1h';
@@ -85,21 +109,71 @@ export class AppContainer extends Container<Env> {
 		const { status } = await this.getState();
 		if (status === 'running' || status === 'healthy') {
 			console.log(`[app] worker version changed (${started ?? 'none'} -> ${this.currentVersion()}), restarting container`);
-			await this.stop();
-			for (let i = 0; i < 120; i++) {
-				const s = (await this.getState()).status;
-				if (s === 'stopped' || s === 'stopped_with_code') break;
-				await new Promise((r) => setTimeout(r, 1000));
-			}
+			await this.stopAndWait();
 		}
 		// Record now so a slow start can't trigger a second restart; onStart re-records.
 		await this.ctx.storage.put(STARTED_VERSION_KEY, this.currentVersion());
 	}
 
+	/** When requests first found the app not listening while marked healthy (see fetch). */
+	private notListeningSince: number | null = null;
+
+	/**
+	 * Starts the container if needed and waits until the app answers on its
+	 * port. Booting takes longer than the library's built-in 20 s (bridge check,
+	 * D1 migrations, seed), so a longer limit is given here.
+	 */
+	private async waitUntilListening(timeoutMs: number): Promise<boolean> {
+		try {
+			await this.startAndWaitForPorts({ ports: 3000, cancellationOptions: { portReadyTimeoutMS: timeoutMs } });
+			this.notListeningSince = null;
+			return true;
+		} catch (err) {
+			console.warn(`[app] not listening yet after ${timeoutMs / 1000}s: ${err instanceof Error ? err.message : err}`);
+			return false;
+		}
+	}
+
+	/** Stops the container and waits (up to 2 min) until it is really gone. */
+	private async stopAndWait(): Promise<void> {
+		await this.stop();
+		for (let i = 0; i < 120; i++) {
+			const s = (await this.getState()).status;
+			if (!this.ctx.container?.running || s === 'stopped' || s === 'stopped_with_code') break;
+			await new Promise((r) => setTimeout(r, 1000));
+		}
+	}
+
 	override async fetch(request: Request): Promise<Response> {
 		this.restarting ??= this.restartIfStale().finally(() => (this.restarting = null));
 		await this.restarting;
-		return super.fetch(request);
+
+		// Not up yet (first start, after a stop): wait for the boot, not just 20 s.
+		if ((await this.getState()).status !== 'healthy' && !(await this.waitUntilListening(BOOT_WAIT_MS))) {
+			return startingPage();
+		}
+
+		const res = await super.fetch(request);
+		if (!(await isNotListening(res))) {
+			this.notListeningSince = null;
+			return res;
+		}
+
+		// Marked healthy, but nothing on port 3000: Cloudflare restarted the
+		// container underneath us (deploy rollout, host move) and the app is
+		// still booting, or the boot is stuck. Wait for it; if it stays down
+		// too long, start it over (this also re-attaches the D1/R2 bridge).
+		this.notListeningSince ??= Date.now();
+		if (Date.now() - this.notListeningSince > STUCK_AFTER_MS) {
+			console.error('[app] container running but not listening for too long, restarting it');
+			this.notListeningSince = null;
+			await this.stopAndWait();
+		}
+		if (await this.waitUntilListening(BOOT_WAIT_MS)) {
+			// Only body-less requests can be sent again.
+			if (request.method === 'GET' || request.method === 'HEAD') return super.fetch(request);
+		}
+		return startingPage();
 	}
 
 	override onStop(params: { exitCode?: number; reason?: string }) {
