@@ -20,6 +20,7 @@ export type AdminTabId =
 	| 'people'
 	| 'biometric'
 	| 'balances'
+	| 'cabs'
 	| 'policies'
 	| 'org'
 	| 'access'
@@ -37,7 +38,7 @@ export type AdminTab = {
 	/** One line under the page title, in place of each page's own header. */
 	blurb: string;
 	/** Which mockup category the tab sits in: People, Attendance, Leave, Policies, Access, System. */
-	category: 'People' | 'Attendance' | 'Leave' | 'Policies' | 'Access' | 'System';
+	category: 'People' | 'Attendance' | 'Leave' | 'Transport' | 'Policies' | 'Access' | 'System';
 	group: 0 | 1 | 2 | 3;
 	/** Any one of these opens the tab. Empty = anyone who can open Admin Controls. */
 	caps: CapabilityKey[];
@@ -93,6 +94,16 @@ export const ADMIN_TABS: AdminTab[] = [
 		blurb: 'Set opening balances from a spreadsheet, such as the HRone carry-forward.',
 		group: 1,
 		caps: ['leave.set_balances']
+	},
+	{
+		id: 'cabs',
+		href: '/admin/cabs',
+		label: 'Cabs',
+		heading: 'Every drop planned, every rule kept.',
+		category: 'Transport',
+		blurb: "Upload HR's cab sheet: see who is where, a roster per slot and the red flags.",
+		group: 1,
+		caps: ['cabs.plan']
 	},
 	{
 		id: 'policies',

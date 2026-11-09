@@ -14,6 +14,7 @@
 	import Palette from '@lucide/svelte/icons/palette';
 	import MessagesSquare from '@lucide/svelte/icons/messages-square';
 	import Video from '@lucide/svelte/icons/video';
+	import Car from '@lucide/svelte/icons/car';
 	import Search from '@lucide/svelte/icons/search';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -31,6 +32,7 @@
 		people: Users,
 		biometric: Clock,
 		balances: Calendar,
+		cabs: Car,
 		policies: FileText,
 		org: Network,
 		access: ShieldCheck,

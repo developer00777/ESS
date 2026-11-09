@@ -1,15 +1,29 @@
 # Company Cab Service: Requirements Intake
 
-**Status:** waiting for answers. Nothing has been built yet.
-**Opened:** 6 Nov 2026
+**Status:** phase 1 (the planner) is built at Admin Controls → Cabs. The answers below are still needed to tune it and to start phase 2.
+**Opened:** 6 Nov 2026 · **Rescoped:** 10 Nov 2026
 
-Champions has 6–8 company cabs, and only female employees may use them. We plan to add a cab module to ESS so that:
+Champions has 6–8 company cabs, and only female employees may use them.
 
-1. employees book their login (coming) and logout (leaving) cabs in advance from the portal,
-2. routes and timings are optimised so the cabs are used as fully as possible, and
-3. drivers get a simple app for their trip sheet, OTP boarding, live location and SOS.
+**Phase 1, the planner (built):** HR's sheet goes in. Out come a map of who is where, a suggested roster per slot (which cab, who, drop order) and red flags (a woman dropped last alone, a full cab, someone without a seat). No booking, no live tracking and no driver app yet.
 
-Before we can design it, we need the facts below from Admin, HR and Transport.
+Later phases add:
+
+1. employees booking their cabs from the portal,
+2. a driver trip sheet with OTP boarding, live location and SOS, and
+3. reports.
+
+Questions marked **(planner)** feed phase 1 directly. Questions marked **(later)** can wait.
+
+## Rules (set 28 Oct 2026)
+
+The planner treats these as hard limits. Anything that breaks one becomes a red flag, never a quiet compromise.
+
+1. **Women first on every drop.** Anyone who gives up a seat claims that day's Ola, Uber or Rapido at actuals.
+2. **No woman is the last person dropped alone at night without a guard.** Every rider is a woman, so in practice every night trip needs a guard, and the guard takes a seat (a 4-seat cab carries 3 riders at night).
+3. **Cab times follow shifts.** Nobody leaves early to fit a cab. An earlier rider may wait for a later run, up to a cap (D8).
+4. **No single-passenger trips where a merge is possible.**
+5. **One-offs fit around the roster:** a driver sent on an errand, a new joiner who needs a seat from day one, a late stay. When a run is full, a one-off gives up the seat before a regular rider.
 
 ## How to fill this in
 
@@ -21,11 +35,11 @@ Before we can design it, we need the facts below from Admin, HR and Transport.
 
 ## A. Office and legal
 
-**A1. Office address(es).** Is there one office the cabs serve, or more? Give the full address and, if possible, a Google Maps pin link.
+**A1. Office address(es). (planner)** Is there one office the cabs serve, or more? Give the full address and a Google Maps pin link. The planner needs the pin; it goes in the sheet's Settings tab.
 
 > Answer:
 
-**A2. State.** Which state is each office in? Women-safety rules for night transport differ by state; see Appendix A.
+**A2. State. (planner)** Which state is each office in? Women-safety rules for night transport differ by state; see Appendix A. The state sets the planner's night window (default 8:00 PM–6:00 AM).
 
 > Answer:
 
@@ -33,7 +47,7 @@ Before we can design it, we need the facts below from Admin, HR and Transport.
 
 > Answer:
 
-**A4. Security guards or escorts.** Do any cabs carry a guard today? On which trips or hours? Are female guards available?
+**A4. Security guards or escorts. (planner, most urgent)** Do any cabs carry a guard today? On which trips or hours? Are female guards available? How many guards can we have on a given night? Under rule 2 every night trip needs one, so the number of guards caps the number of night trips.
 
 > Answer:
 
@@ -43,7 +57,7 @@ Before we can design it, we need the facts below from Admin, HR and Transport.
 
 ## B. Fleet and drivers
 
-**B1. Cab list.** Fill one row per cab.
+**B1. Cab list. (planner)** Fill one row per cab. Seats and guard availability go straight into the sheet's Cabs tab.
 
 | # | Registration no. | Make / model | Seats (excluding driver) | Owned or vendor? | Fixed driver (name) | GPS / CCTV fitted? |
 |---|---|---|---|---|---|---|
@@ -60,11 +74,11 @@ Before we can design it, we need the facts below from Admin, HR and Transport.
 
 > Answer:
 
-**B3. Driver phones.** Does every driver have an Android smartphone with mobile data? Who pays for the data? Are they comfortable using apps?
+**B3. Driver phones. (later)** Does every driver have an Android smartphone with mobile data? Who pays for the data? Are they comfortable using apps?
 
 > Answer:
 
-**B4. Driver language.** Which language should the driver app use (English, Hindi, Kannada, Telugu, Marathi, other)?
+**B4. Driver language. (later)** Which language should the driver app use (English, Hindi, Kannada, Telugu, Marathi, other)?
 
 > Answer:
 
@@ -84,15 +98,20 @@ Before we can design it, we need the facts below from Admin, HR and Transport.
 
 **C2. Riders per day.** Roughly how many employees use the cabs on a typical day? How many at peak?
 
-> Answer:
+> Answer: 15 on a typical day (brief, 10 Nov 2026). Peak still to confirm.
 
-**C3. Shift timings.** List every login and logout time in use, and roughly how many cab users there are at each.
+**C3. Shift timings.** List every login and logout time in use, and roughly how many cab users there are at each. Drops known so far:
 
-| Shift name | Login time | Logout time | Cab users (approx.) |
+| Drop slot | Riders | Teams | What the planner does |
 |---|---|---|---|
-| | | | |
-| | | | |
-| | | | |
+| 4:00 PM | 3 | Sales | Day run, no guard needed |
+| 9:00 PM | 2 | Data | Night run with a guard |
+| 11:00 PM | 1 | — | Kept as a single trip and flagged: sharing the 12:00 AM run would mean a 60-min wait (cap 30) |
+| 12:00 AM | 6 | Four teams | Split by area across cabs, each with a guard |
+| 3:30 AM | 2 | — | Merged with 4:00 AM: one cab leaves at 4:00 AM with all three |
+| 4:00 AM | 1 | — | As above |
+
+Login (pickup) times are still needed for a later phase.
 
 **C4. Current process.** How are cabs arranged today (WhatsApp, Excel, a transport person)? Please share any existing trip sheets or rosters, even a month of them; we can use them to test the routing.
 
@@ -100,13 +119,15 @@ Before we can design it, we need the facts below from Admin, HR and Transport.
 
 **C5. Home locations.** ESS stores each employee's address only as free text. Can employees drop a map pin for their home once, with HR or Transport checking it? Who is allowed to see employees' home locations?
 
-> Answer:
+> Answer (10 Nov 2026): HR's sheet carries a "lat, lng" or a full Maps link per rider. Short `maps.app.goo.gl` links can't be read and are flagged. Only holders of the new "Plan cabs" privilege can open the planner, and nothing uploaded is stored. The map can switch to area hexes only, for screen sharing.
 
-**C6. Service area.** Is there a maximum distance from the office we serve, or areas we do not serve?
+**C6. Service area. (planner)** Is there a maximum distance from the office we serve, or areas we do not serve?
 
 > Answer:
 
 ## D. Booking rules
+
+D1–D5 and D7 belong to the later booking phase. D6 and D8 feed the planner now.
 
 **D1. Booking cut-off.** How far in advance must a cab be booked? Common practice elsewhere is the night before for morning (login) trips and 2–4 hours ahead for evening (logout) trips.
 
@@ -128,7 +149,7 @@ Before we can design it, we need the facts below from Admin, HR and Transport.
 
 > Answer:
 
-**D6. Maximum ride time.** What is the longest acceptable time any one rider spends in the cab (e.g. 60 or 75 minutes)?
+**D6. Maximum ride time. (planner)** What is the longest acceptable time any one rider spends in the cab? The planner uses 75 minutes until we hear otherwise.
 
 > Answer:
 
@@ -136,11 +157,13 @@ Before we can design it, we need the facts below from Admin, HR and Transport.
 
 > Answer:
 
-**D8. Timing flexibility.** May the system suggest a slightly different time to share a cab that's already going (e.g. "leave at 18:45 instead of 19:00")? Up to how many minutes?
+**D8. Waiting to share. (planner)** Rule 3 settles the direction: nobody leaves early. The open question is how long an earlier rider may wait so two slots share one cab (e.g. the 3:30 AM pair waiting for the 4:00 AM run). The planner uses 30 minutes until we hear otherwise.
 
 > Answer:
 
 ## E. Safety
+
+All of section E belongs to the later driver-app phase, except that rule 2 already applies in the planner.
 
 **E1. Night drops.** Must the driver wait until the employee is inside her home? Should she confirm in the app that she's safe ("safe reach")?
 
@@ -172,13 +195,13 @@ Before we can design it, we need the facts below from Admin, HR and Transport.
 
 **G1. Maps.** Do we use a paid maps API key (Ola Maps or Google Maps) with a monthly budget? Or should we self-host free OpenStreetMap routing (OSRM) on our own server, which has no live traffic?
 
-> Answer:
+> Answer (10 Nov 2026): not needed for phase 1. The planner estimates travel time from straight-line distance × 1.4 road factor at 20 km/h by day and 30 km/h at night, all adjustable. One function (`travelMinutes` in `src/lib/cabs/geo.ts`) owns this, so a maps API can replace it later. The map uses OpenStreetMap tiles; only tile coordinates leave the browser, never names or pins.
 
-**G2. Hosting.** ESS runs on Railway. The repo also has Cloudflare Workers branches (`feat/cloudflare-migration`, `feat/cloudflare-workers-native`, `wip/workers-rewrite`). The routing engine (VROOM) and OSRM need a container, so which platform should the cab module target?
+**G2. Hosting.** ESS runs on Railway. The repo also has Cloudflare Workers branches (`feat/cloudflare-migration`, `feat/cloudflare-workers-native`, `wip/workers-rewrite`).
 
-> Answer:
+> Answer (10 Nov 2026): no longer blocking. The planner is plain TypeScript inside ESS with no extra container (no VROOM, no OSRM), so it runs wherever ESS runs.
 
-**G3. Driver app.** For live GPS, choose one:
+**G3. Driver app. (later)** For live GPS, choose one:
 - **Option 1, fastest:** drivers install the free Traccar Client app for tracking, and use an ESS web page for everything else.
 - **Option 2:** a small ESS Android app with background GPS. It would be sideloaded or installed through device management, not published on the Play Store.
 
@@ -205,7 +228,7 @@ Most of these come from secondary sources, so confirm with legal or HR for our s
 | Karnataka | — | The 2007 conditions required a guard when a woman is first pickup or last drop. A 2026 amendment reportedly removes these conditions; this rests on one source and needs verifying |
 | Uttar Pradesh | 7pm–6am (factories) | Transport with guards and CCTV |
 
-Because every rider is a woman, the common rule "a woman is never first pickup or last drop" can never be met. Wherever a guard is required, every night trip needs one, and the guard takes a seat (a 4-seat sedan carries 3 employees).
+Because every rider is a woman, the common rule "a woman is never first pickup or last drop" can never be met by drop order alone; only a guard satisfies it. The planner therefore treats every trip whose start or last drop falls in the night window as needing a guard. It puts the guard in a seat (a 4-seat sedan carries 3 riders), prefers cabs marked "Guard at night", and raises a red flag on any night trip without one.
 
 ## Appendix B: Inspiration and proposed approach (draft)
 
@@ -215,9 +238,19 @@ Because every rider is a woman, the common rule "a woman is never first pickup o
 - **Routematic and Uber Shuttle:** build fresh routes daily from bookings.
 - **TripShot:** a booking counts only once the rider has boarded; drivers do a vehicle checklist in the app.
 
-**Proposed approach (to be confirmed once the answers above are in):**
-- **Routing:** VROOM (open source, run in Docker), which plans routes with seats, time windows, a cap on ride time and "needs a guard". A cab can do several runs per shift wave.
-- **Travel times:** from OSRM or a maps API, stored and reused per H3 hexagon (Uber's hexagonal grid, about 200 m cells) and per hour of the week, to keep map costs low.
+**Approach (phase 1 built, 10 Nov 2026):** with 15 riders across 6 slots the problem is small enough to solve exactly, so phase 1 needs no routing engine.
+
+1. **Place.** Each home pin is indexed to an H3 cell (Uber's hexagonal grid, resolution 8, about 0.7 km²). Riders in the same or touching cells form an area group.
+2. **Group slots (rules 3 and 4).** Slots are taken in time order. A slot that would run a single-passenger trip is merged into the next slot only when the earlier riders wait no longer than the D8 cap; nobody is moved earlier. Otherwise the single trip stays, with a flag explaining why.
+3. **Assign (rule 1).** For each run, every way of splitting the riders across the free cabs is tried (exact search up to 10 riders, area-group sweep above that). Cost is ride minutes plus a charge per cab, a large charge per single-passenger trip and a larger one per unguarded night trip. Riders beyond the seats get a "no seat → ride-hail" flag; one-offs give up seats first.
+4. **Sequence.** Every drop order is tried per cab, and the one with the least total ride time inside the ride cap is kept.
+5. **Flag.** Night trip without a guard, full cab, no seat, single trip, ride over the cap, unreadable pin, pin outside the service radius.
+6. **Cab timeline.** Each cab is busy from departure until it is back at the office, so it can chain runs through the night; errands block their window.
+
+Code: `src/lib/cabs/` (planner, unit-tested), `src/lib/server/cab-sheet.ts` (sheet parsing), `src/routes/(app)/admin/cabs/` (page), `src/routes/api/admin/cabs/` (plan, export, template).
+
+**Later phases** keep the ideas below:
+- **Travel times:** a maps API or OSRM behind `travelMinutes`, cached per H3 cell pair and hour of the week to keep map costs low.
 - **H3 also gives:** reports that show an area rather than a home address, demand heatmaps by area and time slot, and an "arrived" check.
 - **Using what ESS already knows:**
   - approved leave cancels that day's cab automatically,
@@ -226,7 +259,7 @@ Because every rider is a woman, the common rule "a woman is never first pickup o
   - safe-reach and alerts sent with ESS's existing web-push notifications.
 - **Drivers:** they already exist in ESS as staff without a login. We would add phone-OTP sign-in and a single trip-sheet screen: start and end trip, OTP boarding, safe drop, SOS.
 - **Phases:**
-  1. Booking and manual dispatch.
-  2. Automatic routing and time suggestions.
-  3. Live tracking, safe-reach and alerts.
+  1. Planner: sheet in; map, roster and red flags out. **Built.**
+  2. Booking and one-off requests in the portal, feeding the planner instead of the sheet.
+  3. Driver trip sheet, live tracking, safe-reach and alerts.
   4. Reports.

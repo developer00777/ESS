@@ -16,7 +16,7 @@
 
 import type { Role } from './server/auth';
 
-export type CapabilityGroup = 'People' | 'Attendance & leave' | 'Payroll' | 'Policies' | 'Communication' | 'Tasks & meetings' | 'Champ' | 'System';
+export type CapabilityGroup = 'People' | 'Attendance & leave' | 'Payroll' | 'Policies' | 'Communication' | 'Tasks & meetings' | 'Transport' | 'Champ' | 'System';
 
 export type Capability = {
 	key: string;
@@ -66,6 +66,8 @@ export const CAPABILITIES = [
 	{ key: 'tasks.view_all', label: "See every team's tasks", group: 'Tasks & meetings', description: 'Open any team board in Champ Hub, not just their own reports.', grantable: true },
 	{ key: 'tasks.assign_anyone', label: 'Give tasks without approval', group: 'Tasks & meetings', description: "Tasks they create start straight away. Without it, a task waits for the assignee's lead to approve it unless they are that lead.", grantable: true },
 	{ key: 'system.zoom', label: 'Connect Zoom', group: 'Tasks & meetings', description: 'Set up the Zoom connection and link Zoom users to logins. Super Admin only.', grantable: false },
+	// --- Transport
+	{ key: 'cabs.plan', label: 'Plan cabs', group: 'Transport', description: 'Upload the cab sheet and get the suggested roster, the map of who is where and the red flags. Shows home locations.', grantable: true },
 	// --- Champ
 	{ key: 'champ.reports', label: 'Roster reports in Champ', group: 'Champ', description: 'Counts, lists and reports across the whole roster.', grantable: true },
 	{ key: 'champ.audit', label: 'Audit trail in Champ', group: 'Champ', description: 'Search who changed what, and when.', grantable: true },
@@ -140,6 +142,7 @@ export const ADMIN_AREA_KEYS: CapabilityKey[] = [
 	'attendance.biometric_upload',
 	'attendance.device_sync',
 	'leave.set_balances',
+	'cabs.plan',
 	'policies.publish',
 	'org.view',
 	'access.view',
