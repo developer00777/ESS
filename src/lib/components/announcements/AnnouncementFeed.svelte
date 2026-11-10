@@ -3,6 +3,9 @@
 	import Megaphone from '@lucide/svelte/icons/megaphone';
 	import CalendarDays from '@lucide/svelte/icons/calendar-days';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+	import Inbox from '@lucide/svelte/icons/inbox';
+	import CheckCheck from '@lucide/svelte/icons/check-check';
+	import Check from '@lucide/svelte/icons/check';
 	import NeedsYouCard from '$lib/components/announcements/NeedsYouCard.svelte';
 	import PostRow from '$lib/components/announcements/PostRow.svelte';
 	import PostDetail from '$lib/components/announcements/PostDetail.svelte';
@@ -110,7 +113,7 @@
 	<div class="list">
 		<section class="ess-card sec" aria-labelledby="needs-h">
 			<div class="ess-card-head">
-				<h2 id="needs-h" class="ess-h2">Needs you</h2>
+				<h2 id="needs-h" class="ess-h2"><Inbox size={16} /> Needs you</h2>
 				{#if feed.needsYou.length}<span class="cnt">{feed.needsYou.length}</span>{/if}
 			</div>
 			{#if feed.needsYou.length === 0}
@@ -133,7 +136,7 @@
 		</section>
 
 		<section class="ess-card sec" aria-labelledby="coming-h">
-			<div class="ess-card-head"><h2 id="coming-h" class="ess-h2">Coming up</h2></div>
+			<div class="ess-card-head"><h2 id="coming-h" class="ess-h2"><CalendarDays size={16} /> Coming up</h2></div>
 			{#if groups.length === 0}
 				<p class="empty">Nothing planned in the next two months.</p>
 			{:else}
@@ -150,9 +153,9 @@
 
 		<section class="ess-card sec" aria-labelledby="updates-h">
 			<div class="ess-card-head">
-				<h2 id="updates-h" class="ess-h2">Updates {#if unreadUpdates.length}<span class="cnt">{unreadUpdates.length} new</span>{/if}</h2>
+				<h2 id="updates-h" class="ess-h2"><Megaphone size={16} /> Updates {#if unreadUpdates.length}<span class="cnt">{unreadUpdates.length} new</span>{/if}</h2>
 				{#if unreadUpdates.length}
-					<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={markAllRead}>Mark all read</button>
+					<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={markAllRead}><CheckCheck size={14} /> Mark all read</button>
 				{/if}
 			</div>
 			{#if updates.length === 0}
@@ -214,13 +217,13 @@
 				<div class="ess-notice ess-notice--danger">
 					<span class="ess-notice__icon"><TriangleAlert size={15} /></span>
 					<div class="ess-notice__body"><strong>Urgent notice</strong>Tap "Got it" once you have read it.</div>
-					<button type="button" class="ess-btn ess-btn--primary" disabled={busyId === openPost.id} onclick={() => act(openPost!.id, 'dismiss')}>Got it</button>
+					<button type="button" class="ess-btn ess-btn--primary" disabled={busyId === openPost.id} onclick={() => act(openPost!.id, 'dismiss')}><Check size={16} /> Got it</button>
 				</div>
 			{:else if openAsk}
 				<div class="ess-notice">
 					<span class="ess-notice__icon"><span class="bang">!</span></span>
 					<div class="ess-notice__body"><strong>Acknowledgement required</strong>Please confirm that you have read and understood this announcement.</div>
-					<button type="button" class="ess-btn ess-btn--primary" disabled={busyId === openPost.id} onclick={() => act(openPost!.id, 'ack')}>Acknowledge</button>
+					<button type="button" class="ess-btn ess-btn--primary" disabled={busyId === openPost.id} onclick={() => act(openPost!.id, 'ack')}><CircleCheck size={16} /> Acknowledge</button>
 				</div>
 			{/if}
 		{:else}

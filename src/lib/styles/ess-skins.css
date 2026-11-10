@@ -1,0 +1,1852 @@
+/* ============================================================
+   ESS Design System — Skins
+   ============================================================
+   The portal ships with four looks, picked in the account menu
+   (TopBar) and kept per browser (essSkin, applied pre-paint in
+   app.html as <html data-ess-skin="…">):
+
+     (no attribute)  Original — ess-tokens.css + ess-components.css as is
+     mono            Mono — shadcn/ui's neutral theme (ess-skin-mono.css)
+     atur            Atur — light grey workspace, blue gradient accents,
+                     pastel tiles (theme slot 3 until its design arrives)
+     amber           Amber — cream workspace, signature yellow, black pills,
+                     big curves (ess-skin-amber.css)
+
+   Every skin works with both light and dark (data-ess-theme). A skin
+   only overrides; anything it doesn't mention stays Original.
+
+   Specificity: skin tokens use :root[data-ess-skin] (beats :root and
+   [data-ess-theme='dark']); skin dark tokens add [data-ess-theme='dark'].
+   Component rules carry the same prefix plus the component's own
+   structure, so they win over the components' scoped styles.
+   ============================================================ */
+
+/* Mono (shadcn/ui) lives in its own file: ess-skin-mono.css. */
+
+/* ============================================================
+   ATUR — flat surfaces: no colour glows, no glass
+   ============================================================ */
+:root[data-ess-skin='atur'] .ess-shell {
+	--glass-fill: linear-gradient(var(--ess-surface), var(--ess-surface));
+	--glass-edge: var(--ess-border);
+	--glass-shadow: var(--ess-elev-1);
+	background: var(--ess-canvas);
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-card,
+:root[data-ess-skin='atur'] .ess-shell .ess-metric,
+:root[data-ess-skin='atur'] .ess-shell .ess-panel,
+:root[data-ess-skin='atur'] .ess-shell .ess-figures,
+:root[data-ess-skin='atur'] .ess-shell .ess-tabs {
+	background-color: var(--ess-surface);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+
+/* ============================================================
+   ATUR — theme slot 3: light grey, blue gradient, pastel tiles
+   ============================================================ */
+:root[data-ess-skin='atur'] {
+	/* No blue (by request, 2026-11-04): actions are the reference's
+	   near-black, colour comes from the pastels, the charts and one warm
+	   accent (the brand mark, the login headline). */
+	--acc: #1c1d22;
+	--acc2: #ffc8a8;
+	--acc-soft: #ffc8a8;
+	--glow: rgba(28, 29, 34, 0.1);
+	--ring: rgba(28, 29, 34, 0.18);
+	--ess-primary-grad: linear-gradient(135deg, #3a3b42 0%, #1c1d22 55%, #121317 100%);
+	--atur-accent-grad: linear-gradient(100deg, #ec5f9b 0%, #ff8a5c 55%, #f6b23a 100%);
+	--atur-on-primary: #ffffff;
+	--ess-text-on-primary: #ffffff;
+	--ess-info: #6a45c9;
+	--ess-info-bg: #f1ebff;
+
+	/* the shot's four summary cards, left to right */
+	--ess-tint-pink: linear-gradient(115deg, #fde6f5 0%, #fac8ec 55%, #f6b3e3 100%);
+	--ess-tint-peach: linear-gradient(115deg, #fff3e2 0%, #ffdfb6 55%, #ffd09a 100%);
+	--ess-tint-lavender: linear-gradient(115deg, #f2edff 0%, #e2d6ff 55%, #d0bfff 100%);
+	--ess-tint-mint: linear-gradient(115deg, #e0fbf0 0%, #baf3dc 55%, #93ebc8 100%);
+	/* and the white ribbons that sweep across their right side */
+	--atur-wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 120'%3E%3Cpath d='M70 120C104 94 118 62 158 54S222 30 240 2V120Z' fill='%23fff' fill-opacity='.26'/%3E%3Cpath d='M128 120C150 100 166 82 196 77S232 58 240 42V120Z' fill='%23fff' fill-opacity='.3'/%3E%3Cpath d='M52 0C92 24 118 18 150 31S206 72 240 66' fill='none' stroke='%23fff' stroke-opacity='.6' stroke-width='1.4'/%3E%3Cpath d='M88 0C120 19 142 15 172 27S216 60 240 55' fill='none' stroke='%23fff' stroke-opacity='.42' stroke-width='1.4'/%3E%3C/svg%3E");
+	--ess-chart-1: #ffad73;
+	--ess-chart-2: #ff7a8a;
+	--ess-chart-3: #3fd6ad;
+	--ess-chart-4: #a98bff;
+	--ess-chart-5: #ffc797;
+
+	--ess-backdrop: #e5e7ec;
+	--ess-shell-border: rgba(16, 24, 40, 0.05);
+	--ess-canvas: #f1f2f5;
+	--ess-surface: #ffffff;
+	--ess-surface-hover: #f6f7f9;
+	--ess-sunken: #f4f5f8;
+	--ess-inverse: #ffffff;
+	--ess-inverse-raised: #ffffff;
+
+	--ess-border: #e7e9ef;
+	--ess-border-subtle: #eef0f4;
+	--ess-border-strong: #d5d9e2;
+	--ess-border-inverse: #e7e9ef;
+
+	--ess-text: #16181f;
+	--ess-text-secondary: #3f4350;
+	--ess-text-muted: #636878;
+
+	--ess-primary-hover: #2e2f36;
+	--ess-primary-press: #0d0e11;
+	/* soft selections and highlights: a pale violet, so a picked day or a
+	   soft button stands apart from the grey page */
+	--ess-primary-soft: #efe9ff;
+	--ess-primary-softer: #f6f2ff;
+	--ess-primary-ring: rgba(28, 29, 34, 0.22);
+	--ess-primary-text: #1c1d22;
+	--ess-primary-shadow: 0 6px 14px -6px rgba(16, 17, 22, 0.45);
+
+	--ess-ev-blue: #2343b5;
+	--ess-ev-blue-bg: #e4eaff;
+	--ess-ev-blue-line: #b8c6ff;
+	--ess-ev-purple: #5a33a6;
+	--ess-ev-purple-bg: #efe7ff;
+	--ess-ev-purple-line: #cdb8fb;
+	--ess-ev-green: #10694a;
+	--ess-ev-green-bg: #dcf8ec;
+	--ess-ev-green-line: #9de3c5;
+	--ess-ev-yellow: #874f00;
+	--ess-ev-yellow-bg: #fff0dc;
+	--ess-ev-yellow-line: #ffcd94;
+	--ess-ev-pink: #a3175d;
+	--ess-ev-pink-bg: #ffe4f4;
+	--ess-ev-pink-line: #f6b2dc;
+	--ess-cell: #f2f3f7;
+	--ess-cell-off: #e6e8ee;
+
+	--ess-radius-xs: 8px;
+	--ess-radius-sm: 10px;
+	--ess-radius-md: 16px;
+	--ess-radius-lg: 18px;
+	--ess-radius-xl: 28px;
+
+	--atur-block-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 6px 20px -14px rgba(16, 24, 40, 0.14);
+	--ess-elev-1: 0 1px 2px rgba(16, 24, 40, 0.03), 0 8px 24px -14px rgba(16, 24, 40, 0.1);
+	--ess-elev-2: 0 6px 18px -8px rgba(16, 24, 40, 0.12);
+	--ess-elev-3: 0 14px 34px -12px rgba(16, 24, 40, 0.16);
+	--ess-elev-4: 0 24px 60px -20px rgba(16, 24, 40, 0.24);
+
+	/* Body text in Inter: Plus Jakarta Sans renders thin and fuzzy at
+	   small sizes on Windows. Jakarta stays for the large headings and
+	   figures, where it renders cleanly. */
+	--ess-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+	--ess-font-display: 'Jost', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+:root[data-ess-skin='atur'] body {
+	font-optical-sizing: auto;
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] {
+	/* dark: the actions turn light (near-white with ink text) */
+	--acc: #f2f2f5;
+	--acc2: #8a5a44;
+	--acc-soft: #8a5a44;
+	--glow: rgba(255, 255, 255, 0.08);
+	--ring: rgba(255, 255, 255, 0.2);
+	--ess-primary-grad: linear-gradient(135deg, #ffffff 0%, #e6e7ec 100%);
+	--atur-accent-grad: linear-gradient(100deg, #f27aad 0%, #ff9c72 55%, #f8c25a 100%);
+	--atur-on-primary: #121317;
+	--ess-text-on-primary: #121317;
+	--ess-info: #c4b0ff;
+	--ess-info-bg: rgba(180, 150, 255, 0.15);
+
+	/* pastels as luminous jewel tones (2026-11-05, 2nd pass: "dim and
+	   dull"): more chroma and strength, and the peach leans coral so it no
+	   longer browns out over the charcoal */
+	/* bright but easy on the eyes (asked: "bright, not irritating"): a
+	   notch softer than full jewel tones */
+	--ess-tint-pink: linear-gradient(135deg, rgba(255, 120, 190, 0.38) 0%, rgba(190, 70, 150, 0.24) 100%);
+	--ess-tint-peach: linear-gradient(135deg, rgba(255, 155, 110, 0.36) 0%, rgba(235, 105, 80, 0.22) 100%);
+	--ess-tint-lavender: linear-gradient(135deg, rgba(170, 135, 255, 0.4) 0%, rgba(115, 80, 230, 0.24) 100%);
+	--ess-tint-mint: linear-gradient(135deg, rgba(80, 230, 185, 0.32) 0%, rgba(25, 165, 135, 0.2) 100%);
+	--atur-wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 120'%3E%3Cpath d='M70 120C104 94 118 62 158 54S222 30 240 2V120Z' fill='%23fff' fill-opacity='.04'/%3E%3Cpath d='M128 120C150 100 166 82 196 77S232 58 240 42V120Z' fill='%23fff' fill-opacity='.05'/%3E%3Cpath d='M52 0C92 24 118 18 150 31S206 72 240 66' fill='none' stroke='%23fff' stroke-opacity='.12' stroke-width='1.4'/%3E%3Cpath d='M88 0C120 19 142 15 172 27S216 60 240 55' fill='none' stroke='%23fff' stroke-opacity='.08' stroke-width='1.4'/%3E%3C/svg%3E");
+	--ess-chart-1: #ffb37f;
+	--ess-chart-2: #ff8796;
+	--ess-chart-3: #4fe0b8;
+	--ess-chart-4: #b9a0ff;
+	--ess-chart-5: #ffcfa3;
+
+	/* neutral charcoal, not navy */
+	--ess-backdrop: #0b0b0d;
+	--ess-shell-border: #1f2025;
+	/* blocks lifted a little off the page, brighter grey text (2026-11-05:
+	   dark read dim and flat) */
+	--ess-canvas: #121317;
+	--ess-surface: #212229;
+	--ess-surface-hover: #2b2c34;
+	--ess-sunken: #1a1b21;
+	--ess-inverse: #1a1b21;
+	--ess-inverse-raised: #2b2c34;
+	/* menus, popovers, sheets and fields: charcoal too (they fell back to
+	   Original's navy, e.g. the account menu) */
+	--ess-modal-bg: #25262d;
+	--ess-pane-bg: #1a1b21;
+	--ess-pane-raised-bg: #25262d;
+	--ess-glass-raised-bg: #25262d;
+	--ess-glass-bg: rgba(30, 31, 37, 0.72);
+	--ess-glass-solid: rgba(24, 25, 30, 0.5);
+	--ess-field-bg: #16171b;
+
+	--ess-border: rgba(255, 255, 255, 0.1);
+	--ess-border-subtle: rgba(255, 255, 255, 0.07);
+	--ess-border-strong: rgba(255, 255, 255, 0.2);
+
+	--ess-text: #f8f8fc;
+	--ess-text-secondary: #e0e2ec;
+	--ess-text-muted: #b9bdcc;
+
+	--ess-primary-hover: #ffffff;
+	--ess-primary-press: #d9dae0;
+	--ess-primary-soft: rgba(180, 150, 255, 0.16);
+	--ess-primary-softer: rgba(180, 150, 255, 0.09);
+	--ess-primary-ring: rgba(255, 255, 255, 0.3);
+	--ess-primary-text: #f4f4f8;
+	--ess-primary-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.7);
+
+	--ess-ev-blue: #a9c0fb;
+	--ess-ev-blue-bg: rgba(110, 140, 245, 0.18);
+	--ess-ev-blue-line: rgba(110, 140, 245, 0.42);
+	--ess-ev-purple: #c9b5fa;
+	--ess-ev-purple-bg: rgba(170, 140, 245, 0.18);
+	--ess-ev-purple-line: rgba(170, 140, 245, 0.42);
+	--ess-ev-green: #8fdcb1;
+	--ess-ev-green-bg: rgba(76, 195, 138, 0.16);
+	--ess-ev-green-line: rgba(76, 195, 138, 0.4);
+	--ess-ev-yellow: #f3cd73;
+	--ess-ev-yellow-bg: rgba(240, 190, 70, 0.15);
+	--ess-ev-yellow-line: rgba(240, 190, 70, 0.4);
+	--ess-ev-pink: #f5a9cc;
+	--ess-ev-pink-bg: rgba(245, 156, 198, 0.15);
+	--ess-ev-pink-line: rgba(245, 156, 198, 0.4);
+	--ess-cell: #212228;
+	--ess-cell-off: #18191d;
+
+	/* gloss (2026-11-09): a crisp bright line along the top edge, a faint
+	   light ring, and a soft sheen just inside the top, as on glazed glass */
+	--atur-gloss:
+		inset 0 1px 0 rgba(255, 255, 255, 0.22),
+		inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+		inset 0 34px 40px -34px rgba(255, 255, 255, 0.14);
+	--atur-block-shadow: var(--atur-gloss), 0 8px 22px -14px rgba(0, 0, 0, 0.7);
+	--ess-elev-1: var(--atur-gloss), 0 1px 2px rgba(0, 0, 0, 0.4);
+	--ess-elev-2: 0 4px 14px -6px rgba(0, 0, 0, 0.6);
+	--ess-elev-3: 0 12px 32px -12px rgba(0, 0, 0, 0.7);
+	--ess-elev-4: 0 24px 60px -20px rgba(0, 0, 0, 0.8);
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .ess-shell {
+	--glass-edge: rgba(255, 255, 255, 0.06);
+	--glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 30px -16px rgba(0, 0, 0, 0.6);
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-card {
+	--card-px: var(--ess-space-5);
+	--card-py: 18px;
+	--glass-edge: var(--ess-border-subtle);
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-card:hover,
+:root[data-ess-skin='atur'] .ess-shell .ess-figures:hover {
+	--spot: color-mix(in srgb, var(--ess-primary) 5%, transparent);
+}
+
+/* Buttons: the blue gradient pill with white text. */
+:root[data-ess-skin='atur'] .ess-btn--primary {
+	background: var(--ess-primary-grad);
+	color: var(--atur-on-primary);
+	box-shadow: var(--ess-primary-shadow);
+}
+:root[data-ess-skin='atur'] .ess-btn--primary:hover:not(:disabled) {
+	background: var(--ess-primary-grad);
+	filter: brightness(0.96) saturate(1.08);
+	box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--ess-primary) 70%, transparent);
+}
+:root[data-ess-skin='atur'] .ess-btn--primary:active:not(:disabled) {
+	background: var(--ess-primary-grad);
+	filter: brightness(0.9);
+}
+
+/* Tabs: a white bar of pills, the active one the blue gradient. */
+:root[data-ess-skin='atur'] .ess-shell .ess-tabs:not(.ess-tabs--line) {
+	gap: 4px;
+	padding: 4px;
+	border-color: var(--ess-border-subtle);
+	border-radius: 14px;
+}
+:root[data-ess-skin='atur'] .ess-tabs:not(.ess-tabs--line) .ess-tab {
+	padding: 6px 16px;
+	border-right: none;
+	border-radius: 10px;
+	color: var(--ess-text-muted);
+}
+:root[data-ess-skin='atur'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-selected='true'],
+:root[data-ess-skin='atur'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-current='page'] {
+	color: var(--atur-on-primary);
+	background: var(--ess-primary-grad);
+	box-shadow: var(--ess-primary-shadow);
+}
+:root[data-ess-skin='atur'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-selected='true']::after,
+:root[data-ess-skin='atur'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-current='page']::after {
+	display: none;
+}
+:root[data-ess-skin='atur'] .ess-tab[aria-selected='true'] .ess-count,
+:root[data-ess-skin='atur'] .ess-tab[aria-current='page'] .ess-count {
+	background: color-mix(in srgb, var(--atur-on-primary) 22%, transparent);
+	color: var(--atur-on-primary);
+}
+
+/* Rail: a solid white panel; the brand and the active item in the gradient. */
+:root[data-ess-skin='atur'] nav.rail {
+	background: var(--ess-surface);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+	border-color: var(--ess-border-subtle);
+	box-shadow:
+		0 1px 2px rgba(16, 24, 40, 0.04),
+		0 16px 36px -18px rgba(16, 24, 40, 0.2);
+}
+:root[data-ess-skin='atur'] nav.rail .brand-link {
+	border-radius: 14px;
+	color: var(--atur-on-primary);
+	background: var(--ess-primary-grad);
+	box-shadow: var(--ess-primary-shadow);
+}
+:root[data-ess-skin='atur'] nav.rail .nav-item[aria-current='page'] {
+	color: var(--atur-on-primary);
+	background: var(--ess-primary-grad);
+	box-shadow: var(--ess-primary-shadow);
+}
+
+/* Desktop and tablet: the main navigation runs across the top as in the
+   reference (styled in "ATUR — the reference layout" at the end of the
+   Atur section), so the side rail steps aside. Phones keep the rail. */
+@media (min-width: 721px) {
+	:root[data-ess-skin='atur'] {
+		--ess-shell-inset-left: var(--ess-shell-inset);
+		--ess-shell-pad-left: 0px;
+	}
+	:root[data-ess-skin='atur'] nav.rail,
+	:root[data-ess-skin='atur'] .dock-edge {
+		display: none;
+	}
+}
+
+/* Top bar: pill links (the current one in the gradient), a white search. */
+:root[data-ess-skin='atur'] .topbar .links a {
+	padding: 7px 14px;
+	border-radius: 12px;
+}
+:root[data-ess-skin='atur'] .topbar .links a:hover {
+	background: var(--ess-surface-hover);
+}
+:root[data-ess-skin='atur'] .topbar .links a[aria-current='page'] {
+	color: var(--atur-on-primary);
+	background: var(--ess-primary-grad);
+	box-shadow: var(--ess-primary-shadow);
+}
+:root[data-ess-skin='atur'] .topbar .links a[aria-current='page']::after {
+	display: none;
+}
+:root[data-ess-skin='atur'] .topbar .search {
+	border-color: var(--ess-border);
+	border-radius: 12px;
+	background: var(--ess-surface);
+}
+:root[data-ess-skin='atur'] .topbar .add {
+	background: var(--ess-primary-grad);
+	color: var(--atur-on-primary);
+}
+:root[data-ess-skin='atur'] .topbar .add:hover {
+	background: var(--ess-primary-grad);
+	filter: brightness(0.96) saturate(1.08);
+}
+
+/* Dashboard: today's pill, the hours bars. */
+:root[data-ess-skin='atur'] .week .wk[aria-current='date'] {
+	background: var(--ess-primary-grad);
+	color: var(--atur-on-primary);
+	box-shadow: var(--ess-primary-shadow);
+}
+:root[data-ess-skin='atur'] .ins-card .bars .bar {
+	border-radius: 4px 4px 2px 2px;
+	background: linear-gradient(180deg, var(--ess-chart-2), var(--ess-chart-1));
+	opacity: 1;
+}
+:root[data-ess-skin='atur'] .ins-card .bars .bar.open {
+	background: var(--ess-chart-4);
+}
+:root[data-ess-skin='atur'] .ins-card .bars .bar.future {
+	background: var(--ess-border);
+}
+
+/* Absence planner: white bordered controls, gradient selections, pill bars. */
+:root[data-ess-skin='atur'] .planner .title h2 {
+	font-weight: 700;
+}
+:root[data-ess-skin='atur'] .planner .month,
+:root[data-ess-skin='atur'] .planner .seg,
+:root[data-ess-skin='atur'] .planner .find,
+:root[data-ess-skin='atur'] .planner .chip {
+	border: 1px solid var(--ess-border);
+	border-radius: 12px;
+	background: var(--ess-surface);
+}
+:root[data-ess-skin='atur'] .planner .nav-btn,
+:root[data-ess-skin='atur'] .planner .today-btn {
+	border-radius: 9px;
+	background: var(--ess-sunken);
+	box-shadow: none;
+}
+:root[data-ess-skin='atur'] .planner .seg button {
+	border-radius: 9px;
+}
+:root[data-ess-skin='atur'] .planner .seg button[aria-pressed='true'],
+:root[data-ess-skin='atur'] .planner .chip[aria-pressed='true'] {
+	border-color: transparent;
+	background: var(--ess-primary-grad);
+	color: var(--atur-on-primary);
+	box-shadow: var(--ess-primary-shadow);
+}
+:root[data-ess-skin='atur'] .planner .dh.today {
+	background: var(--ess-primary-grad);
+}
+:root[data-ess-skin='atur'] .planner .dh.today .dn,
+:root[data-ess-skin='atur'] .planner .dh.today .dow {
+	color: var(--atur-on-primary);
+}
+:root[data-ess-skin='atur'] .planner .bar {
+	border-radius: 999px;
+}
+
+/* Charts (HR analytics and the rest): Atur's own palette — violet,
+   coral, mint and peach (no blue), with violet ramps for stages and
+   grids. */
+:root[data-ess-skin='atur'] .hra {
+	--hra-1: #7c5cff;
+	--hra-2: #ff7a8a;
+	--hra-3: #2fc79d;
+	--hra-4: #ffad73;
+	--hra-none: #e6e7ec;
+	--hra-o1: #ddd2ff;
+	--hra-o2: #a98bff;
+	--hra-o3: #7c5cff;
+	--hra-q1: #efe9ff;
+	--hra-q2: #cbb9ff;
+	--hra-q3: #9a7dff;
+	--hra-q4: #6a45c9;
+	--hra-q-ink-12: #3d2a85;
+	--hra-q-ink-34: #ffffff;
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .hra {
+	--hra-1: #a68cff;
+	--hra-2: #ff8796;
+	--hra-3: #4fe0b8;
+	--hra-4: #ffb37f;
+	--hra-none: #2a2b31;
+	--hra-o1: #3d3263;
+	--hra-o2: #6f55c8;
+	--hra-o3: #b39dff;
+	--hra-q1: #2a2440;
+	--hra-q2: #4a3c80;
+	--hra-q3: #7f63e0;
+	--hra-q4: #c9b8ff;
+	--hra-q-ink-12: #e6deff;
+	--hra-q-ink-34: #121317;
+}
+
+/* Payroll charts, by meaning: present mint, half day peach, leave
+   violet, absent coral. */
+:root[data-ess-skin='atur'] .pr-overview {
+	--pr-1: #2fc79d;
+	--pr-2: #ff7a8a;
+	--pr-3: #a98bff;
+	--pr-4: #ffad73;
+	--pr-none: #e6e7ec;
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .pr-overview {
+	--pr-1: #4fe0b8;
+	--pr-2: #ff8796;
+	--pr-3: #b9a0ff;
+	--pr-4: #ffb37f;
+	--pr-none: #2a2b31;
+}
+
+/* The smaller dashboard panels. */
+:root[data-ess-skin='atur'] .panel .lead {
+	border-radius: 16px;
+	background: var(--ess-primary-grad);
+	color: var(--atur-on-primary);
+}
+:root[data-ess-skin='atur'] .panel .lead:hover {
+	background: var(--ess-primary-grad);
+	color: var(--atur-on-primary);
+	filter: brightness(0.96) saturate(1.08);
+}
+:root[data-ess-skin='atur'] .panel .rows .tile {
+	border-radius: 12px;
+	background: var(--ess-tint-lavender);
+	color: var(--ess-text-secondary);
+}
+:root[data-ess-skin='atur'] .panel [data-level='1'] {
+	background: color-mix(in srgb, var(--ess-chart-5) 55%, var(--ess-surface)) !important;
+	border-color: var(--ess-chart-1) !important;
+}
+:root[data-ess-skin='atur'] .panel [data-level='2'] {
+	background: color-mix(in srgb, var(--ess-chart-3) 30%, var(--ess-surface)) !important;
+}
+:root[data-ess-skin='atur'] .panel [data-level='3'] {
+	background: color-mix(in srgb, var(--ess-chart-3) 62%, var(--ess-surface)) !important;
+}
+:root[data-ess-skin='atur'] .panel [data-level='4'] {
+	background: color-mix(in srgb, var(--ess-chart-3) 85%, #0a7a58) !important;
+}
+:root[data-ess-skin='atur'] .panel .stats > div {
+	background: var(--ess-tint-mint);
+}
+:root[data-ess-skin='atur'] .panel .stats > div:nth-child(2) {
+	background: var(--ess-tint-lavender);
+}
+:root[data-ess-skin='atur'] .panel .stats > div:nth-child(3) {
+	background: var(--ess-tint-pink);
+}
+:root[data-ess-skin='atur'] .panel .stats > div.warn {
+	background: var(--ess-tint-peach);
+}
+:root[data-ess-skin='atur'] .panel .cards .card {
+	border: 1px solid var(--ess-border-subtle);
+	border-radius: 16px;
+	background: var(--ess-surface);
+}
+:root[data-ess-skin='atur'] .panel .segs span.on,
+:root[data-ess-skin='atur'] .panel .steps li.done .tick {
+	background: var(--ess-primary-grad);
+}
+:root[data-ess-skin='atur'] .panel .send:not(:disabled) {
+	background: var(--ess-primary-grad);
+	color: var(--atur-on-primary);
+}
+
+/* ============================================================
+   ATUR — the reference shot ("Atur · HR Management", 2026-11-03):
+   pastel summary cards, near-black tooltips and pills, soft grey
+   list rows, white outlined controls, rounded-square avatars.
+   The dashboard's own header figures stay plain (by request).
+   ============================================================ */
+
+/* Summary strips (Payroll, Team, Admin, Champ Hub…): each figure is
+   its own pastel card — pink, peach, lavender, mint in turn — with the
+   shot's soft white wave sweeping in from the right. */
+:root[data-ess-skin='atur'] .ess-shell .ess-figures {
+	gap: 12px;
+	border: none;
+	background: transparent;
+	background-color: transparent;
+	box-shadow: none;
+}
+/* The shot's card: label on top, the big figure under it, the status
+   dot in the top-right corner where the shot keeps its trend pill. */
+:root[data-ess-skin='atur'] .ess-shell .ess-figure {
+	position: relative;
+	align-items: flex-start;
+	padding: 14px 16px 15px;
+	border: none;
+	border-radius: 16px;
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-figure > div:has(> .ess-figure__value) {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	/* stretch, not start: each line is held to the card's width, so a long
+	   label wraps inside the card instead of running out of it */
+	align-items: stretch;
+	gap: 6px;
+	min-width: 0;
+	padding-right: 18px;
+	text-align: left;
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-figure > div > br {
+	display: none;
+}
+/* the label: up to two lines, wrapped at word breaks, never past the card */
+:root[data-ess-skin='atur'] .ess-shell .ess-figure__label {
+	order: -1;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	overflow: hidden;
+	min-width: 0;
+	white-space: normal;
+	overflow-wrap: anywhere;
+	text-overflow: clip;
+	font-size: 13.5px;
+	font-weight: 600;
+	line-height: 1.3;
+	color: var(--ess-text);
+}
+/* a label with a detail ("Attendance · 0 of 4 days"): the name on its own
+   line, the detail on the next, quieter, wrapping inside the card */
+:root[data-ess-skin='atur'] .ess-shell .ess-figure__label:has(.fig-sub) {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	-webkit-line-clamp: unset;
+	line-clamp: none;
+	overflow: visible;
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-figure__label .fig-sep {
+	display: none;
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-figure__label .fig-sub {
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1.35;
+	color: var(--ess-text-secondary);
+	white-space: normal;
+}
+/* a card's icon: a small white square with an ink glyph, as on the
+   reference's summary cards (status tones keep their colour) */
+:root[data-ess-skin='atur'] .ess-shell .ess-figure > .ess-tile {
+	width: 32px;
+	height: 32px;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.75);
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-figure > .ess-tile:not([class*='ess-tile--']),
+:root[data-ess-skin='atur'] .ess-shell .ess-figure > .ess-tile--sm:not(.ess-tile--ok):not(.ess-tile--warn):not(.ess-tile--bad) {
+	color: var(--ess-text);
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .ess-shell .ess-figure > .ess-tile {
+	background: rgba(255, 255, 255, 0.1);
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-figure__value {
+	font-size: 26px;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	overflow-wrap: anywhere;
+}
+/* a value that is words, not a number ("Not set", "2 yrs 3 mos") */
+:root[data-ess-skin='atur'] .ess-shell .ess-figure__value.tenure {
+	font-size: 19px;
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-figure__dot {
+	position: absolute;
+	top: 15px;
+	right: 15px;
+	width: 10px;
+	height: 10px;
+	box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.75);
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .ess-shell .ess-figure__dot {
+	box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
+}
+
+/* Chart tooltips: the shot's near-black card with white text. */
+:root[data-ess-skin='atur'] .tip[role='status'] {
+	border-color: transparent;
+	border-radius: 10px;
+	background: #1c1d22;
+	color: #ffffff;
+	box-shadow: 0 10px 24px -10px rgba(16, 24, 40, 0.5);
+}
+:root[data-ess-skin='atur'] .tip[role='status'] .tip-title,
+:root[data-ess-skin='atur'] .tip[role='status'] b {
+	color: #ffffff;
+}
+:root[data-ess-skin='atur'] .tip[role='status'] span {
+	color: rgba(255, 255, 255, 0.72);
+}
+
+/* Lists (Activity Log in the shot): each row a soft grey rounded box. */
+:root[data-ess-skin='atur'] .ess-shell .ess-rows {
+	gap: 8px;
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-rows > .ess-row {
+	padding: 10px 12px;
+	border: none;
+	border-radius: 12px;
+	background: var(--ess-sunken);
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-rows > a.ess-row:hover,
+:root[data-ess-skin='atur'] .ess-shell .ess-rows > button.ess-row:hover {
+	background: var(--ess-surface-hover);
+	box-shadow: inset 0 0 0 1px var(--ess-border);
+}
+/* A row that is the primary action (Policies → "Apply for leave") keeps
+   its primary fill; the grey row fill above hid its on-primary text
+   (white on grey in light, near-black on charcoal in dark). */
+:root[data-ess-skin='atur'] .ess-shell .ess-rows > a.ess-row.apply-row,
+:root[data-ess-skin='atur'] .ess-shell .ess-rows > a.ess-row.apply-row:hover {
+	background: var(--ess-primary-grad);
+	box-shadow: 0 8px 18px -10px rgba(20, 22, 30, 0.55);
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-card > .ess-rows > .ess-row {
+	margin-left: 0;
+	margin-right: 0;
+}
+
+/* Secondary buttons and selects ("Filter", "Export CSV", "Monthly"):
+   white, a light border, the shot's 10px corners. */
+:root[data-ess-skin='atur'] .ess-btn--secondary,
+:root[data-ess-skin='atur'] .ess-btn--outline {
+	border-color: var(--ess-border);
+	border-radius: 10px;
+	background: var(--ess-surface);
+	color: var(--ess-text);
+	box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+:root[data-ess-skin='atur'] .ess-btn--secondary:hover:not(:disabled),
+:root[data-ess-skin='atur'] .ess-btn--outline:hover:not(:disabled) {
+	border-color: var(--ess-border-strong);
+	background: var(--ess-surface-hover);
+	color: var(--ess-text);
+}
+:root[data-ess-skin='atur'] .ess-select {
+	border-color: var(--ess-border);
+	border-radius: 10px;
+	background-color: var(--ess-surface);
+}
+
+/* Solid neutral badges ("Ready") in the shot's near-black. */
+:root[data-ess-skin='atur'] .ess-badge--solid,
+:root[data-ess-skin='atur'] .ess-badge--dark {
+	background: #1c1d22;
+	color: #ffffff;
+}
+
+/* The account button: a rounded-square avatar, as in the shot. */
+:root[data-ess-skin='atur'] .topbar .me-btn,
+:root[data-ess-skin='atur'] .topbar .me-btn .avatar {
+	border-radius: 12px;
+}
+
+/* ============================================================
+   ATUR — reference pass 2 (2026-11-04): every summary card in the
+   shot's pastel-and-ribbon style, neutral icons with blue kept for
+   what's active, the shot's grouped top-right controls, dashed chart
+   grids, soft grey table heads. The dock keeps its layout; only its
+   colours follow the shot.
+   ============================================================ */
+
+/* Summary cards across the portal: payroll/team/admin figure strips,
+   HR analytics headline figures, attendance's three metrics, the
+   dashboard's leave strip and its "This month" stats. Pink, peach,
+   lavender, mint in turn, with the white ribbons on the right. */
+:root[data-ess-skin='atur']
+	:is(
+		.ess-shell .ess-figures > .ess-figure,
+		.ess-shell .kpis > .kpi,
+		.ess-shell .ess-metric,
+		aside.rail[aria-label='My leave'] > .blk,
+		.panel .stats > div
+	) {
+	--atur-tint: var(--ess-tint-pink);
+	background: var(--atur-wave) right center / auto 100% no-repeat, var(--atur-tint);
+	border-color: transparent;
+	box-shadow: none;
+}
+:root[data-ess-skin='atur']
+	:is(
+		.ess-shell .ess-figures > .ess-figure,
+		.ess-shell .kpis > .kpi,
+		.ess-shell .ess-metric,
+		aside.rail[aria-label='My leave'] > .blk,
+		.panel .stats > div
+	):nth-child(4n + 2) {
+	--atur-tint: var(--ess-tint-peach);
+}
+:root[data-ess-skin='atur']
+	:is(
+		.ess-shell .ess-figures > .ess-figure,
+		.ess-shell .kpis > .kpi,
+		.ess-shell .ess-metric,
+		aside.rail[aria-label='My leave'] > .blk,
+		.panel .stats > div
+	):nth-child(4n + 3) {
+	--atur-tint: var(--ess-tint-lavender);
+}
+:root[data-ess-skin='atur']
+	:is(
+		.ess-shell .ess-figures > .ess-figure,
+		.ess-shell .kpis > .kpi,
+		.ess-shell .ess-metric,
+		aside.rail[aria-label='My leave'] > .blk,
+		.panel .stats > div
+	):nth-child(4n + 4) {
+	--atur-tint: var(--ess-tint-mint);
+}
+:root[data-ess-skin='atur'] .ess-shell .kpis > .kpi {
+	padding: 11px 14px;
+	border-radius: 16px;
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-metric {
+	border-radius: 16px;
+}
+/* their labels in ink (the shot's "Total Employee"), not grey */
+:root[data-ess-skin='atur'] .ess-shell .kpis > .kpi .k-label,
+:root[data-ess-skin='atur'] .ess-shell .ess-metric .ess-metric__label {
+	font-weight: 600;
+	color: var(--ess-text);
+}
+:root[data-ess-skin='atur'] .ess-shell .kpis > .kpi .k-sub,
+:root[data-ess-skin='atur'] .ess-shell .ess-metric .ess-metric__meta {
+	color: var(--ess-text-secondary);
+}
+/* icons on a card sit in a small white square */
+:root[data-ess-skin='atur'] .ess-shell .ess-metric .ess-tile {
+	width: 38px;
+	height: 38px;
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.72);
+	color: var(--ess-text);
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .ess-shell .ess-metric .ess-tile {
+	background: rgba(255, 255, 255, 0.1);
+}
+/* trend figures in the shot's white pill (▲ 8%, ▼ 10.5%) */
+:root[data-ess-skin='atur'] .ess-shell .kpis > .kpi .delta {
+	align-self: flex-start;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.82);
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .ess-shell .kpis > .kpi .delta {
+	background: rgba(255, 255, 255, 0.1);
+}
+
+/* Colour: the shot is ink and grey, with blue only for what's active
+   and for its "See All" links. Heading icons, plain tiles and empty
+   states go neutral; status tiles keep their meaning colours. */
+:root[data-ess-skin='atur'] .ess-shell :is(.ess-h2, .ess-h3) > svg:first-child {
+	color: var(--ess-text);
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-tile:not([class*='ess-tile--']) {
+	background: var(--ess-sunken);
+	color: var(--ess-text);
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-empty__icon {
+	background: var(--ess-sunken);
+	color: var(--ess-text-muted);
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-link {
+	font-weight: 600;
+	color: var(--ess-primary);
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-card-head .ess-h2,
+:root[data-ess-skin='atur'] .ess-shell .ess-card .head h2 {
+	font-weight: 650;
+	letter-spacing: -0.015em;
+}
+
+/* Charts: dashed grid lines, as in the shot's Payroll Cost. */
+:root[data-ess-skin='atur'] .ess-shell .chart line.grid {
+	stroke-dasharray: 4 5;
+}
+
+/* Tables: a soft grey header band with rounded ends. */
+:root[data-ess-skin='atur'] .ess-shell .ess-table th {
+	background: var(--ess-sunken);
+	border-bottom-color: transparent;
+	color: var(--ess-text-secondary);
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-table thead tr > th:first-child {
+	border-radius: 10px 0 0 10px;
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-table thead tr > th:last-child {
+	border-radius: 0 10px 10px 0;
+}
+
+/* ============================================================
+   ATUR — the reference layout (2026-11-04): a flat light-grey page
+   where every region is its own white block. Across the top, three
+   blocks: the brand, the main menu (the open page a blue gradient
+   pill) and search · add · settings · bell · you.
+   ============================================================ */
+@media (min-width: 721px) {
+	:root[data-ess-skin='atur'] body:has(.ess-shell) {
+		background: var(--ess-canvas);
+	}
+	:root[data-ess-skin='atur'] .ess-shell {
+		border-color: transparent;
+		box-shadow: none;
+	}
+
+	/* the top row: its own line, the page starts right under it */
+	:root[data-ess-skin='atur'] .ess-main {
+		--topbar-w: -14px;
+		--bar-top: 8px;
+	}
+	:root[data-ess-skin='atur'] .ess-main .topbar:has(> .right) {
+		position: static;
+		display: flex;
+		align-items: stretch;
+		gap: 12px;
+		min-height: 0;
+		padding: 10px var(--ess-page-pad-x) 2px;
+	}
+	:root[data-ess-skin='atur'] .ess-main .topbar .today,
+	:root[data-ess-skin='atur'] .ess-main .topbar .links {
+		display: none;
+	}
+
+	/* brand block: the blue hexagon mark, the name over its second line */
+	:root[data-ess-skin='atur'] .topbar .tb-brand {
+		display: grid;
+		grid-template-columns: auto auto;
+		grid-template-rows: auto auto;
+		align-content: center;
+		column-gap: 10px;
+		flex: none;
+		padding: 7px 18px 7px 9px;
+		border-radius: 16px;
+		background: var(--ess-surface);
+		box-shadow: var(--atur-block-shadow);
+		color: var(--ess-text);
+		text-decoration: none;
+	}
+	:root[data-ess-skin='atur'] .topbar .tb-mark {
+		grid-row: 1 / span 2;
+		display: grid;
+		place-items: center;
+		width: 38px;
+		height: 38px;
+		/* the one warm accent: the brand mark */
+		color: #ffffff;
+		background: var(--atur-accent-grad);
+		clip-path: polygon(50% 0, 93% 24%, 93% 76%, 50% 100%, 7% 76%, 7% 24%);
+	}
+	:root[data-ess-skin='atur'] .topbar .tb-mark svg {
+		width: 17px;
+		height: 17px;
+	}
+	:root[data-ess-skin='atur'] .topbar .tb-name {
+		align-self: end;
+		font-family: var(--ess-font-display);
+		font-size: 16px;
+		font-weight: 600;
+		line-height: 1.15;
+		white-space: nowrap;
+	}
+	:root[data-ess-skin='atur'] .topbar .tb-sub {
+		display: block;
+		align-self: start;
+		font-size: 11.5px;
+		line-height: 1.35;
+		color: var(--ess-text-muted);
+		white-space: nowrap;
+	}
+
+	/* the main menu block: grey items, the open page in the gradient */
+	:root[data-ess-skin='atur'] .topbar .pillnav {
+		display: flex;
+		align-items: center;
+		gap: 0;
+		flex: 1 1 auto;
+		min-width: 0;
+		padding: 6px;
+		border-radius: 16px;
+		background: var(--ess-surface);
+		box-shadow: var(--atur-block-shadow);
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+	:root[data-ess-skin='atur'] .topbar .pn-item {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		flex: none;
+		height: 40px;
+		padding: 0 11px;
+		border-radius: 12px;
+		color: #8a8f9c;
+		font-size: 13px;
+		font-weight: 500;
+		white-space: nowrap;
+		text-decoration: none;
+		transition:
+			background-color 160ms ease,
+			color 160ms ease;
+		transition-duration: 160ms !important;
+	}
+	:root[data-ess-skin='atur'] .topbar .pn-item:hover {
+		background: var(--ess-sunken);
+		color: var(--ess-text);
+	}
+	:root[data-ess-skin='atur'] .topbar .pn-item[aria-current='page'] {
+		background: var(--ess-primary-grad);
+		color: var(--atur-on-primary);
+		font-weight: 600;
+		box-shadow: 0 8px 18px -7px rgba(47, 107, 255, 0.6);
+	}
+	:root[data-ess-skin='atur'] .topbar .pn-item.soon {
+		opacity: 0.55;
+	}
+	:root[data-ess-skin='atur'] .topbar .pn-count {
+		min-width: 18px;
+		height: 18px;
+		padding: 0 5px;
+		border-radius: 999px;
+		/* a deeper red: white on #ff4d5e was 3.2:1 at 10px (2026-11-09) */
+		background: #d92d3f;
+		color: #ffffff;
+		font-size: 10.5px;
+		font-weight: 700;
+		line-height: 18px;
+		text-align: center;
+	}
+	:root[data-ess-skin='atur'] .topbar .pn-item[aria-current='page'] .pn-count {
+		background: #d92d3f;
+		color: #ffffff;
+	}
+
+	/* the utilities block: search pill, round grey buttons, a divider, you */
+	:root[data-ess-skin='atur'] .ess-main .topbar .right {
+		flex: none;
+		align-items: center;
+		gap: 8px;
+		margin-left: 0;
+		padding: 6px 8px 6px 10px;
+		border-radius: 16px;
+		background: var(--ess-surface);
+		box-shadow: var(--atur-block-shadow);
+	}
+	:root[data-ess-skin='atur'] .topbar .right .search {
+		height: 38px;
+		border: 1px solid var(--ess-border);
+		border-radius: 999px;
+		background: var(--ess-surface);
+		color: var(--ess-text-secondary);
+	}
+	:root[data-ess-skin='atur'] .topbar .right .search:hover {
+		border-color: var(--ess-border-strong);
+		background: var(--ess-surface);
+	}
+	:root[data-ess-skin='atur'] .topbar .right .round {
+		width: 38px;
+		height: 38px;
+		border: none;
+		border-radius: 50%;
+		background: var(--ess-sunken);
+		box-shadow: none;
+		color: var(--ess-text);
+	}
+	:root[data-ess-skin='atur'] .topbar .right .round:hover {
+		background: var(--ess-border-subtle);
+	}
+	:root[data-ess-skin='atur'] .topbar .right .dot {
+		top: 8px;
+		right: 9px;
+		background: #ff4d5e;
+		box-shadow: 0 0 0 2px var(--ess-sunken);
+	}
+	:root[data-ess-skin='atur'] .topbar .right .add {
+		width: 38px;
+		height: 38px;
+		padding: 0;
+		justify-content: center;
+		border-radius: 50%;
+		background: var(--ess-primary-grad);
+		color: var(--atur-on-primary);
+	}
+	:root[data-ess-skin='atur'] .topbar .right .add-label {
+		display: none;
+	}
+	:root[data-ess-skin='atur'] .topbar .right .team {
+		display: none;
+	}
+	:root[data-ess-skin='atur'] .topbar .right .me {
+		display: flex;
+		align-items: center;
+		padding-left: 12px;
+		margin-left: 2px;
+		border-left: 1px solid var(--ess-border);
+	}
+	:root[data-ess-skin='atur'] .topbar .right .me-btn {
+		border-radius: 12px;
+		box-shadow: none;
+	}
+	:root[data-ess-skin='atur'] .topbar .right .me-btn :is(.avatar, img) {
+		border-radius: 12px;
+	}
+}
+/* Narrower laptops: the brand's second line goes first, then the other
+   menu items become icons (their name in the tooltip); the open page
+   keeps its label. */
+@media (min-width: 721px) {
+	@container ess-main (max-width: 1600px) {
+		:root[data-ess-skin='atur'] .topbar .tb-sub {
+			display: none;
+		}
+		:root[data-ess-skin='atur'] .topbar .tb-name {
+			align-self: center;
+			grid-row: 1 / span 2;
+		}
+	}
+	/* settings is also in your avatar's menu */
+	@container ess-main (max-width: 1700px) {
+		:root[data-ess-skin='atur'] .topbar .right .settings {
+			display: none;
+		}
+	}
+	@container ess-main (max-width: 1600px) {
+		:root[data-ess-skin='atur'] .topbar .right .search {
+			width: 38px;
+			padding: 0;
+			justify-content: center;
+		}
+		:root[data-ess-skin='atur'] .topbar .right .search-label {
+			display: none;
+		}
+	}
+	@container ess-main (max-width: 1400px) {
+		:root[data-ess-skin='atur'] .topbar .pn-item:not([aria-current='page']) {
+			width: 40px;
+			padding: 0;
+			justify-content: center;
+		}
+		:root[data-ess-skin='atur'] .topbar .pn-item:not([aria-current='page']) .pn-label {
+			display: none;
+		}
+		:root[data-ess-skin='atur'] .topbar .pn-item:not([aria-current='page']) .pn-count {
+			position: absolute;
+			top: 2px;
+			right: 0;
+			box-shadow: 0 0 0 2px var(--ess-surface);
+		}
+	}
+	@container ess-main (max-width: 1000px) {
+		:root[data-ess-skin='atur'] .topbar .tb-name {
+			display: none;
+		}
+		:root[data-ess-skin='atur'] .topbar .tb-brand {
+			padding-right: 9px;
+		}
+	}
+}
+/* Short laptop screens: a slimmer top row. */
+@media (min-width: 721px) and (max-height: 760px) {
+	:root[data-ess-skin='atur'] .ess-main .topbar:has(> .right) {
+		padding-top: 8px;
+	}
+	:root[data-ess-skin='atur'] .topbar .pn-item {
+		height: 34px;
+	}
+	:root[data-ess-skin='atur'] .topbar .tb-mark {
+		width: 32px;
+		height: 32px;
+	}
+	:root[data-ess-skin='atur'] .topbar .right :is(.search, .round, .add) {
+		height: 32px;
+	}
+	:root[data-ess-skin='atur'] .topbar .right :is(.round, .add) {
+		width: 32px;
+	}
+}
+
+/* Less room above the top row (asked for 2026-11-05): 10px → 4px, on top
+   of the shell's 12px margin. */
+@media (min-width: 721px) {
+	:root[data-ess-skin='atur'] .ess-main .topbar:has(> .right) {
+		padding-top: 4px;
+	}
+}
+
+/* Main menu as a dock (2026-11-05, "Apple-style dock": expanding icons,
+   labels on hover). Tidy, even tiles that never change width, so nothing
+   shifts under the pointer. Hover magnifies the icon on a spring, its
+   neighbours swell a little, and the name appears in a small bubble under
+   it. The open page is the near-black pill with its name. Icons drop in
+   one by one on load; the open page's pill "picks" with a small bounce
+   when you move. Pure CSS (:hover with + and :has(+ …)). Durations are
+   !important to outlast the global reduced-motion rule; fills are
+   backwards-only and hover transforms sit on the icon alone, so no
+   transform lingers on text. */
+@media (min-width: 721px) {
+	:root[data-ess-skin='atur'] .topbar .pillnav {
+		--dock-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+		justify-content: flex-start;
+		gap: 4px;
+		padding: 6px;
+		/* sized to its tiles and centred between brand and buttons, like a
+		   dock, instead of a long white block that ends in empty space */
+		flex: 0 1 auto;
+		margin-inline: auto;
+		/* the name bubbles hang below the bar */
+		overflow: visible;
+	}
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item {
+		width: 46px;
+		justify-content: center;
+		gap: 0;
+		padding: 0;
+		border-radius: 13px;
+		font-size: 13px;
+		outline: none;
+		transition:
+			background-color 200ms ease,
+			color 200ms ease,
+			box-shadow 200ms ease;
+		transition-duration: 200ms !important;
+	}
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item:is(:hover, :focus-visible) {
+		background: var(--ess-sunken);
+		color: var(--ess-text);
+	}
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item:focus-visible {
+		box-shadow: 0 0 0 2px var(--ess-text);
+	}
+	/* the open page: a near-black pill with its name (light in dark mode) */
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item[aria-current='page'] {
+		width: auto;
+		gap: 8px;
+		padding: 0 16px 0 14px;
+		margin-inline: 2px;
+		box-shadow: 0 10px 20px -10px rgba(20, 22, 30, 0.6);
+		animation: atur-nav-pick 460ms cubic-bezier(0.3, 1.5, 0.5, 1) backwards;
+		animation-duration: 460ms !important;
+	}
+	:root[data-ess-skin='atur'][data-ess-theme='dark'] .topbar .pillnav .pn-item[aria-current='page'] {
+		box-shadow: 0 10px 20px -12px rgba(0, 0, 0, 0.8);
+	}
+	:root[data-ess-skin='atur'][data-ess-theme='dark'] .topbar .pillnav .pn-item:not([aria-current='page']):is(:hover, :focus-visible) {
+		background: rgba(255, 255, 255, 0.09);
+	}
+
+	/* icon: drops in on load; magnifies on hover, neighbours a little */
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item > svg {
+		flex: none;
+		width: 20px;
+		height: 20px;
+		animation: atur-nav-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+		animation-duration: 420ms !important;
+		transition: transform 320ms var(--dock-spring);
+		transition-duration: 320ms !important;
+	}
+	:root[data-ess-skin='atur'] .topbar .pn-item:nth-child(2) > svg { animation-delay: 40ms; }
+	:root[data-ess-skin='atur'] .topbar .pn-item:nth-child(3) > svg { animation-delay: 80ms; }
+	:root[data-ess-skin='atur'] .topbar .pn-item:nth-child(4) > svg { animation-delay: 120ms; }
+	:root[data-ess-skin='atur'] .topbar .pn-item:nth-child(5) > svg { animation-delay: 160ms; }
+	:root[data-ess-skin='atur'] .topbar .pn-item:nth-child(6) > svg { animation-delay: 200ms; }
+	:root[data-ess-skin='atur'] .topbar .pn-item:nth-child(7) > svg { animation-delay: 240ms; }
+	:root[data-ess-skin='atur'] .topbar .pn-item:nth-child(8) > svg { animation-delay: 280ms; }
+	:root[data-ess-skin='atur'] .topbar .pn-item:nth-child(n + 9) > svg { animation-delay: 320ms; }
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item:not([aria-current='page']):is(:hover, :focus-visible) > svg {
+		transform: scale(1.22);
+	}
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item:is(:hover, :focus-visible) + .pn-item:not([aria-current='page']) > svg,
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item:not([aria-current='page']):has(+ .pn-item:is(:hover, :focus-visible)) > svg {
+		transform: scale(1.08);
+	}
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item:not([aria-current='page']):active > svg {
+		transform: scale(0.92);
+	}
+
+	/* name: a bubble under the hovered icon (inline in the open page) */
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item:not([aria-current='page']) .pn-label {
+		position: absolute;
+		top: calc(100% + 10px);
+		left: 50%;
+		z-index: 60;
+		display: block;
+		padding: 5px 10px;
+		border-radius: 8px;
+		background: var(--ess-text);
+		color: var(--ess-surface);
+		font-size: 12px;
+		font-weight: 600;
+		line-height: 1.2;
+		white-space: nowrap;
+		pointer-events: none;
+		opacity: 0;
+		transform: translate(-50%, -4px) scale(0.96);
+		box-shadow: 0 8px 18px -8px rgba(20, 22, 30, 0.45);
+		transition:
+			opacity 160ms ease,
+			transform 240ms var(--dock-spring);
+		transition-duration: 160ms, 240ms !important;
+	}
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item:not([aria-current='page']) .pn-label::before {
+		content: '';
+		position: absolute;
+		top: -4px;
+		left: 50%;
+		width: 8px;
+		height: 8px;
+		margin-left: -4px;
+		border-radius: 2px;
+		background: inherit;
+		transform: rotate(45deg);
+	}
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item:not([aria-current='page']):is(:hover, :focus-visible) .pn-label {
+		opacity: 1;
+		transform: translate(-50%, 0) scale(1);
+	}
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item[aria-current='page'] .pn-label {
+		display: inline;
+		animation: atur-nav-label 260ms ease-out backwards;
+		animation-duration: 260ms !important;
+	}
+
+	/* counts ride the tile's corner */
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item .pn-count {
+		position: absolute;
+		top: 2px;
+		right: 3px;
+		min-width: 16px;
+		height: 16px;
+		padding: 0 4px;
+		font-size: 10px;
+		line-height: 16px;
+		box-shadow: 0 0 0 2px var(--ess-surface);
+		animation: atur-nav-badge 420ms cubic-bezier(0.3, 1.6, 0.5, 1) 420ms backwards;
+		animation-duration: 420ms !important;
+	}
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item[aria-current='page'] .pn-count {
+		position: static;
+		box-shadow: none;
+	}
+}
+@media (min-width: 721px) and (max-height: 760px) {
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item > svg {
+		width: 18px;
+		height: 18px;
+	}
+	:root[data-ess-skin='atur'] .topbar .pillnav .pn-item:not([aria-current='page']) {
+		width: 42px;
+	}
+}
+@keyframes atur-nav-in {
+	from {
+		opacity: 0;
+		transform: translateY(-7px);
+	}
+}
+@keyframes atur-nav-label {
+	from {
+		opacity: 0;
+		transform: translateX(-5px);
+	}
+}
+@keyframes atur-nav-pick {
+	from {
+		transform: scale(0.88);
+	}
+}
+@keyframes atur-nav-badge {
+	from {
+		opacity: 0;
+		transform: scale(0.3);
+	}
+}
+
+/* Clarity (2026-11-04): on the dashboard's small pastel cards the text
+   runs the full width, so the ribbons would sit behind words; there the
+   card is the plain pastel, and every line is in solid ink. */
+:root[data-ess-skin='atur'] :is(aside.rail[aria-label='My leave'] > .blk, .panel .stats > div) {
+	background: var(--atur-tint);
+}
+:root[data-ess-skin='atur'] aside.rail[aria-label='My leave'] > .blk .eyebrow,
+:root[data-ess-skin='atur'] .panel .stats > div dd {
+	color: var(--ess-text);
+}
+:root[data-ess-skin='atur'] aside.rail[aria-label='My leave'] > .blk :is(.muted, .sub, p, span:not([class*='ess-badge'])),
+:root[data-ess-skin='atur'] .panel .stats > div dt {
+	color: var(--ess-text-secondary);
+}
+
+/* ============================================================
+   ATUR — dashboard summary: one slim white row right under the main
+   menu (greeting · the figures · view tabs · Apply leave), so the
+   planner and panels get the height. Each figure is a compact pastel
+   card: a dark icon square, the label over the number.
+   ============================================================ */
+:root[data-ess-skin='atur'] .home > .top {
+	flex-wrap: nowrap;
+	align-items: center;
+	gap: 14px;
+	height: auto;
+	min-height: auto;
+	padding: 9px 12px 9px 18px;
+	border-radius: 16px;
+	background: var(--ess-surface);
+	box-shadow: var(--atur-block-shadow);
+}
+:root[data-ess-skin='atur'] .home > .top .hello {
+	flex: none;
+	min-width: 0;
+}
+:root[data-ess-skin='atur'] .home > .top:has(.figures.hide) .hello {
+	flex: 1 1 auto;
+}
+:root[data-ess-skin='atur'] .home > .top .hello::before {
+	content: 'Dashboard';
+	display: block;
+	margin-bottom: 1px;
+	font-size: 12px;
+	color: var(--ess-text-muted);
+}
+:root[data-ess-skin='atur'] .home > .top .hello h1 {
+	font-family: var(--ess-font-display);
+	font-size: 20px;
+	letter-spacing: -0.01em;
+	white-space: nowrap;
+}
+:root[data-ess-skin='atur'] .home > .top .hello .greet {
+	font-size: 1em;
+	font-weight: 500;
+	color: var(--ess-text);
+}
+:root[data-ess-skin='atur'] .home > .top .hello .name {
+	font-weight: 600;
+}
+:root[data-ess-skin='atur'] .home > .top .figures {
+	order: 1;
+	flex: 1 1 auto;
+	display: grid;
+	grid-auto-flow: column;
+	grid-auto-columns: minmax(0, 1fr);
+	gap: 10px;
+	min-width: 0;
+	height: auto;
+	overflow: visible;
+}
+:root[data-ess-skin='atur'] .home > .top .figures.hide {
+	display: none;
+}
+:root[data-ess-skin='atur'] .home > .top .view-tabs {
+	order: 2;
+}
+:root[data-ess-skin='atur'] .home > .top .apply {
+	order: 3;
+	flex: none;
+	margin-left: 0;
+}
+:root[data-ess-skin='atur'] .home > .top .fig {
+	--atur-tint: var(--ess-tint-pink);
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	grid-template-rows: auto auto;
+	align-items: center;
+	column-gap: 10px;
+	row-gap: 1px;
+	min-width: 0;
+	min-height: 0;
+	padding: 8px 12px 8px 10px;
+	border-radius: 14px;
+	background: var(--atur-wave) right center / auto 100% no-repeat, var(--atur-tint);
+	color: var(--ess-text);
+	text-decoration: none;
+	transition: filter 160ms ease;
+}
+:root[data-ess-skin='atur'] .home > .top .fig:nth-child(4n + 2) {
+	--atur-tint: var(--ess-tint-peach);
+}
+:root[data-ess-skin='atur'] .home > .top .fig:nth-child(4n + 3) {
+	--atur-tint: var(--ess-tint-lavender);
+}
+:root[data-ess-skin='atur'] .home > .top .fig:nth-child(4n + 4) {
+	--atur-tint: var(--ess-tint-mint);
+}
+:root[data-ess-skin='atur'] .home > .top .fig:hover {
+	background: var(--atur-wave) right center / auto 100% no-repeat, var(--atur-tint);
+	filter: brightness(0.98) saturate(1.05);
+}
+/* the label row holds the icon; the icon square spans both lines */
+:root[data-ess-skin='atur'] .home > .top .fig .k {
+	display: contents;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--ess-text-secondary);
+}
+:root[data-ess-skin='atur'] .home > .top .fig .fig-ic {
+	grid-column: 1;
+	grid-row: 1 / span 2;
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 10px;
+	background: #1c1d22;
+	color: #ffffff;
+}
+:root[data-ess-skin='atur'] .home > .top .fig .k-t {
+	grid-column: 2;
+	grid-row: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+:root[data-ess-skin='atur'] .home > .top .fig .v {
+	grid-column: 2;
+	grid-row: 2;
+	min-width: 0;
+}
+:root[data-ess-skin='atur'] .home > .top .fig b {
+	font-family: var(--ess-font-display);
+	font-size: 20px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+:root[data-ess-skin='atur'] .home > .top .fig .v span {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--ess-text-secondary);
+}
+:root[data-ess-skin='atur'] .home > .top .fig.attn b {
+	color: var(--ess-text);
+}
+/* Tablets (721–1180px): one row squeezed the figure cards to "Le…",
+   "At…". The greeting, view tabs and Apply leave keep the first line;
+   the figures take a full-width second line. */
+@media (min-width: 721px) and (max-width: 1180px) {
+	:root[data-ess-skin='atur'] .home > .top {
+		flex-wrap: wrap;
+		row-gap: 10px;
+	}
+	:root[data-ess-skin='atur'] .home > .top .view-tabs {
+		margin-left: auto;
+	}
+	:root[data-ess-skin='atur'] .home > .top .figures {
+		order: 4;
+		flex: 1 1 100%;
+	}
+}
+/* Cards: the reference's white blocks, titles in its display face. */
+:root[data-ess-skin='atur'] .ess-shell .ess-card {
+	border-color: transparent;
+	box-shadow: var(--atur-block-shadow);
+}
+:root[data-ess-skin='atur'] .ess-shell .ess-card :is(h2, .ess-h2) {
+	font-family: var(--ess-font-display);
+	font-weight: 600;
+	letter-spacing: -0.005em;
+}
+
+/* Champ's orb: the reference's pastels instead of a blue sphere, its
+   breathing glow warm to match. */
+:root[data-ess-skin='atur'] .panel .orb {
+	background:
+		radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 34%),
+		conic-gradient(from 210deg, #f6b3e3, #ffd09a, #93ebc8, #d0bfff, #f6b3e3);
+	box-shadow:
+		0 10px 24px -8px rgba(236, 95, 155, 0.4),
+		inset 0 -4px 10px rgba(60, 20, 60, 0.16);
+	animation-name: atur-orb-breathe;
+}
+@keyframes atur-orb-breathe {
+	50% {
+		box-shadow:
+			0 12px 30px -6px rgba(255, 138, 92, 0.55),
+			inset 0 -4px 10px rgba(60, 20, 60, 0.16);
+	}
+}
+
+/* My attendance (dashboard): the heatmap sits right under this month's
+   figures instead of centring in whatever room is left, so closing or
+   opening Leave Overview (which changes the panel's height) never opens
+   a gap in the middle of the card. */
+:root[data-ess-skin='atur'] .panel .fit > .map {
+	align-content: start;
+}
+
+/* My attendance heatmap: the day you pick and today must never look
+   alike. Today keeps a violet ring; the picked day gets the warm accent's
+   pink ring and a soft glow (its own fill stays, so its level still
+   shows). Hover is a quiet grey ring. */
+:root[data-ess-skin='atur'] .panel .grid button.today {
+	box-shadow: inset 0 0 0 1.5px #7c5cff;
+}
+:root[data-ess-skin='atur'] .panel .grid button:hover {
+	outline-color: var(--ess-text-muted);
+}
+:root[data-ess-skin='atur'] .panel .grid button[aria-pressed='true'] {
+	outline: 2px solid #ec5f9b;
+	outline-offset: 1px;
+	box-shadow: 0 0 0 5px rgba(236, 95, 155, 0.22);
+}
+:root[data-ess-skin='atur'] .panel .grid button.today[aria-pressed='true'] {
+	box-shadow:
+		inset 0 0 0 1.5px #7c5cff,
+		0 0 0 5px rgba(236, 95, 155, 0.22);
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .panel .grid button.today {
+	box-shadow: inset 0 0 0 1.5px #b39dff;
+}
+/* the picked day's line under the grid: its date in the same pink */
+:root[data-ess-skin='atur'] .panel .foot .detail b {
+	color: #d4407f;
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .panel .foot .detail b {
+	color: #f27aad;
+}
+
+/* The dashboard's four panels never get too short to show what's in
+   them (Your setup's five steps, the whole heatmap and its key): with
+   Leave Overview open on a short window the page scrolls a little
+   rather than cutting the panels down. */
+@media (min-width: 1101px) and (min-height: 480px) {
+	:root[data-ess-skin='atur'] .ess-content > .home {
+		grid-template-rows: max-content max-content minmax(264px, 1fr);
+	}
+}
+
+/* My attendance: the heatmap takes the panel's spare height (its squares
+   grow up to about square) instead of leaving an empty band at the
+   bottom; on a short panel it shrinks back to the compact grid. */
+@media (min-width: 1101px) and (min-height: 480px) {
+	:root[data-ess-skin='atur'] .panel .fit > .map {
+		grid-template-rows: auto minmax(0, 190px) auto;
+	}
+	:root[data-ess-skin='atur'] .panel .fit > .map .body {
+		min-height: 0;
+	}
+	:root[data-ess-skin='atur'] .panel .fit > .map :is(.grid, .weekdays) {
+		grid-template-rows: repeat(7, minmax(10px, 1fr));
+	}
+}
+/* ...and on a tall panel, this month's three figures grow into proper
+   summary tiles, so the panel is filled rather than half empty. */
+@container (min-height: 400px) {
+	:root[data-ess-skin='atur'] .panel .fit .stats > div {
+		padding: 12px 14px;
+		border-radius: 14px;
+	}
+	:root[data-ess-skin='atur'] .panel .fit .stats dt {
+		font-size: 12.5px;
+		font-weight: 600;
+	}
+	:root[data-ess-skin='atur'] .panel .fit .stats dd {
+		margin-top: 6px;
+		font-family: var(--ess-font-display);
+		font-size: 26px;
+		font-weight: 600;
+	}
+}
+
+/* ============================================================
+   ATUR dark backdrop (2026-11-05, "a better skin for dark"): instead
+   of one flat charcoal, a quiet pastel aurora — violet, pink, peach and
+   mint glows at low strength in the corners, echoing the pastel cards —
+   over a faint dot grid. Fixed to the viewport so body and shell line
+   up; static (no blur, no animation) so text stays crisp.
+   ============================================================ */
+:root[data-ess-skin='atur'][data-ess-theme='dark'] {
+	--atur-backdrop:
+		radial-gradient(46% 42% at 6% -4%, rgba(160, 130, 255, 0.26), transparent 70%),
+		radial-gradient(38% 36% at 96% 2%, rgba(242, 122, 173, 0.21), transparent 70%),
+		radial-gradient(44% 42% at 74% 104%, rgba(255, 156, 114, 0.17), transparent 70%),
+		radial-gradient(36% 40% at -2% 100%, rgba(79, 224, 184, 0.14), transparent 70%),
+		radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1.4px) 0 0 / 22px 22px,
+		var(--ess-canvas);
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] body:has(.ess-shell),
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .ess-shell {
+	background: var(--atur-backdrop);
+	background-attachment: fixed;
+}
+
+/* ============================================================
+   ATUR — colourful cards (2026-11-05, by request: "the same colourful
+   cards as Amber, in Atur's own reference"). The dashboard's bottom row
+   joins the pastels: Future events peach, Your setup lavender, Champ mint
+   (My attendance stays white, its month figures are pastel already), each
+   with the reference's wave ribbon; the arrow buttons become black round
+   buttons (Atur's action colour); the planner cards' titles are black
+   pill tags. Dark mode uses Atur's dark tints and light pills.
+   ============================================================ */
+:root[data-ess-skin='atur'] .home .lower > .panel:nth-child(1) {
+	--atur-tint: var(--ess-tint-peach);
+}
+:root[data-ess-skin='atur'] .home .lower > .panel:nth-child(3) {
+	--atur-tint: var(--ess-tint-lavender);
+}
+:root[data-ess-skin='atur'] .home .lower > .panel:has(> .orb) {
+	--atur-tint: var(--ess-tint-mint);
+}
+:root[data-ess-skin='atur'] .home .lower > :is(.panel:nth-child(1), .panel:nth-child(3), .panel:has(> .orb)) {
+	background: var(--atur-wave) right bottom / 100% auto no-repeat, var(--atur-tint) !important;
+	box-shadow: none;
+}
+/* the empty icon tile and the inner white card stay white on the pastel */
+:root[data-ess-skin='atur'] .home .lower > .panel:nth-child(1) .empty-ic {
+	background: var(--ess-surface);
+}
+:root[data-ess-skin='atur'] .home .lower > .panel :is(h2, .p-head h2) {
+	color: var(--ess-text);
+}
+/* round black arrow buttons */
+:root[data-ess-skin='atur'] .home .lower > .panel .more {
+	border: 0;
+	background: var(--ess-primary-grad);
+	color: var(--atur-on-primary);
+	box-shadow: 0 6px 14px -8px rgba(20, 22, 30, 0.6);
+	transition: transform 180ms ease;
+	transition-duration: 180ms !important;
+}
+:root[data-ess-skin='atur'] .home .lower > .panel .more:hover {
+	background: var(--ess-primary-grad);
+	color: var(--atur-on-primary);
+	transform: rotate(45deg);
+}
+/* planner cards: the title as a black pill tag */
+:root[data-ess-skin='atur'] aside.rail[aria-label='My leave'] > .blk .eyebrow {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	width: fit-content;
+	padding: 3px 10px 3px 8px;
+	border-radius: 999px;
+	background: #1c1d22;
+	color: #ffffff;
+	letter-spacing: 0.04em;
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] aside.rail[aria-label='My leave'] > .blk .eyebrow {
+	background: #f4f4f8;
+	color: #121317;
+}
+
+/* Atur dark: a soft top highlight on the coloured cards and blocks, so
+   they read as lit, raised surfaces rather than flat patches */
+:root[data-ess-skin='atur'][data-ess-theme='dark'] :is(
+		.home > .top .fig,
+		aside.rail[aria-label='My leave'] > .blk,
+		.home .lower > .panel,
+		.ess-figures > *,
+		.panel .stats > div
+	) {
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.1),
+		0 10px 24px -16px rgba(0, 0, 0, 0.7);
+}
+
+/* Readable text on Atur's pastel cards (2026-11-05 pixel audit): grey
+   secondary/muted text fell to ~4.2:1 on the tints, so inside every
+   pastel card it is near-ink in light mode and near-white in dark. */
+:root[data-ess-skin='atur'] :is(
+		.home .lower > .panel:nth-child(1),
+		.home .lower > .panel:nth-child(3),
+		.home .lower > .panel:has(> .orb),
+		.home > .top .fig,
+		aside.rail[aria-label='My leave'] > .blk,
+		.panel .stats > div,
+		.ess-figures > *,
+		.ess-figure,
+		.kpi
+	) {
+	--ess-text-secondary: #2f323b;
+	--ess-text-muted: #3f434d;
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] :is(
+		.home .lower > .panel:nth-child(1),
+		.home .lower > .panel:nth-child(3),
+		.home .lower > .panel:has(> .orb),
+		.home > .top .fig,
+		aside.rail[aria-label='My leave'] > .blk,
+		.panel .stats > div,
+		.ess-figures > *,
+		.ess-figure,
+		.kpi
+	) {
+	--ess-text-secondary: #f0f1f6;
+	--ess-text-muted: #e2e4ec;
+}
+
+/* ============================================================
+   ATUR dark — gloss (2026-11-09, by request: "glossy bright light
+   strips or border"). On the main cards:
+   - ::before, a 1px light-catching edge: bright at the top-left, fading
+     round the card, with a touch of Atur's warm peach at the far corner;
+   - ::after, a soft diagonal light strip across the card, behind the
+     content (the card is isolated, the strip sits at z-index -1), so
+     text stays crisp. It brightens a little on hover.
+   The top-edge line and inner sheen come from --atur-gloss (tokens).
+   ============================================================ */
+:root[data-ess-skin='atur'][data-ess-theme='dark'] :is(
+		.ess-shell .ess-card,
+		.ess-shell .ess-metric,
+		.home .lower > .panel,
+		.home > .top .fig,
+		.planner,
+		.planner aside.rail > .blk,
+		.ess-content .ess-page-head.bar
+	) {
+	position: relative;
+	isolation: isolate;
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] :is(
+		.ess-shell .ess-card,
+		.ess-shell .ess-metric,
+		.home .lower > .panel,
+		.home > .top .fig,
+		.planner,
+		.planner aside.rail > .blk,
+		.ess-content .ess-page-head.bar
+	)::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	padding: 1px;
+	border-radius: inherit;
+	background: linear-gradient(
+		140deg,
+		rgba(255, 255, 255, 0.55) 0%,
+		rgba(255, 255, 255, 0.16) 18%,
+		rgba(255, 255, 255, 0.04) 45%,
+		rgba(255, 255, 255, 0.04) 70%,
+		rgba(255, 138, 92, 0.32) 100%
+	);
+	-webkit-mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	-webkit-mask-composite: xor;
+	mask:
+		linear-gradient(#000 0 0) content-box exclude,
+		linear-gradient(#000 0 0);
+	pointer-events: none;
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] :is(
+		.ess-shell .ess-card,
+		.ess-shell .ess-metric,
+		.home .lower > .panel,
+		.home > .top .fig,
+		.planner,
+		.planner aside.rail > .blk,
+		.ess-content .ess-page-head.bar
+	)::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	border-radius: inherit;
+	background: linear-gradient(
+		112deg,
+		transparent 0%,
+		transparent 30%,
+		rgba(255, 255, 255, 0.05) 36%,
+		rgba(255, 255, 255, 0.1) 40%,
+		rgba(255, 255, 255, 0.05) 44%,
+		transparent 50%,
+		transparent 56%,
+		rgba(255, 255, 255, 0.04) 59%,
+		transparent 62%
+	);
+	opacity: 0.85;
+	pointer-events: none;
+	transition: opacity 260ms ease;
+	transition-duration: 260ms !important;
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] :is(
+		.ess-shell .ess-card,
+		.ess-shell .ess-metric,
+		.home .lower > .panel,
+		.home > .top .fig,
+		.planner aside.rail > .blk
+	):hover::after {
+	opacity: 1;
+	filter: brightness(1.5);
+}

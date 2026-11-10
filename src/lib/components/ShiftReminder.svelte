@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import Clock from '@lucide/svelte/icons/clock';
 	import Fingerprint from '@lucide/svelte/icons/fingerprint-pattern';
+	import ClipboardPen from '@lucide/svelte/icons/clipboard-pen';
 
 	/**
 	 * Check-out prompts, on every ESS page, for whoever is checked in:
@@ -221,7 +222,7 @@
 				<div class="ess-modal__foot">
 					<button type="button" class="ess-btn ess-btn--ghost" onclick={dismiss}>Dismiss</button>
 					<button type="button" class="ess-btn ess-btn--outline" onclick={snooze}>I've punched out</button>
-					<button type="button" class="ess-btn ess-btn--primary" onclick={raise}>Raise correction</button>
+					<button type="button" class="ess-btn ess-btn--primary" onclick={raise}><ClipboardPen size={16} /> Raise correction</button>
 				</div>
 			{/if}
 		</div>

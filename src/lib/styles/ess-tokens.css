@@ -102,7 +102,7 @@
 	/* ---------- Semantic text ---------- */
 	--ess-text: #1d1d1f;
 	--ess-text-secondary: #424245;
-	--ess-text-muted: #6e6e73; /* 5.1:1 on white */
+	--ess-text-muted: #505056; /* 7.8:1 on white; was #6e6e73, which fell to ~3.3:1 on the tinted glass cards */
 	--ess-text-on-primary: #ffffff;
 	--ess-text-inverse: #15171c;
 	--ess-text-inverse-secondary: #464951;
@@ -144,9 +144,11 @@
 	--ess-cell-off: #e5e5ea;
 
 	/* ---------- Status (chip fg / tint bg, AA on white) ---------- */
-	--ess-success: #157f52;
+	/* a shade darker (2026-11-05): #157f52 / #a35f00 were 4.48:1 on
+	   their own tints, just under AA */
+	--ess-success: #127448;
 	--ess-success-bg: #e6f6ee;
-	--ess-warning: #a35f00;
+	--ess-warning: #945600;
 	--ess-warning-bg: #fdf1dc;
 	--ess-danger: #c62f45;
 	--ess-danger-bg: #fde8ec;
@@ -296,8 +298,9 @@
 	--ess-border-inverse: rgba(255, 255, 255, 0.08);
 
 	--ess-text: #f2f1f8;
-	--ess-text-secondary: rgba(242, 241, 248, 0.78);
-	--ess-text-muted: rgba(242, 241, 248, 0.58);
+	/* brighter secondary/muted text (2026-11-05): 0.78/0.58 read dim */
+	--ess-text-secondary: rgba(242, 241, 248, 0.86);
+	--ess-text-muted: rgba(242, 241, 248, 0.76);
 	--ess-text-on-primary: #0b0d1c;
 	--ess-text-inverse: #f2f1f8;
 	--ess-text-inverse-secondary: rgba(242, 241, 248, 0.7);
@@ -308,7 +311,7 @@
 	--ess-primary-soft: rgba(116, 134, 255, 0.18);
 	--ess-primary-softer: rgba(116, 134, 255, 0.1);
 	--ess-primary-ring: rgba(116, 134, 255, 0.42);
-	--ess-primary-text: #a7b3ff;
+	--ess-primary-text: #c4cbff; /* lighter (was #a7b3ff): selected tabs and tags read ~3.6:1 on their violet wash */
 	--ess-primary-shadow: none;
 
 	--ess-ev-blue: #a9c0fb;
@@ -333,8 +336,9 @@
 	--ess-success-bg: rgba(74, 222, 128, 0.14);
 	--ess-warning: #fbbf24;
 	--ess-warning-bg: rgba(251, 191, 36, 0.14);
-	--ess-danger: #fb7185;
-	--ess-danger-bg: rgba(251, 113, 133, 0.14);
+	/* lighter (was #fb7185): 'Absent' / 'Urgent' badges were ~3.2:1 */
+	--ess-danger: #ffb3bd;
+	--ess-danger-bg: rgba(251, 113, 133, 0.16);
 	--ess-info: #7dd3fc;
 	--ess-info-bg: rgba(125, 211, 252, 0.14);
 	--ess-neutral: #c7cadb;

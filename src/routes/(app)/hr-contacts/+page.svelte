@@ -6,6 +6,8 @@
 	import Search from '@lucide/svelte/icons/search';
 	import MessageCircle from '@lucide/svelte/icons/message-circle';
 	import Headset from '@lucide/svelte/icons/headset';
+	import LifeBuoy from '@lucide/svelte/icons/life-buoy';
+	import BookOpen from '@lucide/svelte/icons/book-open';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 
@@ -68,7 +70,7 @@
 
 	<section class="ess-card ess-fill-card grow team-card">
 		<div class="head">
-			<h2 class="ess-h2">Your HR team</h2>
+			<h2 class="ess-h2"><Headset size={16} /> Your HR team</h2>
 			<p>Your manager and the HR team who handle leave, attendance records, logins and policy questions.</p>
 		</div>
 		{#if chatError}<p class="ess-error" role="alert">{chatError}</p>{/if}
@@ -103,7 +105,7 @@
 	<div class="help-row">
 		<section class="ess-card help-card">
 			<div class="help-head">
-				<h2 class="ess-h2 aside-h">How to get help</h2>
+				<h2 class="ess-h2 aside-h"><LifeBuoy size={16} /> How to get help</h2>
 				<p class="aside-sub">Follow these steps to reach the right person.</p>
 			</div>
 			<ol class="steps">
@@ -122,7 +124,7 @@
 			</ol>
 		</section>
 		<section class="ess-card before-card">
-			<h2 class="ess-h2 aside-h">Before you ask</h2>
+			<h2 class="ess-h2 aside-h"><BookOpen size={16} /> Before you ask</h2>
 			<div class="ess-rows">
 				<a class="ess-row" href="/policies?tab=leave"><span class="ess-row__body"><span class="ess-row__title">Leave policy</span><span class="ess-row__meta">Entitlements, carry-forward and documentation</span></span></a>
 				<a class="ess-row" href="/attendance"><span class="ess-row__body"><span class="ess-row__title">Raise an attendance correction</span><span class="ess-row__meta">For a missing or wrong punch</span></span></a>

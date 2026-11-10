@@ -4,6 +4,10 @@
 	 * workbook: Leave Balance, To Be Paid, LOP, Stop Salary, HR Comments.
 	 * Rows open the person; the same data downloads as CSV or .xlsx.
 	 */
+	import MessageSquarePlus from '@lucide/svelte/icons/message-square-plus';
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 	import type { PayrollEmployee, PayrollReport } from '$lib/server/payroll';
 	import { salaryActionLabel } from '$lib/payroll';
 	import { fmtDate, fmtDays } from './codes';
@@ -24,6 +28,47 @@
 	const visible = $derived(new Set(employees.map((e) => e.userId)));
 
 	let pick = $state('');
+
+	/* Sorting and paging, one view per sheet (the stop-salary blocks stay as they are). */
+	const tenureMs = (doj: string | null) => (doj ? Date.parse(report.asOf) - Date.parse(doj) : null);
+	const balanceView = new TableView(() => employees, {
+		name: (e) => e.name,
+		designation: (e) => e.designation,
+		department: (e) => e.department,
+		team: (e) => e.team,
+		tenure: (e) => tenureMs(e.doj),
+		doj: (e) => e.doj,
+		opening: (e) => e.balance.opening,
+		el: (e) => e.balance.el,
+		sl: (e) => e.balance.sl,
+		compOff: (e) => e.balance.compOff,
+		availed: (e) => e.balance.availed,
+		closing: (e) => e.balance.closing,
+		lwd: (e) => e.lwd,
+		remarks: (e) => e.remarks
+	});
+	const paidView = new TableView(() => paid, {
+		name: (e) => e.name,
+		designation: (e) => e.designation,
+		team: (e) => e.team,
+		doj: (e) => e.doj,
+		paidDays: (e) => e.balance.paidDays,
+		lopDays: (e) => e.balance.lopDays || null
+	});
+	const lopView = new TableView(() => lop, {
+		name: (e) => e.name,
+		designation: (e) => e.designation,
+		team: (e) => e.team,
+		lop: (e) => e.balance.lopDays,
+		absent: (e) => e.summary.absent,
+		halfDay: (e) => e.summary.halfDay,
+		leave: (e) => e.summary.leave
+	});
+	const commentView = new TableView(() => commented, {
+		name: (e) => e.name,
+		comment: (e) => e.comment,
+		remarks: (e) => e.remarks
+	});
 </script>
 
 {#snippet person(e: { userId: string; name: string; empCode: string })}
@@ -38,13 +83,24 @@
 		<table class="ess-table">
 			<thead>
 				<tr>
-					<th>Employee</th><th>Designation</th><th>Department</th><th>Team</th><th class="ess-num">Tenure (yrs)</th><th>DOJ</th>
-					<th class="ess-num">Op Leave Bal</th><th class="ess-num">EL</th><th class="ess-num">SL</th><th class="ess-num">Comp off</th>
-					<th class="ess-num">Availed</th><th class="ess-num">CL</th><th>LWD</th><th>Remarks</th>
+					<th aria-sort={balanceView.ariaSort('name')}><SortButton view={balanceView} key="name">Employee</SortButton></th>
+					<th aria-sort={balanceView.ariaSort('designation')}><SortButton view={balanceView} key="designation">Designation</SortButton></th>
+					<th aria-sort={balanceView.ariaSort('department')}><SortButton view={balanceView} key="department">Department</SortButton></th>
+					<th aria-sort={balanceView.ariaSort('team')}><SortButton view={balanceView} key="team">Team</SortButton></th>
+					<th class="ess-num" aria-sort={balanceView.ariaSort('tenure')}><SortButton view={balanceView} key="tenure">Tenure (yrs)</SortButton></th>
+					<th aria-sort={balanceView.ariaSort('doj')}><SortButton view={balanceView} key="doj">DOJ</SortButton></th>
+					<th class="ess-num" aria-sort={balanceView.ariaSort('opening')}><SortButton view={balanceView} key="opening">Op Leave Bal</SortButton></th>
+					<th class="ess-num" aria-sort={balanceView.ariaSort('el')}><SortButton view={balanceView} key="el">EL</SortButton></th>
+					<th class="ess-num" aria-sort={balanceView.ariaSort('sl')}><SortButton view={balanceView} key="sl">SL</SortButton></th>
+					<th class="ess-num" aria-sort={balanceView.ariaSort('compOff')}><SortButton view={balanceView} key="compOff">Comp off</SortButton></th>
+					<th class="ess-num" aria-sort={balanceView.ariaSort('availed')}><SortButton view={balanceView} key="availed">Availed</SortButton></th>
+					<th class="ess-num" aria-sort={balanceView.ariaSort('closing')}><SortButton view={balanceView} key="closing">CL</SortButton></th>
+					<th aria-sort={balanceView.ariaSort('lwd')}><SortButton view={balanceView} key="lwd">LWD</SortButton></th>
+					<th aria-sort={balanceView.ariaSort('remarks')}><SortButton view={balanceView} key="remarks">Remarks</SortButton></th>
 				</tr>
 			</thead>
 			<tbody>
-				{#each employees as e (e.userId)}
+				{#each balanceView.rows as e (e.userId)}
 					<tr onclick={() => onopen(e.userId)}>
 						<td>{@render person(e)}</td>
 						<td>{e.designation || '—'}</td><td>{e.department || '—'}</td><td>{e.team || '—'}</td>
@@ -62,11 +118,21 @@
 		</table>
 	{:else if sheet === 'to-be-paid'}
 		<table class="ess-table">
-			<thead><tr><th class="ess-num">Sl</th><th>Employee</th><th>Designation</th><th>Team</th><th>DOJ</th><th class="ess-num">Paid days</th><th class="ess-num">LOP days</th></tr></thead>
+			<thead>
+				<tr>
+					<th class="ess-num">Sl</th>
+					<th aria-sort={paidView.ariaSort('name')}><SortButton view={paidView} key="name">Employee</SortButton></th>
+					<th aria-sort={paidView.ariaSort('designation')}><SortButton view={paidView} key="designation">Designation</SortButton></th>
+					<th aria-sort={paidView.ariaSort('team')}><SortButton view={paidView} key="team">Team</SortButton></th>
+					<th aria-sort={paidView.ariaSort('doj')}><SortButton view={paidView} key="doj">DOJ</SortButton></th>
+					<th class="ess-num" aria-sort={paidView.ariaSort('paidDays')}><SortButton view={paidView} key="paidDays">Paid days</SortButton></th>
+					<th class="ess-num" aria-sort={paidView.ariaSort('lopDays')}><SortButton view={paidView} key="lopDays">LOP days</SortButton></th>
+				</tr>
+			</thead>
 			<tbody>
-				{#each paid as e, i (e.userId)}
+				{#each paidView.rows as e, i (e.userId)}
 					<tr onclick={() => onopen(e.userId)}>
-						<td class="ess-num">{i + 1}</td><td>{@render person(e)}</td><td>{e.designation || '—'}</td><td>{e.team || '—'}</td><td>{fmtDate(e.doj)}</td>
+						<td class="ess-num">{paidView.from + i}</td><td>{@render person(e)}</td><td>{e.designation || '—'}</td><td>{e.team || '—'}</td><td>{fmtDate(e.doj)}</td>
 						<td class="ess-num strong">{fmtDays(e.balance.paidDays)}</td>
 						<td class="ess-num" class:bad={e.balance.lopDays > 0}>{e.balance.lopDays ? fmtDays(e.balance.lopDays) : '—'}</td>
 					</tr>
@@ -77,11 +143,22 @@
 		</table>
 	{:else if sheet === 'lop'}
 		<table class="ess-table">
-			<thead><tr><th class="ess-num">Sl</th><th>Employee</th><th>Designation</th><th>Team</th><th class="ess-num">LOP</th><th class="ess-num">Absent</th><th class="ess-num">Half days</th><th class="ess-num">Leave</th></tr></thead>
+			<thead>
+				<tr>
+					<th class="ess-num">Sl</th>
+					<th aria-sort={lopView.ariaSort('name')}><SortButton view={lopView} key="name">Employee</SortButton></th>
+					<th aria-sort={lopView.ariaSort('designation')}><SortButton view={lopView} key="designation">Designation</SortButton></th>
+					<th aria-sort={lopView.ariaSort('team')}><SortButton view={lopView} key="team">Team</SortButton></th>
+					<th class="ess-num" aria-sort={lopView.ariaSort('lop')}><SortButton view={lopView} key="lop">LOP</SortButton></th>
+					<th class="ess-num" aria-sort={lopView.ariaSort('absent')}><SortButton view={lopView} key="absent">Absent</SortButton></th>
+					<th class="ess-num" aria-sort={lopView.ariaSort('halfDay')}><SortButton view={lopView} key="halfDay">Half days</SortButton></th>
+					<th class="ess-num" aria-sort={lopView.ariaSort('leave')}><SortButton view={lopView} key="leave">Leave</SortButton></th>
+				</tr>
+			</thead>
 			<tbody>
-				{#each lop as e, i (e.userId)}
+				{#each lopView.rows as e, i (e.userId)}
 					<tr onclick={() => onopen(e.userId)}>
-						<td class="ess-num">{i + 1}</td><td>{@render person(e)}</td><td>{e.designation || '—'}</td><td>{e.team || '—'}</td>
+						<td class="ess-num">{lopView.from + i}</td><td>{@render person(e)}</td><td>{e.designation || '—'}</td><td>{e.team || '—'}</td>
 						<td class="ess-num strong bad">-{fmtDays(e.balance.lopDays)}</td>
 						<td class="ess-num">{e.summary.absent}</td><td class="ess-num">{e.summary.halfDay}</td><td class="ess-num">{e.summary.leave}</td>
 					</tr>
@@ -116,15 +193,22 @@
 					<option value="">Add a comment for…</option>
 					{#each employees as e (e.userId)}<option value={e.userId}>{e.empCode ? `${e.empCode} · ` : ''}{e.name}</option>{/each}
 				</select>
-				<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={!pick} onclick={() => { onopen(pick); pick = ''; }}>Add comment</button>
+				<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={!pick} onclick={() => { onopen(pick); pick = ''; }}><MessageSquarePlus size={14} /> Add comment</button>
 			</div>
 		{/if}
 		<table class="ess-table">
-			<thead><tr><th class="ess-num">S.No</th><th>Employee</th><th>Comment</th><th>Remarks</th></tr></thead>
+			<thead>
+				<tr>
+					<th class="ess-num">S.No</th>
+					<th aria-sort={commentView.ariaSort('name')}><SortButton view={commentView} key="name">Employee</SortButton></th>
+					<th aria-sort={commentView.ariaSort('comment')}><SortButton view={commentView} key="comment">Comment</SortButton></th>
+					<th aria-sort={commentView.ariaSort('remarks')}><SortButton view={commentView} key="remarks">Remarks</SortButton></th>
+				</tr>
+			</thead>
 			<tbody>
-				{#each commented as e, i (e.userId)}
+				{#each commentView.rows as e, i (e.userId)}
 					<tr onclick={() => onopen(e.userId)}>
-						<td class="ess-num">{i + 1}</td><td>{@render person(e)}</td><td>{e.comment || '—'}</td><td class="remarks">{e.remarks}</td>
+						<td class="ess-num">{commentView.from + i}</td><td>{@render person(e)}</td><td>{e.comment || '—'}</td><td class="remarks">{e.remarks}</td>
 					</tr>
 				{:else}
 					<tr><td colspan="4" class="empty">No HR comments this month{canManage ? ' — open anyone to add one' : ''}.</td></tr>
@@ -133,6 +217,15 @@
 		</table>
 	{/if}
 </div>
+{#if sheet === 'leave-balance'}
+	<TablePager view={balanceView} noun="people" />
+{:else if sheet === 'to-be-paid'}
+	<TablePager view={paidView} noun="people" />
+{:else if sheet === 'lop'}
+	<TablePager view={lopView} noun="people" />
+{:else if sheet === 'hr-comments'}
+	<TablePager view={commentView} noun="comments" />
+{/if}
 
 <style>
 	.sheet {

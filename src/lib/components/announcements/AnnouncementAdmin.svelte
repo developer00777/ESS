@@ -3,11 +3,20 @@
 	import { tick } from 'svelte';
 	import Paperclip from '@lucide/svelte/icons/paperclip';
 	import X from '@lucide/svelte/icons/x';
+	import PenLine from '@lucide/svelte/icons/pen-line';
+	import Send from '@lucide/svelte/icons/send';
+	import Save from '@lucide/svelte/icons/save';
+	import Megaphone from '@lucide/svelte/icons/megaphone';
+	import Users from '@lucide/svelte/icons/users';
+	import Mail from '@lucide/svelte/icons/mail';
 	import NeedsYouCard from '$lib/components/announcements/NeedsYouCard.svelte';
 	import PostRow from '$lib/components/announcements/PostRow.svelte';
 	import PostDetail from '$lib/components/announcements/PostDetail.svelte';
 	import { daysUntil, weekGroup, type AnnouncementKind, type FeedPost } from '$lib/announcements';
 	import { lockPageScroll } from '$lib/scroll-lock';
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 
 	/**
 	 * Posting and managing announcements, inside Champ Chat's #announcements
@@ -212,6 +221,19 @@
 
 	const pct = (n: number, of: number) => (of > 0 ? Math.round((n / of) * 100) : 0);
 
+	/* The posted announcements table: sortable by each column, a page at a time. */
+	const isLive = (p: Post) => {
+		const k = status(p).key;
+		return k === 'live' || k === 'ended';
+	};
+	const postsView = new TableView(() => data.posts, {
+		title: (p) => p.title,
+		status: (p) => status(p).label,
+		audience: (p) => audienceLabel(p),
+		read: (p) => (isLive(p) ? p.reads : null),
+		confirmed: (p) => (p.requiresAck && isLive(p) ? Math.max(0, p.audienceSize - p.acks) : p.requiresAck ? 'Asked' : 'Not asked')
+	});
+
 	/* ---------- who hasn't confirmed ---------- */
 
 	let pendingFor = $state<Post | null>(null);
@@ -267,7 +289,7 @@
 		}}
 	>
 		<div class="form-head">
-			<h2 class="ess-h2">{f.id ? 'Edit announcement' : 'Post announcement'}</h2>
+			<h2 class="ess-h2"><PenLine size={16} /> {f.id ? 'Edit announcement' : 'Post announcement'}</h2>
 			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={reset}>{f.id ? 'Cancel edit' : 'Clear'}</button>
 		</div>
 		<input type="hidden" name="id" value={f.id} />
@@ -417,10 +439,10 @@
 
 		<div class="actions">
 			<button class="ess-btn ess-btn--primary" type="submit" name="intent" value="publish" disabled={saving}>
-				{saving ? 'Saving…' : f.id && f.isLive ? 'Save changes' : f.when === 'later' ? 'Schedule' : 'Publish now'}
+				<Send size={16} /> {saving ? 'Saving…' : f.id && f.isLive ? 'Save changes' : f.when === 'later' ? 'Schedule' : 'Publish now'}
 			</button>
 			{#if !f.isLive}
-				<button class="ess-btn ess-btn--outline" type="submit" name="intent" value="draft" disabled={saving}>Save draft</button>
+				<button class="ess-btn ess-btn--outline" type="submit" name="intent" value="draft" disabled={saving}><Save size={16} /> Save draft</button>
 			{/if}
 			{#if f.isLive}
 				<span class="ess-help">Changing the wording shows it as unread again, marked "Edited".</span>
@@ -458,7 +480,7 @@
 
 <section class="ess-panel" aria-labelledby="posted-h">
 	<div class="list-head">
-		<h2 class="ess-h2" id="posted-h">Posted</h2>
+		<h2 class="ess-h2" id="posted-h"><Megaphone size={16} /> Posted</h2>
 		<span class="ess-caption">Holidays from the published calendars appear for employees by themselves and are not listed here.</span>
 	</div>
 	{#if data.posts.length === 0}
@@ -467,10 +489,10 @@
 		<div class="ess-table-shell">
 			<table class="ess-table">
 				<thead>
-					<tr><th>Announcement</th><th>Status</th><th>Audience</th><th>Read</th><th>Confirmed</th><th><span class="ess-sr-only">Actions</span></th></tr>
+					<tr><th aria-sort={postsView.ariaSort('title')}><SortButton view={postsView} key="title">Announcement</SortButton></th><th aria-sort={postsView.ariaSort('status')}><SortButton view={postsView} key="status">Status</SortButton></th><th aria-sort={postsView.ariaSort('audience')}><SortButton view={postsView} key="audience">Audience</SortButton></th><th aria-sort={postsView.ariaSort('read')}><SortButton view={postsView} key="read">Read</SortButton></th><th aria-sort={postsView.ariaSort('confirmed')}><SortButton view={postsView} key="confirmed">Confirmed</SortButton></th><th><span class="ess-sr-only">Actions</span></th></tr>
 				</thead>
 				<tbody>
-					{#each data.posts as p (p.id)}
+					{#each postsView.rows as p (p.id)}
 						{@const st = status(p)}
 						{@const live = st.key === 'live' || st.key === 'ended'}
 						<tr>
@@ -506,6 +528,7 @@
 				</tbody>
 			</table>
 		</div>
+		<TablePager view={postsView} noun="announcements" />
 	{/if}
 </section>
 
@@ -515,7 +538,7 @@
 		<div class="ess-modal__head">
 			<div>
 				<h2 class="ess-h3 pending-h" id="pending-h">
-					{pending ? `${pending.pending.length} ${pending.pending.length === 1 ? 'person hasn’t' : 'people haven’t'} confirmed yet` : 'Loading…'}
+					<Users size={16} /> {pending ? `${pending.pending.length} ${pending.pending.length === 1 ? 'person hasn’t' : 'people haven’t'} confirmed yet` : 'Loading…'}
 				</h2>
 				<p class="ess-caption">“{pendingFor.title}”{pending ? ` · ${pending.audience - pending.pending.length} of ${pending.audience} confirmed` : ''}</p>
 			</div>
@@ -539,7 +562,7 @@
 				<form method="POST" action="?/remind" use:enhance={() => async ({ update }) => { await update(); closePending(); }}>
 					<input type="hidden" name="id" value={pendingFor.id} />
 					<button class="ess-btn ess-btn--primary ess-btn--sm" type="submit" disabled={!data.mailerConfigured}>
-						Email a reminder to {pending.pending.length}
+						<Mail size={14} /> Email a reminder to {pending.pending.length}
 					</button>
 				</form>
 				{#if !data.mailerConfigured}<span class="ess-caption">Email is not set up on this server.</span>{/if}

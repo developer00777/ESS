@@ -232,7 +232,7 @@
 		{#if confirmSensitive}
 			<div class="confirm" role="alert">
 				<span>{confirmSensitive}</span>
-				<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" onclick={() => send(true)}>Send anyway</button>
+				<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" onclick={() => send(true)}><SendHorizontal size={14} /> Send anyway</button>
 				<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (confirmSensitive = null)}>Edit it</button>
 			</div>
 		{/if}

@@ -218,7 +218,7 @@
 					<span class="ess-tile ess-tile--lg"><Megaphone size={24} strokeWidth={1.75} /></span>
 					<strong>Announcements</strong>
 					<p>Notices from HR, with what needs you and what is coming up.</p>
-					<a class="ess-btn ess-btn--primary" href="/hub/c/{preview.id}">Open announcements</a>
+					<a class="ess-btn ess-btn--primary" href="/hub/c/{preview.id}"><Megaphone size={16} /> Open announcements</a>
 				</div>
 			{:else}
 				{#key preview.id}

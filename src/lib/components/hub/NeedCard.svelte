@@ -5,6 +5,11 @@
 	import Clock from '@lucide/svelte/icons/clock';
 	import Ban from '@lucide/svelte/icons/ban';
 	import Check from '@lucide/svelte/icons/check';
+	import X from '@lucide/svelte/icons/x';
+	import Reply from '@lucide/svelte/icons/reply';
+	import Play from '@lucide/svelte/icons/play';
+	import CheckCheck from '@lucide/svelte/icons/check-check';
+	import ClipboardCheck from '@lucide/svelte/icons/clipboard-check';
 	import { api, hub } from '$lib/hub/client.svelte';
 	import { moveTask } from '$lib/hub/actions';
 	import ApprovalButtons from './ApprovalButtons.svelte';
@@ -119,13 +124,13 @@
 			{#if item.kind === 'mention'}
 				<form class="reply" onsubmit={sendReply}>
 					<input class="ess-input" bind:value={reply} placeholder="Reply in {item.mention?.channelName}" aria-label="Reply in {item.mention?.channelName}" />
-					<button class="ess-btn ess-btn--secondary ess-btn--sm" type="submit" disabled={busy || !reply.trim()}>Reply</button>
+					<button class="ess-btn ess-btn--secondary ess-btn--sm" type="submit" disabled={busy || !reply.trim()}><Reply size={14} /> Reply</button>
 				</form>
 			{/if}
 			{#if rejecting}
 				<div class="reply">
 					<input class="ess-input" bind:value={note} placeholder="Reason, shown to them (optional)" aria-label="Reason for rejecting" />
-					<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" disabled={busy} onclick={() => decide('reject')}>Reject</button>
+					<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" disabled={busy} onclick={() => decide('reject')}><X size={14} /> Reject</button>
 					<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (rejecting = false)}>Cancel</button>
 				</div>
 			{/if}
@@ -135,15 +140,15 @@
 			{#if isTaskApproval && item.task}
 				<ApprovalButtons task={item.task} ondone={() => (gone = true)} />
 			{:else if item.kind === 'approval' && !rejecting}
-				<button type="button" class="ess-btn ess-btn--outline ess-btn--sm" disabled={busy} onclick={() => decide('approve')}>Approve</button>
-				<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" disabled={busy} onclick={() => decide('reject')}>Reject</button>
+				<button type="button" class="ess-btn ess-btn--outline ess-btn--sm" disabled={busy} onclick={() => decide('approve')}><Check size={14} /> Approve</button>
+				<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" disabled={busy} onclick={() => decide('reject')}><X size={14} /> Reject</button>
 			{:else if item.kind === 'minutes'}
-				<a class="ess-btn ess-btn--outline ess-btn--sm" href="/hub/meetings/{item.meetingId}">Review</a>
+				<a class="ess-btn ess-btn--outline ess-btn--sm" href="/hub/meetings/{item.meetingId}"><ClipboardCheck size={14} /> Review</a>
 			{:else if item.kind === 'mention' && item.mention}
 				<a class="ess-btn ess-btn--outline ess-btn--sm" href="/hub/c/{item.mention.channelId}">Open</a>
-				<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={markRead}>Mark read</button>
+				<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={markRead}><CheckCheck size={14} /> Mark read</button>
 			{:else if item.kind === 'due' && item.task}
-				{#if item.task.status === 'todo'}<button type="button" class="ess-btn ess-btn--outline ess-btn--sm" disabled={busy} onclick={() => move('in_progress')}>Start</button>{/if}
+				{#if item.task.status === 'todo'}<button type="button" class="ess-btn ess-btn--outline ess-btn--sm" disabled={busy} onclick={() => move('in_progress')}><Play size={14} /> Start</button>{/if}
 				<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={busy} onclick={() => move('done')}><Check size={14} /> Done</button>
 			{:else if item.kind === 'blocked' && item.task}
 				<button type="button" class="ess-btn ess-btn--outline ess-btn--sm" onclick={() => hub.openTask(item.task!.id)}>Open</button>

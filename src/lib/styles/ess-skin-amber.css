@@ -1,0 +1,1164 @@
+/* ============================================================
+   ESS Design System — Amber skin (theme 4)
+   ============================================================
+   After the "Hirely" reference: a warm cream workspace on a soft
+   peach backdrop, white cards with big curved corners, one
+   signature yellow, and near-black for weight.
+
+     yellow  #ffca20  primary actions, the "+" button, today,
+                      highlight cards (black text on it, never white)
+     blue    #2055ff  the yellow's counterpart (was black, 2026-11-09):
+                      the selected tab / filter / page is a blue pill
+                      with white text; the sidebar and page banners are
+                      blue. Text stays near-black (#161616) for reading;
+                      text on blue is solid white.
+     cream   #f8f4ec  the workspace; cards are white
+     shape   every button, tab and chip is a pill; cards 24px,
+             panels 28px, the workspace 40px
+
+   Selected with <html data-ess-skin="amber">; works light and dark.
+   Only overrides: anything not named here stays Original. Rules
+   carry the skin prefix plus the component's structure so they win
+   over the components' scoped styles (see ess-skins.css).
+   ============================================================ */
+
+/* ---------- tokens: light ---------- */
+:root[data-ess-skin='amber'] {
+	--amb-yellow: #ffca20;
+	--amb-yellow-hover: #f2bc12;
+	--amb-yellow-press: #e0a800;
+	/* the counterpart colour; "ink" kept as the name the rules use */
+	--amb-ink: #2055ff;
+	--amb-ink-raised: #1a47e0;
+	--amb-on-ink: #ffffff;
+
+	--acc: var(--amb-yellow);
+	--acc2: #f6c66b;
+	--acc-soft: #ffe08a;
+	--glow: rgba(255, 202, 32, 0.2);
+	--ring: rgba(242, 188, 18, 0.38);
+	--ess-primary-grad: linear-gradient(135deg, #ffd84f 0%, #f2bc12 100%);
+
+	--ess-tint-pink: linear-gradient(135deg, #fde7ef 0%, #fbd3e2 100%);
+	--ess-tint-peach: linear-gradient(135deg, #fff1df 0%, #ffdcb5 100%);
+	--ess-tint-lavender: linear-gradient(135deg, #eef0ff 0%, #dde1ff 100%);
+	--ess-tint-mint: linear-gradient(135deg, #e6f7ee 0%, #cdeedb 100%);
+	--ess-chart-1: #ffca20;
+	--ess-chart-2: #2055ff;
+	--ess-chart-3: #f59e0b;
+	--ess-chart-4: #f3c99b;
+	--ess-chart-5: #d9cbb3;
+
+	--ess-backdrop: #f1dcc0;
+	--ess-shell-border: rgba(80, 56, 16, 0.06);
+	--ess-canvas: #f8f4ec;
+	--ess-surface: #ffffff;
+	--ess-surface-hover: #faf6ee;
+	--ess-sunken: #f4efe5;
+	--ess-inverse: #ffffff;
+	--ess-inverse-raised: #ffffff;
+	--ess-pane-bg: #f4efe5;
+	--ess-modal-bg: #ffffff;
+	--ess-field-bg: #ffffff;
+
+	--ess-border: #ebe4d6;
+	--ess-border-subtle: #f1ebdf;
+	--ess-border-strong: #ddd3bf;
+	--ess-border-inverse: #ebe4d6;
+
+	--ess-text: #161616;
+	/* darker than before (2026-11-09): muted was #736c60, 4.5:1 on the
+	   cream panels at 11–12px; now ≥ 6:1 on cream, 7:1 on white */
+	--ess-text-secondary: #38342d;
+	--ess-text-muted: #5f584c;
+	--ess-text-on-primary: #161616;
+
+	--ess-primary-hover: var(--amb-yellow-hover);
+	--ess-primary-press: var(--amb-yellow-press);
+	--ess-primary-soft: #fff2c7;
+	--ess-primary-softer: #fff8e3;
+	--ess-primary-ring: rgba(242, 188, 18, 0.42);
+	--ess-primary-text: #7a5000;
+	--ess-primary-shadow: 0 6px 14px -6px rgba(224, 168, 0, 0.55);
+
+	--ess-cell: #f3eee4;
+	--ess-cell-off: #e9e2d4;
+
+	--ess-radius-xs: 8px;
+	--ess-radius-sm: 14px;
+	--ess-radius-md: 24px;
+	--ess-radius-lg: 28px;
+	--ess-radius-xl: 40px;
+
+	--ess-elev-1: 0 1px 2px rgba(80, 56, 16, 0.04), 0 10px 26px -16px rgba(80, 56, 16, 0.16);
+	--ess-elev-2: 0 6px 18px -8px rgba(80, 56, 16, 0.16);
+	--ess-elev-3: 0 16px 34px -14px rgba(80, 56, 16, 0.22);
+	--ess-elev-4: 0 26px 60px -22px rgba(80, 56, 16, 0.3);
+
+	--ess-font-sans: 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+	--ess-font-display: 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ---------- tokens: dark (the reference's map side) ---------- */
+:root[data-ess-skin='amber'][data-ess-theme='dark'] {
+	--amb-ink: #2055ff;
+	--amb-ink-raised: #1a47e0;
+	--acc2: #b8862b;
+	--acc-soft: #6b5414;
+	--glow: rgba(255, 202, 32, 0.24);
+	--ring: rgba(255, 202, 32, 0.4);
+
+	/* a step more vivid (2026-11-05: dark read dull) */
+	--ess-tint-pink: linear-gradient(135deg, rgba(249, 150, 190, 0.28) 0%, rgba(214, 92, 140, 0.18) 100%);
+	--ess-tint-peach: linear-gradient(135deg, rgba(255, 196, 120, 0.3) 0%, rgba(230, 140, 60, 0.18) 100%);
+	--ess-tint-lavender: linear-gradient(135deg, rgba(150, 170, 255, 0.28) 0%, rgba(96, 116, 230, 0.18) 100%);
+	--ess-tint-mint: linear-gradient(135deg, rgba(110, 240, 190, 0.26) 0%, rgba(40, 180, 130, 0.16) 100%);
+	--ess-chart-2: #f6f2ea;
+	--ess-chart-4: #b88a55;
+	--ess-chart-5: #6b6355;
+
+	--ess-backdrop: #0a0a0a;
+	--ess-shell-border: rgba(255, 255, 255, 0.06);
+	/* cards lifted a little off the page, brighter text (2026-11-05) */
+	--ess-canvas: #141414;
+	--ess-surface: #212121;
+	--ess-surface-hover: #2a2a2a;
+	--ess-sunken: #1a1a1a;
+	--ess-inverse: #212121;
+	--ess-inverse-raised: #2a2a2a;
+	--ess-pane-bg: #1a1a1a;
+	--ess-modal-bg: #212121;
+	--ess-field-bg: #1a1a1a;
+
+	--ess-border: rgba(255, 255, 255, 0.1);
+	--ess-border-subtle: rgba(255, 255, 255, 0.07);
+	--ess-border-strong: rgba(255, 255, 255, 0.2);
+	--ess-border-inverse: rgba(255, 255, 255, 0.1);
+
+	--ess-text: #f8f5ee;
+	--ess-text-secondary: rgba(248, 245, 238, 0.9);
+	--ess-text-muted: rgba(248, 245, 238, 0.76);
+	--ess-text-on-primary: #161616;
+
+	--ess-primary-hover: #ffd84f;
+	--ess-primary-press: #f2bc12;
+	--ess-primary-soft: rgba(255, 202, 32, 0.16);
+	--ess-primary-softer: rgba(255, 202, 32, 0.08);
+	--ess-primary-ring: rgba(255, 202, 32, 0.42);
+	--ess-primary-text: #ffd35c;
+	--ess-primary-shadow: 0 6px 16px -8px rgba(242, 188, 18, 0.45);
+
+	--ess-cell: #242424;
+	--ess-cell-off: #1b1b1b;
+
+	--ess-elev-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+	--ess-elev-2: 0 4px 14px -6px rgba(0, 0, 0, 0.6);
+	--ess-elev-3: 0 12px 32px -12px rgba(0, 0, 0, 0.7);
+	--ess-elev-4: 0 24px 60px -20px rgba(0, 0, 0, 0.8);
+}
+
+/* ============================================================
+   SURFACES — flat cream workspace, white cards, no glass
+   ============================================================ */
+@media (min-width: 721px) {
+	:root[data-ess-skin='amber'] body:has(.ess-shell) {
+		background:
+			radial-gradient(60% 70% at 100% 0%, #f7e5c9 0%, transparent 70%),
+			linear-gradient(160deg, #f4e4cc 0%, #efd6b4 100%);
+	}
+	:root[data-ess-skin='amber'][data-ess-theme='dark'] body:has(.ess-shell) {
+		background: linear-gradient(160deg, #0d0d0d 0%, #070707 100%);
+	}
+	/* No floating "one big card" frame (2026-11-05, by request): the
+	   workspace runs edge to edge — no outer gap, border, rounded corners
+	   or drop shadow — and the cream (or ember, in dark) fills the screen. */
+	:root[data-ess-skin='amber'] .ess-shell {
+		height: calc(100dvh / var(--ess-zoom));
+		margin: 0;
+		border: 0;
+		border-radius: 0;
+		box-shadow: none;
+	}
+}
+:root[data-ess-skin='amber'] .ess-shell {
+	--glass-fill: linear-gradient(var(--ess-surface), var(--ess-surface));
+	--glass-edge: var(--ess-border-subtle);
+	--glass-shadow: var(--ess-elev-1);
+	/* one soft yellow glow, like the reference's map */
+	background:
+		radial-gradient(38% 46% at 96% 4%, color-mix(in srgb, var(--amb-yellow) 12%, transparent), transparent 70%),
+		var(--ess-canvas);
+}
+:root[data-ess-skin='amber'] .ess-shell .ess-card,
+:root[data-ess-skin='amber'] .ess-shell .ess-metric,
+:root[data-ess-skin='amber'] .ess-shell .ess-panel,
+:root[data-ess-skin='amber'] .ess-shell .ess-figures,
+:root[data-ess-skin='amber'] .ess-shell .ess-tabs {
+	background-color: var(--ess-surface);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+:root[data-ess-skin='amber'] .ess-shell .ess-card {
+	--card-px: 20px;
+	--card-py: 18px;
+}
+:root[data-ess-skin='amber'] .ess-shell .ess-card:hover,
+:root[data-ess-skin='amber'] .ess-shell .ess-figures:hover {
+	--spot: color-mix(in srgb, var(--amb-yellow) 9%, transparent);
+}
+
+/* ============================================================
+   BUTTONS — pills: yellow primary, white outline, black for weight
+   ============================================================ */
+:root[data-ess-skin='amber'] .ess-btn {
+	border-radius: 999px;
+	font-weight: 600;
+}
+:root[data-ess-skin='amber'] .ess-btn--primary {
+	background: var(--amb-yellow);
+	color: #161616;
+	box-shadow: var(--ess-primary-shadow);
+}
+:root[data-ess-skin='amber'] .ess-btn--primary:hover:not(:disabled),
+:root[data-ess-skin='amber'] a.ess-btn--primary:hover {
+	background: var(--ess-primary-hover);
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .ess-btn--primary:active:not(:disabled) {
+	background: var(--ess-primary-press);
+}
+:root[data-ess-skin='amber'] .ess-btn--secondary,
+:root[data-ess-skin='amber'] .ess-btn--outline {
+	background: var(--ess-surface);
+	border-color: var(--ess-border-strong);
+	color: var(--ess-text);
+}
+:root[data-ess-skin='amber'] .ess-btn--secondary:hover:not(:disabled),
+:root[data-ess-skin='amber'] .ess-btn--outline:hover:not(:disabled) {
+	background: var(--ess-surface);
+	border-color: var(--ess-text);
+	color: var(--ess-text);
+}
+:root[data-ess-skin='amber'] .ess-btn--soft {
+	background: var(--ess-primary-soft);
+	color: var(--ess-text);
+}
+:root[data-ess-skin='amber'] .ess-btn--soft:hover:not(:disabled) {
+	background: var(--amb-yellow);
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .ess-icon-btn {
+	border-radius: 50%;
+}
+:root[data-ess-skin='amber'] .ess-icon-btn--bordered {
+	border-color: var(--ess-border);
+}
+
+/* fields: softly rounded, a yellow focus ring */
+:root[data-ess-skin='amber'] .ess-input,
+:root[data-ess-skin='amber'] .ess-select {
+	border-radius: 14px;
+}
+:root[data-ess-skin='amber'] .ess-input:focus,
+:root[data-ess-skin='amber'] .ess-select:focus,
+:root[data-ess-skin='amber'] .ess-textarea:focus {
+	border-color: var(--amb-yellow-press);
+}
+
+/* badges and counts: pills */
+:root[data-ess-skin='amber'] .ess-badge {
+	border-radius: 999px;
+}
+
+/* ============================================================
+   TABS & SEGMENTED — a white pill bar; the chosen one a black pill
+   ============================================================ */
+:root[data-ess-skin='amber'] .ess-shell .ess-tabs:not(.ess-tabs--line) {
+	gap: 4px;
+	padding: 4px;
+	border-color: var(--ess-border);
+	border-radius: 999px;
+}
+:root[data-ess-skin='amber'] .ess-tabs:not(.ess-tabs--line) .ess-tab {
+	padding: 6px 16px;
+	border-right: none;
+	border-radius: 999px;
+	color: var(--ess-text-secondary);
+	font-weight: 500;
+}
+:root[data-ess-skin='amber'] .ess-tabs:not(.ess-tabs--line) .ess-tab:hover {
+	background: var(--ess-sunken);
+	color: var(--ess-text);
+}
+:root[data-ess-skin='amber'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-selected='true'],
+:root[data-ess-skin='amber'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-current='page'] {
+	background: var(--amb-ink);
+	color: var(--amb-on-ink);
+	font-weight: 600;
+}
+:root[data-ess-skin='amber'][data-ess-theme='dark'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-selected='true'],
+:root[data-ess-skin='amber'][data-ess-theme='dark'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-current='page'] {
+	background: var(--amb-yellow);
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-selected='true']::after,
+:root[data-ess-skin='amber'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-current='page']::after {
+	display: none;
+}
+:root[data-ess-skin='amber'] .ess-tab[aria-selected='true'] .ess-count,
+:root[data-ess-skin='amber'] .ess-tab[aria-current='page'] .ess-count {
+	background: var(--amb-yellow);
+	color: #161616;
+}
+/* underline tabs: an ink underline, ink text */
+:root[data-ess-skin='amber'] .ess-tabs--line .ess-tab[aria-selected='true'],
+:root[data-ess-skin='amber'] .ess-tabs--line .ess-tab[aria-current='page'] {
+	background: transparent;
+	color: var(--ess-text);
+	font-weight: 600;
+}
+:root[data-ess-skin='amber'] .ess-tabs--line .ess-tab[aria-selected='true']::after,
+:root[data-ess-skin='amber'] .ess-tabs--line .ess-tab[aria-current='page']::after {
+	height: 3px;
+	border-radius: 3px 3px 0 0;
+	background: var(--amb-yellow);
+}
+:root[data-ess-skin='amber'] .ess-segmented {
+	border-radius: 999px;
+	background: var(--ess-surface);
+}
+:root[data-ess-skin='amber'] .ess-segmented button {
+	border-radius: 999px;
+}
+:root[data-ess-skin='amber'] .ess-segmented button[aria-pressed='true'] {
+	background: var(--amb-ink);
+	color: var(--amb-on-ink);
+	box-shadow: none;
+}
+
+/* ============================================================
+   SIDEBAR — the dark panel; the current page a yellow circle
+   ============================================================ */
+:root[data-ess-skin='amber'] nav.rail {
+	background: var(--amb-ink);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+	border-color: rgba(255, 255, 255, 0.06);
+	box-shadow:
+		0 1px 2px rgba(0, 0, 0, 0.2),
+		0 22px 44px -18px rgba(40, 24, 0, 0.45);
+	color: #f6f2ea;
+}
+:root[data-ess-skin='amber'] nav.rail .brand-link {
+	background: var(--amb-yellow);
+	color: #161616;
+}
+:root[data-ess-skin='amber'] nav.rail .nav-item {
+	color: rgba(255, 255, 255, 0.86);
+}
+:root[data-ess-skin='amber'] nav.rail .nav-item:hover {
+	background: rgba(255, 255, 255, 0.08);
+	color: #ffffff;
+}
+:root[data-ess-skin='amber'] nav.rail .nav-item[aria-current='page'] {
+	background: var(--amb-yellow);
+	color: #161616;
+	box-shadow: 0 6px 16px -8px rgba(242, 188, 18, 0.7);
+}
+:root[data-ess-skin='amber'] nav.rail .rail-foot {
+	border-top-color: rgba(255, 255, 255, 0.1);
+}
+:root[data-ess-skin='amber'] nav.rail .nav-item::after {
+	background: #161616;
+	color: #fff;
+	box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================
+   MAIN NAVIGATION — across the top, as in the reference: the brand,
+   then the sections as pills (the current one black), then search and
+   the round buttons. The sidebar steps aside on desktop and tablet;
+   phones keep their sidebar (the dark panel above).
+   ============================================================ */
+@media (min-width: 721px) {
+	:root[data-ess-skin='amber'] {
+		--ess-shell-inset-left: var(--ess-shell-inset);
+		--ess-shell-pad-left: 0px;
+	}
+	:root[data-ess-skin='amber'] nav.rail,
+	:root[data-ess-skin='amber'] .dock-edge {
+		display: none;
+	}
+	/* the top bar is its own row now, so page headers keep no room for it;
+	   it sits tight to the top and the page starts right under it, giving
+	   back the height the one-screen pages (the dashboard) are built for */
+	:root[data-ess-skin='amber'] .ess-main {
+		--topbar-w: -14px;
+		--bar-top: 8px;
+	}
+	:root[data-ess-skin='amber'] .ess-main .topbar:has(> .right) {
+		position: static;
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		min-height: 0;
+		padding: 10px var(--ess-page-pad-x) 0;
+	}
+	:root[data-ess-skin='amber'] .ess-main .topbar .today,
+	:root[data-ess-skin='amber'] .ess-main .topbar .links {
+		display: none;
+	}
+	:root[data-ess-skin='amber'] .ess-main .topbar .right {
+		margin-left: auto;
+		gap: 8px;
+	}
+
+	/* the brand: a yellow disc with the mark, then the name */
+	:root[data-ess-skin='amber'] .topbar .tb-brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 9px;
+		flex: none;
+		color: var(--ess-text);
+		font-size: 18px;
+		font-weight: 800;
+		letter-spacing: -0.02em;
+	}
+	:root[data-ess-skin='amber'] .topbar .tb-brand:hover {
+		color: var(--ess-text);
+	}
+	:root[data-ess-skin='amber'] .topbar .tb-mark {
+		display: grid;
+		place-items: center;
+		width: 38px;
+		height: 38px;
+		border-radius: 50%;
+		background: var(--amb-yellow);
+		color: #161616;
+		box-shadow: var(--ess-primary-shadow);
+	}
+
+	/* the section pills */
+	/* the row scrolls sideways if it must, and a scroll box clips what
+	   sticks out, so it keeps room inside for the counts on the icons
+	   (padding) without moving anything (the matching negative margin) */
+	:root[data-ess-skin='amber'] .topbar .pillnav {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		min-width: 0;
+		margin: -8px -6px;
+		padding: 8px 6px;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+	:root[data-ess-skin='amber'] .topbar .pn-item {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 7px;
+		flex: none;
+		height: 38px;
+		padding: 0 15px;
+		border: 1px solid var(--ess-border);
+		border-radius: 999px;
+		background: var(--ess-surface);
+		color: var(--ess-text-secondary);
+		font-size: 13px;
+		font-weight: 600;
+		white-space: nowrap;
+		transition:
+			background 160ms ease,
+			border-color 160ms ease,
+			color 160ms ease;
+		transition-duration: 160ms !important;
+	}
+	:root[data-ess-skin='amber'] .topbar .pn-item:hover {
+		border-color: var(--ess-border-strong);
+		background: var(--ess-surface);
+		color: var(--ess-text);
+	}
+	:root[data-ess-skin='amber'] .topbar .pn-item[aria-current='page'] {
+		border-color: transparent;
+		background: var(--amb-ink);
+		color: #ffffff;
+	}
+	:root[data-ess-skin='amber'][data-ess-theme='dark'] .topbar .pn-item[aria-current='page'] {
+		background: var(--amb-yellow);
+		color: #161616;
+	}
+	:root[data-ess-skin='amber'] .topbar .pn-item.soon {
+		opacity: 0.55;
+	}
+	:root[data-ess-skin='amber'] .topbar .pn-item:active {
+		transform: scale(0.96);
+	}
+	:root[data-ess-skin='amber'] .topbar .pn-count {
+		min-width: 18px;
+		height: 18px;
+		padding: 0 5px;
+		border-radius: 999px;
+		background: var(--amb-yellow);
+		color: #161616;
+		font-size: 10.5px;
+		font-weight: 700;
+		line-height: 18px;
+		text-align: center;
+	}
+	:root[data-ess-skin='amber'] .topbar .pn-count.warn {
+		background: var(--ess-warning);
+		color: #fff;
+	}
+	/* dark mode's warning is a light amber: white on it was 1.7:1 */
+	:root[data-ess-skin='amber'][data-ess-theme='dark'] .topbar .pn-count.warn {
+		color: #161616;
+	}
+	:root[data-ess-skin='amber'] .topbar .pn-count.urgent {
+		background: var(--ess-danger);
+		color: #fff;
+	}
+	/* inside the open page's yellow pill (dark mode) a yellow count
+	   vanished: a dark chip. On the blue pill (light) the yellow count reads. */
+	:root[data-ess-skin='amber'][data-ess-theme='dark'] .topbar .pn-item[aria-current='page'] .pn-count {
+		background: #161616;
+		color: var(--amb-yellow);
+	}
+}
+/* Short laptop screens: a slimmer row still. */
+@media (min-width: 721px) and (max-height: 760px) {
+	:root[data-ess-skin='amber'] .ess-main {
+		--bar-top: 6px;
+	}
+	:root[data-ess-skin='amber'] .ess-main .topbar:has(> .right) {
+		padding-top: 8px;
+	}
+	:root[data-ess-skin='amber'] .topbar .pn-item {
+		height: 34px;
+	}
+	:root[data-ess-skin='amber'] .topbar .tb-mark {
+		width: 34px;
+		height: 34px;
+	}
+}
+/* Narrower laptops: the other sections become round icon buttons (their
+   name in the tooltip); the current one keeps its label. */
+@media (min-width: 721px) {
+	@container ess-main (max-width: 1520px) {
+		:root[data-ess-skin='amber'] .topbar .pn-item:not([aria-current='page']) {
+			width: auto;
+			aspect-ratio: 1;
+			padding: 0;
+		}
+		:root[data-ess-skin='amber'] .topbar .pn-item:not([aria-current='page']) .pn-label {
+			display: none;
+		}
+		:root[data-ess-skin='amber'] .topbar .pn-item:not([aria-current='page']) .pn-count {
+			position: absolute;
+			top: -5px;
+			right: -5px;
+			box-shadow: 0 0 0 2px var(--ess-canvas);
+		}
+	}
+	@container ess-main (max-width: 1160px) {
+		:root[data-ess-skin='amber'] .topbar .tb-name {
+			display: none;
+		}
+	}
+}
+
+/* ============================================================
+   TOP BAR — white pill search, round white buttons, a yellow "+"
+   ============================================================ */
+:root[data-ess-skin='amber'] .topbar .search {
+	border-color: var(--ess-border);
+	background: var(--ess-surface);
+}
+:root[data-ess-skin='amber'] .topbar .search:hover {
+	border-color: var(--ess-border-strong);
+}
+:root[data-ess-skin='amber'] .topbar .add {
+	border-radius: 999px;
+	background: var(--amb-yellow);
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .topbar .add:hover {
+	background: var(--ess-primary-hover);
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .topbar .round {
+	border-color: var(--ess-border);
+}
+:root[data-ess-skin='amber'] .topbar .links a[aria-current='page'] {
+	background: var(--amb-ink);
+	color: var(--amb-on-ink);
+	padding: 6px 14px;
+}
+:root[data-ess-skin='amber'] .topbar .links a[aria-current='page']::after {
+	display: none;
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+/* the week strip's today and the hours bars */
+:root[data-ess-skin='amber'] .week .wk[aria-current='date'] {
+	background: var(--amb-yellow);
+	color: #161616;
+	box-shadow: var(--ess-primary-shadow);
+}
+:root[data-ess-skin='amber'] .ins-card .bars .bar {
+	border-radius: 999px 999px 4px 4px;
+	background: var(--amb-yellow);
+	opacity: 1;
+}
+:root[data-ess-skin='amber'] .ins-card .bars .bar.open {
+	background: var(--ess-text);
+}
+:root[data-ess-skin='amber'] .ins-card .bars .bar.future {
+	background: var(--ess-border);
+}
+
+/* absence planner: white pill controls, black selections, a yellow today */
+:root[data-ess-skin='amber'] .planner .title h2 {
+	font-weight: 700;
+}
+:root[data-ess-skin='amber'] .planner .month,
+:root[data-ess-skin='amber'] .planner .seg,
+:root[data-ess-skin='amber'] .planner .find,
+:root[data-ess-skin='amber'] .planner .chip {
+	border: 1px solid var(--ess-border);
+	border-radius: 999px;
+	background: var(--ess-surface);
+}
+:root[data-ess-skin='amber'] .planner .nav-btn,
+:root[data-ess-skin='amber'] .planner .today-btn {
+	border-radius: 999px;
+	background: var(--ess-sunken);
+	box-shadow: none;
+}
+:root[data-ess-skin='amber'] .planner .nav-btn:hover,
+:root[data-ess-skin='amber'] .planner .today-btn:hover {
+	background: var(--amb-yellow);
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .planner .seg button {
+	border-radius: 999px;
+}
+:root[data-ess-skin='amber'] .planner .seg button[aria-pressed='true'],
+:root[data-ess-skin='amber'] .planner .chip[aria-pressed='true'] {
+	border-color: transparent;
+	background: var(--amb-ink);
+	color: var(--amb-on-ink);
+	box-shadow: none;
+}
+:root[data-ess-skin='amber'][data-ess-theme='dark'] .planner .seg button[aria-pressed='true'],
+:root[data-ess-skin='amber'][data-ess-theme='dark'] .planner .chip[aria-pressed='true'] {
+	background: var(--amb-yellow);
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .planner .dh {
+	border-radius: 999px;
+}
+:root[data-ess-skin='amber'] .planner .dh.today {
+	background: var(--amb-yellow);
+	box-shadow: var(--ess-primary-shadow);
+}
+:root[data-ess-skin='amber'] .planner .dh.today .dn,
+:root[data-ess-skin='amber'] .planner .dh.today .dow {
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .planner .cell {
+	border-radius: 9px;
+}
+:root[data-ess-skin='amber'] .planner .bar {
+	border-radius: 999px;
+}
+:root[data-ess-skin='amber'] .planner .blk {
+	border-radius: 20px;
+}
+:root[data-ess-skin='amber'] .planner .blk.hero {
+	background: linear-gradient(150deg, #fff3cc 0%, var(--ess-sunken) 72%);
+}
+:root[data-ess-skin='amber'][data-ess-theme='dark'] .planner .blk.hero {
+	background: linear-gradient(150deg, rgba(255, 202, 32, 0.16) 0%, var(--ess-sunken) 72%);
+}
+
+/* the round arrow buttons on each panel: white circles, yellow on hover */
+:root[data-ess-skin='amber'] .panel .more {
+	border: 1px solid var(--ess-border);
+	background: var(--ess-surface);
+	color: var(--ess-text);
+	transition:
+		background var(--ess-t-fast),
+		border-color var(--ess-t-fast);
+}
+:root[data-ess-skin='amber'] .panel .more:hover {
+	border-color: transparent;
+	background: var(--amb-yellow);
+	color: #161616;
+}
+
+/* future events: the next one is a yellow card with a black label pill */
+:root[data-ess-skin='amber'] .panel .lead {
+	border-radius: 20px;
+	background: var(--amb-yellow);
+	color: #161616;
+	box-shadow: var(--ess-primary-shadow);
+}
+:root[data-ess-skin='amber'] .panel .lead:hover {
+	background: var(--ess-primary-hover);
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .panel .lead .tag {
+	background: var(--amb-ink);
+	color: #fff;
+}
+:root[data-ess-skin='amber'] .panel .face {
+	box-shadow: 0 0 0 2px var(--amb-yellow);
+}
+:root[data-ess-skin='amber'] .panel .face.more {
+	background: var(--amb-ink);
+	color: #fff;
+}
+:root[data-ess-skin='amber'] .panel .rows .tile {
+	border-radius: 14px;
+}
+
+/* my attendance: the month as a bento of yellow, black and white, and
+   the heatmap in yellows */
+:root[data-ess-skin='amber'] .panel .stats > div {
+	border: 1px solid transparent;
+	border-radius: 16px;
+}
+:root[data-ess-skin='amber'] .panel .stats > div:nth-child(1) {
+	background: var(--amb-yellow);
+}
+:root[data-ess-skin='amber'] .panel .stats > div:nth-child(1) dt {
+	color: rgba(22, 22, 22, 0.86);
+}
+:root[data-ess-skin='amber'] .panel .stats > div:nth-child(1) dd {
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .panel .stats > div:nth-child(2) {
+	background: var(--amb-ink);
+}
+:root[data-ess-skin='amber'][data-ess-theme='dark'] .panel .stats > div:nth-child(2) {
+	border-color: rgba(255, 255, 255, 0.08);
+}
+:root[data-ess-skin='amber'] .panel .stats > div:nth-child(2) dt {
+	color: #ffffff;
+}
+:root[data-ess-skin='amber'] .panel .stats > div:nth-child(2) dd {
+	color: #fff;
+}
+:root[data-ess-skin='amber'] .panel .stats > div:nth-child(3) {
+	border-color: var(--ess-border);
+	background: var(--ess-surface);
+}
+:root[data-ess-skin='amber'] .panel .stats > div.warn {
+	border-color: transparent;
+	background: var(--ess-warning-bg);
+}
+:root[data-ess-skin='amber'] .panel [data-level='2'] {
+	background: color-mix(in srgb, var(--amb-yellow) 32%, var(--ess-surface)) !important;
+}
+:root[data-ess-skin='amber'] .panel [data-level='3'] {
+	background: color-mix(in srgb, var(--amb-yellow) 68%, var(--ess-surface)) !important;
+}
+:root[data-ess-skin='amber'] .panel [data-level='4'] {
+	background: #f0a900 !important;
+}
+:root[data-ess-skin='amber'] .panel .grid button.today {
+	box-shadow: inset 0 0 0 1.5px var(--ess-text);
+}
+:root[data-ess-skin='amber'] .panel .grid button:hover,
+:root[data-ess-skin='amber'] .panel .grid button[aria-pressed='true'] {
+	outline-color: var(--ess-text);
+}
+
+/* your setup: white cards, yellow progress, black ticks with a yellow check */
+:root[data-ess-skin='amber'] .panel .cards .card {
+	border: 1px solid var(--ess-border-subtle);
+	border-radius: 20px;
+	background: var(--ess-surface);
+}
+:root[data-ess-skin='amber'] .panel .segs span.on {
+	background: var(--amb-yellow);
+}
+:root[data-ess-skin='amber'] .panel .steps li.done .tick {
+	border-color: var(--amb-ink);
+	background: var(--amb-ink);
+	color: #ffffff;
+}
+:root[data-ess-skin='amber'][data-ess-theme='dark'] .panel .steps li.done .tick {
+	border-color: var(--amb-yellow);
+	background: var(--amb-yellow);
+	color: #161616;
+}
+
+/* charts (HR analytics and the rest): the theme's own palette — yellow,
+   ink, a soft blue and coral, with yellow ramps for stages and grids */
+:root[data-ess-skin='amber'] .hra {
+	--hra-1: #ffca20;
+	--hra-2: #2b2b2b;
+	--hra-3: #6f9be8;
+	--hra-4: #f2836b;
+	--hra-none: #e9e2d4;
+	--hra-o1: #ffe6a1;
+	--hra-o2: #ffca20;
+	--hra-o3: #c98a00;
+	--hra-q1: #fff1c4;
+	--hra-q2: #ffd65c;
+	--hra-q3: #f2b200;
+	--hra-q4: #b07800;
+	--hra-q-ink-12: #3d2a00;
+	--hra-q-ink-34: #161616;
+}
+:root[data-ess-skin='amber'][data-ess-theme='dark'] .hra {
+	--hra-1: #ffca20;
+	--hra-2: #f6f2ea;
+	--hra-3: #7fa6ee;
+	--hra-4: #f28f78;
+	--hra-none: #2a2a2a;
+	--hra-o1: #5a4510;
+	--hra-o2: #b88a1a;
+	--hra-o3: #ffca20;
+	--hra-q1: #3a2e0c;
+	--hra-q2: #7a5c10;
+	--hra-q3: #c9961a;
+	--hra-q4: #ffd35c;
+	--hra-q-ink-12: #fff4d6;
+	--hra-q-ink-34: #161616;
+}
+
+/* payroll charts, by meaning: present yellow, half day warm grey, leave
+   blue, absent coral */
+:root[data-ess-skin='amber'] .pr-overview {
+	--pr-1: #ffca20;
+	--pr-2: #f2836b;
+	--pr-3: #6f9be8;
+	--pr-4: #a39784;
+	--pr-none: #e9e2d4;
+}
+:root[data-ess-skin='amber'][data-ess-theme='dark'] .pr-overview {
+	--pr-1: #ffca20;
+	--pr-2: #f28f78;
+	--pr-3: #7fa6ee;
+	--pr-4: #b8ad9a;
+	--pr-none: #2a2a2a;
+}
+
+/* champ: the dashboard's dark panel, like the reference's map side: near
+   black with a soft yellow glow, a golden orb, pill chips, a yellow send */
+:root[data-ess-skin='amber'] .ess-shell .panel:has(> .orb) {
+	border-color: transparent;
+	background:
+		radial-gradient(70% 55% at 85% 0%, rgba(255, 202, 32, 0.26), transparent 70%),
+		radial-gradient(60% 40% at 0% 100%, rgba(255, 202, 32, 0.1), transparent 70%),
+		#161616;
+	color: #f6f2ea;
+	box-shadow: 0 20px 40px -22px rgba(40, 24, 0, 0.55);
+}
+:root[data-ess-skin='amber'][data-ess-theme='dark'] .ess-shell .panel:has(> .orb) {
+	border-color: rgba(255, 255, 255, 0.06);
+	background:
+		radial-gradient(70% 55% at 85% 0%, rgba(255, 202, 32, 0.22), transparent 70%),
+		#0c0c0c;
+}
+:root[data-ess-skin='amber'] .panel:has(> .orb) .intro h2 {
+	color: #ffffff;
+}
+:root[data-ess-skin='amber'] .panel:has(> .orb) .intro p,
+:root[data-ess-skin='amber'] .panel:has(> .orb) .off {
+	color: rgba(246, 242, 234, 0.66);
+}
+:root[data-ess-skin='amber'] .panel:has(> .orb) .chip {
+	border-color: rgba(255, 255, 255, 0.14);
+	background: rgba(255, 255, 255, 0.06);
+	color: rgba(246, 242, 234, 0.86);
+}
+:root[data-ess-skin='amber'] .panel:has(> .orb) .chip:hover {
+	border-color: var(--amb-yellow);
+	color: #ffffff;
+}
+:root[data-ess-skin='amber'] .panel:has(> .orb) .ask {
+	border-color: rgba(255, 255, 255, 0.1);
+	background: rgba(255, 255, 255, 0.07);
+}
+:root[data-ess-skin='amber'] .panel:has(> .orb) .ask:focus-within {
+	border-color: var(--amb-yellow);
+	background: rgba(255, 255, 255, 0.1);
+}
+:root[data-ess-skin='amber'] .panel:has(> .orb) .ask input {
+	color: #ffffff;
+}
+:root[data-ess-skin='amber'] .panel:has(> .orb) .send:disabled {
+	background: rgba(255, 255, 255, 0.14);
+	color: rgba(255, 255, 255, 0.5);
+}
+:root[data-ess-skin='amber'] .panel .orb {
+	background:
+		radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 32%),
+		radial-gradient(circle at 70% 75%, #ffe08a, transparent 55%),
+		radial-gradient(circle at 50% 50%, #ffca20, #d98a00);
+	box-shadow:
+		0 10px 24px -8px rgba(240, 160, 0, 0.55),
+		inset 0 -4px 10px rgba(120, 60, 0, 0.3);
+}
+:root[data-ess-skin='amber'] .panel .chip:hover {
+	border-color: var(--amb-yellow-press);
+	color: var(--ess-text);
+}
+:root[data-ess-skin='amber'] .panel .send:not(:disabled) {
+	background: var(--amb-yellow);
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .panel .ask {
+	border-radius: 999px;
+}
+
+/* ============================================================
+   AMBER dark backdrop (2026-11-05, "a better skin for dark"): a warm
+   ember look instead of near-flat black — a honey glow top right, a deep
+   amber one bottom left, a soft vignette and a fine film grain. Fixed to
+   the viewport so body and shell line up; static, so text stays crisp.
+   ============================================================ */
+:root[data-ess-skin='amber'][data-ess-theme='dark'] {
+	--amb-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .9 0 0 0 0 .7 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+	--amb-backdrop:
+		var(--amb-grain) 0 0 / 160px 160px,
+		radial-gradient(52% 58% at 100% 0%, rgba(255, 202, 32, 0.24), transparent 68%),
+		radial-gradient(46% 52% at 0% 100%, rgba(214, 120, 20, 0.18), transparent 70%),
+		radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.45) 100%),
+		linear-gradient(160deg, #171511 0%, #121110 55%, #0f0e0c 100%);
+}
+@media (min-width: 721px) {
+	:root[data-ess-skin='amber'][data-ess-theme='dark'] body:has(.ess-shell) {
+		background:
+			radial-gradient(60% 60% at 100% 0%, rgba(255, 202, 32, 0.08), transparent 70%),
+			linear-gradient(160deg, #0d0c0a 0%, #070707 100%);
+	}
+}
+:root[data-ess-skin='amber'][data-ess-theme='dark'] .ess-shell {
+	background: var(--amb-backdrop);
+	background-attachment: fixed;
+}
+
+/* ============================================================
+   AMBER — colourful cards (2026-11-05, after the user's Hirely shot):
+   solid YELLOW and solid BLACK cards mixed with white ones, card titles
+   as small pill tags ("Manage", "Find"), round icon buttons (yellow on
+   white cards, white on yellow). Each coloured card re-points the text,
+   border and surface tokens, so whatever it holds stays readable. In dark
+   mode a black card would vanish into the page, so it turns light cream
+   (as the white cards sit on the shot's dark map).
+   ============================================================ */
+:root[data-ess-skin='amber'] {
+	--amb-on-yellow: #161616;
+}
+/* token sets */
+:root[data-ess-skin='amber'] :is(
+		.home > .top .fig:nth-child(1),
+		.planner aside.rail > .blk:nth-child(1),
+		.home .lower > .panel:nth-child(1),
+		.ess-content .ess-figures > :nth-child(1)
+	) {
+	--ess-text: #161616;
+	--ess-text-secondary: rgba(22, 22, 22, 0.88);
+	--ess-text-muted: rgba(22, 22, 22, 0.8);
+	--ess-border: rgba(22, 22, 22, 0.12);
+	--ess-border-subtle: rgba(22, 22, 22, 0.08);
+	--ess-sunken: rgba(255, 255, 255, 0.5);
+	--ess-surface: #ffffff;
+	--ess-surface-hover: #fff8e1;
+	--ess-primary-text: #161616;
+	background: var(--amb-yellow) !important;
+	border-color: transparent !important;
+	color: #161616;
+}
+:root[data-ess-skin='amber'] :is(
+		.home > .top .fig:nth-child(2),
+		.planner aside.rail > .blk:nth-child(2),
+		.ess-content .ess-figures > :nth-child(2)
+	) {
+	/* on the blue, faded white drops under 4.5:1: text is solid white */
+	--ess-text: #ffffff;
+	--ess-text-secondary: #ffffff;
+	--ess-text-muted: rgba(255, 255, 255, 0.92);
+	--ess-border: rgba(255, 255, 255, 0.22);
+	--ess-border-subtle: rgba(255, 255, 255, 0.14);
+	--ess-sunken: rgba(255, 255, 255, 0.12);
+	--ess-surface: var(--amb-ink-raised);
+	--ess-primary-text: #ffffff;
+	background: var(--amb-ink) !important;
+	border-color: transparent !important;
+	color: #ffffff;
+}
+:root[data-ess-skin='amber'][data-ess-theme='dark'] :is(
+		.home > .top .fig:nth-child(2),
+		.planner aside.rail > .blk:nth-child(2),
+		.ess-content .ess-figures > :nth-child(2)
+	) {
+	/* the blue card stays blue in dark mode (a black one used to vanish
+	   into the page and turned cream here) */
+}
+/* the white third and the honey fourth */
+:root[data-ess-skin='amber'] :is(.home > .top .fig:nth-child(3), .planner aside.rail > .blk:nth-child(3)) {
+	background: var(--ess-surface) !important;
+	box-shadow: inset 0 0 0 1px var(--ess-border);
+}
+:root[data-ess-skin='amber'] .planner aside.rail > .blk:nth-child(4) {
+	background: #ffeaa8 !important;
+	--ess-text: #161616;
+	--ess-text-secondary: rgba(22, 22, 22, 0.88);
+	--ess-text-muted: rgba(22, 22, 22, 0.8);
+	color: #161616;
+}
+:root[data-ess-skin='amber'][data-ess-theme='dark'] .planner aside.rail > .blk:nth-child(4) {
+	background: rgba(255, 202, 32, 0.16) !important;
+	box-shadow: inset 0 0 0 1px rgba(255, 202, 32, 0.28);
+	--ess-text: #fff3cf;
+	--ess-text-secondary: rgba(255, 243, 207, 0.82);
+	--ess-text-muted: rgba(255, 243, 207, 0.68);
+	color: #fff3cf;
+}
+
+/* header figures as three small cards: yellow · black · white */
+:root[data-ess-skin='amber'] .home > .top .fig {
+	padding: 5px 14px 5px 12px;
+	border-radius: 16px;
+	transition: transform 160ms ease, box-shadow 160ms ease;
+	transition-duration: 160ms !important;
+}
+:root[data-ess-skin='amber'] .home > .top .fig :is(b, .v, .v span, .k, .k-t) {
+	color: inherit;
+}
+:root[data-ess-skin='amber'] .home > .top .fig .k-t {
+	opacity: 0.92;
+}
+:root[data-ess-skin='amber'] .home > .top .fig:hover {
+	box-shadow: 0 10px 20px -12px rgba(60, 40, 0, 0.5);
+}
+
+/* planner cards: the title as a pill tag; the Plan button turns white on yellow */
+:root[data-ess-skin='amber'] .planner aside.rail > .blk {
+	border-radius: 22px;
+}
+:root[data-ess-skin='amber'] .planner aside.rail > .blk .eyebrow {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	width: fit-content;
+	padding: 3px 10px 3px 8px;
+	border-radius: 999px;
+	background: var(--amb-ink);
+	color: #ffffff;
+	letter-spacing: 0.04em;
+}
+:root[data-ess-skin='amber'] .planner aside.rail > .blk:nth-child(2) .eyebrow {
+	background: #ffffff;
+	color: #161616;
+}
+:root[data-ess-skin='amber'][data-ess-theme='dark'] :is(.planner aside.rail > .blk:nth-child(3), .planner aside.rail > .blk:nth-child(4)) .eyebrow {
+	background: var(--amb-yellow);
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .planner aside.rail > .blk:nth-child(1) .plan-btn {
+	background: #ffffff;
+	color: #161616;
+	box-shadow: 0 4px 10px -6px rgba(60, 40, 0, 0.5);
+}
+
+/* Future events: a solid yellow card; its next-event card turns black */
+:root[data-ess-skin='amber'] .home .lower > .panel:nth-child(1) .more {
+	border-color: transparent;
+	background: #ffffff;
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .home .lower > .panel:nth-child(1) .more:hover {
+	background: var(--amb-ink);
+	color: #ffffff;
+}
+:root[data-ess-skin='amber'] .home .lower > .panel:nth-child(1) .lead {
+	background: var(--amb-ink);
+	color: #ffffff;
+	--ess-text: #ffffff;
+	--ess-text-secondary: #ffffff;
+}
+:root[data-ess-skin='amber'] .home .lower > .panel:nth-child(1) .lead .tag {
+	background: var(--amb-yellow);
+	color: #161616;
+}
+/* white panels: round yellow icon buttons, as in the shot */
+:root[data-ess-skin='amber'] .home .lower > .panel:not(:nth-child(1)):not(:has(> .orb)) .more {
+	border-color: transparent;
+	background: var(--amb-yellow);
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .home .lower > .panel:not(:nth-child(1)):not(:has(> .orb)) .more:hover {
+	background: var(--amb-ink);
+	color: #ffffff;
+}
+/* header figures fit the 38px row: one line, number then label */
+:root[data-ess-skin='amber'] .home > .top .fig {
+	display: inline-flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 7px;
+	height: 36px;
+	padding: 0 14px 0 12px;
+}
+:root[data-ess-skin='amber'] .home > .top .fig .v b {
+	font-size: 18px;
+}
+/* text on the coloured cards: solid ink (some lines kept a mustard or
+   pale tint from their own rules) */
+:root[data-ess-skin='amber'] :is(
+		.planner aside.rail > .blk:nth-child(1),
+		.planner aside.rail > .blk:nth-child(4),
+		.home .lower > .panel:nth-child(1)
+	) :is(p, .muted, .quiet) {
+	color: rgba(22, 22, 22, 0.9) !important;
+}
+:root[data-ess-skin='amber'] .planner aside.rail > .blk:nth-child(2) :is(p, .muted) {
+	color: #ffffff !important;
+}
+:root[data-ess-skin='amber'][data-ess-theme='dark'] .planner aside.rail > .blk:nth-child(4) :is(p, .muted) {
+	color: rgba(255, 243, 207, 0.94) !important;
+}
+:root[data-ess-skin='amber'] .home .lower > .panel:nth-child(1) :is(h2, .p-head h2 svg) {
+	color: #161616;
+}
+:root[data-ess-skin='amber'] .home .lower > .panel:nth-child(1) .empty-ic {
+	background: #ffffff;
+	color: #161616;
+}
+/* summary strips (People, Payroll …): separate rounded cards, like the
+   shot's tiles — yellow, black, then white — rather than one joined bar */
+:root[data-ess-skin='amber'] .ess-content .ess-figures {
+	gap: 10px;
+	padding: 0;
+	border: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	overflow: visible;
+}
+:root[data-ess-skin='amber'] .ess-content .ess-figures > * {
+	border: 0;
+	border-radius: 20px;
+	background: var(--ess-surface);
+	box-shadow: inset 0 0 0 1px var(--ess-border-subtle);
+}
+:root[data-ess-skin='amber'] .ess-content .ess-figures > :is(:nth-child(1), :nth-child(2)) {
+	box-shadow: none;
+}
+
+/* ============================================================
+   READING WEIGHT (2026-11-09) — Manrope's regular (400) draws thin at
+   11–13px on Windows; body text inherits 500 instead. Rules that set
+   their own weight keep it.
+   ============================================================ */
+:root[data-ess-skin='amber'] body {
+	font-weight: 500;
+}

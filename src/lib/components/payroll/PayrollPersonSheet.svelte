@@ -6,6 +6,7 @@
 	 */
 	import { invalidateAll } from '$app/navigation';
 	import X from '@lucide/svelte/icons/x';
+	import Save from '@lucide/svelte/icons/save';
 	import type { PayrollEmployee, PayrollReport } from '$lib/server/payroll';
 	import { SALARY_ACTIONS, salaryActionLabel } from '$lib/payroll';
 	import { fmtDate, fmtDays } from './codes';
@@ -144,7 +145,7 @@
 				{#if error}<p class="err" role="alert">{error}</p>{/if}
 				<div class="actions">
 					<button type="button" class="ess-btn ess-btn--secondary" onclick={onclose}>Cancel</button>
-					<button type="submit" class="ess-btn ess-btn--primary" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+					<button type="submit" class="ess-btn ess-btn--primary" disabled={saving}><Save size={16} /> {saving ? 'Saving…' : 'Save'}</button>
 				</div>
 			</form>
 		{:else if p.comment || p.remarks}

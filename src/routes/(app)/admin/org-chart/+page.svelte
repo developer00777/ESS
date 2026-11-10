@@ -8,6 +8,8 @@
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
+	import ListChecks from '@lucide/svelte/icons/list-checks';
+	import UserRound from '@lucide/svelte/icons/user-round';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import { flattenDepthFirst, reportCount, type OrgNode } from '$lib/org-chart';
 	import { BASE_ROLE_LABEL } from '$lib/capabilities';
@@ -115,7 +117,7 @@
 	<div class="ess-stack">
 		<section class="ess-card ess-fill-card chart-card">
 			<div class="ess-card-head">
-				<h2 class="ess-h2">Organisation chart</h2>
+				<h2 class="ess-h2"><Network size={16} /> Organisation chart</h2>
 				<span class="ess-caption">{stats.total} active {stats.total === 1 ? 'person' : 'people'}</span>
 			</div>
 
@@ -203,7 +205,7 @@
 	<aside class="ess-stack">
 		<section class="ess-card checks-card">
 			<div class="ess-card-head">
-				<h2 class="ess-h2">Reporting checks</h2>
+				<h2 class="ess-h2"><ListChecks size={16} /> Reporting checks</h2>
 			</div>
 			<p class="ess-caption">From the live roster: only active people are charted.</p>
 			<div class="ess-rows checks">
@@ -237,7 +239,7 @@
 
 		<section class="ess-card ess-fill-card detail-card">
 			<div class="ess-card-head">
-				<h2 class="ess-h2">Employee details</h2>
+				<h2 class="ess-h2"><UserRound size={16} /> Employee details</h2>
 			</div>
 			<div class="detail-body ess-scroll">
 			{#if selected}

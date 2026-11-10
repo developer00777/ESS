@@ -11,6 +11,8 @@
 	import Info from '@lucide/svelte/icons/info';
 	import ExternalLink from '@lucide/svelte/icons/external-link';
 	import Mail from '@lucide/svelte/icons/mail';
+	import ClipboardPen from '@lucide/svelte/icons/clipboard-pen';
+	import ClipboardCheck from '@lucide/svelte/icons/clipboard-check';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import { makeWeekOffResolver, workingDaysInRange } from '$lib/week-off';
 
@@ -130,7 +132,7 @@
 		{#if step === 0}
 			<form class="ess-card ess-fill-card form grow" onsubmit={toReview}>
 				<div class="form-head">
-					<h2 class="ess-h2">Leave details</h2>
+					<h2 class="ess-h2"><ClipboardPen size={16} /> Leave details</h2>
 					<p>Tell us about your leave request.</p>
 				</div>
 
@@ -141,11 +143,16 @@
 					<span class="with-icon">
 						<Calendar size={17} strokeWidth={1.75} />
 						<select class="ess-select" bind:value={leaveTypeId} required>
+							<!-- A placeholder, so the field never shows blank. -->
+							<option value="" disabled>{data.types.length ? 'Select a leave type' : 'No leave types set up yet'}</option>
 							{#each data.types as t (t.id)}
 								<option value={t.id}>{t.name}</option>
 							{/each}
 						</select>
 					</span>
+					{#if !data.types.length}
+						<span class="ess-help">HR hasn't set up any leave types for you yet. Ask HR to add them, then apply here.</span>
+					{/if}
 					{#if type}
 						<span class="ess-help">
 							{#if type.monthlyQuotaDays != null}
@@ -200,7 +207,7 @@
 		{:else}
 			<section class="ess-card ess-fill-card form grow">
 				<div class="form-head">
-					<h2 class="ess-h2">Review your request</h2>
+					<h2 class="ess-h2"><ClipboardCheck size={16} /> Review your request</h2>
 					<p>Check the details, then send it for approval.</p>
 				</div>
 
@@ -239,7 +246,7 @@
 	<aside class="fill-col">
 		<section class="ess-card impact grow">
 			<div class="form-head">
-				<h2 class="ess-h2">Leave impact summary</h2>
+				<h2 class="ess-h2"><ChartPie size={16} /> Leave impact summary</h2>
 				<p>Here’s how this request affects your balance.</p>
 			</div>
 

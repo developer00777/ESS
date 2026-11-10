@@ -13,7 +13,17 @@
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import CircleX from '@lucide/svelte/icons/circle-x';
+	import Search from '@lucide/svelte/icons/search';
+	import Save from '@lucide/svelte/icons/save';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import UserPlus from '@lucide/svelte/icons/user-plus';
+	import Grid3x3 from '@lucide/svelte/icons/grid-3x3';
+	import Eye from '@lucide/svelte/icons/eye';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import DelegationsCard from '$lib/components/DelegationsCard.svelte';
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 	import {
 		BASE_ROLE_LABEL,
 		CAPABILITIES,
@@ -25,7 +35,7 @@
 
 	let { data, form } = $props();
 
-	type Tab = 'roles' | 'matrix' | 'teams';
+	type Tab = 'roles' | 'matrix' | 'teams' | 'reach';
 	let tab = $state<Tab>('roles');
 
 	const BUILT_IN = ['employee', 'team_lead', 'admin', 'super_admin'] as const;
@@ -72,6 +82,81 @@
 
 	let confirmDelete = $state<string | null>(null);
 	const pick = $state<Record<string, string>>({});
+
+	/* ---------- who can see whom (/api/access/explain) ----------
+	   For two people, every scoped permission and what grants it: a
+	   privilege, Super Admin, or a relationship such as line manager. */
+	const PERM_LABEL: Record<string, string> = {
+		'person.basic': 'Basic profile — name, picture, designation, team',
+		'person.job': 'Job details — shift, timings, reporting line, week off',
+		'attendance.view': 'Attendance',
+		'leave.view': 'Leave — dates, type, status and reason',
+		'leave.dates': 'Leave dates and status only',
+		'tasks.view': 'Tasks',
+		'person.edit_settings': 'Change their settings',
+		'person.reset_password': 'Reset their password'
+	};
+	const RELATION_LABEL: Record<string, string> = {
+		self: 'it is the same person',
+		line_manager: 'their line manager',
+		line_chain: 'further up their reporting line',
+		dotted_manager: 'their dotted-line manager',
+		concerned_hr: 'the HR named on their profile',
+		hr_fallback: 'HR, for requests nobody else is named for',
+		team_lead: 'the lead of their team',
+		teammate: 'on the same team',
+		delegate: 'covering for their manager (delegation)'
+	};
+	function reason(v: string) {
+		if (v === 'Super Admin') return 'Super Admin';
+		if (v.startsWith('privilege ')) {
+			const key = v.slice('privilege '.length);
+			return `Privilege: ${CAPABILITIES.find((c) => c.key === key)?.label ?? key}`;
+		}
+		if (v.startsWith('relation ')) {
+			const r = v.slice('relation '.length);
+			return `Relationship: ${RELATION_LABEL[r] ?? r}`;
+		}
+		return v;
+	}
+	let actorId = $state('');
+	let targetId = $state('');
+	let explaining = $state(false);
+	let explainError = $state('');
+	let explained = $state<{ actorId: string; targetId: string; permissions: Record<string, { allowed: boolean; via: string[] }> } | null>(null);
+	async function explain() {
+		if (!actorId || !targetId || explaining) return;
+		explaining = true;
+		explainError = '';
+		try {
+			const r = await fetch(`/api/access/explain?actor=${actorId}&target=${targetId}`);
+			if (!r.ok) {
+				const body = await r.json().catch(() => ({}));
+				explainError = body.message ?? `Could not check (${r.status}).`;
+				explained = null;
+				return;
+			}
+			explained = await r.json();
+		} catch {
+			explainError = 'Could not reach the server. Try again.';
+		} finally {
+			explaining = false;
+		}
+	}
+	const personName = (id: string) => data.people.find((p) => p.id === id)?.fullName ?? 'This person';
+	// HR (people.edit_settings) and Super Admins see and set up everyone's cover.
+	const canCoverOthers = $derived(data.user.role === 'super_admin' || (data.user.capabilities ?? []).includes('people.edit_settings'));
+
+	const teamsView = new TableView(() => data.teamRows, {
+		team: (t) => t.name,
+		lead: (t) => t.teamLeadName,
+		approve: (t) => t.canApproveLeave,
+		shift: (t) => t.canEditTeamShiftWindow,
+		payroll: (t) => t.canViewTeamPayrollCost,
+		logins: (t) => t.canCreateEmployeeLogins,
+		grievances: (t) => t.canResolveGrievances,
+		autoApprove: (t) => t.maxLeaveDaysAutoApprove
+	});
 </script>
 
 <svelte:head>
@@ -85,6 +170,7 @@
 		{#if data.teamRows.length > 0}
 			<button class="ess-tab" role="tab" aria-selected={tab === 'teams'} onclick={() => (tab = 'teams')}>Teams</button>
 		{/if}
+		<button class="ess-tab" role="tab" aria-selected={tab === 'reach'} onclick={() => (tab = 'reach')}>Who can see whom</button>
 	</div>
 	{#if data.canManage && !editing}
 		<button type="button" class="ess-btn ess-btn--primary" onclick={() => { editing = blank(); tab = 'roles'; }}>
@@ -113,7 +199,7 @@
 					}}
 				>
 					<div class="ess-card-head">
-						<h2 class="ess-h2">{editing.id ? `Edit ${editing.name}` : 'New named role'}</h2>
+						<h2 class="ess-h2"><Sparkles size={16} /> {editing.id ? `Edit ${editing.name}` : 'New named role'}</h2>
 						{#if !editing.id}
 							<span class="presets">
 								<span class="ess-caption">Start from:</span>
@@ -175,7 +261,7 @@
 					</div>
 					<p class="ess-help">Deleting data, managing roles and exporting conversations stay with Super Admins and cannot be given.</p>
 					<div class="actions">
-						<button class="ess-btn ess-btn--primary" type="submit">Save role</button>
+						<button class="ess-btn ess-btn--primary" type="submit"><Save size={16} /> Save role</button>
 						<button class="ess-btn ess-btn--secondary" type="button" onclick={() => (editing = null)}>Cancel</button>
 					</div>
 				</form>
@@ -183,7 +269,7 @@
 
 			<section class="ess-card builtin-card">
 				<div class="ess-card-head">
-					<h2 class="ess-h2">Built-in roles</h2>
+					<h2 class="ess-h2"><Shield size={16} /> Built-in roles</h2>
 					<span class="ess-badge ess-badge--neutral">Protected</span>
 				</div>
 				<p class="ess-caption">Every login has one of these. It decides approvals: who a person's leave goes to, and who counts as HR.</p>
@@ -207,7 +293,7 @@
 
 			<section class="ess-card ess-fill-card named-card-wrap">
 				<div class="ess-card-head">
-					<h2 class="ess-h2">Named roles</h2>
+					<h2 class="ess-h2"><Sparkles size={16} /> Named roles</h2>
 					<span class="ess-caption">{data.namedRoles.length} {data.namedRoles.length === 1 ? 'role' : 'roles'}</span>
 				</div>
 				<p class="ess-caption">
@@ -242,11 +328,11 @@
 										{#if confirmDelete === r.id}
 											<form method="POST" action="?/deleteRole" use:enhance={() => async ({ update }) => { await update(); confirmDelete = null; }}>
 												<input type="hidden" name="id" value={r.id} />
-												<button class="ess-btn ess-btn--danger ess-btn--sm" type="submit">Delete {r.name}</button>
+												<button class="ess-btn ess-btn--danger ess-btn--sm" type="submit"><Trash2 size={13} /> Delete {r.name}</button>
 											</form>
 											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (confirmDelete = null)}>Keep</button>
 										{:else}
-											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (confirmDelete = r.id)}>Delete</button>
+											<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (confirmDelete = r.id)}><Trash2 size={13} /> Delete</button>
 										{/if}
 									</div>
 								{/if}
@@ -276,7 +362,7 @@
 													<option value={p.id}>{p.fullName}{p.customRoleId ? ` (now ${data.namedRoles.find((n) => n.id === p.customRoleId)?.name})` : ` (${BASE_ROLE_LABEL[p.role]})`}</option>
 												{/each}
 											</select>
-											<button class="ess-btn ess-btn--secondary ess-btn--sm" type="submit" disabled={!pick[r.id]}>Give role</button>
+											<button class="ess-btn ess-btn--secondary ess-btn--sm" type="submit" disabled={!pick[r.id]}><UserPlus size={14} /> Give role</button>
 										</form>
 									{/if}
 								</div>
@@ -292,7 +378,7 @@
 		{:else if tab === 'matrix'}
 			<section class="ess-card ess-fill-card matrix-card">
 				<div class="ess-card-head">
-					<h2 class="ess-h2">Role permissions matrix</h2>
+					<h2 class="ess-h2"><Grid3x3 size={16} /> Role permissions matrix</h2>
 				</div>
 				<p class="ess-caption">
 					Compare what each role can do. Worked out from the same privilege list the portal checks, so this table cannot drift from what people can actually do. Select a column to see the role's details.
@@ -346,10 +432,63 @@
 					</table>
 				</div>
 			</section>
+		{:else if tab === 'reach'}
+			<section class="ess-card explain-card" aria-labelledby="explain-h">
+				<div class="ess-card-head">
+					<h2 id="explain-h" class="ess-h2"><Eye size={16} /> Why can one person see another?</h2>
+				</div>
+				<p class="ess-caption">
+					Pick two people to see, for each kind of record, whether the first can reach the second's — and the privilege or relationship that allows it.
+				</p>
+				<div class="explain-pick">
+					<label class="ess-field">
+						<span class="ess-label">Can this person…</span>
+						<select class="ess-select" bind:value={actorId}>
+							<option value="">Choose someone</option>
+							{#each data.people as p (p.id)}<option value={p.id}>{p.fullName}</option>{/each}
+						</select>
+					</label>
+					<label class="ess-field">
+						<span class="ess-label">…see this person's records?</span>
+						<select class="ess-select" bind:value={targetId}>
+							<option value="">Choose someone</option>
+							{#each data.people as p (p.id)}<option value={p.id}>{p.fullName}</option>{/each}
+						</select>
+					</label>
+					<button type="button" class="ess-btn ess-btn--primary" disabled={!actorId || !targetId || explaining} onclick={explain}>
+						<Search size={15} /> {explaining ? 'Checking…' : 'Explain'}
+					</button>
+				</div>
+				{#if explainError}<p class="ess-error" role="alert">{explainError}</p>{/if}
+				{#if explained}
+					<div class="ess-rows explain-rows">
+						<p class="ess-caption">
+							What <strong>{personName(explained.actorId)}</strong> can reach of <strong>{personName(explained.targetId)}</strong>:
+						</p>
+						{#each Object.entries(explained.permissions) as [perm, r] (perm)}
+							<div class="ess-row">
+								<div class="ess-row__body">
+									<span class="ess-row__title">{PERM_LABEL[perm] ?? perm}</span>
+									<span class="ess-row__meta">{r.allowed ? r.via.map(reason).join(' · ') : 'Nothing grants this.'}</span>
+								</div>
+								<div class="ess-row__end">
+									<span class="ess-badge {r.allowed ? 'ess-badge--approved' : 'ess-badge--rejected'}">
+										{#if r.allowed}<Check size={12} strokeWidth={3} /> Allowed{:else}<X size={12} strokeWidth={3} /> Not allowed{/if}
+									</span>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</section>
+
+			{#if canCoverOthers}
+				<DelegationsCard viewerId={data.viewerId} all people={data.people} />
+			{/if}
 		{:else}
 			<section class="ess-card ess-fill-card teams-card">
 				<div class="ess-card-head">
-					<h2 class="ess-h2">Team privileges</h2>
+					<h2 class="ess-h2"><Users size={16} /> Team privileges</h2>
 				</div>
 				<div class="ess-alert ess-alert--info">
 					<Info size={16} />
@@ -359,13 +498,13 @@
 					<table class="ess-table">
 						<thead>
 							<tr>
-								<th>Team</th><th>Team lead</th>
-								<th class="role-col">Approve leave</th><th class="role-col">Edit shift window</th><th class="role-col">View payroll cost</th>
-								<th class="role-col">Create logins</th><th class="role-col">Resolve grievances</th><th class="role-col">Auto-approve up to</th>
+								<th aria-sort={teamsView.ariaSort('team')}><SortButton view={teamsView} key="team">Team</SortButton></th><th aria-sort={teamsView.ariaSort('lead')}><SortButton view={teamsView} key="lead">Team lead</SortButton></th>
+								<th class="role-col" aria-sort={teamsView.ariaSort('approve')}><SortButton view={teamsView} key="approve">Approve leave</SortButton></th><th class="role-col" aria-sort={teamsView.ariaSort('shift')}><SortButton view={teamsView} key="shift">Edit shift window</SortButton></th><th class="role-col" aria-sort={teamsView.ariaSort('payroll')}><SortButton view={teamsView} key="payroll">View payroll cost</SortButton></th>
+								<th class="role-col" aria-sort={teamsView.ariaSort('logins')}><SortButton view={teamsView} key="logins">Create logins</SortButton></th><th class="role-col" aria-sort={teamsView.ariaSort('grievances')}><SortButton view={teamsView} key="grievances">Resolve grievances</SortButton></th><th class="role-col" aria-sort={teamsView.ariaSort('autoApprove')}><SortButton view={teamsView} key="autoApprove">Auto-approve up to</SortButton></th>
 							</tr>
 						</thead>
 						<tbody>
-							{#each data.teamRows as team (team.id)}
+							{#each teamsView.rows as team (team.id)}
 								<tr>
 									<td><span class="cap-label">{team.name}</span></td>
 									<td>{team.teamLeadName ?? '—'}</td>
@@ -377,8 +516,9 @@
 							{/each}
 						</tbody>
 					</table>
-					{#if data.teamRows.length === 0}<div class="ess-empty"><p class="ess-empty__title">No teams yet.</p></div>{/if}
+					{#if data.teamRows.length === 0}<div class="ess-empty"><span class="ess-empty__icon"><Users size={22} /></span><p class="ess-empty__title">No teams yet.</p></div>{/if}
 				</div>
+				<TablePager view={teamsView} noun="teams" />
 			</section>
 		{/if}
 	</div>
@@ -725,6 +865,29 @@
 	.no {
 		background: var(--ess-neutral-bg);
 		color: var(--ess-text-muted);
+	}
+
+	/* ---------- who can see whom ---------- */
+	.explain-card {
+		display: grid;
+		gap: 10px;
+	}
+	.explain-pick {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+		align-items: end;
+		gap: 10px 12px;
+	}
+	.explain-rows .ess-row {
+		padding: 9px 0;
+	}
+	.explain-rows .ess-row__meta {
+		white-space: normal;
+	}
+	@media (max-width: 720px) {
+		.explain-pick {
+			grid-template-columns: minmax(0, 1fr);
+		}
 	}
 
 	/* ---------- aside ---------- */

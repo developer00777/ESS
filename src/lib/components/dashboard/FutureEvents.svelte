@@ -8,6 +8,8 @@
 	import PartyPopper from '@lucide/svelte/icons/party-popper';
 	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 	import Video from '@lucide/svelte/icons/video';
+	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
+	import CalendarX2 from '@lucide/svelte/icons/calendar-x-2';
 	import Avatar from '$lib/components/Avatar.svelte';
 
 	type Ev = {
@@ -50,14 +52,17 @@
 <section class="ess-card panel" aria-labelledby="events-h">
 	<header class="p-head">
 		<div>
-			<h2 id="events-h">Future events</h2>
+			<h2 id="events-h"><CalendarClock size={15} aria-hidden="true" />Future events</h2>
 			<p>Meetings, events and holidays ahead</p>
 		</div>
 		<a class="more" href="/chat?c=announcements" aria-label="All announcements"><ArrowUpRight size={16} /></a>
 	</header>
 
 	{#if !lead}
-		<p class="quiet">Nothing scheduled yet. Meetings, event announcements and holidays will appear here.</p>
+		<div class="empty">
+			<span class="empty-ic" aria-hidden="true"><CalendarX2 size={18} /></span>
+			<p class="quiet">Nothing scheduled yet. Meetings, event announcements and holidays will appear here.</p>
+		</div>
 	{:else}
 		<a
 			class="lead"
@@ -131,10 +136,17 @@
 		gap: 8px;
 	}
 	.p-head h2 {
+		display: flex;
+		align-items: center;
+		gap: 7px;
 		margin: 0;
 		font-size: 15px;
 		font-weight: 650;
 		letter-spacing: -0.01em;
+	}
+	.p-head h2 :global(svg) {
+		flex: none;
+		color: var(--ess-primary-text);
 	}
 	.p-head p {
 		margin: 1px 0 0;
@@ -312,6 +324,51 @@
 		margin: 0;
 		color: var(--ess-text-muted);
 		font-size: 13px;
+	}
+	.empty {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 8px;
+	}
+	.empty-ic {
+		display: grid;
+		place-items: center;
+		width: 34px;
+		height: 34px;
+		border-radius: 10px;
+		background: var(--ess-sunken);
+		color: var(--ess-text-muted);
+	}
+
+	/* ---------- motion ----------
+	   The highlighted event, then each row, rises in turn. !important
+	   lengths: contained motion that plays under reduced motion too (see
+	   INTERACTION FEEDBACK in ess-components.css). */
+	@keyframes fe-rise {
+		from {
+			opacity: 0;
+			transform: translateY(6px);
+		}
+	}
+	.lead,
+	.rows li,
+	.empty {
+		animation: fe-rise 460ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation-duration: 460ms !important;
+		animation-delay: 300ms;
+	}
+	.rows li:nth-child(1) {
+		animation-delay: 380ms;
+	}
+	.rows li:nth-child(2) {
+		animation-delay: 440ms;
+	}
+	.lead {
+		transition: background var(--ess-t-fast), transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	.lead:hover {
+		transform: translateY(-1px);
 	}
 
 	/* Short laptop screens (about 1280×580): tighter so the dashboard fits. */

@@ -1,8 +1,8 @@
 <script lang="ts">
 	/**
-	 * Shares of a whole as 100% bars: one row for everyone, then one per
-	 * group. Segments sit 2px apart; a segment labels its share inside only
-	 * when the text fits, otherwise the tooltip and table carry it.
+	 * Shares of a whole as slim 100% capsules: one row for everyone, then
+	 * one per group. Segments sit 2px apart; each share reads from the
+	 * tooltip (hover or focus) and the card's table.
 	 */
 	import ChartTooltip from './ChartTooltip.svelte';
 
@@ -55,8 +55,6 @@
 					{@const s = share(r, k.name)}
 					{#if s > 0}
 						<span class="seg" style="flex-grow: {s}; background: {k.color}; color: {k.ink}">
-							<!-- Inside only when there's room for it. -->
-							{#if s * (width * 0.66) > 38}{pctText(s)}{/if}
 						</span>
 					{/if}
 				{/each}
@@ -85,7 +83,7 @@
 		border-bottom: 1px solid var(--ess-border-subtle);
 	}
 	.row.first .bar {
-		height: 20px;
+		height: 12px;
 	}
 	.name {
 		display: flex;
@@ -107,13 +105,15 @@
 		color: var(--ess-text-muted);
 		font-variant-numeric: tabular-nums;
 	}
+	/* a slim capsule; the shares read from the tooltip and the table */
 	.bar {
 		display: flex;
 		gap: 2px;
-		height: 15px;
-		border-radius: 4px;
+		height: 10px;
+		border-radius: 999px;
 		overflow: hidden;
 		outline: none;
+		background: var(--ess-sunken);
 	}
 	.bar:focus-visible {
 		box-shadow: 0 0 0 2px var(--ess-focus-ring);

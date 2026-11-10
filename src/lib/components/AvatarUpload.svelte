@@ -135,7 +135,7 @@
 			<strong>{fullName}</strong>
 			<div class="avatar-actions">
 				<button type="button" class="ess-btn ess-btn--sm ess-btn--secondary" onclick={() => fileInput?.click()} disabled={busy}>
-					{busy ? 'Saving…' : shows ? 'Change photo' : 'Add photo'}
+					<Camera size={14} /> {busy ? 'Saving…' : shows ? 'Change photo' : 'Add photo'}
 				</button>
 				{#if shows}
 					<button type="button" class="ess-btn ess-btn--sm ess-btn--ghost" onclick={removePicture} disabled={busy}>

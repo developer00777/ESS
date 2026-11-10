@@ -1,8 +1,10 @@
 <script lang="ts">
 	/**
-	 * The one hover readout the analytics charts share: the value leads, the
-	 * series name follows, each keyed by a short stroke of its colour.
-	 * Positioned by the chart inside its own box, kept within it.
+	 * The one hover readout the analytics charts share, laid out like
+	 * shadcn/ui's ChartTooltipContent: the label on top, then a row per
+	 * series, a small rounded square of its colour and its name on the left,
+	 * the value on the right in tabular figures. Positioned by the chart
+	 * inside its own box, kept within it.
 	 */
 	export type TipRow = { name: string; value: string; color?: string };
 
@@ -18,8 +20,8 @@
 	{#each rows as r (r.name)}
 		<p class="tip-row">
 			{#if r.color}<i style="background: {r.color}"></i>{/if}
-			<b>{r.value}</b>
 			<span>{r.name}</span>
+			<b>{r.value}</b>
 		</p>
 	{/each}
 </div>
@@ -28,41 +30,60 @@
 	.tip {
 		position: absolute;
 		z-index: 5;
-		min-width: 120px;
-		padding: 8px 10px;
-		border-radius: 10px;
-		background: var(--ess-surface);
+		display: grid;
+		gap: 6px;
+		min-width: 128px;
+		padding: 6px 10px;
+		border: 1px solid color-mix(in srgb, var(--ess-border) 50%, transparent);
+		border-radius: 8px;
+		background: var(--ess-modal-bg, var(--ess-surface));
 		box-shadow:
-			0 0 0 1px var(--ess-border),
-			0 8px 24px -8px rgba(20, 22, 40, 0.25);
+			0 20px 25px -5px rgba(0, 0, 0, 0.1),
+			0 8px 10px -6px rgba(0, 0, 0, 0.1);
 		pointer-events: none;
 		transform: translateY(-50%);
 		font-size: 12px;
+		line-height: 1.35;
 	}
 	.tip-title {
-		margin: 0 0 4px;
-		font-size: 11.5px;
-		color: var(--ess-text-muted);
+		margin: 0;
+		font-weight: 500;
+		color: var(--ess-text);
 	}
 	.tip-row {
 		display: flex;
 		align-items: center;
-		gap: 6px;
-		margin: 2px 0 0;
+		gap: 8px;
+		margin: 0;
 		white-space: nowrap;
 	}
 	.tip-row i {
 		width: 10px;
-		height: 2px;
-		border-radius: 1px;
+		height: 10px;
+		border-radius: 2px;
 		flex-shrink: 0;
 	}
+	.tip-row span {
+		flex: 1;
+		color: var(--ess-text-muted);
+	}
 	.tip-row b {
-		font-weight: 650;
+		margin-left: 12px;
+		font-weight: 500;
 		color: var(--ess-text);
 		font-variant-numeric: tabular-nums;
 	}
-	.tip-row span {
-		color: var(--ess-text-secondary);
+	/* Mono (shadcn "bar chart – pattern"): the label sits over a hairline,
+	   values are semibold */
+	:global(:root[data-ess-skin='mono']) .tip {
+		gap: 8px;
+		min-width: 160px;
+	}
+	:global(:root[data-ess-skin='mono']) .tip-title {
+		padding-bottom: 7px;
+		border-bottom: 1px solid color-mix(in srgb, var(--ess-border) 60%, transparent);
+	}
+	:global(:root[data-ess-skin='mono']) .tip-row b {
+		font-weight: 600;
 	}
 </style>

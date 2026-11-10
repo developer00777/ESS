@@ -24,12 +24,38 @@
 	const paidDays = $derived(paid.reduce((s, e) => s + e.balance.paidDays, 0));
 	const availed = $derived(employees.reduce((s, e) => s + e.balance.availed, 0));
 
-	/* ---- daily attendance across the month (working days only) */
-	const elapsed = $derived(report.dates.map((d, i) => ({ d, i })).filter(({ d }) => d <= report.asOf));
+	/* ---- daily attendance: working days only — a day counts when someone
+	   has a status on it (present, half day, leave, absent), so week offs,
+	   holidays and today-not-yet-counted ("upcoming") are left out */
+	const COUNTED = ['present', 'half', 'leave', 'pink', 'compoff', 'compoff_half', 'absent'];
+	const workdays = $derived(
+		report.dates
+			.map((d, i) => ({ d, i }))
+			.filter(({ d, i }) => d <= report.asOf && employees.some((e) => COUNTED.includes(e.days[i]?.kind)))
+	);
+	/* the last 7 or 15 working days of this payroll month, or all of them */
+	let range = $state<7 | 15 | 0>(7);
+	const RANGES: [7 | 15 | 0, string][] = [
+		[7, '7 days'],
+		[15, '15 days'],
+		[0, 'Month']
+	];
+	const elapsed = $derived(range ? workdays.slice(-range) : workdays);
+	const dayLabel = (d: string) =>
+		range ? `${new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short' })} ${Number(d.slice(8))}` : String(Number(d.slice(8)));
+	const dailySub = $derived(
+		(range ? `The last ${Math.min(range, workdays.length)} working days: ` : 'Every working day so far: ') +
+			'people present, on a half day, on leave and absent. Week offs and holidays are left out.'
+	);
+	const dailyNote = $derived(
+		range && workdays.length < range
+			? `Only ${workdays.length} working ${workdays.length === 1 ? 'day has' : 'days have'} passed in this payroll month. For earlier days, pick the previous month above.`
+			: undefined
+	);
 	const daily = $derived.by(() => {
 		const count = (i: number, kinds: string[]) => employees.filter((e) => kinds.includes(e.days[i]?.kind)).length;
 		return {
-			labels: elapsed.map(({ d }) => String(Number(d.slice(8)))),
+			labels: elapsed.map(({ d }) => dayLabel(d)),
 			series: [
 				{ name: 'Present', color: C.present, values: elapsed.map(({ i }) => count(i, ['present'])) },
 				{ name: 'Half day', color: C.half, values: elapsed.map(({ i }) => count(i, ['half'])) },
@@ -122,7 +148,14 @@
 	{/if}
 
 	<div class="grid">
-		<ChartCard title="Who turned up, day by day" sub="People present, on a half day, on leave and absent each working day. Week offs and holidays are left out." wide cls="span2">
+		<ChartCard title="Who turned up, day by day" sub={dailySub} note={dailyNote} wide cls="span2">
+			{#snippet tools()}
+				<div class="seg range" role="group" aria-label="Days shown">
+					{#each RANGES as [v, l] (v)}
+						<button type="button" aria-pressed={range === v} onclick={() => (range = v)}>{l}</button>
+					{/each}
+				</div>
+			{/snippet}
 			{#snippet legend()}
 				<span class="legend">
 					{#each daily.series as s (s.name)}<span><i style:background={s.color}></i>{s.name}</span>{/each}
@@ -243,6 +276,28 @@
 		border-radius: 3px;
 		margin-right: 5px;
 		vertical-align: -1px;
+	}
+	/* the range switch, beside the card's Chart / Table switch */
+	.range {
+		display: flex;
+		padding: 2px;
+		border-radius: 999px;
+		background: var(--ess-sunken);
+	}
+	.range button {
+		padding: 0 10px;
+		border: 0;
+		border-radius: 999px;
+		background: none;
+		color: var(--ess-text-muted);
+		font: inherit;
+		font-weight: 500;
+		cursor: pointer;
+	}
+	.range button[aria-pressed='true'] {
+		background: var(--ess-surface);
+		color: var(--ess-text);
+		box-shadow: 0 1px 2px rgba(20, 22, 40, 0.08);
 	}
 	.donut {
 		display: grid;

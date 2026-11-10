@@ -1,5 +1,7 @@
 <script lang="ts">
 	import X from '@lucide/svelte/icons/x';
+	import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
+	import CalendarCheck from '@lucide/svelte/icons/calendar-check';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import { api, hub } from '$lib/hub/client.svelte';
 	import { todayKey } from '$lib/hub/format';
@@ -82,7 +84,7 @@
 <div class="ess-scrim scrim" role="presentation" onclick={onclose}></div>
 <div class="ess-modal modal" role="dialog" aria-modal="true" aria-labelledby="sched-title">
 	<div class="ess-modal__head">
-		<h2 id="sched-title" class="ess-h2">Schedule a meeting</h2>
+		<h2 id="sched-title" class="ess-h2"><CalendarPlus size={16} /> Schedule a meeting</h2>
 		<button type="button" class="ess-icon-btn" onclick={onclose} aria-label="Close"><X size={16} /></button>
 	</div>
 	<form class="ess-modal__body body" onsubmit={save}>
@@ -153,7 +155,7 @@
 		{#if err}<p class="ess-error">{err}</p>{/if}
 		<div class="actions">
 			<button type="button" class="ess-btn ess-btn--secondary" onclick={onclose}>Cancel</button>
-			<button type="submit" class="ess-btn ess-btn--primary" disabled={busy || !topic.trim()}>{busy ? 'Scheduling…' : 'Schedule'}</button>
+			<button type="submit" class="ess-btn ess-btn--primary" disabled={busy || !topic.trim()}><CalendarCheck size={16} /> {busy ? 'Scheduling…' : 'Schedule'}</button>
 		</div>
 	</form>
 </div>

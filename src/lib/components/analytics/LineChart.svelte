@@ -26,14 +26,22 @@
 	// Grows to fill its card; `height` is the least it will be.
 	let boxH = $state(0);
 	const H = $derived(Math.max(height, boxH));
-	const pad = { l: 34, r: 14, t: 8, b: 20 };
-	const plotW = $derived(Math.max(0, width - pad.l - pad.r));
-	const plotH = $derived(H - pad.t - pad.b);
 
 	const top = $derived(
 		max ?? niceMax(Math.max(0, ...series.flatMap((s) => s.values.filter((v): v is number => v !== null))) * 1.1)
 	);
 	const yTicks = $derived(ticks(top));
+	// The left margin fits the longest y-axis label ("0.8%" needs more room
+	// than "8"), so the labels are never cut off at the card's edge. About
+	// 6.5px a character at the 11px tick size, plus the 8px gap to the axis.
+	const pad = $derived({
+		l: Math.max(34, Math.ceil(Math.max(...yTicks.map((t) => `${compact(t)}${unit}`.length)) * 6.5) + 12),
+		r: 14,
+		t: 8,
+		b: 20
+	});
+	const plotW = $derived(Math.max(0, width - pad.l - pad.r));
+	const plotH = $derived(H - pad.t - pad.b);
 	const x = (i: number) => pad.l + (labels.length <= 1 ? plotW / 2 : (plotW * i) / (labels.length - 1));
 	const y = (v: number) => pad.t + plotH - (v / top) * plotH;
 	const step = $derived(labelStep(labels.length, plotW));
@@ -164,13 +172,14 @@
 		box-shadow: 0 0 0 2px var(--ess-focus-ring);
 		border-radius: 8px;
 	}
+	/* shadcn: horizontal hairlines only, 12px muted ticks */
 	.grid {
-		stroke: var(--ess-border-subtle);
+		stroke: color-mix(in srgb, var(--ess-border) 70%, transparent);
 		stroke-width: 1;
 	}
 	.tick {
 		fill: var(--ess-text-muted);
-		font-size: 10px;
+		font-size: 11.5px;
 		font-variant-numeric: tabular-nums;
 	}
 	.line {

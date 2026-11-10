@@ -1,6 +1,8 @@
 <script lang="ts">
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import FileCheck from '@lucide/svelte/icons/file-check';
+	import Check from '@lucide/svelte/icons/check';
+	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import PostDetail from './PostDetail.svelte';
 	import { isUrgentNow, summaryOf, type FeedPost } from '$lib/announcements';
 
@@ -51,16 +53,16 @@
 	{/if}
 	<div class="act">
 		{#if urgent}
-			<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={busy || preview} onclick={ondismiss}>Got it</button>
+			<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={busy || preview} onclick={ondismiss}><Check size={14} /> Got it</button>
 		{:else if !open && !selected}
-			<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={preview} onclick={ontoggle}>Read and confirm</button>
+			<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={preview} onclick={ontoggle}><FileCheck size={14} /> Read and confirm</button>
 		{/if}
 	</div>
 	{#if open && !urgent}
 		<div class="more">
 			<PostDetail {post} {now} {preview} />
 			<div class="confirm">
-				<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy || preview} onclick={onconfirm}>I've read this</button>
+				<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy || preview} onclick={onconfirm}><CircleCheck size={14} /> I've read this</button>
 				<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={ontoggle}>Later</button>
 			</div>
 		</div>

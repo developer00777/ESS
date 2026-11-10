@@ -13,6 +13,10 @@
 	import Plane from '@lucide/svelte/icons/plane';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+	import TreePalm from '@lucide/svelte/icons/tree-palm';
+	import ChartPie from '@lucide/svelte/icons/chart-pie';
+	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
+	import PartyPopper from '@lucide/svelte/icons/party-popper';
 	import type { MyBalance, MyLeave } from '$lib/leave-planning';
 
 	interface Props {
@@ -71,7 +75,7 @@
 	<!-- ---------- balance ---------- -->
 	<section class="blk hero" aria-labelledby="ml-bal">
 		<div class="blk-head">
-			<h3 id="ml-bal" class="eyebrow">My leave · {me.year}</h3>
+			<h3 id="ml-bal" class="eyebrow"><TreePalm size={11} /> My leave · {me.year}</h3>
 			<button type="button" class="plan-btn" onclick={planNext}><CalendarPlus size={13} /> Plan</button>
 		</div>
 		{#if me.balances.length}
@@ -96,7 +100,7 @@
 	<!-- ---------- by type ---------- -->
 	{#if me.balances.length || me.monthly.length || me.compOff.available}
 		<section class="blk" aria-labelledby="ml-types">
-			<h3 id="ml-types" class="eyebrow">Free by type</h3>
+			<h3 id="ml-types" class="eyebrow"><ChartPie size={11} /> Free by type</h3>
 			<ul class="lines">
 				{#each me.balances as b (b.typeId)}
 					{@const u = used(b)}
@@ -132,7 +136,7 @@
 
 	<!-- ---------- next time away ---------- -->
 	<section class="blk" aria-labelledby="ml-next">
-		<h3 id="ml-next" class="eyebrow">Next time off</h3>
+		<h3 id="ml-next" class="eyebrow"><CalendarClock size={11} /> Next time off</h3>
 		{#if me.next}
 			<div class="next">
 				<span class="next-ic"><Plane size={15} /></span>
@@ -178,7 +182,7 @@
 	<!-- ---------- holidays ---------- -->
 	<section class="blk" aria-labelledby="ml-hol">
 		<div class="blk-head">
-			<h3 id="ml-hol" class="eyebrow">Holidays</h3>
+			<h3 id="ml-hol" class="eyebrow"><PartyPopper size={11} /> Holidays</h3>
 			{#if me.holidays.totalThisYear}<span class="meta">{me.holidays.leftThisYear} of {me.holidays.totalThisYear} left</span>{/if}
 		</div>
 		{#if me.holidays.upcoming.length}
@@ -551,5 +555,45 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	/* ---------- motion ----------
+	   The blocks rise in turn when the strip opens, and the balance bar
+	   and per-type meters draw in from the left. !important lengths:
+	   contained motion that plays under reduced motion too (see
+	   INTERACTION FEEDBACK in ess-components.css). */
+	@keyframes ml-rise {
+		from {
+			opacity: 0;
+			transform: translateY(6px);
+		}
+	}
+	@keyframes ml-draw {
+		from {
+			clip-path: inset(0 100% 0 0);
+		}
+	}
+	.blk {
+		animation: ml-rise 460ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation-duration: 460ms !important;
+		animation-delay: 200ms;
+	}
+	.blk:nth-child(2) {
+		animation-delay: 260ms;
+	}
+	.blk:nth-child(3) {
+		animation-delay: 320ms;
+	}
+	.blk:nth-child(4) {
+		animation-delay: 380ms;
+	}
+	.blk:nth-child(5) {
+		animation-delay: 440ms;
+	}
+	.stack,
+	.meter {
+		animation: ml-draw 700ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation-duration: 700ms !important;
+		animation-delay: 480ms;
 	}
 </style>

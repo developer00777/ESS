@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import X from '@lucide/svelte/icons/x';
+	import ListPlus from '@lucide/svelte/icons/list-plus';
+	import Plus from '@lucide/svelte/icons/plus';
 	import AssigneeSelect from './AssigneeSelect.svelte';
 	import { api, hub } from '$lib/hub/client.svelte';
 	import { lockPageScroll } from '$lib/scroll-lock';
@@ -71,7 +73,7 @@
 <div class="ess-scrim scrim" role="presentation" onclick={onclose}></div>
 <div class="ess-modal modal" role="dialog" aria-modal="true" aria-labelledby="new-task-title">
 	<div class="ess-modal__head">
-		<h2 id="new-task-title" class="ess-h2">{from ? 'Make a task from this message' : 'New task'}</h2>
+		<h2 id="new-task-title" class="ess-h2"><ListPlus size={16} /> {from ? 'Make a task from this message' : 'New task'}</h2>
 		<button type="button" class="ess-icon-btn" onclick={onclose} aria-label="Close"><X size={16} /></button>
 	</div>
 	<form class="ess-modal__body body" onsubmit={save}>
@@ -100,7 +102,7 @@
 		{#if err}<p class="ess-error">{err}</p>{/if}
 		<div class="actions">
 			<button type="button" class="ess-btn ess-btn--secondary" onclick={onclose}>Cancel</button>
-			<button type="submit" class="ess-btn ess-btn--primary" disabled={busy || !title.trim()}>{from ? 'Create task' : 'Add task'}</button>
+			<button type="submit" class="ess-btn ess-btn--primary" disabled={busy || !title.trim()}><Plus size={16} /> {from ? 'Create task' : 'Add task'}</button>
 		</div>
 	</form>
 </div>

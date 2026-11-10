@@ -6,6 +6,9 @@
 	import User from '@lucide/svelte/icons/user';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import CircleX from '@lucide/svelte/icons/circle-x';
+	import MessageSquare from '@lucide/svelte/icons/message-square';
+	import Users from '@lucide/svelte/icons/users';
+	import Eye from '@lucide/svelte/icons/eye';
 	import { describeDmRule, DEFAULT_CHAT_POLICY, type ChatPolicy } from '$lib/chat/policy';
 
 	let { data, form } = $props();
@@ -56,7 +59,7 @@
 		<div class="ess-stack">
 			<section class="ess-card">
 				<div class="ess-card-head">
-					<h2 class="ess-h2">Who employees can message directly</h2>
+					<h2 class="ess-h2"><MessageSquare size={16} /> Who employees can message directly</h2>
 				</div>
 				<p class="ess-caption">
 					Select who employees are allowed to start one-to-one conversations with. Team Leads, HR, Super Admins and any named role with <strong>Message anyone</strong> can always message anyone.
@@ -82,7 +85,7 @@
 
 			<section class="ess-card">
 				<div class="ess-card-head">
-					<h2 class="ess-h2">Who can start group chats</h2>
+					<h2 class="ess-h2"><Users size={16} /> Who can start group chats</h2>
 				</div>
 				<p class="ess-caption">Group chats are small private conversations of up to 20 people. Members still have to be people the starter may message.</p>
 				<div class="opts opts--grid">
@@ -109,7 +112,7 @@
 		<aside class="ess-stack">
 			<section class="ess-card ess-fill-card preview">
 				<div class="ess-card-head">
-					<h2 class="ess-h2">Effective access preview</h2>
+					<h2 class="ess-h2"><Eye size={16} /> Effective access preview</h2>
 				</div>
 				<p class="ess-caption">Based on the current settings, before you save.</p>
 				<div class="ess-scroll preview-scroll">

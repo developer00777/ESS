@@ -6,7 +6,16 @@
 	import Plus from '@lucide/svelte/icons/plus';
 	import Info from '@lucide/svelte/icons/info';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+	import Wrench from '@lucide/svelte/icons/wrench';
+	import Users from '@lucide/svelte/icons/users';
+	import Unlink from '@lucide/svelte/icons/unlink';
+	import Link from '@lucide/svelte/icons/link';
+	import Save from '@lucide/svelte/icons/save';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 
 	let { data, form } = $props();
 	let busy = $state(false);
@@ -18,6 +27,11 @@
 	const when = (iso?: string) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }) : 'Never');
 	const varsSet = $derived(Object.values(data.vars).filter(Boolean).length);
 	const varsTotal = $derived(Object.keys(data.vars).length);
+
+	const hostsView = new TableView(() => data.links, {
+		employee: (l) => l.fullName,
+		zoom: (l) => l.zoomKey
+	});
 
 	/** Masks an email or id for the connection card: never the whole thing. */
 	function mask(s: string) {
@@ -71,7 +85,7 @@
 				</div>
 				<div class="conn-actions">
 					<form method="POST" action="?/check" use:enhance={() => { busy = true; return async ({ update }) => { await update(); busy = false; }; }}>
-						<button class="ess-btn ess-btn--outline" disabled={busy || !data.configured}>{busy ? 'Checking…' : 'Check Zoom now'}</button>
+						<button class="ess-btn ess-btn--outline" disabled={busy || !data.configured}><RefreshCw size={16} /> {busy ? 'Checking…' : 'Check Zoom now'}</button>
 					</form>
 					<button type="button" class="ess-btn ess-btn--secondary" onclick={() => (setupOpen = !setupOpen)} aria-expanded={setupOpen}>
 						Manage connection <ChevronDown size={15} class={setupOpen ? 'flip' : ''} />
@@ -106,7 +120,7 @@
 
 			{#if setupOpen}
 				<div class="setup">
-					<h3 class="ess-h3">Setting up the Zoom app</h3>
+					<h3 class="ess-h3"><Wrench size={16} /> Setting up the Zoom app</h3>
 					<dl class="ess-kv vars">
 						{#each Object.entries(data.vars) as [k, set] (k)}
 							<dt><code>{k}</code></dt>
@@ -134,7 +148,7 @@
 		<section class="ess-card ess-fill-card hosts-card">
 			<div class="ess-card-head">
 				<div>
-					<h2 class="ess-h2">Host mapping</h2>
+					<h2 class="ess-h2"><Users size={16} /> Host mapping</h2>
 					<p class="ess-caption">Link Zoom accounts to people so meetings are hosted and attributed correctly.</p>
 				</div>
 				<button type="button" class="ess-btn ess-btn--primary" onclick={() => { mapping = { userId: '', zoomKey: '' }; keyInput?.closest('section')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }}>
@@ -147,9 +161,9 @@
 			{#if data.links.length}
 				<div class="ess-table-shell table-gap ess-scroll">
 					<table class="ess-table">
-						<thead><tr><th>Employee</th><th>Zoom account</th><th>Status</th><th></th></tr></thead>
+						<thead><tr><th aria-sort={hostsView.ariaSort('employee')}><SortButton view={hostsView} key="employee">Employee</SortButton></th><th aria-sort={hostsView.ariaSort('zoom')}><SortButton view={hostsView} key="zoom">Zoom account</SortButton></th><th>Status</th><th></th></tr></thead>
 						<tbody>
-							{#each data.links as l (l.id)}
+							{#each hostsView.rows as l (l.id)}
 								<tr>
 									<td>
 										<span class="who">
@@ -171,6 +185,7 @@
 						</tbody>
 					</table>
 				</div>
+				<TablePager view={hostsView} noun="hosts" />
 			{:else}
 				<div class="ess-empty empty">
 					<span class="ess-empty__icon"><Video size={20} /></span>
@@ -184,7 +199,7 @@
 		<section class="ess-card ess-fill-card unmatched-card">
 			<div class="ess-card-head">
 				<div>
-					<h2 class="ess-h2">Unmatched meeting names</h2>
+					<h2 class="ess-h2"><Unlink size={16} /> Unmatched meeting names</h2>
 					<p class="ess-caption">Attendees match by work email. Personal accounts, phones and dial-ins show a name only; link them once and future meetings match.</p>
 				</div>
 			</div>
@@ -223,7 +238,7 @@
 		<!-- ---------- map a host ---------- -->
 		<section class="ess-card map-card">
 			<div class="ess-card-head">
-				<h2 class="ess-h2">Match participant names</h2>
+				<h2 class="ess-h2"><Link size={16} /> Match participant names</h2>
 			</div>
 			<p class="ess-caption">Link a Zoom name or email to a person.</p>
 			<form method="POST" action="?/link" use:enhance={() => async ({ result, update }) => { await update(); if (result.type === 'success') mapping = { userId: '', zoomKey: '' }; }} class="map-form">
@@ -240,7 +255,7 @@
 					<span class="ess-help">The Zoom user ID is on the user's page in the Zoom admin portal (User Management › Users). It has to be a licensed user in the company account.</span>
 				</div>
 				<div class="map-actions">
-					<button class="ess-btn ess-btn--primary">Save mapping</button>
+					<button class="ess-btn ess-btn--primary"><Save size={16} /> Save mapping</button>
 					<button type="button" class="ess-btn ess-btn--secondary" onclick={() => (mapping = { userId: '', zoomKey: '' })}>Cancel</button>
 				</div>
 			</form>
@@ -248,7 +263,7 @@
 
 		<section class="ess-card about">
 			<div class="about-body">
-			<h3 class="ess-h3">About this integration</h3>
+			<h3 class="ess-h3"><Info size={16} /> About this integration</h3>
 			<p class="ess-caption">One Server-to-Server OAuth app on the company Zoom account. Meetings scheduled in Champ Hub are created in Zoom, and when a call ends its AI summary comes back as minutes to review.</p>
 			<ul class="about-list">
 				<li><span class="ess-tile ess-tile--sm"><Video size={15} /></span> Schedule and join calls from Champ Hub</li>

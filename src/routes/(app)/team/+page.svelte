@@ -17,11 +17,21 @@
 	import { invalidateAll, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import KeyRound from '@lucide/svelte/icons/key-round';
 	import CalendarDays from '@lucide/svelte/icons/calendar-days';
 	import Settings from '@lucide/svelte/icons/settings';
+	import Save from '@lucide/svelte/icons/save';
+	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+	import Copy from '@lucide/svelte/icons/copy';
+	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+	import ListChecks from '@lucide/svelte/icons/list-checks';
+	import LayoutTemplate from '@lucide/svelte/icons/layout-template';
+	import Info from '@lucide/svelte/icons/info';
 	import PersonSettingsPanel from '$lib/components/PersonSettingsPanel.svelte';
 	import LoginEmailQueue from '$lib/components/LoginEmailQueue.svelte';
 	import { WEEKDAY_LABELS, DEFAULT_WEEKDAYS_OFF, weekdaysOffOn } from '$lib/week-off';
@@ -462,6 +472,17 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 		await invalidateAll();
 	}
 
+	/* The directory table: sortable by each column, a page at a time. */
+	const rosterView = new TableView(() => filteredRoster, {
+		name: (p) => p.fullName,
+		reportsTo: (p) => p.reportsToName ?? (p.reportsToChief ? 'Chief' : ''),
+		hr: (p) => p.hrName ?? '',
+		shift: (p) => p.shiftGroupName ?? '',
+		weekOff: (p) => p.weekOffName ?? 'Sat + Sun',
+		today: (p) => statusLabel[p.status],
+		leave: (p) => p.leaveLeft
+	});
+
 	const filteredRoster = $derived(
 		data.roster.filter((person) => {
 			const q = search.trim().toLowerCase();
@@ -542,6 +563,13 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 			})
 	);
 	const pwThisWeek = $derived(data.passwordActivity.filter((e) => Date.now() - new Date(e.createdAt).getTime() < 7 * 86_400_000).length);
+	/* The password activity table: sortable by each column, a page at a time. */
+	const pwView = new TableView(() => pwRows, {
+		employee: (e) => e.targetName ?? e.targetEmail ?? '',
+		action: (e) => e.label,
+		actor: (e) => e.actorName ?? 'Unknown',
+		date: (e) => new Date(e.createdAt)
+	});
 	const pwEvent = $derived(pwSelected === null ? null : (data.passwordActivity[pwSelected] ?? null));
 	const whenLong = (d: string | Date) => new Date(d).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 </script>
@@ -664,6 +692,8 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 				roles={ROLES}
 				canEditRole={data.isSuperAdmin}
 				canPickChief={data.canPickChief}
+				canSetEmployeeCode={data.user.capabilities?.includes('people.employee_code') ?? false}
+				canSetPinkLeave={data.user.capabilities?.includes('people.edit_settings') ?? false}
 				currentUserId={data.currentUserId}
 				onnotice={(m) => (settingsNotice = m)}
 				onclose={() => (editingPerson = null)}
@@ -679,7 +709,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 		<section class="ess-card directory ess-fill-card">
 			<div class="ess-card-head">
 				<div>
-					<h2 class="ess-h2">{embedded ? 'Employee directory' : 'People'}</h2>
+					<h2 class="ess-h2"><Users size={16} /> {embedded ? 'Employee directory' : 'People'}</h2>
 					<p class="ess-caption">{filteredRoster.length} of {data.teamSize} {data.teamSize === 1 ? 'person' : 'people'}</p>
 				</div>
 				{#if data.canCreateLogin && embedded}
@@ -694,18 +724,18 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 				<table class="ess-table roster">
 					<thead>
 						<tr>
-							<th>Name</th>
-							<th>Reports to</th>
-							<th>Concerned HR</th>
-							<th>Shift</th>
-							<th>Week off</th>
-							<th>Today</th>
-							<th class="ess-num">Leave left</th>
+							<th aria-sort={rosterView.ariaSort('name')}><SortButton view={rosterView} key="name">Name</SortButton></th>
+							<th aria-sort={rosterView.ariaSort('reportsTo')}><SortButton view={rosterView} key="reportsTo">Reports to</SortButton></th>
+							<th aria-sort={rosterView.ariaSort('hr')}><SortButton view={rosterView} key="hr">Concerned HR</SortButton></th>
+							<th aria-sort={rosterView.ariaSort('shift')}><SortButton view={rosterView} key="shift">Shift</SortButton></th>
+							<th aria-sort={rosterView.ariaSort('weekOff')}><SortButton view={rosterView} key="weekOff">Week off</SortButton></th>
+							<th aria-sort={rosterView.ariaSort('today')}><SortButton view={rosterView} key="today">Today</SortButton></th>
+							<th class="ess-num" aria-sort={rosterView.ariaSort('leave')}><SortButton view={rosterView} key="leave">Leave left</SortButton></th>
 							<th><span class="ess-sr-only">Actions</span></th>
 						</tr>
 					</thead>
 					<tbody>
-						{#each filteredRoster as person (person.id)}
+						{#each rosterView.rows as person (person.id)}
 							<!-- The whole row selects the person for the panel on the right.
 							     Keyboard users get the same via the View button. -->
 							<tr class="person-row" class:is-selected={selectedId === person.id} onclick={() => (selectedId = person.id)}>
@@ -800,6 +830,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 					</tbody>
 				</table>
 			</div>
+			<TablePager view={rosterView} noun="people" />
 		</section>
 
 		<aside class="ess-stack side">
@@ -812,7 +843,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 				<form method="POST" action="?/createEmployee" use:enhance class="ess-card create-panel">
 					<div class="ess-card-head">
 						<div>
-							<h2 class="ess-h2">Create login</h2>
+							<h2 class="ess-h2"><UserPlus size={16} /> Create login</h2>
 							<p class="ess-caption">Create an employee account; their login email waits for approval.</p>
 						</div>
 						<button type="button" class="ess-icon-btn" onclick={() => (showCreateForm = false)} aria-label="Close"><X size={18} /></button>
@@ -891,13 +922,13 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 					{#if data.shiftGroups.length === 0}
 						<p class="ess-error">Publish a holiday calendar for at least one shift group before creating logins.</p>
 					{/if}
-					<button type="submit" class="ess-btn ess-btn--primary wide" disabled={data.shiftGroups.length === 0}>Create login</button>
+					<button type="submit" class="ess-btn ess-btn--primary wide" disabled={data.shiftGroups.length === 0}><UserPlus size={16} /> Create login</button>
 				</form>
 			{:else if resetFor}
 				<div class="ess-card">
 					<div class="ess-card-head">
 						<div>
-							<h2 class="ess-h2">Reset password</h2>
+							<h2 class="ess-h2"><KeyRound size={16} /> Reset password</h2>
 							<p class="ess-caption">{resetFor.name}</p>
 						</div>
 						<button type="button" class="ess-icon-btn" onclick={() => (resetFor = null)} aria-label="Close"><X size={18} /></button>
@@ -911,8 +942,9 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 					</label>
 					{#if resetError}<p class="ess-error">{resetError}</p>{/if}
 					<div class="btn-row">
-						<button type="button" class="ess-btn ess-btn--secondary" onclick={() => (resetValue = generatePassword())}>Regenerate</button>
+						<button type="button" class="ess-btn ess-btn--secondary" onclick={() => (resetValue = generatePassword())}><RefreshCw size={16} /> Regenerate</button>
 						<button type="button" class="ess-btn ess-btn--primary" onclick={submitReset} disabled={resettingId !== null}>
+							<KeyRound size={16} />
 							{resettingId ? 'Resetting…' : 'Reset password'}
 						</button>
 					</div>
@@ -990,6 +1022,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 								Temporary password <code class="code">{selected.temporaryPassword}</code>
 							</div>
 							<button type="button" class="ess-btn ess-btn--sm ess-btn--ghost" onclick={() => copyTemporaryPassword(selected!.id, selected!.temporaryPassword!)}>
+								<Copy size={14} />
 								{copiedPasswordFor === selected.id ? 'Copied' : 'Copy'}
 							</button>
 						</div>
@@ -1000,6 +1033,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 							<button type="button" class="ess-btn ess-btn--secondary" onclick={() => openReset(selected!)}><KeyRound size={15} /> Reset password</button>
 							{#if confirmingDelete === selected.id}
 								<button type="button" class="ess-btn ess-btn--danger" onclick={() => deleteEmployee(selected!.id)} disabled={deletingId === selected.id}>
+									<Trash2 size={16} />
 									{deletingId === selected.id ? 'Deleting…' : 'Confirm delete'}
 								</button>
 								<button type="button" class="ess-btn ess-btn--ghost" onclick={() => (confirmingDelete = null)}>Cancel</button>
@@ -1031,7 +1065,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 			<section class="ess-card ess-fill-card grid-card">
 				<div class="ess-card-head">
 					<div>
-						<h2 class="ess-h2">Team weekly roster</h2>
+						<h2 class="ess-h2"><CalendarDays size={16} /> Team weekly roster</h2>
 						<p class="ess-caption">{gridRows.length} {gridRows.length === 1 ? 'person' : 'people'}<span class="ess-dot-sep"></span>{weekRange}</p>
 					</div>
 					<select class="ess-select grid-filter" bind:value={gridFilter} aria-label="Show people on">
@@ -1084,7 +1118,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 			<section class="ess-card ess-fill-card templates-card">
 				<div class="ess-card-head">
 					<div>
-						<h2 class="ess-h2">Schedule templates</h2>
+						<h2 class="ess-h2"><LayoutTemplate size={16} /> Schedule templates</h2>
 						<p class="ess-caption">
 							{#if data.canAuthorRosters}
 								Save a week-off pattern once, then publish it so team managers can apply it from a person's settings.
@@ -1153,7 +1187,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 				<div class="ess-card editor">
 					<div class="ess-card-head">
 						<div>
-							<h2 class="ess-h2">{editingRosterId ? 'Edit roster' : 'New roster'}</h2>
+							<h2 class="ess-h2"><CalendarDays size={16} /> {editingRosterId ? 'Edit roster' : 'New roster'}</h2>
 							<p class="ess-caption">Define the week-off schedule, then assign it from each person's settings.</p>
 						</div>
 					</div>
@@ -1233,6 +1267,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 					<div class="btn-row end">
 						<button type="button" class="ess-btn ess-btn--secondary" onclick={() => { resetRosterForm(); showRosterEditor = false; }}>Cancel</button>
 						<button type="button" class="ess-btn ess-btn--primary" onclick={saveRoster} disabled={rosterSaving}>
+							<Save size={16} />
 							{rosterSaving ? 'Saving…' : editingRosterId ? 'Save changes' : 'Save roster'}
 						</button>
 					</div>
@@ -1282,7 +1317,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 			<section class="ess-card">
 				<div class="ess-card-head">
 					<div>
-						<h2 class="ess-h2">Import preview</h2>
+						<h2 class="ess-h2"><FileSpreadsheet size={16} /> Import preview</h2>
 						<p class="ess-caption">Upload any HR spreadsheet — the sheet and columns are detected automatically. Each new login gets its own temporary password and must be changed on first sign-in.</p>
 					</div>
 					{#if showBulkImport}
@@ -1332,6 +1367,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 							<input class="ess-input" type="file" name="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onchange={onBulkFileChange} required />
 						</label>
 						<button type="submit" class="ess-btn ess-btn--primary" disabled={uploadingBulk}>
+							<UploadCloud size={16} />
 							{uploadingBulk ? 'Parsing…' : 'Upload & review'}
 						</button>
 					</form>
@@ -1559,7 +1595,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 
 		<aside class="ess-stack side">
 			<div class="ess-card">
-				<h2 class="ess-h2 card-title">Import summary</h2>
+				<h2 class="ess-h2 card-title"><ListChecks size={16} /> Import summary</h2>
 				{#if reviewImport}
 					{@const locked = reviewImport.status === 'applied'}
 					<dl class="summary">
@@ -1653,7 +1689,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 
 			{#if data.canApproveLogins}
 				<div class="ess-card">
-					<h2 class="ess-h2 card-title">Login email queue</h2>
+					<h2 class="ess-h2 card-title"><Mail size={16} /> Login email queue</h2>
 					<div class="queue-hint">
 						<span class="ess-tile"><Mail size={20} strokeWidth={1.75} /></span>
 						<div>
@@ -1724,7 +1760,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 			</select>
 		</label>
 		{#if pwSearch || pwAction}
-			<button type="button" class="ess-btn ess-btn--ghost" onclick={() => { pwSearch = ''; pwAction = ''; }}>Reset filters</button>
+			<button type="button" class="ess-btn ess-btn--ghost" onclick={() => { pwSearch = ''; pwAction = ''; }}><RotateCcw size={16} /> Reset filters</button>
 		{/if}
 	</div>
 
@@ -1732,7 +1768,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 		<section class="ess-card">
 			<div class="ess-card-head">
 				<div>
-					<h2 class="ess-h2">Password activity</h2>
+					<h2 class="ess-h2"><KeyRound size={16} /> Password activity</h2>
 					<p class="ess-caption">
 						Who changed or reset whose password, and when. A password someone has chosen for themselves is never stored or shown — it is one-way hashed and cannot be recovered by anyone, including a Super Admin.
 					</p>
@@ -1743,14 +1779,14 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 				<table class="ess-table">
 					<thead>
 						<tr>
-							<th>Employee</th>
-							<th>Action</th>
-							<th>Performed by</th>
-							<th>Date</th>
+							<th aria-sort={pwView.ariaSort('employee')}><SortButton view={pwView} key="employee">Employee</SortButton></th>
+							<th aria-sort={pwView.ariaSort('action')}><SortButton view={pwView} key="action">Action</SortButton></th>
+							<th aria-sort={pwView.ariaSort('actor')}><SortButton view={pwView} key="actor">Performed by</SortButton></th>
+							<th aria-sort={pwView.ariaSort('date')}><SortButton view={pwView} key="date">Date</SortButton></th>
 						</tr>
 					</thead>
 					<tbody>
-						{#each pwRows as entry (entry.i)}
+						{#each pwView.rows as entry (entry.i)}
 							<tr class="person-row" class:is-selected={pwSelected === entry.i} onclick={() => (pwSelected = entry.i)}>
 								<td>
 									<strong>{entry.targetName ?? entry.targetEmail ?? '—'}</strong>
@@ -1766,13 +1802,14 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 					</tbody>
 				</table>
 			</div>
+			<TablePager view={pwView} noun="events" />
 		</section>
 
 		<aside class="ess-stack side">
 			{#if pwEvent}
 				<div class="ess-card">
 					<div class="ess-card-head">
-						<h2 class="ess-h2">Event details</h2>
+						<h2 class="ess-h2"><Info size={16} /> Event details</h2>
 						<button type="button" class="ess-icon-btn" onclick={() => (pwSelected = null)} aria-label="Close"><X size={18} /></button>
 					</div>
 					<div class="event-who">

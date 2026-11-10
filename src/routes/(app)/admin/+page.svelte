@@ -14,6 +14,9 @@
 	import MessagesSquare from '@lucide/svelte/icons/messages-square';
 	import ShieldCheck from '@lucide/svelte/icons/shield-check';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
+	import Activity from '@lucide/svelte/icons/activity';
+	import ListTodo from '@lucide/svelte/icons/list-todo';
 	import type { AdminIssue } from '$lib/admin-issues';
 
 	let { data } = $props();
@@ -83,6 +86,22 @@
 		]
 	);
 
+	/* "Open issues" points at the Needs attention card on this same page,
+	   which is usually already in view: so the click scrolls it in if it
+	   isn't, then briefly lights it up and moves focus to it, rather than
+	   seeming to do nothing. */
+	let flash = $state(false);
+	function showIssues(e: MouseEvent) {
+		const card = document.getElementById('attention');
+		if (!card) return;
+		e.preventDefault();
+		card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+		card.focus({ preventScroll: true });
+		flash = false;
+		requestAnimationFrame(() => (flash = true));
+		setTimeout(() => (flash = false), 1400);
+	}
+
 	const fmtDay = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
 	const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' });
 	const toneOf = (action: string) => (action.includes('delete') || action.includes('cleanup') || action.includes('failed') ? 'bad' : action.includes('create') || action.includes('publish') || action.includes('apply') ? 'ok' : 'accent');
@@ -96,10 +115,10 @@
 	<div class="ess-stack main-col">
 		<section class="ess-card" aria-labelledby="ops-title">
 			<div class="ess-card-head">
-				<h2 class="ess-h2" id="ops-title">Operations overview</h2>
+				<h2 class="ess-h2" id="ops-title"><LayoutDashboard size={16} /> Operations overview</h2>
 			</div>
 			<div class="figures">
-				<a class="figure" href="#attention">
+				<a class="figure" href="#attention" onclick={showIssues}>
 					<span class="ess-tile" class:ess-tile--bad={openIssues > 0} class:ess-tile--ok={openIssues === 0}>
 						{#if openIssues > 0}<TriangleAlert size={18} strokeWidth={1.75} />{:else}<CircleCheck size={18} strokeWidth={1.75} />{/if}
 					</span>
@@ -119,9 +138,9 @@
 			</div>
 		</section>
 
-		<section class="ess-card ess-fill-card grow-card" aria-labelledby="attention-title" id="attention">
+		<section class="ess-card ess-fill-card grow-card" class:flash aria-labelledby="attention-title" id="attention" tabindex="-1">
 			<div class="ess-card-head">
-				<h2 class="ess-h2" id="attention-title">Needs attention</h2>
+				<h2 class="ess-h2" id="attention-title"><TriangleAlert size={16} /> Needs attention</h2>
 				{#if hiddenCount > 0}
 					<button type="button" class="ess-link as-btn" onclick={() => (showHidden = !showHidden)}>
 						{showHidden ? 'Hide dismissed' : `Show ${hiddenCount} dismissed`}
@@ -171,7 +190,7 @@
 		{#if data.recentActivity.length > 0}
 			<section class="ess-card ess-fill-card grow-card" aria-labelledby="activity-title">
 				<div class="ess-card-head">
-					<h2 class="ess-h2" id="activity-title">Recent admin activity</h2>
+					<h2 class="ess-h2" id="activity-title"><Activity size={16} /> Recent admin activity</h2>
 					{#if can('people.password_activity')}
 						<a class="ess-link" href="/admin/people?view=passwords">Password activity <ChevronRight size={14} /></a>
 					{/if}
@@ -199,7 +218,7 @@
 	<aside class="ess-stack ess-stack--tight">
 		<section class="ess-card ess-fill-card tasks-card" aria-labelledby="tasks-title">
 			<div class="ess-card-head">
-				<h2 class="ess-h2" id="tasks-title">Start a task</h2>
+				<h2 class="ess-h2" id="tasks-title"><ListTodo size={16} /> Start a task</h2>
 			</div>
 			<div class="task-list ess-scroll">
 				{#each tasks as task (task.href)}
@@ -263,6 +282,34 @@
 		margin-left: auto;
 		color: var(--ess-text-muted);
 		flex: none;
+	}
+
+	/* the card "Open issues" leads to: a soft ring in the accent, fading */
+	#attention:focus {
+		outline: none;
+	}
+	#attention.flash {
+		animation: issues-flash 1.4s ease-out;
+		animation-duration: 1.4s !important;
+	}
+	@keyframes issues-flash {
+		0%,
+		35% {
+			box-shadow:
+				0 0 0 3px var(--ess-primary-ring),
+				var(--ess-elev-2);
+		}
+		100% {
+			box-shadow: var(--ess-elev-1);
+		}
+	}
+	.figure {
+		transition:
+			border-color var(--ess-t-fast),
+			background-color var(--ess-t-fast);
+	}
+	.figure:hover {
+		background: var(--ess-surface-hover);
 	}
 
 	.as-btn {

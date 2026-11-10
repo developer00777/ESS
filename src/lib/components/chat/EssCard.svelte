@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Check from '@lucide/svelte/icons/check';
+	import X from '@lucide/svelte/icons/x';
+	import EyeOff from '@lucide/svelte/icons/eye-off';
 	import type { ChatMessageView } from '$lib/server/chat/messages';
 
 	/**
@@ -83,11 +86,11 @@
 				<div class="btns">
 					{#if !rejecting}
 						<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy} onclick={() => decide('approve')}>
-							{r.canAct === 'hr' ? 'Approve' : 'Approve'}
+							<Check size={14} /> {r.canAct === 'hr' ? 'Approve' : 'Approve'}
 						</button>
 					{/if}
 					<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={busy || (rejecting && !note.trim())} onclick={() => decide('reject')}>
-						{rejecting ? 'Send rejection' : 'Reject'}
+						<X size={14} /> {rejecting ? 'Send rejection' : 'Reject'}
 					</button>
 					{#if rejecting}<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (rejecting = false)}>Cancel</button>{/if}
 					<a class="ess-btn ess-btn--ghost ess-btn--sm" href={r.href}>Open in {card.type === 'leave' ? 'Leave' : 'Attendance'}</a>
@@ -122,7 +125,7 @@
 			<span class="line">Reason given: "{report.reason}"</span>
 			{#if report.status === 'open'}
 				<div class="btns">
-					<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy} onclick={() => moderate('hide')}>Hide for everyone</button>
+					<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy} onclick={() => moderate('hide')}><EyeOff size={14} /> Hide for everyone</button>
 					<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" disabled={busy} onclick={() => moderate('dismiss')}>Keep it</button>
 				</div>
 			{/if}

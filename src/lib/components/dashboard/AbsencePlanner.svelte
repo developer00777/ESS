@@ -16,7 +16,11 @@
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import Search from '@lucide/svelte/icons/search';
 	import X from '@lucide/svelte/icons/x';
-	import PanelBottom from '@lucide/svelte/icons/panel-bottom';
+	import CalendarRange from '@lucide/svelte/icons/calendar-range';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import CalendarDays from '@lucide/svelte/icons/calendar-days';
+	import Hand from '@lucide/svelte/icons/hand';
+	import FunnelX from '@lucide/svelte/icons/funnel-x';
 	import { goto, invalidateAll } from '$app/navigation';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import SideSheet from '$lib/components/hub/SideSheet.svelte';
@@ -111,6 +115,14 @@
 		planner.leaves.filter((l) => (status === 'all' || l.status === status) && !hiddenTypes.includes(l.typeName))
 	);
 
+	// How many requests each status choice holds (with the type keys applied),
+	// shown on the buttons so a choice always says what it will show.
+	const statusCounts = $derived.by(() => {
+		const shown = planner.leaves.filter((l) => !hiddenTypes.includes(l.typeName));
+		const approved = shown.filter((l) => l.status === 'approved').length;
+		return { all: shown.length, approved, pending: shown.length - approved };
+	});
+
 	const leavesByUser = $derived.by(() => {
 		const map = new Map<string, Leave[]>();
 		for (const l of visibleLeaves) {
@@ -202,6 +214,14 @@
 		}
 		return { working: planner.month.days - offs - hols.length, offs, hols, leave };
 	});
+
+	/* The line under the title, as one string: shown on a single line (cut
+	   with an ellipsis when narrow) and in full on hover. */
+	const summary = $derived(
+		myMonth
+			? `${myMonth.working} working days · ${myMonth.offs} week offs · ${myMonth.leave} on leave · ${myMonth.hols.length} ${myMonth.hols.length === 1 ? 'holiday' : 'holidays'}`
+			: [todayIndex ? `${awayToday} away today` : '', `${pendingCount} pending`, planner.people.length > 1 ? `${planner.people.length} people` : ''].filter(Boolean).join(' · ')
+	);
 
 	/** Everyone else's leave on the planner, for "also away" in the plan sheet. */
 	const othersAway = $derived(
@@ -300,17 +320,8 @@
 <section class="planner ess-card" aria-labelledby="planner-h">
 	<header class="head">
 		<div class="title">
-			<h2 id="planner-h">Absence planner</h2>
-			<p>
-				{#if myMonth}
-					{myMonth.working} working days · {myMonth.offs} week offs · {myMonth.leave} on leave · {myMonth.hols.length}
-					{myMonth.hols.length === 1 ? 'holiday' : 'holidays'}
-				{:else}
-					{#if todayIndex}{awayToday} away today ·{/if}
-					{pendingCount} pending
-					{#if planner.people.length > 1}· {planner.people.length} people{/if}
-				{/if}
-			</p>
+			<h2 id="planner-h"><CalendarDays size={16} aria-hidden="true" />Absence planner</h2>
+			<p title={summary}>{summary}</p>
 		</div>
 
 		<div class="month" role="group" aria-label="Month">
@@ -332,15 +343,29 @@
 			{/if}
 			<div class="seg" role="group" aria-label="Status">
 				{#each [['all', 'All'], ['approved', 'Approved'], ['pending', 'Pending']] as [v, label] (v)}
-					<button type="button" aria-pressed={status === v} onclick={() => (status = v as typeof status)}>{label}</button>
+					<button type="button" aria-pressed={status === v} onclick={() => (status = v as typeof status)}
+						>{label}<span class="n">{statusCounts[v as keyof typeof statusCounts]}</span></button
+					>
 				{/each}
 			</div>
 			{#if planner.people.length > 1}
 				<button type="button" class="chip" aria-pressed={awayOnly} onclick={() => (awayOnly = !awayOnly)}>Away only</button>
 			{/if}
 			{#if me}
-				<button type="button" class="chip with-ic" aria-pressed={showRail} onclick={toggleRail} title={showRail ? 'Hide my leave' : 'Show my leave'}>
-					<PanelBottom size={14} /> My leave
+				<!-- Opens or closes the strip under the calendar: your leave balance,
+				     next time off, long weekends and holidays. One label and a fixed
+				     width; only the chevron turns with the state. -->
+				<button
+					type="button"
+					class="chip with-ic overview-btn"
+					aria-expanded={showRail}
+					aria-pressed={showRail}
+					onclick={toggleRail}
+					title={showRail ? 'Close your leave overview' : 'Open your leave overview: balance, next time off, long weekends and holidays'}
+				>
+					<CalendarRange size={15} strokeWidth={2} />
+					<span>Leave Overview</span>
+					<span class="chev" class:open={showRail} aria-hidden="true"><ChevronDown size={15} strokeWidth={3} /></span>
 				</button>
 			{/if}
 		</div>
@@ -352,7 +377,7 @@
 				<div class="row hrow">
 					<div class="who who-h">Employee</div>
 					{#each days as d (d.key)}
-						<div class="dh" class:weekend={d.weekend} class:today={d.n === todayIndex} aria-hidden="true">
+						<div class="dh" class:weekend={d.weekend} class:today={d.n === todayIndex} style="--i: {d.n - 1}" aria-hidden="true">
 							<span class="dow">{d.dow}</span>
 							<span class="dn">{d.n}</span>
 						</div>
@@ -380,7 +405,7 @@
 									class:hol={!!hol}
 									class:today={d.n === todayIndex}
 									class:sel={selLo > 0 && d.n >= selLo && d.n <= selHi}
-									style="grid-column: {i + 2}"
+									style="grid-column: {i + 2}; --i: {i}"
 									title={hol ? `${hol.name} · drag to plan` : p.offDays[i] === '1' ? 'Week off' : 'Drag to plan time off'}
 									aria-label="Plan time off from {fmtDay(d.key)}{hol ? ` (${hol.name})` : ''}"
 									onpointerdown={(e) => pickStart(d.n, e)}
@@ -393,7 +418,7 @@
 									class:off={p.offDays[i] === '1'}
 									class:hol={!!hol}
 									class:today={d.n === todayIndex}
-									style="grid-column: {i + 2}"
+									style="grid-column: {i + 2}; --i: {i}"
 									title={hol ? hol.name : p.offDays[i] === '1' ? 'Week off' : undefined}
 								></span>
 							{/if}
@@ -447,12 +472,25 @@
 				<span class="swatch"></span>{t.name}
 			</button>
 		{:else}
-			<span class="key-note">No leave this month.</span>
+			{#if status === 'all'}<span class="key-note">No leave this month.</span>{/if}
 		{/each}
-		<span class="key static"><span class="swatch pending-sw"></span>Pending</span>
-		<span class="key static"><span class="swatch off-sw"></span>Week off</span>
-		<span class="key static"><span class="swatch hol-sw"></span>Holiday</span>
-		{#if me}<span class="hint">Drag across your row to plan time off</span>{/if}
+		<!-- A status choice that leaves no bars says so here, in the key's
+		     row, rather than looking like nothing happened (and without
+		     adding a line that would squeeze the panels below). "Show all"
+		     only when All would actually show something more. -->
+		{#if status !== 'all' && visibleLeaves.length === 0}
+			<span class="key-note filtered" role="status">
+				<FunnelX size={13} aria-hidden="true" />No {status === 'approved' ? 'approved leave' : 'pending requests'} this month.
+				{#if statusCounts.all > 0}
+					<button type="button" class="show-all" onclick={() => (status = 'all')}>Show all ({statusCounts.all})</button>
+				{/if}
+			</span>
+		{/if}
+		<span class="sep" aria-hidden="true"></span>
+		<span class="key static k-pen"><span class="swatch pending-sw"></span>Pending</span>
+		<span class="key static k-off"><span class="swatch off-sw"></span>Week off</span>
+		<span class="key static k-hol"><span class="swatch hol-sw"></span>Holiday</span>
+		{#if me}<span class="hint"><Hand size={13} aria-hidden="true" />Drag across your row to plan time off</span>{/if}
 	</footer>
 </section>
 
@@ -528,20 +566,113 @@
 		min-height: 0;
 		padding: 10px 16px 8px;
 		gap: 8px;
+		/* the header's layout answers to the card's own width */
+		container: planner / inline-size;
+
+		/* Three day states, each with its own colour and shape, used alike
+		   in the calendar and in the key: week off is slate with diagonal
+		   stripes, a holiday is rose with a star, pending is amber with a
+		   dashed edge and a waiting dot. */
+		--off-a: #dfe3ea;
+		--off-b: #f4f5f8;
+		--off-line: #c9cfda;
+		--off-ink: #4b5566;
+		--hol-bg: #ffe3e7;
+		--hol-line: #f3a2ae;
+		--hol-ink: #b0283f;
+		--pen-bg: #fff4e0;
+		--pen-line: #e9a23b;
+		--pen-ink: #9a5a00;
+	}
+	:global([data-ess-theme='dark']) .planner {
+		--off-a: rgba(255, 255, 255, 0.1);
+		--off-b: rgba(255, 255, 255, 0.03);
+		--off-line: rgba(255, 255, 255, 0.18);
+		--off-ink: #b9c2d0;
+		--hol-bg: rgba(244, 114, 138, 0.18);
+		--hol-line: rgba(244, 114, 138, 0.5);
+		--hol-ink: #ff9aab;
+		--pen-bg: rgba(245, 166, 35, 0.14);
+		--pen-line: #e9a23b;
+		--pen-ink: #f7c170;
 	}
 
 	/* ---------- head ---------- */
+	/* Three slots, so nothing moves when the numbers, the month name or the
+	   "Today" button change: the title column is as wide as its summary
+	   line, which keeps a minimum of 26em in its own font (the full line
+	   with room for a number to gain a digit, at any text size or theme
+	   font) and is never cut; the month switcher sits straight after it,
+	   the controls are pinned right. */
 	.head {
-		display: flex;
+		display: grid;
+		grid-template-columns: max-content auto minmax(0, 1fr);
 		align-items: center;
-		flex-wrap: wrap;
-		gap: 10px 18px;
+		gap: 10px 20px;
+	}
+	.title {
+		min-width: 0;
+	}
+	.title p {
+		min-width: 26em;
+		white-space: nowrap;
+		font-variant-numeric: tabular-nums;
+	}
+	.head .month {
+		position: relative;
+		justify-self: start;
+	}
+	/* "Today" sits just outside the switcher, so the arrows never shift */
+	.head .month .today-btn {
+		position: absolute;
+		left: calc(100% + 6px);
+		top: 50%;
+		transform: translateY(-50%);
+	}
+	.head .controls {
+		justify-self: end;
+		flex-wrap: nowrap;
+	}
+	/* one fixed size whatever its state; the chevron turns when open */
+	.overview-btn {
+		width: 168px;
+		flex: none;
+		justify-content: center;
+		white-space: nowrap;
+		font-weight: 700;
+	}
+	.chev {
+		display: inline-grid;
+		margin-left: 2px;
+		transition: transform var(--ess-t);
+	}
+	.chev.open {
+		transform: rotate(180deg);
+	}
+	/* Narrow cards: the title takes the first line, month and controls the next. */
+	@container planner (max-width: 860px) {
+		.head {
+			grid-template-columns: minmax(0, 1fr) auto;
+		}
+		.head .title {
+			grid-column: 1 / -1;
+		}
+		.head .month {
+			justify-self: start;
+		}
 	}
 	.title h2 {
+		display: flex;
+		align-items: center;
+		gap: 7px;
 		margin: 0;
 		font-size: 17px;
 		font-weight: 650;
 		letter-spacing: -0.015em;
+	}
+	.title h2 :global(svg) {
+		flex: none;
+		color: var(--ess-primary-text);
 	}
 	.title p {
 		margin: 1px 0 0;
@@ -557,8 +688,10 @@
 		border-radius: 999px;
 		background: var(--ess-sunken);
 	}
+	/* wide enough for the longest month ("September 2026") at any text size */
 	.month-label {
-		min-width: 118px;
+		min-width: 9.5em;
+		white-space: nowrap;
 		text-align: center;
 		font-size: 13px;
 		font-weight: 600;
@@ -639,6 +772,35 @@
 		background: var(--ess-surface);
 		color: var(--ess-text);
 		box-shadow: 0 1px 2px rgba(20, 22, 40, 0.08);
+	}
+	/* each choice's count, a small figure after its label */
+	.seg button {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		transition:
+			background-color 160ms ease,
+			color 160ms ease,
+			box-shadow 160ms ease;
+		transition-duration: 160ms !important;
+	}
+	.seg .n {
+		min-width: 16px;
+		padding: 0 4px;
+		border-radius: 999px;
+		background: color-mix(in srgb, currentColor 12%, transparent);
+		font-size: 10.5px;
+		font-weight: 600;
+		line-height: 16px;
+		text-align: center;
+		font-variant-numeric: tabular-nums;
+	}
+	/* a narrow planner (1280 with the sidebar open) keeps the header on one
+	   line: the counts give way; an empty choice still says so under the grid */
+	@container planner (max-width: 1060px) {
+		.seg .n {
+			display: none;
+		}
 	}
 	.chip {
 		height: 32px;
@@ -725,10 +887,11 @@
 		align-items: center;
 		height: 34px;
 		padding: 0;
-		/* Solid: rows scrolling under it are hidden, not seen through. */
+		/* Solid: rows scrolling under it are hidden, not seen through. No
+		   backdrop blur: behind a solid fill it showed nothing, but it put
+		   the row (and everything overlapping it) on its own GPU layer,
+		   which renders text soft on Windows. */
 		background: var(--ess-surface);
-		-webkit-backdrop-filter: blur(16px) saturate(160%);
-		backdrop-filter: blur(16px) saturate(160%);
 	}
 
 	.who {
@@ -749,8 +912,6 @@
 	@media (max-width: 1100px) {
 		.who {
 			background: var(--ess-surface);
-			-webkit-backdrop-filter: blur(16px) saturate(160%);
-			backdrop-filter: blur(16px) saturate(160%);
 		}
 	}
 	.who-h {
@@ -819,18 +980,27 @@
 		border-radius: 7px;
 		background: var(--ess-cell);
 	}
+	/* week off: slate, clear diagonal stripes */
 	.cell.off {
-		background: repeating-linear-gradient(
-			-45deg,
-			var(--ess-cell-off),
-			var(--ess-cell-off) 3px,
-			var(--ess-cell) 3px,
-			var(--ess-cell) 6px
-		);
+		background: repeating-linear-gradient(-45deg, var(--off-a), var(--off-a) 3px, var(--off-b) 3px, var(--off-b) 6px);
+		box-shadow: inset 0 0 0 1px var(--off-line);
 	}
+	/* holiday: rose, with a small star */
 	.cell.hol {
-		background: var(--ess-ev-yellow-bg);
-		box-shadow: inset 0 0 0 1px var(--ess-ev-yellow-line);
+		position: relative;
+		background: var(--hol-bg);
+		box-shadow: inset 0 0 0 1px var(--hol-line);
+	}
+	.cell.hol::after {
+		content: '★';
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center;
+		font-size: 10px;
+		line-height: 1;
+		color: var(--hol-ink);
+		pointer-events: none;
 	}
 	.cell.today {
 		box-shadow: inset 0 0 0 1.5px var(--ess-primary-ring);
@@ -911,10 +1081,23 @@
 		--line: var(--ess-ev-pink-line);
 		--ink: var(--ess-ev-pink);
 	}
+	/* pending: amber, a dashed edge and a waiting dot before the name */
 	.bar.pending {
-		background: var(--ess-surface);
+		background: var(--pen-bg);
+		border-color: var(--pen-line);
 		border-style: dashed;
 		border-width: 1.5px;
+		color: var(--pen-ink);
+	}
+	.bar.pending::before {
+		content: '';
+		flex: none;
+		width: 7px;
+		height: 7px;
+		margin-left: 4px;
+		border-radius: 50%;
+		background: var(--pen-line);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--pen-line) 25%, transparent);
 	}
 	.bar.act {
 		box-shadow: 0 0 0 2px var(--ess-surface), 0 0 0 3.5px var(--ess-warning);
@@ -979,60 +1162,192 @@
 		color: var(--ess-text-muted);
 		font-size: 13px;
 	}
+	.key-note.filtered {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		animation: day-in 300ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation-duration: 300ms !important;
+	}
+	.show-all {
+		padding: 0;
+		border: 0;
+		background: none;
+		color: var(--ess-primary-text);
+		font: inherit;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.show-all:hover {
+		text-decoration: underline;
+	}
 
 	/* ---------- legend ---------- */
+	/* The key as small pill chips. Each swatch is drawn like the calendar
+	   cell it explains; leave types are buttons that show or hide their
+	   bars, filled in their own colour while shown. */
 	.legend {
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
-		gap: 2px 14px;
-		font-size: 11.5px;
+		gap: 6px;
+		font-size: 12px;
 		color: var(--ess-text-secondary);
 	}
 	.key {
 		display: inline-flex;
 		align-items: center;
-		gap: 6px;
-		padding: 2px 0;
-		border: 0;
-		background: none;
+		gap: 7px;
+		height: 26px;
+		padding: 0 11px 0 8px;
+		border: 1px solid var(--ess-border);
+		border-radius: 999px;
+		background: var(--ess-surface);
 		font: inherit;
+		font-weight: 500;
 		color: inherit;
 		cursor: pointer;
+		transition:
+			background var(--ess-t-fast),
+			border-color var(--ess-t-fast),
+			opacity var(--ess-t-fast),
+			transform var(--ess-t-fast);
 	}
-	.key.static {
-		cursor: default;
-		color: var(--ess-text-muted);
+	button.key:hover {
+		border-color: var(--ess-border-strong);
+		transform: translateY(-1px);
+	}
+	/* a shown leave type: the chip takes the type's own colours */
+	button.key[aria-pressed='true'] {
+		background: var(--fill);
+		border-color: var(--line);
+		color: var(--ink);
 	}
 	.key[aria-pressed='false'] {
-		opacity: 0.45;
+		opacity: 0.5;
 		text-decoration: line-through;
 	}
+	/* the three day states, each chip in its own colours */
+	.key.static {
+		cursor: default;
+		font-weight: 600;
+	}
+	.key.k-pen {
+		background: var(--pen-bg);
+		border-color: color-mix(in srgb, var(--pen-line) 55%, transparent);
+		color: var(--pen-ink);
+	}
+	.key.k-off {
+		background: var(--off-b);
+		border-color: var(--off-line);
+		color: var(--off-ink);
+	}
+	.key.k-hol {
+		background: var(--hol-bg);
+		border-color: color-mix(in srgb, var(--hol-line) 70%, transparent);
+		color: var(--hol-ink);
+	}
 	.key-note {
+		display: inline-flex;
+		align-items: center;
+		height: 26px;
+		padding: 0 11px;
+		border: 1px dashed var(--ess-border-strong);
+		border-radius: 999px;
 		color: var(--ess-text-muted);
 	}
+	/* between the leave types and the fixed keys */
+	.sep {
+		width: 1px;
+		height: 16px;
+		margin: 0 4px;
+		background: var(--ess-border);
+	}
 	.hint {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
 		margin-left: auto;
 		font-size: 11.5px;
 		color: var(--ess-text-muted);
 	}
+
+	/* ---------- motion ----------
+	   The days fade in left to right (also on a month change, as the new
+	   month's cells mount), and a leave bar grows from its first day.
+	   !important lengths: contained motion that plays under reduced motion
+	   too (see INTERACTION FEEDBACK in ess-components.css). */
+	@keyframes day-in {
+		from {
+			opacity: 0;
+			transform: translateY(4px);
+		}
+	}
+	@keyframes bar-in {
+		from {
+			opacity: 0;
+			transform: scaleX(0.4);
+		}
+	}
+	.dh,
+	.cell {
+		animation: day-in 360ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation-duration: 360ms !important;
+		animation-delay: calc(120ms + var(--i, 0) * 11ms);
+	}
+	.bar {
+		transform-origin: left center;
+		animation: bar-in 520ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation-duration: 520ms !important;
+		animation-delay: 420ms;
+	}
 	.swatch {
+		flex: none;
 		width: 14px;
-		height: 10px;
-		border-radius: 3px;
+		height: 14px;
+		border-radius: 4px;
 		background: var(--fill, var(--ess-cell));
 		border: 1px solid var(--line, var(--ess-border));
 	}
+	button.key[aria-pressed='true'] .swatch {
+		background: var(--ink);
+		border-color: var(--ink);
+	}
+	/* swatches drawn exactly like the calendar cells and bars */
 	.pending-sw {
+		position: relative;
 		background: var(--ess-surface);
-		border: 1.5px dashed var(--ess-text-muted);
+		border: 1.5px dashed var(--pen-line);
+	}
+	.pending-sw::after {
+		content: '';
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 5px;
+		height: 5px;
+		margin: -2.5px 0 0 -2.5px;
+		border-radius: 50%;
+		background: var(--pen-line);
 	}
 	.off-sw {
-		background: repeating-linear-gradient(-45deg, var(--ess-cell-off), var(--ess-cell-off) 2px, var(--ess-cell) 2px, var(--ess-cell) 4px);
+		border-color: var(--off-line);
+		background: repeating-linear-gradient(-45deg, var(--off-a), var(--off-a) 2px, var(--off-b) 2px, var(--off-b) 4px);
 	}
 	.hol-sw {
-		background: var(--ess-ev-yellow-bg);
-		border-color: var(--ess-ev-yellow-line);
+		position: relative;
+		background: var(--ess-surface);
+		border-color: var(--hol-line);
+	}
+	.hol-sw::after {
+		content: '★';
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center;
+		font-size: 9px;
+		line-height: 1;
+		color: var(--hol-ink);
 	}
 
 	/* ---------- detail sheet ---------- */

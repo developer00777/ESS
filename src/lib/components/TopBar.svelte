@@ -1,17 +1,19 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import Search from '@lucide/svelte/icons/search';
 	import Bell from '@lucide/svelte/icons/bell';
 	import Settings from '@lucide/svelte/icons/settings';
 	import Plus from '@lucide/svelte/icons/plus';
-	import User from '@lucide/svelte/icons/user';
-	import KeyRound from '@lucide/svelte/icons/key-round';
-	import LogOut from '@lucide/svelte/icons/log-out';
-	import Sun from '@lucide/svelte/icons/sun';
-	import Moon from '@lucide/svelte/icons/moon';
-	import PanelLeft from '@lucide/svelte/icons/panel-left';
-	import PanelLeftDashed from '@lucide/svelte/icons/panel-left-dashed';
+	import CalendarDays from '@lucide/svelte/icons/calendar-days';
+	import LayoutGrid from '@lucide/svelte/icons/layout-grid';
+	import Calendar from '@lucide/svelte/icons/calendar';
+	import Clock from '@lucide/svelte/icons/clock';
+	import FileText from '@lucide/svelte/icons/file-text';
+	import Users from '@lucide/svelte/icons/users';
+	import ShieldUser from '@lucide/svelte/icons/shield-user';
+	import Wallet from '@lucide/svelte/icons/wallet';
+	import CircleHelp from '@lucide/svelte/icons/circle-help';
 	import Avatar from './Avatar.svelte';
+	import AccountMenu from './AccountMenu.svelte';
 	import { hub } from '$lib/hub/client.svelte';
 	import type { Role } from '$lib/server/auth';
 
@@ -39,6 +41,11 @@
 		teamPeek?: { people: { id: string; fullName: string; hasPicture: boolean }[]; total: number } | null;
 		/** Where Add employee goes, or null when this login cannot create logins. */
 		addEmployeeHref?: string | null;
+		/** For the main navigation in themes that carry it here (Amber): the
+		    same sections, counts and gates as the sidebar. */
+		canPayroll?: boolean;
+		chatBadge?: { count: number; urgent: boolean };
+		adminIssueCount?: number;
 	}
 
 	let {
@@ -53,8 +60,25 @@
 		canAdmin = false,
 		canTeam,
 		teamPeek = null,
-		addEmployeeHref = null
+		addEmployeeHref = null,
+		canPayroll = false,
+		chatBadge = { count: 0, urgent: false },
+		adminIssueCount = 0
 	}: Props = $props();
+
+	/* The main navigation as a row of pills (themes that move it out of the
+	   sidebar: Amber). Mirrors SidebarNav's items one for one. */
+	const mainNav = $derived([
+		{ href: '/dashboard', label: 'Today', icon: CalendarDays, soon: false },
+		{ href: '/hub', label: 'Champ Hub', icon: LayoutGrid, soon: false },
+		{ href: '/leave', label: 'Leave', icon: Calendar, soon: false },
+		{ href: '/attendance', label: 'Attendance', icon: Clock, soon: false },
+		{ href: '/policies', label: 'Policies', icon: FileText, soon: false },
+		...((canTeam ?? role !== 'employee') ? [{ href: '/team', label: 'Team', icon: Users, soon: false }] : []),
+		...(canAdmin ? [{ href: '/admin', label: 'Admin Controls', icon: ShieldUser, soon: false }] : []),
+		{ href: '/payroll', label: 'Payroll', icon: Wallet, soon: !canPayroll },
+		{ href: '/hr-contacts', label: 'Help & support', icon: CircleHelp, soon: false }
+	]);
 
 	// The same sections as the rail, as text links.
 	const links = $derived([
@@ -77,6 +101,19 @@
 		today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 	});
 
+	/* Atur shows each menu item's name in its own bubble on hover, so the
+	   browser's tooltip would repeat it; other themes keep the tooltip.
+	   Follows theme switches live. */
+	let skin = $state('');
+	$effect(() => {
+		const root = document.documentElement;
+		const read = () => (skin = root.getAttribute('data-ess-skin') ?? '');
+		read();
+		const mo = new MutationObserver(read);
+		mo.observe(root, { attributes: true, attributeFilter: ['data-ess-skin'] });
+		return () => mo.disconnect();
+	});
+
 	let menuOpen = $state(false);
 
 	/* On desktop the cluster floats over the top-right of the page and
@@ -86,77 +123,19 @@
 		if (!cluster) return;
 		const el = cluster;
 		const root = document.documentElement;
-		const ro = new ResizeObserver(() => root.style.setProperty("--topbar-w", `${el.offsetWidth}px`));
+		// Its height too, so a header row can match it and centre on one line.
+		const ro = new ResizeObserver(() => {
+			root.style.setProperty('--topbar-w', `${el.offsetWidth}px`);
+			root.style.setProperty('--topbar-h', `${el.offsetHeight}px`);
+		});
 		ro.observe(el);
 		return () => ro.disconnect();
 	});
-	let theme = $state<'light' | 'dark'>('light');
 
-	$effect(() => {
-		theme = document.documentElement.getAttribute('data-ess-theme') === 'dark' ? 'dark' : 'light';
-	});
-
-	function setTheme(next: 'light' | 'dark') {
-		theme = next;
-		if (next === 'dark') document.documentElement.setAttribute('data-ess-theme', 'dark');
-		else document.documentElement.removeAttribute('data-ess-theme');
-		try {
-			localStorage.setItem('essTheme', next);
-		} catch {
-			/* not remembered in private mode */
-		}
-	}
-
-	/* Text size: a bar per step, each taller than the last. The choice is a
-	   multiplier on the workspace zoom (--ess-text-scale, see .ess-shell). */
-	const TEXT_STEPS = [0.9, 1, 1.1, 1.2, 1.3];
-	let textStep = $state(1);
-
-	/* The dock either floats (slides in from the left edge) or stays fixed. */
-	let dock = $state<'floating' | 'fixed'>('floating');
-
-	$effect(() => {
-		const root = document.documentElement;
-		const scale = parseFloat(root.style.getPropertyValue('--ess-text-scale')) || 1;
-		const i = TEXT_STEPS.indexOf(scale);
-		textStep = i === -1 ? 1 : i;
-		dock = root.getAttribute('data-ess-dock') === 'fixed' ? 'fixed' : 'floating';
-	});
-
-	function setTextStep(i: number) {
-		textStep = Math.max(0, Math.min(TEXT_STEPS.length - 1, i));
-		const scale = TEXT_STEPS[textStep];
-		const root = document.documentElement;
-		if (scale === 1) root.style.removeProperty('--ess-text-scale');
-		else root.style.setProperty('--ess-text-scale', String(scale));
-		// Enlarged text: pages flow and scroll instead of fitting the screen.
-		root.toggleAttribute('data-ess-flow', scale > 1);
-		try {
-			if (scale === 1) localStorage.removeItem('essTextScale');
-			else localStorage.setItem('essTextScale', String(scale));
-		} catch {
-			/* not remembered in private mode */
-		}
-	}
-
-	function setDock(next: 'floating' | 'fixed') {
-		dock = next;
-		if (next === 'fixed') document.documentElement.setAttribute('data-ess-dock', 'fixed');
-		else document.documentElement.removeAttribute('data-ess-dock');
-		try {
-			localStorage.setItem('essDock', next);
-		} catch {
-			/* not remembered in private mode */
-		}
-	}
-
-	async function openSearch() {
-		// Search lives in Champ Hub's command palette; open it wherever we are.
-		if (location.pathname.startsWith('/hub')) hub.paletteOpen = true;
-		else {
-			await goto('/hub');
-			hub.paletteOpen = true;
-		}
+	function openSearch() {
+		// The search palette opens over whatever page this is (the app layout
+		// mounts it outside Champ Hub; the Hub layout inside it).
+		hub.paletteOpen = true;
 	}
 
 	function onWindowClick(e: MouseEvent) {
@@ -170,6 +149,38 @@
 <svelte:window onclick={onWindowClick} onkeydown={onWindowKey} />
 
 <div class="topbar">
+	<!-- Brand and main navigation pills: shown only by themes that carry the
+	     navigation in the top bar (Amber); hidden everywhere else. -->
+	<a href="/dashboard" class="tb-brand" aria-label="Champ HR, Today">
+		<span class="tb-mark" aria-hidden="true">
+			<svg viewBox="0 0 40 40" width="22" height="22">
+				<path d="M20.5 9.5A11 11 0 1 0 20.5 30.5" fill="none" stroke="currentColor" stroke-width="6.5" stroke-linecap="round" />
+				<path d="M25 10v20M25 20h10M35 10v20" fill="none" stroke="currentColor" stroke-width="6.5" stroke-linecap="round" />
+			</svg>
+		</span>
+		<span class="tb-name">Champ HR</span>
+		<!-- the brand's second line (Atur only; hidden elsewhere) -->
+		<small class="tb-sub">Self-Service</small>
+	</a>
+	<nav class="pillnav" aria-label="Main">
+		{#each mainNav as item (item.href)}
+			<a
+				href={item.href}
+				class="pn-item"
+				class:soon={item.soon}
+				aria-current={isActive(item.href) ? 'page' : undefined}
+				title={item.soon ? `${item.label} — coming soon` : skin === 'atur' ? undefined : item.label}
+			>
+				<item.icon size={16} strokeWidth={2} />
+				<span class="pn-label">{item.label}</span>
+				{#if item.href === '/admin' && adminIssueCount > 0}
+					<span class="pn-count warn" aria-label="{adminIssueCount} need{adminIssueCount === 1 ? 's' : ''} attention">{adminIssueCount}</span>
+				{:else if item.href === '/hub' && chatBadge.count > 0}
+					<span class="pn-count" class:urgent={chatBadge.urgent} aria-label="{chatBadge.count} unread">{chatBadge.count > 99 ? '99+' : chatBadge.count}</span>
+				{/if}
+			</a>
+		{/each}
+	</nav>
 	<span class="today">{today || ' '}</span>
 
 	<nav class="links" aria-label="Sections">
@@ -218,51 +229,7 @@
 				<Avatar {userId} {fullName} {hasPicture} size="md" version={pictureVersion ?? undefined} />
 			</button>
 			{#if menuOpen}
-				<div class="menu" role="menu">
-					<div class="who">
-						<strong>{fullName}</strong>
-						<span>{roleLabel}</span>
-					</div>
-					<div class="menu-sep"></div>
-					<a role="menuitem" href="/profile" onclick={() => (menuOpen = false)}><User size={15} /> My profile</a>
-					<a role="menuitem" href="/change-password" onclick={() => (menuOpen = false)}><KeyRound size={15} /> Change password</a>
-					<div class="menu-sep"></div>
-					<div class="seg" role="group" aria-label="Appearance">
-						<button type="button" aria-pressed={theme === 'light'} onclick={() => setTheme('light')}><Sun size={14} /> Light</button>
-						<button type="button" aria-pressed={theme === 'dark'} onclick={() => setTheme('dark')}><Moon size={14} /> Dark</button>
-					</div>
-					<div class="pref">
-						<span class="pref-label">Text size <b>{Math.round(TEXT_STEPS[textStep] * 100)}%</b></span>
-						<div class="text-size" role="group" aria-label="Text size">
-							<button type="button" class="ts-step sm" aria-label="Smaller text" disabled={textStep === 0} onclick={() => setTextStep(textStep - 1)}>A</button>
-							<div class="bars">
-								{#each TEXT_STEPS as s, i (s)}
-									<button
-										type="button"
-										class="bar"
-										class:on={i <= textStep}
-										style="height: {36 + i * 16}%"
-										aria-label="{Math.round(s * 100)}%"
-										aria-pressed={i === textStep}
-										onclick={() => setTextStep(i)}
-									></button>
-								{/each}
-							</div>
-							<button type="button" class="ts-step lg" aria-label="Larger text" disabled={textStep === TEXT_STEPS.length - 1} onclick={() => setTextStep(textStep + 1)}>A</button>
-						</div>
-					</div>
-					<div class="pref">
-						<span class="pref-label">Dock</span>
-						<div class="seg" role="group" aria-label="Dock">
-							<button type="button" aria-pressed={dock === 'floating'} onclick={() => setDock('floating')}><PanelLeftDashed size={14} /> Floating</button>
-							<button type="button" aria-pressed={dock === 'fixed'} onclick={() => setDock('fixed')}><PanelLeft size={14} /> Fixed</button>
-						</div>
-					</div>
-					<div class="menu-sep"></div>
-					<form method="POST" action="/logout">
-						<button type="submit" role="menuitem" class="logout"><LogOut size={15} /> Log out</button>
-					</form>
-				</div>
+				<AccountMenu {fullName} {roleLabel} onclose={() => (menuOpen = false)} />
 			{/if}
 		</div>
 	</div>
@@ -281,6 +248,13 @@
 		font-size: 12px;
 		color: var(--ess-text-muted);
 		white-space: nowrap;
+	}
+	/* Only themes that move the main navigation here show these (Amber,
+	   styled in ess-skin-amber.css). */
+	.tb-brand,
+	.pillnav,
+	.tb-sub {
+		display: none;
 	}
 
 	/* ---------- section links: quiet text, the current one in ink ---------- */
@@ -447,170 +421,6 @@
 		box-shadow: 0 0 0 2px var(--ess-surface), 0 4px 10px -4px rgba(20, 22, 40, 0.3);
 	}
 
-	.menu {
-		position: absolute;
-		top: calc(100% + 8px);
-		right: 0;
-		z-index: 80;
-		min-width: 230px;
-		padding: 6px;
-		background: var(--ess-modal-bg);
-		border: 1px solid var(--ess-border);
-		border-radius: 14px;
-		box-shadow: var(--ess-elev-3);
-		display: grid;
-		gap: 2px;
-	}
-	.who {
-		display: grid;
-		padding: 6px 10px 4px;
-		line-height: 1.3;
-	}
-	.who strong {
-		font-size: 13.5px;
-		font-weight: 600;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.who span {
-		font-size: 12px;
-		color: var(--ess-text-muted);
-	}
-	.menu a,
-	.menu .logout {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		width: 100%;
-		padding: 9px 10px;
-		border: none;
-		border-radius: 9px;
-		background: transparent;
-		color: var(--ess-text);
-		font: inherit;
-		font-size: 13.5px;
-		text-align: left;
-		cursor: pointer;
-	}
-	.menu a:hover,
-	.menu .logout:hover {
-		background: var(--ess-surface-hover);
-	}
-	.menu .logout:hover {
-		color: var(--ess-danger);
-	}
-	.menu-sep {
-		height: 1px;
-		background: var(--ess-border);
-		margin: 4px 0;
-	}
-	.seg {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 2px;
-		padding: 2px;
-		background: var(--ess-sunken);
-		border-radius: 9px;
-	}
-	.seg button {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
-		padding: 6px 0;
-		border: none;
-		border-radius: 7px;
-		background: transparent;
-		color: var(--ess-text-secondary);
-		font: inherit;
-		font-size: 12.5px;
-		font-weight: 500;
-		cursor: pointer;
-	}
-	.seg button[aria-pressed='true'] {
-		background: var(--ess-surface);
-		color: var(--ess-primary-text);
-		box-shadow: 0 1px 2px rgba(20, 22, 40, 0.08);
-	}
-
-	/* ---------- text size and dock, under the theme ---------- */
-	.pref {
-		display: grid;
-		gap: 5px;
-		padding: 6px 2px 0;
-	}
-	.pref-label {
-		display: flex;
-		justify-content: space-between;
-		padding: 0 8px;
-		font-size: 12px;
-		color: var(--ess-text-muted);
-	}
-	.pref-label b {
-		font-weight: 600;
-		color: var(--ess-text-secondary);
-		font-variant-numeric: tabular-nums;
-	}
-	.text-size {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 6px 8px;
-		background: var(--ess-sunken);
-		border-radius: 9px;
-	}
-	.ts-step {
-		display: grid;
-		place-items: center;
-		width: 24px;
-		height: 24px;
-		padding: 0;
-		border: none;
-		border-radius: 6px;
-		background: transparent;
-		color: var(--ess-text-secondary);
-		font: inherit;
-		font-weight: 600;
-		line-height: 1;
-		cursor: pointer;
-	}
-	.ts-step.sm {
-		font-size: 11px;
-	}
-	.ts-step.lg {
-		font-size: 16px;
-	}
-	.ts-step:hover:not(:disabled) {
-		background: var(--ess-surface);
-		color: var(--ess-text);
-	}
-	.ts-step:disabled {
-		opacity: 0.35;
-		cursor: default;
-	}
-	.bars {
-		flex: 1;
-		display: flex;
-		align-items: flex-end;
-		gap: 4px;
-		height: 24px;
-	}
-	.bar {
-		flex: 1;
-		padding: 0;
-		border: none;
-		border-radius: 3px;
-		background: color-mix(in srgb, var(--ess-text) 14%, transparent);
-		cursor: pointer;
-		transition: background var(--ess-t-fast);
-	}
-	.bar:hover {
-		background: color-mix(in srgb, var(--ess-primary) 45%, transparent);
-	}
-	.bar.on {
-		background: var(--ess-primary);
-	}
 
 	/* Narrower laptops: the rail carries the sections. */
 	/* Short laptop screens (e.g. 1280×720 at 150% scaling): a slimmer bar. */

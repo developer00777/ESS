@@ -11,6 +11,9 @@
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Info from '@lucide/svelte/icons/info';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import ListTodo from '@lucide/svelte/icons/list-todo';
+	import ClipboardCheck from '@lucide/svelte/icons/clipboard-check';
+	import SquareCheck from '@lucide/svelte/icons/square-check';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import AssigneeSelect from '$lib/components/hub/AssigneeSelect.svelte';
 	import { api, hub } from '$lib/hub/client.svelte';
@@ -97,7 +100,7 @@
 		<div class="ess-split main-split guest">
 			<section class="ess-card ess-fill-card" aria-labelledby="mine-h">
 				<div class="ess-card-head">
-					<h2 id="mine-h" class="ess-h2">Your tasks from this meeting</h2>
+					<h2 id="mine-h" class="ess-h2"><ListChecks size={16} /> Your tasks from this meeting</h2>
 				</div>
 				<div class="ess-rows ess-scroll fill-body">
 					{#each items as i (i.id)}
@@ -107,7 +110,7 @@
 								<span class="ess-row__title">{i.title}</span>
 								{#if i.dueDate}<span class="ess-row__meta">Due {dueLabel(i.dueDate)}</span>{/if}
 							</span>
-							<span class="ess-row__end">{#if i.taskId}<a class="ess-btn ess-btn--secondary ess-btn--sm" href="/hub/tasks?task={i.taskId}">Open task</a>{/if}</span>
+							<span class="ess-row__end">{#if i.taskId}<a class="ess-btn ess-btn--secondary ess-btn--sm" href="/hub/tasks?task={i.taskId}"><SquareCheck size={14} /> Open task</a>{/if}</span>
 						</div>
 					{:else}
 						<p class="empty">{m.state === 'published' ? 'Nothing from this meeting was given to you.' : `${m.host?.fullName ?? 'The host'} is still reviewing the minutes.`}</p>
@@ -130,7 +133,7 @@
 				{#if tab === 'summary'}
 					<section class="ess-card ess-fill-card share" aria-labelledby="sum-h">
 						<div class="ess-card-head">
-							<h2 id="sum-h" class="ess-h2">{m.source === 'pasted' ? 'Your notes' : 'Meeting summary'}</h2>
+							<h2 id="sum-h" class="ess-h2"><FileText size={16} /> {m.source === 'pasted' ? 'Your notes' : 'Meeting summary'}</h2>
 							<span class="ess-badge ess-badge--accent">{m.source === 'pasted' ? 'Pasted' : 'Written automatically'}</span>
 						</div>
 						{#if m.summary}
@@ -169,7 +172,7 @@
 
 				<section class="ess-card ess-fill-card share items-card" aria-labelledby="items-h">
 					<div class="ess-card-head">
-						<h2 id="items-h" class="ess-h2">Action items{#if kept.length} ({kept.length}){/if}</h2>
+						<h2 id="items-h" class="ess-h2"><ListTodo size={16} /> Action items{#if kept.length} ({kept.length}){/if}</h2>
 						{#if pending.length}
 							<button type="button" class="ess-btn ess-btn--primary" disabled={busy || missing > 0} title={missing ? 'Give every kept item an owner, or drop it' : undefined} onclick={publish}>
 								<Send size={15} /> Publish {pending.length} {pending.length === 1 ? 'task' : 'tasks'}
@@ -196,7 +199,7 @@
 									<div class="top">
 										<span class="ess-tile ess-tile--sm ess-tile--ok"><CircleCheck size={15} /></span>
 										<strong class="grow">{i.title}</strong>
-										<a class="ess-btn ess-btn--secondary ess-btn--sm" href="/hub/tasks?task={i.taskId}">Open task</a>
+										<a class="ess-btn ess-btn--secondary ess-btn--sm" href="/hub/tasks?task={i.taskId}"><SquareCheck size={14} /> Open task</a>
 									</div>
 									<span class="done-line">Published to {i.ownerName}{i.dueDate ? ` · due ${dueLabel(i.dueDate)}` : ''}</span>
 								{:else}
@@ -267,7 +270,7 @@
 			<aside class="ess-stack">
 				<section class="ess-card ess-fill-card share" aria-labelledby="yours-h">
 					<div class="ess-card-head">
-						<h2 id="yours-h" class="ess-h2">Your tasks from this meeting</h2>
+						<h2 id="yours-h" class="ess-h2"><ListChecks size={16} /> Your tasks from this meeting</h2>
 						<a class="ess-link" href="/hub/tasks" aria-label="All tasks"><ChevronRight size={16} /></a>
 					</div>
 					<div class="ess-rows ess-scroll fill-body">
@@ -291,7 +294,7 @@
 
 				<section class="ess-card ess-fill-card fixed" aria-labelledby="rev-h">
 					<div class="ess-card-head">
-						<h2 id="rev-h" class="ess-h2">Minutes review</h2>
+						<h2 id="rev-h" class="ess-h2"><ClipboardCheck size={16} /> Minutes review</h2>
 						{#if m.state === 'published'}
 							<span class="ess-badge ess-badge--ok">Published</span>
 						{:else if pending.length}

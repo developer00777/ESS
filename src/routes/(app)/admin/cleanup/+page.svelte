@@ -7,6 +7,9 @@
 	import Clock from '@lucide/svelte/icons/clock';
 	import ShieldCheck from '@lucide/svelte/icons/shield-check';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
+	import Database from '@lucide/svelte/icons/database';
+	import ListChecks from '@lucide/svelte/icons/list-checks';
+	import Lock from '@lucide/svelte/icons/lock';
 	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
@@ -89,7 +92,7 @@
 
 		<section class="ess-card ess-fill-card opts-card">
 			<div class="ess-card-head">
-				<h2 class="ess-h2">Select data to delete</h2>
+				<h2 class="ess-h2"><Database size={16} /> Select data to delete</h2>
 			</div>
 			<p class="ess-caption">Choose one or more kinds of data to permanently remove from Champ HR.</p>
 
@@ -161,7 +164,7 @@
 	<aside class="ess-stack">
 		<section class="ess-card ess-fill-card summary-card">
 			<div class="ess-card-head">
-				<h2 class="ess-h2">Selection summary</h2>
+				<h2 class="ess-h2"><ListChecks size={16} /> Selection summary</h2>
 			</div>
 			{#if chosen.length === 0}
 				<div class="ess-empty none">
@@ -188,7 +191,7 @@
 
 		<section class="ess-card confirm-card">
 			<div class="ess-card-head">
-				<h2 class="ess-h2">Type DELETE to confirm</h2>
+				<h2 class="ess-h2"><Lock size={16} /> Type DELETE to confirm</h2>
 			</div>
 			<p class="ess-caption">To enable deletion, type <strong>DELETE</strong> in the box below.</p>
 			<label class="ess-field confirm">

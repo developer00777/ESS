@@ -4,6 +4,9 @@
 	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
 	import FileText from '@lucide/svelte/icons/file-text';
 	import Gift from '@lucide/svelte/icons/gift';
+	import ClipboardList from '@lucide/svelte/icons/clipboard-list';
+	import Check from '@lucide/svelte/icons/check';
+	import X from '@lucide/svelte/icons/x';
 
 	/**
 	 * The HR / Reporting Manager side of the SOP: pending attendance corrections
@@ -105,7 +108,7 @@
 {#if deviations.length > 0 || compOffs.length > 0}
 	<section class="ess-card queue" aria-labelledby="queue-h">
 		<div class="ess-card-head">
-			<h2 id="queue-h" class="ess-h2">Pending your review <span class="count">{deviations.length + compOffs.length}</span></h2>
+			<h2 id="queue-h" class="ess-h2"><ClipboardList size={16} /> Pending your review <span class="count">{deviations.length + compOffs.length}</span></h2>
 			<span class="ess-caption">Corrections and comp-off claims from people who report to you</span>
 		</div>
 
@@ -179,9 +182,10 @@
 
 						<div class="actions">
 							<button class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy === d.id} onclick={() => decide('deviation', d.id, 'approve')}>
+								<Check size={14} />
 								{busy === d.id ? 'Saving…' : 'Approve & correct'}
 							</button>
-							<button class="ess-btn ess-btn--outline ess-btn--sm" disabled={busy === d.id} onclick={() => decide('deviation', d.id, 'reject')}>Reject</button>
+							<button class="ess-btn ess-btn--outline ess-btn--sm" disabled={busy === d.id} onclick={() => decide('deviation', d.id, 'reject')}><X size={14} /> Reject</button>
 						</div>
 					</li>
 				{/each}
@@ -214,9 +218,10 @@
 						</p>
 						<div class="actions">
 							<button class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy === c.id} onclick={() => decide('comp-off', c.id, 'approve')}>
+								<Check size={14} />
 								{busy === c.id ? 'Saving…' : c.status === 'manager_approved' ? 'Credit comp-off' : 'Approve — send to HR'}
 							</button>
-							<button class="ess-btn ess-btn--outline ess-btn--sm" disabled={busy === c.id} onclick={() => decide('comp-off', c.id, 'reject')}>Reject</button>
+							<button class="ess-btn ess-btn--outline ess-btn--sm" disabled={busy === c.id} onclick={() => decide('comp-off', c.id, 'reject')}><X size={14} /> Reject</button>
 						</div>
 					</li>
 				{/each}

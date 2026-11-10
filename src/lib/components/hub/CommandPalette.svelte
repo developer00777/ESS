@@ -177,11 +177,20 @@
 		color: var(--ess-text);
 		outline: none;
 	}
+	/* The row is the field: no focus box drawn around the input inside it
+	   (the global :focus-visible ring), the caret shows where typing goes. */
+	.in input:focus,
+	.in input:focus-visible {
+		box-shadow: none;
+		border-radius: 0;
+	}
+	/* One height whatever matches, so the dialog never shrinks and grows
+	   with each key; results scroll inside it. */
 	ul {
 		list-style: none;
 		margin: 0;
 		padding: 6px;
-		max-height: min(52vh, 440px);
+		height: min(52vh, 440px);
 		overflow-y: auto;
 	}
 	li button {

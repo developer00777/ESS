@@ -1,6 +1,17 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import Mail from '@lucide/svelte/icons/mail';
+	import Save from '@lucide/svelte/icons/save';
+	import Clock from '@lucide/svelte/icons/clock';
+	import Send from '@lucide/svelte/icons/send';
+	import MailWarning from '@lucide/svelte/icons/mail-warning';
+	import Check from '@lucide/svelte/icons/check';
+	import CheckCheck from '@lucide/svelte/icons/check-check';
+	import Pause from '@lucide/svelte/icons/pause';
+	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 
 	/**
 	 * Login emails waiting for approval, in Admin Controls › People. New logins
@@ -96,6 +107,36 @@
 	const failed = $derived(data?.rows.filter((r) => r.status === 'failed') ?? []);
 	const done = $derived(data?.rows.filter((r) => r.status === 'sent' || r.status === 'skipped' || r.status === 'cancelled') ?? []);
 
+	/*
+	 * Sortable tables. The three with a "select all" checkbox select every row
+	 * in the list, so they show all rows (view.sorted) with no pager: paging
+	 * would hide selected rows. The finished list pages as usual.
+	 */
+	const goesTo = (r: Row) => r.sendTo ?? r.email;
+	const pendingView = new TableView(() => pending, {
+		person: (r) => r.fullName,
+		goesTo: (r) => goesTo(r),
+		from: (r) => `${SOURCE[r.source]}${r.requestedBy ? ` · ${r.requestedBy}` : ''}`,
+		queued: (r) => r.createdAt
+	});
+	const approvedView = new TableView(() => approved, {
+		position: (r) => (r.status === 'sending' ? -1 : r.position),
+		person: (r) => r.fullName,
+		goesTo: (r) => goesTo(r),
+		approvedBy: (r) => r.approvedBy ?? ''
+	});
+	const failedView = new TableView(() => failed, {
+		person: (r) => r.fullName,
+		address: (r) => goesTo(r),
+		why: (r) => r.error ?? ''
+	});
+	const doneView = new TableView(() => done, {
+		person: (r) => r.fullName,
+		status: (r) => (r.status === 'sent' ? 'Sent' : r.status === 'skipped' ? 'Not needed' : 'Cancelled'),
+		when: (r) => r.sentAt ?? r.createdAt,
+		note: (r) => r.error ?? (r.sendTo ? `Sent to ${r.sendTo}` : '')
+	});
+
 	function toggle(id: string, on: boolean) {
 		picked = on ? [...picked, id] : picked.filter((x) => x !== id);
 	}
@@ -109,7 +150,7 @@
 <section class="ess-card queue" id="login-emails">
 	<header class="head">
 		<div>
-			<h2 class="ess-h2">Login delivery</h2>
+			<h2 class="ess-h2"><Mail size={16} /> Login delivery</h2>
 			<p class="ess-caption">
 				New logins are not emailed until you approve them here. Approved emails go out one at a time, so a large import never floods inboxes or the mail provider.
 			</p>
@@ -129,7 +170,7 @@
 					<option value="minutes">minutes</option>
 					<option value="hours">hours</option>
 				</select>
-				<button class="ess-btn ess-btn--secondary ess-btn--sm" disabled={busy}>Save</button>
+				<button class="ess-btn ess-btn--secondary ess-btn--sm" disabled={busy}><Save size={14} /> Save</button>
 			</div>
 		</form>
 	</header>
@@ -144,10 +185,10 @@
 	{:else}
 		<div class="block">
 			<div class="bar">
-				<h3 class="ess-h3">Pending review <span class="n">{pending.length}</span></h3>
+				<h3 class="ess-h3"><Clock size={16} /> Pending review <span class="n">{pending.length}</span></h3>
 				<div class="btns">
-					<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy || !pending.some((r) => picked.includes(r.id))} onclick={() => act('approve', pending.filter((r) => picked.includes(r.id)).map((r) => r.id))}>Approve selected</button>
-					<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={busy || pending.length === 0} onclick={() => act('approve_all', [])}>Approve all {pending.length}</button>
+					<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy || !pending.some((r) => picked.includes(r.id))} onclick={() => act('approve', pending.filter((r) => picked.includes(r.id)).map((r) => r.id))}><Check size={14} /> Approve selected</button>
+					<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={busy || pending.length === 0} onclick={() => act('approve_all', [])}><CheckCheck size={14} /> Approve all {pending.length}</button>
 					<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" disabled={busy || !pending.some((r) => picked.includes(r.id))} onclick={() => act('cancel', pending.filter((r) => picked.includes(r.id)).map((r) => r.id))}>Don't send</button>
 				</div>
 			</div>
@@ -157,14 +198,14 @@
 						<thead>
 							<tr>
 								<th><input type="checkbox" aria-label="Select all waiting" checked={allPicked(pending)} onchange={(e) => pickAll(pending, e.currentTarget.checked)} /></th>
-								<th>Person</th>
-								<th>Goes to</th>
-								<th>From</th>
-								<th>Queued</th>
+								<th aria-sort={pendingView.ariaSort('person')}><SortButton view={pendingView} key="person">Person</SortButton></th>
+								<th aria-sort={pendingView.ariaSort('goesTo')}><SortButton view={pendingView} key="goesTo">Goes to</SortButton></th>
+								<th aria-sort={pendingView.ariaSort('from')}><SortButton view={pendingView} key="from">From</SortButton></th>
+								<th aria-sort={pendingView.ariaSort('queued')}><SortButton view={pendingView} key="queued">Queued</SortButton></th>
 							</tr>
 						</thead>
 						<tbody>
-							{#each pending as r (r.id)}
+							{#each pendingView.sorted as r (r.id)}
 								<tr>
 									<td><input type="checkbox" aria-label="Select {r.fullName}" checked={picked.includes(r.id)} onchange={(e) => toggle(r.id, e.currentTarget.checked)} /></td>
 									<td><strong>{r.fullName}</strong></td>
@@ -188,17 +229,17 @@
 		{#if approved.length}
 			<div class="block">
 				<div class="bar">
-					<h3 class="ess-h3">Approved, going out <span class="n">{approved.length}</span></h3>
+					<h3 class="ess-h3"><Send size={16} /> Approved, going out <span class="n">{approved.length}</span></h3>
 					<div class="btns">
-						<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" disabled={busy || !approved.some((r) => picked.includes(r.id))} onclick={() => act('hold', approved.filter((r) => picked.includes(r.id)).map((r) => r.id))}>Hold back</button>
+						<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" disabled={busy || !approved.some((r) => picked.includes(r.id))} onclick={() => act('hold', approved.filter((r) => picked.includes(r.id)).map((r) => r.id))}><Pause size={14} /> Hold back</button>
 					</div>
 				</div>
 				<p class="ess-help">One every {cadenceText(data.settings.cadenceSeconds)}{data.nextSendAt ? `; the next goes at about ${when(data.nextSendAt)}` : ''}. The last of these goes out in about {cadenceText(Math.max(1, approved.length) * data.settings.cadenceSeconds)}.</p>
 				<div class="ess-table-shell">
 					<table class="ess-table">
-						<thead><tr><th><input type="checkbox" aria-label="Select all approved" checked={allPicked(approved)} onchange={(e) => pickAll(approved, e.currentTarget.checked)} /></th><th>#</th><th>Person</th><th>Goes to</th><th>Approved by</th></tr></thead>
+						<thead><tr><th><input type="checkbox" aria-label="Select all approved" checked={allPicked(approved)} onchange={(e) => pickAll(approved, e.currentTarget.checked)} /></th><th aria-sort={approvedView.ariaSort('position')}><SortButton view={approvedView} key="position">#</SortButton></th><th aria-sort={approvedView.ariaSort('person')}><SortButton view={approvedView} key="person">Person</SortButton></th><th aria-sort={approvedView.ariaSort('goesTo')}><SortButton view={approvedView} key="goesTo">Goes to</SortButton></th><th aria-sort={approvedView.ariaSort('approvedBy')}><SortButton view={approvedView} key="approvedBy">Approved by</SortButton></th></tr></thead>
 						<tbody>
-							{#each approved as r (r.id)}
+							{#each approvedView.sorted as r (r.id)}
 								<tr>
 									<td>{#if r.status === 'approved'}<input type="checkbox" aria-label="Select {r.fullName}" checked={picked.includes(r.id)} onchange={(e) => toggle(r.id, e.currentTarget.checked)} />{/if}</td>
 									<td class="ess-num">{r.status === 'sending' ? 'Sending' : r.position}</td>
@@ -216,17 +257,17 @@
 		{#if failed.length}
 			<div class="block">
 				<div class="bar">
-					<h3 class="ess-h3">Couldn't send <span class="n bad">{failed.length}</span></h3>
+					<h3 class="ess-h3"><MailWarning size={16} /> Couldn't send <span class="n bad">{failed.length}</span></h3>
 					<div class="btns">
-						<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={busy || !failed.some((r) => picked.includes(r.id))} onclick={() => act('approve', failed.filter((r) => picked.includes(r.id)).map((r) => r.id))}>Retry selected</button>
+						<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={busy || !failed.some((r) => picked.includes(r.id))} onclick={() => act('approve', failed.filter((r) => picked.includes(r.id)).map((r) => r.id))}><RotateCcw size={14} /> Retry selected</button>
 						<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" disabled={busy || !failed.some((r) => picked.includes(r.id))} onclick={() => act('cancel', failed.filter((r) => picked.includes(r.id)).map((r) => r.id))}>Don't send</button>
 					</div>
 				</div>
 				<div class="ess-table-shell">
 					<table class="ess-table">
-						<thead><tr><th><input type="checkbox" aria-label="Select all failed" checked={allPicked(failed)} onchange={(e) => pickAll(failed, e.currentTarget.checked)} /></th><th>Person</th><th>Address</th><th>Why</th></tr></thead>
+						<thead><tr><th><input type="checkbox" aria-label="Select all failed" checked={allPicked(failed)} onchange={(e) => pickAll(failed, e.currentTarget.checked)} /></th><th aria-sort={failedView.ariaSort('person')}><SortButton view={failedView} key="person">Person</SortButton></th><th aria-sort={failedView.ariaSort('address')}><SortButton view={failedView} key="address">Address</SortButton></th><th aria-sort={failedView.ariaSort('why')}><SortButton view={failedView} key="why">Why</SortButton></th></tr></thead>
 						<tbody>
-							{#each failed as r (r.id)}
+							{#each failedView.sorted as r (r.id)}
 								<tr>
 									<td><input type="checkbox" aria-label="Select {r.fullName}" checked={picked.includes(r.id)} onchange={(e) => toggle(r.id, e.currentTarget.checked)} /></td>
 									<td><strong>{r.fullName}</strong></td>
@@ -246,9 +287,9 @@
 			{#if showDone}
 				<div class="ess-table-shell">
 					<table class="ess-table">
-						<thead><tr><th>Person</th><th>Status</th><th>When</th><th>Note</th></tr></thead>
+						<thead><tr><th aria-sort={doneView.ariaSort('person')}><SortButton view={doneView} key="person">Person</SortButton></th><th aria-sort={doneView.ariaSort('status')}><SortButton view={doneView} key="status">Status</SortButton></th><th aria-sort={doneView.ariaSort('when')}><SortButton view={doneView} key="when">When</SortButton></th><th aria-sort={doneView.ariaSort('note')}><SortButton view={doneView} key="note">Note</SortButton></th></tr></thead>
 						<tbody>
-							{#each done as r (r.id)}
+							{#each doneView.rows as r (r.id)}
 								<tr>
 									<td>{r.fullName}</td>
 									<td><span class="ess-badge {r.status === 'sent' ? 'ess-badge--approved' : 'ess-badge--cancelled'}">{r.status === 'sent' ? 'Sent' : r.status === 'skipped' ? 'Not needed' : 'Cancelled'}</span></td>
@@ -259,6 +300,7 @@
 						</tbody>
 					</table>
 				</div>
+				<TablePager view={doneView} noun="emails" />
 			{/if}
 		{/if}
 	{/if}

@@ -9,7 +9,17 @@
 	import Fingerprint from '@lucide/svelte/icons/fingerprint';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ChevronUp from '@lucide/svelte/icons/chevron-up';
+	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+	import FileCheck from '@lucide/svelte/icons/file-check';
+	import Eye from '@lucide/svelte/icons/eye';
+	import History from '@lucide/svelte/icons/history';
+	import ListChecks from '@lucide/svelte/icons/list-checks';
+	import CalendarRange from '@lucide/svelte/icons/calendar-range';
+	import UserX from '@lucide/svelte/icons/user-x';
 	import UploadSteps from '$lib/components/UploadSteps.svelte';
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 
 	let { data } = $props();
 
@@ -171,13 +181,141 @@
 	// whole file, and applying is never limited to what is shown.
 	const MAX_SHOWN = 300;
 
+	const previewLabel = (d: PreviewDay) =>
+		!d.matched ? 'Unmatched' : d.effect === 'create' ? 'Valid · add' : d.effect === 'update' ? 'Valid · change' : 'Valid · no change';
+	const previewView = new TableView(() => visibleDays.slice(0, MAX_SHOWN), {
+		code: (d) => d.empCode,
+		employee: (d) => (d.matched ? d.matchedName : d.employeeName),
+		date: (d) => d.date,
+		inTime: (d) => d.inTime,
+		outTime: (d) => d.outTime,
+		onFile: (d) => d.existingIn ?? d.existingOut,
+		validation: (d) => previewLabel(d)
+	});
+
 	const fmtTime = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' }) : '—');
 	const fmtWhen = (v: string | Date) => new Date(v).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' });
 	const fmtDay = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
+	/* ---------- ProHance sync ----------
+	   Status and the last 10 runs come from /api/admin/prohance-sync; "Sync
+	   now" pulls the default window (the poller's), a backfill an explicit
+	   one. Hidden for anyone without attendance.device_sync. */
+	interface ProhanceSync {
+		id: string;
+		trigger: string;
+		rangeFrom: string;
+		rangeTo: string;
+		status: string;
+		rowCount: number;
+		matchedCount: number;
+		unmatchedCount: number;
+		error: string | null;
+		startedAt: string;
+		finishedAt: string | null;
+	}
+	interface ProhanceStatus {
+		configured: boolean;
+		window: { fromDate: string; toDate: string };
+		syncs: ProhanceSync[];
+	}
+
+	const MAX_BACKFILL_DAYS = 190;
+	let ph = $state<ProhanceStatus | null>(null);
+	let phHidden = $state(false);
+	let phRunning = $state(false);
+	let phError = $state('');
+	let phResult = $state('');
+	let phFrom = $state('');
+	let phTo = $state('');
+
+	async function loadProhance() {
+		try {
+			const res = await fetch('/api/admin/prohance-sync');
+			if (res.status === 401 || res.status === 403) {
+				phHidden = true;
+				return;
+			}
+			const body = await res.json().catch(() => ({}));
+			if (!res.ok) {
+				phError = body.message ?? 'Could not read the ProHance status';
+				return;
+			}
+			ph = body;
+			if (!phFrom) {
+				phFrom = body.window.fromDate;
+				phTo = body.window.toDate;
+			}
+		} catch (err) {
+			phError = err instanceof Error ? err.message : 'Could not read the ProHance status';
+		}
+	}
+	$effect(() => {
+		void loadProhance();
+	});
+
+	const backfillDays = $derived(phFrom && phTo ? (Date.parse(`${phTo}T00:00:00Z`) - Date.parse(`${phFrom}T00:00:00Z`)) / 86_400_000 + 1 : 0);
+	const backfillProblem = $derived(
+		!phFrom || !phTo
+			? 'Pick both dates.'
+			: phFrom > phTo
+				? 'The start date is after the end date.'
+				: backfillDays > MAX_BACKFILL_DAYS
+					? `At most ${MAX_BACKFILL_DAYS} days at a time — this range is ${backfillDays}.`
+					: ''
+	);
+
+	async function runProhance(range?: { fromDate: string; toDate: string }) {
+		phRunning = true;
+		phError = '';
+		phResult = '';
+		try {
+			const res = await fetch('/api/admin/prohance-sync', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: range ? JSON.stringify(range) : undefined
+			});
+			const body = await res.json().catch(() => ({}));
+			if (!res.ok) {
+				phError = body.message ?? 'The ProHance sync failed';
+				return;
+			}
+			phResult =
+				`Pulled ${fmtDay(body.fromDate)} → ${fmtDay(body.toDate)}: ${body.rowCount} employee-days, ${body.matchedCount} matched` +
+				(body.unmatchedCount > 0 ? `, ${body.unmatchedCount} with an unknown employee code` : '') +
+				(body.rematchedCount > 0 ? `; ${body.rematchedCount} earlier day(s) now matched` : '') +
+				'.';
+			await loadProhance();
+		} catch (err) {
+			phError = err instanceof Error ? err.message : 'The ProHance sync failed';
+		} finally {
+			phRunning = false;
+		}
+	}
+
 	const lastFeedAt = $derived(data.feedTokens.map((t) => t.lastUsedAt).filter(Boolean).sort().at(-1) ?? null);
 	const feedMatched = $derived(data.feedImports.reduce((n, i) => n + i.matchedCount, 0));
 	const feedUnmatched = $derived(data.feedUnmatched.length);
+
+	const feedImportsView = new TableView(() => data.feedImports, {
+		when: (i) => i.createdAt,
+		source: (i) => i.tokenLabel,
+		batch: (i) => i.filename,
+		rows: (i) => i.rowCount,
+		applied: (i) => i.matchedCount,
+		duplicate: (i) => i.duplicateCount,
+		unmatched: (i) => i.unmatchedCount
+	});
+
+	const uploadsView = new TableView(() => data.recentUploads, {
+		file: (u) => u.filename,
+		uploaded: (u) => u.createdAt,
+		records: (u) => u.rowCount,
+		matched: (u) => u.matchedCount,
+		unmatched: (u) => u.unmatchedCount,
+		by: (u) => u.uploadedByName,
+		status: (u) => (u.unmatchedCount === 0 ? 'Applied' : 'Applied, some unmatched')
+	});
 </script>
 
 <svelte:head>
@@ -191,7 +329,7 @@
 		<!-- ---------- device feed ---------- -->
 		<section class="ess-card feed" aria-labelledby="feed-h">
 			<div class="ess-card-head">
-				<h2 class="ess-h2" id="feed-h">Device feed</h2>
+				<h2 class="ess-h2" id="feed-h"><Fingerprint size={16} /> Device feed</h2>
 				{#if lastFeedAt}<span class="ess-caption">Last synced {fmtWhen(lastFeedAt)}</span>{/if}
 			</div>
 			{#if data.feedTokens.length === 0}
@@ -234,17 +372,17 @@
 					<table class="ess-table">
 						<thead>
 							<tr>
-								<th>When</th>
-								<th>Source</th>
-								<th>Batch</th>
-								<th class="ess-num">Rows</th>
-								<th class="ess-num">Applied</th>
-								<th class="ess-num">Already had</th>
-								<th class="ess-num">Unmatched</th>
+								<th aria-sort={feedImportsView.ariaSort('when')}><SortButton view={feedImportsView} key="when">When</SortButton></th>
+								<th aria-sort={feedImportsView.ariaSort('source')}><SortButton view={feedImportsView} key="source">Source</SortButton></th>
+								<th aria-sort={feedImportsView.ariaSort('batch')}><SortButton view={feedImportsView} key="batch">Batch</SortButton></th>
+								<th class="ess-num" aria-sort={feedImportsView.ariaSort('rows')}><SortButton view={feedImportsView} key="rows">Rows</SortButton></th>
+								<th class="ess-num" aria-sort={feedImportsView.ariaSort('applied')}><SortButton view={feedImportsView} key="applied">Applied</SortButton></th>
+								<th class="ess-num" aria-sort={feedImportsView.ariaSort('duplicate')}><SortButton view={feedImportsView} key="duplicate">Already had</SortButton></th>
+								<th class="ess-num" aria-sort={feedImportsView.ariaSort('unmatched')}><SortButton view={feedImportsView} key="unmatched">Unmatched</SortButton></th>
 							</tr>
 						</thead>
 						<tbody>
-							{#each data.feedImports as imp (imp.id)}
+							{#each feedImportsView.rows as imp (imp.id)}
 								<tr>
 									<td>{fmtWhen(imp.createdAt)}</td>
 									<td>{imp.tokenLabel ?? '—'}</td>
@@ -258,6 +396,7 @@
 						</tbody>
 					</table>
 				</div>
+				<TablePager view={feedImportsView} noun="batches" />
 			{:else if data.feedTokens.length > 0}
 				<p class="ess-help">Nothing has arrived from the device feed yet.</p>
 			{/if}
@@ -280,6 +419,7 @@
 					<input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" onchange={onFileChange} />
 				</label>
 				<button type="submit" class="ess-btn ess-btn--primary" disabled={!file || checking}>
+					<FileCheck size={16} />
 					{checking ? 'Reading…' : 'Check file'}
 				</button>
 			</form>
@@ -336,7 +476,7 @@
 					{/if}
 
 					<div class="ess-card-head preview-head">
-						<h2 class="ess-h2">Attendance preview</h2>
+						<h2 class="ess-h2"><Eye size={16} /> Attendance preview</h2>
 						<div class="ess-segmented" role="group" aria-label="Filter rows">
 							<button type="button" aria-pressed={filter === 'all'} onclick={() => (filter = 'all')}>All records ({preview.rowCount})</button>
 							<button type="button" aria-pressed={filter === 'matched'} onclick={() => (filter = 'matched')}>Matched ({preview.matchedCount})</button>
@@ -351,17 +491,17 @@
 						<table class="ess-table">
 							<thead>
 								<tr>
-									<th>Employee code</th>
-									<th>Employee</th>
-									<th>Date</th>
-									<th>Check-in</th>
-									<th>Check-out</th>
-									<th>Currently on file</th>
-									<th>Validation</th>
+									<th aria-sort={previewView.ariaSort('code')}><SortButton view={previewView} key="code">Employee code</SortButton></th>
+									<th aria-sort={previewView.ariaSort('employee')}><SortButton view={previewView} key="employee">Employee</SortButton></th>
+									<th aria-sort={previewView.ariaSort('date')}><SortButton view={previewView} key="date">Date</SortButton></th>
+									<th aria-sort={previewView.ariaSort('inTime')}><SortButton view={previewView} key="inTime">Check-in</SortButton></th>
+									<th aria-sort={previewView.ariaSort('outTime')}><SortButton view={previewView} key="outTime">Check-out</SortButton></th>
+									<th aria-sort={previewView.ariaSort('onFile')}><SortButton view={previewView} key="onFile">Currently on file</SortButton></th>
+									<th aria-sort={previewView.ariaSort('validation')}><SortButton view={previewView} key="validation">Validation</SortButton></th>
 								</tr>
 							</thead>
 							<tbody>
-								{#each visibleDays.slice(0, MAX_SHOWN) as day (`${day.sourceRow}-${day.empCode}-${day.date}`)}
+								{#each previewView.rows as day (`${day.sourceRow}-${day.empCode}-${day.date}`)}
 									<tr class:unmatched={!day.matched}>
 										<td class="mono">{day.empCode}</td>
 										<td>
@@ -408,6 +548,7 @@
 							<span>Showing {Math.min(visibleDays.length, MAX_SHOWN)} of {preview.rowCount} records{visibleDays.length > MAX_SHOWN ? ` · only the first ${MAX_SHOWN} are listed; applying still covers all ${preview.rowCount}` : ''}</span>
 						</div>
 					</div>
+					<TablePager view={previewView} noun="records" />
 
 					<label class="overwrite">
 						<input type="checkbox" bind:checked={overwrite} />
@@ -422,7 +563,7 @@
 		<!-- ---------- recent uploads ---------- -->
 		<section class="ess-card ess-fill-card recent-card" aria-labelledby="recent-h">
 			<div class="ess-card-head">
-				<h2 class="ess-h2" id="recent-h">Recent uploads</h2>
+				<h2 class="ess-h2" id="recent-h"><History size={16} /> Recent uploads</h2>
 			</div>
 			{#if data.recentUploads.length === 0}
 				<p class="ess-help">No biometric report has been uploaded by hand yet.</p>
@@ -431,17 +572,17 @@
 					<table class="ess-table">
 						<thead>
 							<tr>
-								<th>File name</th>
-								<th>Uploaded on</th>
-								<th class="ess-num">Records</th>
-								<th class="ess-num">Matched</th>
-								<th class="ess-num">Unmatched</th>
-								<th>Uploaded by</th>
-								<th>Status</th>
+								<th aria-sort={uploadsView.ariaSort('file')}><SortButton view={uploadsView} key="file">File name</SortButton></th>
+								<th aria-sort={uploadsView.ariaSort('uploaded')}><SortButton view={uploadsView} key="uploaded">Uploaded on</SortButton></th>
+								<th class="ess-num" aria-sort={uploadsView.ariaSort('records')}><SortButton view={uploadsView} key="records">Records</SortButton></th>
+								<th class="ess-num" aria-sort={uploadsView.ariaSort('matched')}><SortButton view={uploadsView} key="matched">Matched</SortButton></th>
+								<th class="ess-num" aria-sort={uploadsView.ariaSort('unmatched')}><SortButton view={uploadsView} key="unmatched">Unmatched</SortButton></th>
+								<th aria-sort={uploadsView.ariaSort('by')}><SortButton view={uploadsView} key="by">Uploaded by</SortButton></th>
+								<th aria-sort={uploadsView.ariaSort('status')}><SortButton view={uploadsView} key="status">Status</SortButton></th>
 							</tr>
 						</thead>
 						<tbody>
-							{#each data.recentUploads as up (up.id)}
+							{#each uploadsView.rows as up (up.id)}
 								<tr>
 									<td><span class="file-cell"><span class="ess-tile ess-tile--sm ess-tile--ok"><FileSpreadsheet size={15} /></span>{up.filename ?? '—'}</span></td>
 									<td>{fmtWhen(up.createdAt)}</td>
@@ -455,6 +596,7 @@
 						</tbody>
 					</table>
 				</div>
+				<TablePager view={uploadsView} noun="uploads" />
 			{/if}
 		</section>
 	</div>
@@ -463,7 +605,7 @@
 	<aside class="ess-stack aside">
 		<section class="ess-card" aria-labelledby="apply-h">
 			<div class="ess-card-head">
-				<h2 class="ess-h2" id="apply-h">Apply summary</h2>
+				<h2 class="ess-h2" id="apply-h"><ListChecks size={16} /> Apply summary</h2>
 			</div>
 			{#if preview}
 				<div class="summary">
@@ -494,10 +636,92 @@
 			{/if}
 		</section>
 
+		{#if !phHidden}
+			<section class="ess-card prohance" aria-labelledby="ph-h">
+				<div class="ess-card-head">
+					<h2 class="ess-h2" id="ph-h"><RefreshCw size={16} /> ProHance sync</h2>
+					{#if ph?.syncs[0]}<span class="ess-caption">Last run {fmtWhen(ph.syncs[0].startedAt)}</span>{/if}
+				</div>
+				{#if !ph && !phError}
+					<p class="ess-help">Reading the sync status…</p>
+				{:else if ph && !ph.configured}
+					<div class="ess-notice">
+						<span class="ess-notice__icon"><AlertTriangle size={15} /></span>
+						<div class="ess-notice__body">
+							<strong>ProHance isn’t connected.</strong>
+							Set PROHANCE_BASE_URL and the credentials on the server; until then nothing can be pulled. Earlier runs stay listed below.
+						</div>
+					</div>
+				{:else if ph}
+					<p class="ess-help">Each run pulls {fmtDay(ph.window.fromDate)} → {fmtDay(ph.window.toDate)} — the 25th of last month to today, the same window as the scheduled poll.</p>
+					<button type="button" class="ess-btn ess-btn--primary sync-now" onclick={() => runProhance()} disabled={phRunning}>
+						<span class="sync-ic" class:spin={phRunning}><RefreshCw size={16} /></span>
+						{phRunning ? 'Syncing…' : 'Sync now'}
+					</button>
+					<details class="backfill">
+						<summary>Backfill a date range</summary>
+						<div class="backfill-row">
+							<label class="ess-field">
+								<span class="ess-label">From</span>
+								<input class="ess-input" type="date" bind:value={phFrom} max={phTo || undefined} />
+							</label>
+							<label class="ess-field">
+								<span class="ess-label">To</span>
+								<input class="ess-input" type="date" bind:value={phTo} min={phFrom || undefined} />
+							</label>
+						</div>
+						<p class="ess-help">Up to {MAX_BACKFILL_DAYS} days, pulled 28 days at a time. Days already on file are refreshed in place, never counted twice.</p>
+						{#if backfillProblem}<p class="ess-error">{backfillProblem}</p>{/if}
+						<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={phRunning || !!backfillProblem} onclick={() => runProhance({ fromDate: phFrom, toDate: phTo })}>
+							<CalendarRange size={14} />
+							{phRunning ? 'Syncing…' : `Backfill ${backfillDays || ''} ${backfillDays === 1 ? 'day' : 'days'}`}
+						</button>
+					</details>
+				{/if}
+
+				{#if phError}
+					<p class="ess-error msg"><AlertTriangle size={15} /> {phError}</p>
+				{/if}
+				{#if phResult}
+					<div class="ess-notice ess-notice--success">
+						<span class="ess-notice__icon"><CheckCircle size={15} /></span>
+						<div class="ess-notice__body"><strong>Synced.</strong> {phResult}</div>
+					</div>
+				{/if}
+
+				{#if ph && ph.syncs.length > 0}
+					<div class="ess-rows runs">
+						{#each ph.syncs as s (s.id)}
+							<div class="ess-row">
+								<div class="ess-row__body">
+									<span class="ess-row__title">{fmtDay(s.rangeFrom)} → {fmtDay(s.rangeTo)}</span>
+									<span class="ess-row__meta">
+										{fmtWhen(s.startedAt)} · {s.trigger === 'manual' ? 'by hand' : 'scheduled'} · {s.rowCount} days, {s.matchedCount} matched{s.unmatchedCount > 0 ? `, ${s.unmatchedCount} unmatched` : ''}
+									</span>
+									{#if s.error}<span class="run-error">{s.error}</span>{/if}
+								</div>
+								<div class="ess-row__end">
+									{#if s.status === 'error'}
+										<span class="ess-badge ess-badge--bad">Failed</span>
+									{:else if !s.finishedAt}
+										<span class="ess-badge ess-badge--pending">Running</span>
+									{:else}
+										<span class="ess-badge ess-badge--ok">OK</span>
+									{/if}
+								</div>
+							</div>
+						{/each}
+					</div>
+				{:else if ph}
+					<p class="ess-help">No ProHance sync has run yet.</p>
+				{/if}
+			</section>
+		{/if}
+
 		{#if preview && unmatchedDays.length > 0}
 			<section class="ess-card" aria-labelledby="unm-h">
 				<div class="ess-card-head">
-					<h2 class="ess-h2" id="unm-h">Unmatched records ({preview.unmatchedCodes.length})</h2>
+					<h2 class="ess-h2" id="unm-h"><UserX size={16} /> Unmatched records ({preview.unmatchedCodes.length})</h2>
 					<button type="button" class="ess-icon-btn" onclick={() => (unmatchedOpen = !unmatchedOpen)} aria-expanded={unmatchedOpen} aria-label={unmatchedOpen ? 'Collapse' : 'Expand'}>
 						{#if unmatchedOpen}<ChevronUp size={18} />{:else}<ChevronDown size={18} />{/if}
 					</button>
@@ -833,6 +1057,66 @@
 		padding: 10px 0 0;
 		cursor: pointer;
 		font: inherit;
+	}
+
+	/* ---------- ProHance sync ---------- */
+	.sync-now {
+		width: 100%;
+		margin-top: 4px;
+	}
+	.sync-ic {
+		display: inline-grid;
+	}
+	/* Lengths are !important: the app shortens every animation under reduced
+	   motion, and a spinner that never turns would read as stuck. */
+	.sync-ic.spin {
+		animation: ph-spin 900ms linear infinite;
+		animation-duration: 900ms !important;
+	}
+	@keyframes ph-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+	.backfill {
+		margin-top: 10px;
+		font-size: 13px;
+		color: var(--ess-text-secondary);
+	}
+	.backfill summary {
+		cursor: pointer;
+		font-weight: 500;
+		color: var(--ess-text);
+	}
+	.backfill-row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 10px;
+		margin: 10px 0 6px;
+	}
+	.backfill .ess-error {
+		margin: 4px 0 8px;
+	}
+	.backfill .ess-btn {
+		margin-top: 6px;
+	}
+	.runs {
+		margin-top: 10px;
+	}
+	.runs .ess-row {
+		padding: 10px 0;
+	}
+	.runs .ess-row__title {
+		font-size: 13.5px;
+	}
+	.runs .ess-row__meta {
+		font-size: 12px;
+		white-space: normal;
+	}
+	.run-error {
+		font-size: 12px;
+		color: var(--ess-danger);
+		overflow-wrap: anywhere;
 	}
 
 	@media (max-width: 1100px) {

@@ -136,7 +136,7 @@
 <div class="preview" role="dialog" aria-modal="true" aria-labelledby="pv-title">
 	<header class="head">
 		<div>
-			<h2 id="pv-title" class="ess-h2">Preview · {label}</h2>
+			<h2 id="pv-title" class="ess-h2"><FileSpreadsheet size={16} /> Preview · {label}</h2>
 			<p class="sub">
 				This is exactly what downloads.
 				{#if canEdit}Click a cell to change it by hand; changes save as you go and show <mark>highlighted</mark>, with the portal's value on hover.{/if}

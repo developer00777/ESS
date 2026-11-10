@@ -11,6 +11,7 @@
 	import Settings from '@lucide/svelte/icons/settings';
 	import BellOff from '@lucide/svelte/icons/bell-off';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
+	import MessagesSquare from '@lucide/svelte/icons/messages-square';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import { channelLabel, type SidebarChannel } from '$lib/chat/client.svelte';
 
@@ -112,7 +113,7 @@
 
 <nav class="side" aria-label="Conversations">
 	<div class="tools">
-		<h2 class="ess-h2">Chats</h2>
+		<h2 class="ess-h2"><MessagesSquare size={16} /> Chats</h2>
 		<button type="button" class="ess-icon-btn" onclick={onnew} aria-label="New conversation" title="New conversation"><Plus size={19} /></button>
 		<button type="button" class="ess-icon-btn" aria-label="Find a conversation" title="Find a conversation" aria-pressed={searching} onclick={() => { searching = !searching; if (!searching) filter = ''; }}><Search size={18} /></button>
 	</div>

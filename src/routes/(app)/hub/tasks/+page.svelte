@@ -2,6 +2,7 @@
 	import List from '@lucide/svelte/icons/list';
 	import SquareKanban from '@lucide/svelte/icons/square-kanban';
 	import Plus from '@lucide/svelte/icons/plus';
+	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import TaskBoard, { type BoardColumn } from '$lib/components/hub/TaskBoard.svelte';
 	import TaskRow from '$lib/components/hub/TaskRow.svelte';
 	import { createTask, moveTask } from '$lib/hub/actions';
@@ -144,7 +145,7 @@
 
 	<section class="ess-card board-card ess-fill-card" aria-labelledby="tasks-h">
 		<header class="toolbar">
-			<h2 id="tasks-h" class="ess-h2">My tasks</h2>
+			<h2 id="tasks-h" class="ess-h2"><ListChecks size={16} /> My tasks</h2>
 			<div class="ess-segmented" role="group" aria-label="View">
 				<button type="button" aria-pressed={view === 'list'} onclick={() => setView('list')}><List size={15} /> List</button>
 				<button type="button" aria-pressed={view === 'board'} onclick={() => setView('board')}><SquareKanban size={15} /> Board</button>

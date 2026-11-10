@@ -14,7 +14,7 @@
 	import Palette from '@lucide/svelte/icons/palette';
 	import MessagesSquare from '@lucide/svelte/icons/messages-square';
 	import Video from '@lucide/svelte/icons/video';
-	import Search from '@lucide/svelte/icons/search';
+	import Compass from '@lucide/svelte/icons/compass';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import { adminTabForPath, visibleAdminTabs, type AdminTabId } from '$lib/admin-tabs';
@@ -172,7 +172,7 @@
 >
 	{#snippet actions()}
 		<button type="button" class="ess-btn ess-btn--secondary jump-btn" onclick={openJump} aria-label="Jump to a section or task" title="Jump to… (Ctrl K)">
-			<Search size={15} />
+			<Compass size={15} />
 			<span class="jump-label">Jump to…</span>
 			<kbd class="ess-kbd">Ctrl K</kbd>
 		</button>
@@ -344,16 +344,25 @@
 		padding: 10px 16px;
 		gap: 10px;
 	}
-	/* Value on the left, label and detail stacked beside it. */
+	/* Value on the left, label and detail stacked beside it, all on one
+	   centre line; a cell with no detail keeps the value and label on a
+	   single row instead of spanning an empty second one (which left the
+	   label stuck to the top). */
+	.admin-body > :global(.ess-figures > .ess-figure) {
+		align-items: center;
+	}
 	.admin-body > :global(.ess-figures > .ess-figure > div) {
 		grid-template-columns: auto minmax(0, 1fr);
 		column-gap: 10px;
-		align-items: start;
+		align-items: center;
 	}
 	.admin-body > :global(.ess-figures) :global(.ess-figure__value) {
 		grid-row: 1 / span 2;
 		font-size: 20px;
 		line-height: 1;
+	}
+	.admin-body > :global(.ess-figures) :global(.ess-figure > div:not(:has(> .detail)) > .ess-figure__value) {
+		grid-row: 1;
 	}
 	.admin-body > :global(.ess-figures) :global(.ess-figure__label),
 	.admin-body > :global(.ess-figures) :global(.ess-figure__value ~ span) {
@@ -366,8 +375,8 @@
 	.admin-body > :global(.ess-figures) :global(.ess-figure__dot) {
 		width: 10px;
 		height: 10px;
-		margin-top: 6px;
-		align-self: flex-start;
+		margin-top: 0;
+		align-self: center;
 	}
 
 	/* Fill layout (desktop). The body is the .ess-fill child of .ess-content,
@@ -385,9 +394,12 @@
 			.admin-body > :global(*) {
 				flex-shrink: 0;
 			}
+			/* fits the screen, but never squeezes below a usable height: on a
+			   very short window the page scrolls instead of crushing its cards
+			   into slivers (the dashboard does the same) */
 			.admin-body > :global(.ess-fill) {
 				flex: 1 1 0px;
-				min-height: 0;
+				min-height: 540px;
 			}
 			:global(.ess-content) > .admin-body:not(:has(> :global(.ess-fill))) {
 				flex: 1 0 auto;
@@ -436,12 +448,19 @@
 		color: var(--ess-text);
 		outline: none;
 	}
+	/* no focus box around the field (the global :focus-visible ring) */
+	.jump-input:focus,
+	.jump-input:focus-visible {
+		box-shadow: none;
+		border-radius: 0;
+	}
 
+	/* one height whatever matches, so the box never jumps while typing */
 	.jump-list {
 		list-style: none;
 		margin: 0;
 		padding: 6px;
-		max-height: 340px;
+		height: 340px;
 		overflow-y: auto;
 	}
 
@@ -535,15 +554,14 @@
 		}
 	}
 
-	/* The header row is shared with the top-bar cluster: Jump to shows its
-	   icon only until there's room for the label. */
+	/* The header row is shared with the top-bar cluster, whose search sits
+	   right beside this: Jump to keeps its compass and its words so the two
+	   never read as two searches; only the shortcut hint gives way. */
 	@media (min-width: 1101px) {
 		@container ess-main (max-width: 1474px) {
 			.jump-btn.jump-btn {
-				width: 36px;
-				padding: 0;
+				padding: 0 12px;
 			}
-			.jump-label,
 			.jump-btn kbd {
 				display: none;
 			}

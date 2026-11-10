@@ -5,3 +5,8 @@
    editorial serif headings, violet actions, lavender selection. */
 @import './lib/styles/ess-tokens.css';
 @import './lib/styles/ess-components.css';
+/* The selectable looks; Original is the two files above. Amber is theme 4. */
+@import './lib/styles/ess-skin-mono.css';
+@import './lib/styles/ess-skins.css';
+@import './lib/styles/ess-skin-amber.css';
+@import './lib/styles/ess-skin-layouts.css';

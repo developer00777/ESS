@@ -18,6 +18,9 @@
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import Info from '@lucide/svelte/icons/info';
 	import Check from '@lucide/svelte/icons/check';
+	import X from '@lucide/svelte/icons/x';
+	import ChartColumn from '@lucide/svelte/icons/chart-column';
+	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import AbsencePlanner from '$lib/components/dashboard/AbsencePlanner.svelte';
 	import AttendanceHeatmap from '$lib/components/dashboard/AttendanceHeatmap.svelte';
@@ -25,16 +28,17 @@
 	import OnboardingPanel from '$lib/components/dashboard/OnboardingPanel.svelte';
 	import ChampCard from '$lib/components/dashboard/ChampCard.svelte';
 	import QuickActionRow from '$lib/components/QuickActionRow.svelte';
+	import DotGridField from '$lib/components/DotGridField.svelte';
 	import { timeIst } from '$lib/hub/format';
 
 	let { data } = $props();
 
 	const firstName = $derived(data.user.fullName.split(' ')[0]);
 	// Time of day comes from the viewer's clock, after hydration.
-	let greeting = $state('Welcome back');
+	let greeting = $state('Welcome Back');
 	$effect(() => {
 		const h = new Date().getHours();
-		greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+		greeting = h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
 	});
 	const fmtNum = (n: number) => String(+n.toFixed(1));
 
@@ -205,8 +209,14 @@
      below. -->
 <div class="home">
 	<header class="top">
+		<!-- Mono only: a strip of dashes behind the greeting that move away
+		     from the cursor. Absolutely placed, so it never changes the
+		     one-screen layout. -->
+		<div class="top-field" aria-hidden="true">
+			<DotGridField dotGap={22} interactionRadius={70} repulsionStrength={5} dashLength={[4, 9]} intensity={0.75} />
+		</div>
 		<div class="hello">
-			<h1>{greeting}, {firstName}</h1>
+			<h1><span class="greet">{greeting},</span> <span class="name">{firstName}</span></h1>
 		</div>
 		<div class="ess-tabs view-tabs" role="tablist" aria-label="Home views">
 			<button type="button" role="tab" class="ess-tab" aria-selected={view === 'today'} onclick={() => (view = 'today')}>Today</button>
@@ -215,20 +225,22 @@
 		<div class="figures" class:hide={view === 'insights'} role="group" aria-label="At a glance">
 			<a class="fig" href="/leave" title="{fmtNum(data.leaveAllocated)} days allocated this year">
 				<span class="v"><b>{fmtNum(data.leaveBalance)}</b><span>days</span></span>
-				<span class="k">Leave balance</span>
+				<!-- .fig-ic: the card icons, shown only where the figures are
+				     cards (Atur) -->
+				<span class="k"><span class="fig-ic" aria-hidden="true"><Plane size={13} strokeWidth={2.2} /></span><span class="k-t">Leave balance</span></span>
 			</a>
 			<a class="fig" href="/attendance" title="{data.daysWithCheckIn} of {data.businessDaysSoFar} days with a check-in">
 				<span class="v"><b>{data.attendancePct}</b><span>%</span></span>
-				<span class="k">Attendance</span>
+				<span class="k"><span class="fig-ic" aria-hidden="true"><Clock size={13} strokeWidth={2.2} /></span><span class="k-t">Attendance</span></span>
 			</a>
 			<a class="fig" href="/leave">
 				<span class="v"><b>{data.pendingCount}</b></span>
-				<span class="k">Pending leave</span>
+				<span class="k"><span class="fig-ic" aria-hidden="true"><FileText size={13} strokeWidth={2.2} /></span><span class="k-t">Pending leave</span></span>
 			</a>
 			{#if data.toApprove > 0 || canApprove}
 				<a class="fig" class:attn={data.toApprove > 0} href="/leave?tab=approvals">
 					<span class="v"><b>{data.toApprove}</b></span>
-					<span class="k">To approve</span>
+					<span class="k"><span class="fig-ic" aria-hidden="true"><Check size={13} strokeWidth={2.4} /></span><span class="k-t">To approve</span></span>
 				</a>
 			{/if}
 		</div>
@@ -254,30 +266,30 @@
 		<div class="ess-figures ins-figs" role="group" aria-label="This month at a glance">
 			<a class="ess-figure" href="/attendance">
 				<span class="ess-tile ess-tile--sm ess-tile--ok"><Clock size={16} /></span>
-				<div><div class="ess-figure__value">{data.attendancePct}<small>%</small></div><div class="ess-figure__label">Attendance · {data.daysWithCheckIn} of {data.businessDaysSoFar} days</div></div>
+				<div><div class="ess-figure__value">{data.attendancePct}<small>%</small></div><div class="ess-figure__label">Attendance<span class="fig-sep"> · </span><span class="fig-sub">{data.daysWithCheckIn} of {data.businessDaysSoFar} days</span></div></div>
 			</a>
 			<a class="ess-figure" href="/attendance">
 				<span class="ess-tile ess-tile--sm"><Activity size={16} /></span>
-				<div><div class="ess-figure__value">{data.analytics.recordedHours}<small> hrs</small></div><div class="ess-figure__label">Recorded · {data.analytics.completeDays} complete days</div></div>
+				<div><div class="ess-figure__value">{data.analytics.recordedHours}<small> hrs</small></div><div class="ess-figure__label">Recorded<span class="fig-sep"> · </span><span class="fig-sub">{data.analytics.completeDays} complete days</span></div></div>
 			</a>
 			<a class="ess-figure" href="/leave">
 				<span class="ess-tile ess-tile--sm"><Calendar size={16} /></span>
-				<div><div class="ess-figure__value">{fmtNum(data.leaveBalance)}<small> days</small></div><div class="ess-figure__label">Leave balance{data.leaveAllocated ? ` · of ${fmtNum(data.leaveAllocated)}` : ''}</div></div>
+				<div><div class="ess-figure__value">{fmtNum(data.leaveBalance)}<small> days</small></div><div class="ess-figure__label">Leave balance{#if data.leaveAllocated}<span class="fig-sep"> · </span><span class="fig-sub">of {fmtNum(data.leaveAllocated)}</span>{/if}</div></div>
 			</a>
 			<a class="ess-figure" href="/leave">
 				<span class="ess-tile ess-tile--sm ess-tile--warn"><FileText size={16} /></span>
-				<div><div class="ess-figure__value">{data.pendingCount}</div><div class="ess-figure__label">Pending · {data.approvedThisMonth} approved this month</div></div>
+				<div><div class="ess-figure__value">{data.pendingCount}</div><div class="ess-figure__label">Pending<span class="fig-sep"> · </span><span class="fig-sub">{data.approvedThisMonth} approved this month</span></div></div>
 			</a>
 			<a class="ess-figure" href="/profile">
 				<span class="ess-tile ess-tile--sm"><Award size={16} /></span>
-				<div><div class="ess-figure__value tenure">{data.analytics.tenure ?? 'Not set'}</div><div class="ess-figure__label">{data.analytics.joiningDate ? `Tenure · joined ${data.analytics.joiningDate}` : 'Tenure · joining date not on file'}</div></div>
+				<div><div class="ess-figure__value tenure">{data.analytics.tenure ?? 'Not set'}</div><div class="ess-figure__label">Tenure<span class="fig-sep"> · </span><span class="fig-sub">{data.analytics.joiningDate ? `joined ${data.analytics.joiningDate}` : 'joining date not on file'}</span></div></div>
 			</a>
 		</div>
 
 		<div class="ins-grid">
 			<section class="ess-card ins-card" aria-labelledby="tl-h">
 				<div class="ess-card-head">
-					<h2 id="tl-h" class="ess-h2">Today’s timeline</h2>
+					<h2 id="tl-h" class="ess-h2"><Clock size={16} /> Today’s timeline</h2>
 					<div class="week" aria-label="This week">
 						{#each week as d (d.num)}
 							<span class="wk" aria-current={d.isToday ? 'date' : undefined}><small>{d.label}</small>{d.num}</span>
@@ -321,7 +333,7 @@
 			<div class="ins-col">
 				<section class="ess-card ins-card" aria-labelledby="needs-h">
 					<div class="ess-card-head">
-						<h2 id="needs-h" class="ess-h2">Needs your attention</h2>
+						<h2 id="needs-h" class="ess-h2"><Bell size={16} /> Needs your attention</h2>
 						<a class="ess-link" href="/leave">Leave <ChevronRight size={14} /></a>
 					</div>
 					<div class="ess-scroll ins-body ess-rows">
@@ -348,8 +360,8 @@
 										<span class="ess-row__meta">{row.type.name} · {fmtRange(String(row.application.startDate).slice(0, 10), String(row.application.endDate).slice(0, 10))} · {Number(row.application.days)} day{Number(row.application.days) === 1 ? '' : 's'}</span>
 									</div>
 									<div class="ess-row__end">
-										<button class="ess-btn ess-btn--primary ess-btn--sm" onclick={() => decide(row.application.id, 'approve')}>Approve</button>
-										<button class="ess-btn ess-btn--outline ess-btn--sm" onclick={() => decide(row.application.id, 'reject')}>Reject</button>
+										<button class="ess-btn ess-btn--primary ess-btn--sm" onclick={() => decide(row.application.id, 'approve')}><Check size={14} /> Approve</button>
+										<button class="ess-btn ess-btn--outline ess-btn--sm" onclick={() => decide(row.application.id, 'reject')}><X size={14} /> Reject</button>
 									</div>
 								</div>
 							{/each}
@@ -362,7 +374,7 @@
 
 				<section class="ess-card ins-card" aria-labelledby="act-h">
 					<div class="ess-card-head">
-						<h2 id="act-h" class="ess-h2">Recent activity</h2>
+						<h2 id="act-h" class="ess-h2"><Activity size={16} /> Recent activity</h2>
 						<a class="ess-link" href="/attendance">All <ChevronRight size={14} /></a>
 					</div>
 					<div class="ess-scroll ins-body ess-rows">
@@ -389,7 +401,7 @@
 			<div class="ins-col">
 				<section class="ess-card ins-card req-card" aria-labelledby="req-h">
 					<div class="ess-card-head">
-						<h2 id="req-h" class="ess-h2">Request progress</h2>
+						<h2 id="req-h" class="ess-h2"><FileText size={16} /> Request progress</h2>
 						<a class="ess-link" href="/leave" aria-label="All requests"><ChevronRight size={16} /></a>
 					</div>
 					<div class="ess-scroll ins-body">
@@ -431,7 +443,7 @@
 
 				<section class="ess-card ins-card" aria-labelledby="month-h">
 					<div class="ess-card-head">
-						<h2 id="month-h" class="ess-h2">Hours this month</h2>
+						<h2 id="month-h" class="ess-h2"><ChartColumn size={16} /> Hours this month</h2>
 						<span class="ess-caption">{data.analytics.recordedDays} days · {data.analytics.recordedHours} hrs</span>
 					</div>
 					<div class="bars" role="img" aria-label="Recorded hours per day this month: {data.analytics.recordedHours} hours over {data.analytics.recordedDays} days">
@@ -444,7 +456,7 @@
 
 				<section class="ess-card ins-card" aria-labelledby="up-h">
 					<div class="ess-card-head">
-						<h2 id="up-h" class="ess-h2">Coming up</h2>
+						<h2 id="up-h" class="ess-h2"><CalendarClock size={16} /> Coming up</h2>
 						<a class="ess-link" href="/hub/meetings">Meetings <ChevronRight size={14} /></a>
 					</div>
 					<div class="ess-scroll ins-body ess-rows">
@@ -503,12 +515,136 @@
 		font-size: 13px;
 		color: var(--ess-text-muted);
 	}
+	/* the Mono strip behind the greeting; hidden in every other theme */
+	.top {
+		position: relative;
+		isolation: isolate;
+	}
+	.top-field {
+		display: none;
+		position: absolute;
+		z-index: -1;
+		top: -10px;
+		bottom: -10px;
+		left: -8px;
+		width: min(560px, 60%);
+		pointer-events: none;
+		-webkit-mask-image: linear-gradient(90deg, #000 0%, #000 45%, transparent 100%),
+			linear-gradient(180deg, transparent 0%, #000 30%, #000 70%, transparent 100%);
+		-webkit-mask-composite: source-in;
+		mask-image: linear-gradient(90deg, #000 0%, #000 45%, transparent 100%),
+			linear-gradient(180deg, transparent 0%, #000 30%, #000 70%, transparent 100%);
+		mask-composite: intersect;
+	}
+	:global([data-ess-skin='mono']) .top-field {
+		display: block;
+	}
 	.hello h1 {
-		margin: 2px 0 0;
+		margin: 0;
 		font-size: 30px;
 		font-weight: 700;
 		letter-spacing: -0.03em;
 		line-height: 1.1;
+	}
+	/* the greeting reads as a lead-in, lighter and smaller; the name is the
+	   headline. Sizes are relative, so the short-screen h1 sizes carry over. */
+	.hello .greet {
+		font-size: 0.74em;
+		font-weight: 500;
+		letter-spacing: -0.015em;
+		color: var(--ess-text-secondary);
+	}
+	.hello .name {
+		font-weight: 700;
+		color: var(--ess-text);
+	}
+
+	/* ---------- motion ----------
+	   Soft and short: the page settles in top to bottom (greeting, figures,
+	   planner, then the four panels left to right), each a small fade-up;
+	   switching Today / Timeline replays it for what comes in. Panels lift a
+	   little on hover and their arrow nudges toward where it goes.
+	   Lengths are !important so this contained motion still plays under the
+	   reduced-motion rule (see INTERACTION FEEDBACK in ess-components.css). */
+	@keyframes home-rise {
+		from {
+			opacity: 0;
+			transform: translateY(8px);
+		}
+	}
+	@keyframes home-fade {
+		from {
+			opacity: 0;
+		}
+	}
+	.home > .top,
+	.home > :global(.planner),
+	.home .lower > :global(*),
+	.home .insights {
+		animation: home-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation-duration: 520ms !important;
+	}
+	.home > .top {
+		animation-name: home-fade;
+		animation-duration: 400ms !important;
+	}
+	.home > :global(.planner) {
+		animation-delay: 80ms;
+	}
+	.home .lower > :global(:nth-child(1)) {
+		animation-delay: 160ms;
+	}
+	.home .lower > :global(:nth-child(2)) {
+		animation-delay: 220ms;
+	}
+	.home .lower > :global(:nth-child(3)) {
+		animation-delay: 280ms;
+	}
+	.home .lower > :global(:nth-child(4)) {
+		animation-delay: 340ms;
+	}
+	.hello .greet,
+	.hello .name {
+		display: inline-block;
+		animation: home-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation-duration: 560ms !important;
+	}
+	.hello .name {
+		animation-delay: 90ms;
+	}
+	.figures .fig {
+		animation: home-rise 480ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation-duration: 480ms !important;
+	}
+	.figures .fig:nth-child(1) {
+		animation-delay: 140ms;
+	}
+	.figures .fig:nth-child(2) {
+		animation-delay: 200ms;
+	}
+	.figures .fig:nth-child(3) {
+		animation-delay: 260ms;
+	}
+	.figures .fig:nth-child(4) {
+		animation-delay: 320ms;
+	}
+	.home .lower > :global(*) {
+		transition:
+			box-shadow 260ms ease,
+			transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+		transition-duration: 260ms !important;
+	}
+	/* a deeper shadow only: moving the panel would slide it out from under
+	   a pointer resting on its edge and back, a flicker */
+	.home .lower > :global(*:hover) {
+		box-shadow: var(--ess-elev-3);
+	}
+	.home .lower :global(.more svg) {
+		transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+		transition-duration: 220ms !important;
+	}
+	.home .lower > :global(*:hover .more svg) {
+		transform: translate(1.5px, -1.5px);
 	}
 	.figures {
 		display: flex;
@@ -518,8 +654,9 @@
 	.fig {
 		display: flex;
 		flex-direction: column;
+		justify-content: center;
 		min-width: 92px;
-		padding: 6px 14px;
+		padding: 0 14px;
 		border-radius: 14px;
 		color: var(--ess-text);
 		transition: background var(--ess-t-fast);
@@ -528,10 +665,13 @@
 		background: var(--ess-surface);
 		color: var(--ess-text);
 	}
+	/* tight lines, so a figure is as tall as the top bar's buttons and the
+	   whole header row centres on one line with them */
 	.fig .v {
 		display: flex;
 		align-items: baseline;
 		gap: 3px;
+		line-height: 1.1;
 	}
 	.fig b {
 		font-size: 20px;
@@ -544,12 +684,23 @@
 		font-weight: 700;
 		color: var(--ess-text-secondary);
 	}
+	/* a figure never squeezes: its label stays on one line, and one that
+	   doesn't fit moves whole to the header's hidden second line rather
+	   than showing cut in half */
+	.fig {
+		flex: none;
+	}
 	.fig .k {
 		font-size: 12px;
+		line-height: 1.2;
 		color: var(--ess-text-muted);
+		white-space: nowrap;
 	}
 	.fig.attn b {
 		color: var(--ess-primary-text);
+	}
+	.fig-ic {
+		display: none;
 	}
 	.apply {
 		margin-left: 10px;
@@ -796,7 +947,10 @@
 		@container ess-fill (min-width: 1075px) {
 			.top {
 				flex-wrap: nowrap;
-				min-height: 38px;
+				/* exactly the floating top-bar cluster's height (TopBar publishes
+				   it), so the greeting row and the cluster centre on one line */
+				height: var(--topbar-h, 38px);
+				min-height: 0;
 				padding-right: calc(var(--topbar-w, 380px) + 14px);
 			}
 			.hello h1 {
@@ -916,7 +1070,6 @@
 	}
 	.wk[aria-current='date'] small {
 		color: inherit;
-		opacity: 0.85;
 	}
 	/* Quick actions: a compact two-column list under the timeline. */
 	.quick {
@@ -1049,17 +1202,24 @@
 				min-width: 0;
 				flex-wrap: wrap;
 				justify-content: flex-end;
-				height: 58px;
+				height: var(--topbar-h, 38px);
 				overflow: hidden;
 				align-content: flex-start;
 				align-items: center;
+				container: figs / inline-size;
 			}
+		}
+	}
+	/* room for not even one whole figure: show none, rather than a sliver */
+	@container figs (max-width: 120px) {
+		.fig {
+			visibility: hidden;
 		}
 	}
 	@media (min-width: 1101px) and (max-height: 760px) {
 		@container ess-fill (min-width: 1075px) {
 			.top .figures {
-				height: 46px;
+				height: var(--topbar-h, 36px);
 			}
 			.top .apply {
 				flex: none;

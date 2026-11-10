@@ -1,4 +1,5 @@
 import { redirect, type Handle } from '@sveltejs/kit';
+import { env as envPrivate } from '$env/dynamic/private';
 import { sequence } from '@sveltejs/kit/hooks';
 import { withClerkHandler } from 'svelte-clerk/server';
 import {
@@ -23,23 +24,30 @@ import { startClerkAccountSync } from '$lib/server/clerk-sync';
 import type { SessionUser } from '$lib/server/auth';
 import { clerkAuthActive, authorizedParties, userForClerkId } from '$lib/server/clerk';
 
-// Kicks off the ProHance attendance poller with the server process. No-op
-// unless PROHANCE_BASE_URL + Prohance_API_KEY are set; guarded internally
-// against dev-HMR double starts.
-startProhancePoller();
+// DISABLE_BACKGROUND_JOBS=1 skips every job below, so a local dev server
+// pointed at the live database only serves pages and never sends emails or
+// updates rows alongside production. Unset in production.
+if (envPrivate.DISABLE_BACKGROUND_JOBS === '1') {
+	console.log('[hooks] DISABLE_BACKGROUND_JOBS=1: background jobs not started');
+} else {
+	// Kicks off the ProHance attendance poller with the server process. No-op
+	// unless PROHANCE_BASE_URL + Prohance_API_KEY are set; guarded internally
+	// against dev-HMR double starts.
+	startProhancePoller();
 
-// Sends the email copy of scheduled announcements once they go live.
-startAnnouncementScheduler();
+	// Sends the email copy of scheduled announcements once they go live.
+	startAnnouncementScheduler();
 
-// Champ Chat: roster sync, reminders, digests, celebrations, retention.
-startChatScheduler();
+	// Champ Chat: roster sync, reminders, digests, celebrations, retention.
+	startChatScheduler();
 
-// Approved login emails go out one at a time at the cadence HR set.
-startLoginEmailSender();
+	// Approved login emails go out one at a time at the cadence HR set.
+	startLoginEmailSender();
 
-// Copies every existing login into Clerk (same password) once Clerk keys are
-// set, then hourly picks up anyone missing. No-op without keys.
-startClerkAccountSync();
+	// Copies every existing login into Clerk (same password) once Clerk keys are
+	// set, then hourly picks up anyone missing. No-op without keys.
+	startClerkAccountSync();
+}
 
 /** Privileges ride along on the request user (src/lib/capabilities.ts). */
 async function withCapabilities(user: SessionUser): Promise<SessionUser> {

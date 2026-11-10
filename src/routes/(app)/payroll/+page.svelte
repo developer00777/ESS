@@ -1,5 +1,6 @@
 <script lang="ts">
 	import FileText from '@lucide/svelte/icons/file-text';
+	import Headset from '@lucide/svelte/icons/headset';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import PayrollDashboard from '$lib/components/payroll/PayrollDashboard.svelte';
 
@@ -28,7 +29,7 @@
 	<h2 class="ess-h2">Payroll is not available yet</h2>
 	<p>Your HR team will let you know when payslips are published here. Until then, payroll questions go to HR directly.</p>
 	<div class="actions">
-		<a href="/hr-contacts" class="ess-btn ess-btn--primary">Contact HR</a>
+		<a href="/hr-contacts" class="ess-btn ess-btn--primary"><Headset size={16} /> Contact HR</a>
 		<a href="/dashboard" class="ess-btn ess-btn--secondary">Return to Today</a>
 	</div>
 </section>

@@ -9,7 +9,13 @@
 	import Plus from '@lucide/svelte/icons/plus';
 	import X from '@lucide/svelte/icons/x';
 	import CloudUpload from '@lucide/svelte/icons/cloud-upload';
+	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+	import ScrollText from '@lucide/svelte/icons/scroll-text';
+	import Archive from '@lucide/svelte/icons/archive';
 	import { invalidateAll } from '$app/navigation';
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 
 	let { data } = $props();
 
@@ -294,6 +300,40 @@
 
 	const fmtDate = (v: string | Date | null | undefined) => (v ? new Date(v).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 	const fmtDays = (n: unknown) => (n == null || n === '' ? '—' : Number.isInteger(Number(n)) ? `${Number(n)} ${Number(n) === 1 ? 'day' : 'days'}` : `${Number(n).toFixed(1)} days`);
+
+	/* Sorting and paging for the read-only lists below. */
+	const num = (n: unknown) => (n == null || n === '' ? null : Number(n));
+	const publishedCalendarsView = new TableView(() => data.publishedCalendars, {
+		version: (c) => c.version,
+		group: (c) => c.shiftGroupName,
+		year: (c) => c.year,
+		holidays: (c) => c.holidays.length,
+		effective: (c) => c.effectiveFrom
+	});
+	const otherCalendarsView = new TableView(() => data.otherCalendars, {
+		version: (c) => c.version,
+		group: (c) => c.shiftGroupName,
+		year: (c) => c.year,
+		holidays: (c) => c.holidays.length,
+		status: (c) => (c.status === 'archived' ? 'Archived' : 'Draft')
+	});
+	const leaveTypesView = new TableView(() => data.leaveTypes, {
+		version: (lt) => lt.policyVersion,
+		name: (lt) => lt.name,
+		code: (lt) => lt.code,
+		accrual: (lt) => num(lt.monthlyQuotaDays ?? lt.fixedDays ?? lt.accrualPerMonth),
+		carry: (lt) => num(lt.carryForwardCap)
+	});
+	const archivedLeaveTypesView = new TableView(() => data.archivedLeaveTypes, {
+		version: (lt) => lt.policyVersion,
+		name: (lt) => lt.name,
+		code: (lt) => lt.code
+	});
+	const documentsView = new TableView(() => kindDocuments, {
+		file: (d) => d.filename,
+		uploaded: (d) => d.createdAt,
+		status: (d) => DOC_STATUS[d.status]?.label ?? d.status
+	});
 </script>
 
 <svelte:head>
@@ -311,11 +351,14 @@
 	</button>
 </nav>
 
-<div class="ess-fill pol-body">
+<!-- A page that scrolls (not the one-screen fill layout): the publish card,
+     the published list and the documents each take their natural height,
+     so nothing is squeezed when there are many policies or versions. -->
+<div class="pol-body">
 <section class="ess-card publish" aria-labelledby="pub-h">
 	<div class="pub-head">
 		<div>
-			<h2 class="ess-h2" id="pub-h">Publish a new {kind === 'holiday_calendar' ? 'holiday calendar' : 'leave policy'}</h2>
+			<h2 class="ess-h2" id="pub-h"><CloudUpload size={16} /> Publish a new {kind === 'holiday_calendar' ? 'holiday calendar' : 'leave policy'}</h2>
 			<p class="ess-caption">Upload the source document and review what was read from it before publishing.</p>
 		</div>
 		<ol class="ess-stepper steps" aria-label="Progress">
@@ -341,7 +384,7 @@
 	<div class="pub-grid">
 		<!-- ---------- left: the document ---------- -->
 		<div class="doc">
-			<h3 class="ess-h3">Uploaded document</h3>
+			<h3 class="ess-h3"><FileText size={16} /> Uploaded document</h3>
 			{#if file}
 				<div class="file-row">
 					<span class="ess-tile" class:ess-tile--bad={isPdf} class:ess-tile--info={!isPdf}>
@@ -368,6 +411,7 @@
 							<UploadCloud size={16} /> {extracting ? 'Reading with AI…' : 'Upload & read'}
 						</button>
 						<label class="ess-btn ess-btn--secondary">
+							<RefreshCw size={16} />
 							Replace file
 							<input type="file" accept="image/jpeg,image/png,application/pdf" onchange={onFileChange} hidden />
 						</label>
@@ -397,7 +441,7 @@
 
 				{#if kind === 'holiday_calendar'}
 					<div class="fields-head">
-						<h3 class="ess-h3">Extracted holidays</h3>
+						<h3 class="ess-h3"><CalendarDays size={16} /> Extracted holidays</h3>
 						<span class="ess-badge ess-badge--accent">Extracted values</span>
 					</div>
 					<div class="meta-row">
@@ -454,7 +498,7 @@
 					</div>
 				{:else}
 					<div class="fields-head">
-						<h3 class="ess-h3">Extracted policy details</h3>
+						<h3 class="ess-h3"><ScrollText size={16} /> Extracted policy details</h3>
 						<span class="ess-badge ess-badge--accent">Extracted values</span>
 					</div>
 					<label class="ess-field eff">
@@ -535,7 +579,7 @@
 	<section class="ess-card current" aria-labelledby="cur-h">
 		<div class="ess-card-head">
 			<div>
-				<h2 class="ess-h2" id="cur-h">Currently published holiday calendars</h2>
+				<h2 class="ess-h2" id="cur-h"><CalendarDays size={16} /> Currently published holiday calendars</h2>
 				<p class="ess-caption">The calendars employees resolve to, one per shift group.</p>
 			</div>
 		</div>
@@ -546,17 +590,17 @@
 				<table class="ess-table">
 					<thead>
 						<tr>
-							<th>Version</th>
-							<th>Shift group</th>
-							<th class="ess-num">Year</th>
-							<th class="ess-num">Holidays</th>
+							<th aria-sort={publishedCalendarsView.ariaSort('version')}><SortButton view={publishedCalendarsView} key="version">Version</SortButton></th>
+							<th aria-sort={publishedCalendarsView.ariaSort('group')}><SortButton view={publishedCalendarsView} key="group">Shift group</SortButton></th>
+							<th class="ess-num" aria-sort={publishedCalendarsView.ariaSort('year')}><SortButton view={publishedCalendarsView} key="year">Year</SortButton></th>
+							<th class="ess-num" aria-sort={publishedCalendarsView.ariaSort('holidays')}><SortButton view={publishedCalendarsView} key="holidays">Holidays</SortButton></th>
 							<th>Status</th>
-							<th>Effective from</th>
+							<th aria-sort={publishedCalendarsView.ariaSort('effective')}><SortButton view={publishedCalendarsView} key="effective">Effective from</SortButton></th>
 							<th>Actions</th>
 						</tr>
 					</thead>
 					<tbody>
-						{#each data.publishedCalendars as cal (cal.id)}
+						{#each publishedCalendarsView.rows as cal (cal.id)}
 							<tr>
 								<td class="muted">v{cal.version}</td>
 								<td><strong>{cal.shiftGroupName}</strong></td>
@@ -588,25 +632,26 @@
 					</tbody>
 				</table>
 			</div>
+			<TablePager view={publishedCalendarsView} noun="calendars" />
 		{/if}
 
 		{#if data.otherCalendars.length > 0}
-			<h3 class="ess-h3 sub-h">Archived calendars</h3>
+			<h3 class="ess-h3 sub-h"><Archive size={16} /> Archived calendars</h3>
 			<p class="ess-caption">Not shown to employees. Restore one to publish it again (it replaces the live calendar for that shift group and year), or delete it for good.</p>
 			<div class="ess-table-shell current-table">
 				<table class="ess-table">
 					<thead>
 						<tr>
-							<th>Version</th>
-							<th>Shift group</th>
-							<th class="ess-num">Year</th>
-							<th class="ess-num">Holidays</th>
-							<th>Status</th>
+							<th aria-sort={otherCalendarsView.ariaSort('version')}><SortButton view={otherCalendarsView} key="version">Version</SortButton></th>
+							<th aria-sort={otherCalendarsView.ariaSort('group')}><SortButton view={otherCalendarsView} key="group">Shift group</SortButton></th>
+							<th class="ess-num" aria-sort={otherCalendarsView.ariaSort('year')}><SortButton view={otherCalendarsView} key="year">Year</SortButton></th>
+							<th class="ess-num" aria-sort={otherCalendarsView.ariaSort('holidays')}><SortButton view={otherCalendarsView} key="holidays">Holidays</SortButton></th>
+							<th aria-sort={otherCalendarsView.ariaSort('status')}><SortButton view={otherCalendarsView} key="status">Status</SortButton></th>
 							<th>Actions</th>
 						</tr>
 					</thead>
 					<tbody>
-						{#each data.otherCalendars as cal (cal.id)}
+						{#each otherCalendarsView.rows as cal (cal.id)}
 							<tr>
 								<td class="muted">v{cal.version}</td>
 								<td><strong>{cal.shiftGroupName}</strong></td>
@@ -635,13 +680,14 @@
 					</tbody>
 				</table>
 			</div>
+			<TablePager view={otherCalendarsView} noun="calendars" />
 		{/if}
 	</section>
 {:else}
 	<section class="ess-card current" aria-labelledby="curl-h">
 		<div class="ess-card-head">
 			<div>
-				<h2 class="ess-h2" id="curl-h">Currently published policies</h2>
+				<h2 class="ess-h2" id="curl-h"><ScrollText size={16} /> Currently published policies</h2>
 				<p class="ess-caption">The leave types currently in effect. "Max per month" limits how fast a balance may be drawn down; blank is no limit.</p>
 			</div>
 		</div>
@@ -652,18 +698,18 @@
 				<table class="ess-table">
 					<thead>
 						<tr>
-							<th>Version</th>
-							<th>Policy name</th>
-							<th>Code</th>
-							<th>Accrual per month</th>
-							<th>Carry-forward cap</th>
+							<th aria-sort={leaveTypesView.ariaSort('version')}><SortButton view={leaveTypesView} key="version">Version</SortButton></th>
+							<th aria-sort={leaveTypesView.ariaSort('name')}><SortButton view={leaveTypesView} key="name">Policy name</SortButton></th>
+							<th aria-sort={leaveTypesView.ariaSort('code')}><SortButton view={leaveTypesView} key="code">Code</SortButton></th>
+							<th aria-sort={leaveTypesView.ariaSort('accrual')}><SortButton view={leaveTypesView} key="accrual">Accrual per month</SortButton></th>
+							<th aria-sort={leaveTypesView.ariaSort('carry')}><SortButton view={leaveTypesView} key="carry">Carry-forward cap</SortButton></th>
 							<th>Max per month</th>
 							<th>Status</th>
 							<th>Actions</th>
 						</tr>
 					</thead>
 					<tbody>
-						{#each data.leaveTypes as lt (lt.id)}
+						{#each leaveTypesView.rows as lt (lt.id)}
 							<tr>
 								<td class="muted">v{lt.policyVersion}</td>
 								<td><strong>{lt.name}</strong></td>
@@ -712,18 +758,19 @@
 					</tbody>
 				</table>
 			</div>
+			<TablePager view={leaveTypesView} noun="leave types" />
 		{/if}
 
 		{#if data.archivedLeaveTypes.length > 0}
-			<h3 class="ess-h3 sub-h">Archived leave types</h3>
+			<h3 class="ess-h3 sub-h"><Archive size={16} /> Archived leave types</h3>
 			<p class="ess-caption">Not offered when applying for leave. Restore one to offer it again, or delete it with every allocation and application under it. Re-uploading a policy with the same code also restores it.</p>
 			<div class="ess-table-shell current-table">
 				<table class="ess-table">
 					<thead>
-						<tr><th>Version</th><th>Policy name</th><th>Code</th><th>Status</th><th>Actions</th></tr>
+						<tr><th aria-sort={archivedLeaveTypesView.ariaSort('version')}><SortButton view={archivedLeaveTypesView} key="version">Version</SortButton></th><th aria-sort={archivedLeaveTypesView.ariaSort('name')}><SortButton view={archivedLeaveTypesView} key="name">Policy name</SortButton></th><th aria-sort={archivedLeaveTypesView.ariaSort('code')}><SortButton view={archivedLeaveTypesView} key="code">Code</SortButton></th><th>Status</th><th>Actions</th></tr>
 					</thead>
 					<tbody>
-						{#each data.archivedLeaveTypes as lt (lt.id)}
+						{#each archivedLeaveTypesView.rows as lt (lt.id)}
 							<tr>
 								<td class="muted">v{lt.policyVersion}</td>
 								<td><strong>{lt.name}</strong></td>
@@ -751,6 +798,7 @@
 					</tbody>
 				</table>
 			</div>
+			<TablePager view={archivedLeaveTypesView} noun="leave types" />
 		{/if}
 	</section>
 {/if}
@@ -759,7 +807,7 @@
 <section class="ess-card current" aria-labelledby="docs-h">
 	<div class="ess-card-head">
 		<div>
-			<h2 class="ess-h2" id="docs-h">Uploaded {kind === 'holiday_calendar' ? 'calendar' : 'policy'} documents</h2>
+			<h2 class="ess-h2" id="docs-h"><FileText size={16} /> Uploaded {kind === 'holiday_calendar' ? 'calendar' : 'policy'} documents</h2>
 			<p class="ess-caption">The files calendars and policies were read from. Deleting a file keeps what was published from it; to replace a published {kind === 'holiday_calendar' ? 'calendar' : 'policy'}, upload the corrected file above and publish it.</p>
 		</div>
 	</div>
@@ -769,10 +817,10 @@
 		<div class="ess-table-shell current-table">
 			<table class="ess-table">
 				<thead>
-					<tr><th>File</th><th>Uploaded</th><th>Status</th><th>Actions</th></tr>
+					<tr><th aria-sort={documentsView.ariaSort('file')}><SortButton view={documentsView} key="file">File</SortButton></th><th aria-sort={documentsView.ariaSort('uploaded')}><SortButton view={documentsView} key="uploaded">Uploaded</SortButton></th><th aria-sort={documentsView.ariaSort('status')}><SortButton view={documentsView} key="status">Status</SortButton></th><th>Actions</th></tr>
 				</thead>
 				<tbody>
-					{#each kindDocuments as doc (doc.id)}
+					{#each documentsView.rows as doc (doc.id)}
 						{@const st = DOC_STATUS[doc.status] ?? { label: doc.status, tone: 'neutral' }}
 						<tr>
 							<td><a class="doc-link" href="/api/admin/policy-documents/{doc.id}" target="_blank" rel="noopener">{doc.filename}</a></td>
@@ -795,6 +843,7 @@
 				</tbody>
 			</table>
 		</div>
+		<TablePager view={documentsView} noun="documents" />
 	{/if}
 </section>
 </div>
@@ -1054,102 +1103,22 @@
 		color: var(--ess-danger);
 	}
 
-	/* Desktop fill: the publish card takes the height left over and its two
-	   panes scroll on their own; the published list keeps its natural height
-	   up to a cap and scrolls inside after that. */
-	@media (min-width: 1101px) and (min-height: 480px) {
-		@container ess-fill (min-width: 0px) {
-			.pol-body {
-				display: flex;
-				flex-direction: column;
-			}
-			.publish {
-				flex: 1 1 0%;
-				min-height: 230px;
-				display: flex;
-				flex-direction: column;
-				overflow: hidden;
-			}
-			.pub-grid {
-				flex: 1 1 0%;
-				min-height: 0;
-				align-items: stretch;
-			}
-			.doc,
-			.fields {
-				min-height: 0;
-				overflow: auto;
-				overscroll-behavior: contain;
-				scrollbar-width: thin;
-			}
-			.doc {
-				display: flex;
-				flex-direction: column;
-			}
-			.doc > :global(*) {
-				flex-shrink: 0;
-			}
-			.doc .doc-preview {
-				flex: 1 1 0%;
-				min-height: 180px;
-				max-height: none;
-			}
-			.doc-preview iframe {
-				height: 100%;
-			}
-			.doc-preview img {
-				height: 100%;
-				max-height: none;
-			}
-			.doc,
-			.fields {
-				padding: 10px 12px;
-				gap: 8px;
-			}
-			.doc .file-drop {
-				flex: 1 1 auto;
-				padding: 10px 14px;
-				grid-template-columns: auto minmax(0, 1fr);
-				justify-items: start;
-				align-content: center;
-				column-gap: 14px;
-				text-align: left;
-			}
-			.file-drop .ess-tile {
-				grid-row: span 3;
-				align-self: center;
-			}
-			.file-drop > :global(*:not(.ess-tile)) {
-				grid-column: 2;
-			}
-			.fields:has(> .waiting) {
-				align-content: center;
-			}
-			.fields .waiting {
-				min-height: 100%;
-				align-content: center;
-				padding: 8px 12px;
-			}
-			.current {
-				flex: 0 1 auto;
-				min-height: 96px;
-				max-height: 42%;
-				display: flex;
-				flex-direction: column;
-				overflow: hidden;
-			}
-			.current-table {
-				flex: 1 1 auto;
-				min-height: 0;
-				overflow: auto;
-				overscroll-behavior: contain;
-				scrollbar-width: thin;
-			}
-			.current-table th {
-				position: sticky;
-				top: 0;
-				z-index: 1;
-			}
+	/* Desktop: the page scrolls as a whole (no fill), so the cards keep
+	   their natural height. The file drop lies flat, icon beside its words. */
+	@media (min-width: 1101px) {
+		.doc .file-drop {
+			grid-template-columns: auto minmax(0, 1fr);
+			justify-items: start;
+			align-content: center;
+			column-gap: 14px;
+			text-align: left;
+		}
+		.file-drop .ess-tile {
+			grid-row: span 3;
+			align-self: center;
+		}
+		.file-drop > :global(*:not(.ess-tile)) {
+			grid-column: 2;
 		}
 	}
 

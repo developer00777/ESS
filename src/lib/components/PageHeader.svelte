@@ -1,5 +1,17 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import type { Component, Snippet } from 'svelte';
+	import { page } from '$app/state';
+	import LayoutGrid from '@lucide/svelte/icons/layout-grid';
+	import Calendar from '@lucide/svelte/icons/calendar';
+	import Clock from '@lucide/svelte/icons/clock';
+	import FileText from '@lucide/svelte/icons/file-text';
+	import Users from '@lucide/svelte/icons/users';
+	import ShieldUser from '@lucide/svelte/icons/shield-user';
+	import Wallet from '@lucide/svelte/icons/wallet';
+	import UserRound from '@lucide/svelte/icons/user-round';
+	import Headset from '@lucide/svelte/icons/headset';
+	import Megaphone from '@lucide/svelte/icons/megaphone';
+	import MessageSquare from '@lucide/svelte/icons/message-square';
 
 	/**
 	 * The one-row page bar every screen opens with: the section's name, its
@@ -32,6 +44,24 @@
 
 	let { crumb = [], label, title, sub, tabs, actions, children }: Props = $props();
 
+	/* The section's icon. Only the Mono, Atur and Amber themes show it (each
+	   in its own header layout, see ess-skin-layouts.css); Original hides it. */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const ICONS: Record<string, Component<any>> = {
+		hub: LayoutGrid,
+		leave: Calendar,
+		attendance: Clock,
+		policies: FileText,
+		team: Users,
+		admin: ShieldUser,
+		payroll: Wallet,
+		profile: UserRound,
+		'hr-contacts': Headset,
+		announcements: Megaphone,
+		chat: MessageSquare
+	};
+	const Icon = $derived(ICONS[page.url.pathname.split('/')[1] ?? ''] ?? LayoutGrid);
+
 	const name = $derived.by(() => {
 		if (label) return label;
 		const first = crumb[0];
@@ -42,11 +72,18 @@
 	const back = $derived(crumb.find((c) => typeof c !== 'string') as { label: string; href: string } | undefined);
 </script>
 
-<header class="ess-page-head bar">
-	{#if back && typeof crumb[0] !== 'string'}
-		<a class="back" href={back.href} title="Back to {back.label}">{back.label}<span aria-hidden="true">/</span></a>
-	{/if}
-	<h1 class="ess-page-title bar-title" title={sub ? `${title} ${sub}` : title}>{name}</h1>
+<header class="ess-page-head bar" class:has-tabs={!!tabs}>
+	<span class="bar-icon" aria-hidden="true"><Icon size={20} strokeWidth={1.75} /></span>
+	<div class="bar-text">
+		{#if back && typeof crumb[0] !== 'string'}
+			<a class="back" href={back.href} title="Back to {back.label}">{back.label}<span aria-hidden="true">/</span></a>
+		{/if}
+		<h1 class="ess-page-title bar-title" title={sub ? `${title} ${sub}` : title}>{name}</h1>
+		<!-- The headline and its description: shown by the themes whose header
+		     layout has room for them (Mono, Atur, Amber), hidden in Original. -->
+		<p class="bar-line">{title}</p>
+		{#if sub}<p class="bar-desc">{sub}</p>{/if}
+	</div>
 	{#if tabs}<div class="bar-tabs">{@render tabs()}</div>{/if}
 	{#if children}<div class="bar-extra">{@render children()}</div>{/if}
 	{#if actions}<div class="ess-page-head__actions bar-actions">{@render actions()}</div>{/if}
@@ -61,6 +98,16 @@
 		gap: 8px 14px;
 		min-height: 38px;
 		margin-bottom: 12px;
+	}
+	/* Original's bar: the text wrapper adds no box, and the icon and the
+	   headline lines stay hidden (the themes' header layouts show them). */
+	.bar-text {
+		display: contents;
+	}
+	.bar-icon,
+	.bar-line,
+	.bar-desc {
+		display: none;
 	}
 	.back {
 		display: inline-flex;

@@ -9,6 +9,7 @@
 	import Paperclip from '@lucide/svelte/icons/paperclip';
 	import EyeOff from '@lucide/svelte/icons/eye-off';
 	import ListPlus from '@lucide/svelte/icons/list-plus';
+	import Check from '@lucide/svelte/icons/check';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import EssCard from './EssCard.svelte';
 	import { fileSize, renderBody, timeOf } from '$lib/chat/format';
@@ -110,7 +111,7 @@
 		{:else if editing}
 			<textarea class="ess-textarea edit" bind:value={draft} rows="3" aria-label="Edit message"></textarea>
 			<div class="row">
-				<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={saveEdit}>Save</button>
+				<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={saveEdit}><Check size={14} /> Save</button>
 				<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (editing = false)}>Cancel</button>
 			</div>
 		{:else}
@@ -166,14 +167,14 @@
 		{#if reporting}
 			<div class="row">
 				<input class="ess-input" bind:value={reason} placeholder="What's wrong with it? HR will see this" aria-label="Report reason" />
-				<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={!reason.trim()} onclick={async () => { if (await post('/report', { reason })) { reporting = false; reason = ''; } }}>Report</button>
+				<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={!reason.trim()} onclick={async () => { if (await post('/report', { reason })) { reporting = false; reason = ''; } }}><Flag size={14} /> Report</button>
 				<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (reporting = false)}>Cancel</button>
 			</div>
 		{/if}
 		{#if confirmDelete}
 			<div class="row">
 				<span class="warn">Delete this message for everyone?</span>
-				<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" onclick={async () => { await post('', {}, 'DELETE'); confirmDelete = false; }}>Delete</button>
+				<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" onclick={async () => { await post('', {}, 'DELETE'); confirmDelete = false; }}><Trash2 size={14} /> Delete</button>
 				<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (confirmDelete = false)}>Keep</button>
 			</div>
 		{/if}

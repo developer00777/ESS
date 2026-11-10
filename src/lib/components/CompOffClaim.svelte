@@ -8,6 +8,8 @@
 	import X from '@lucide/svelte/icons/x';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import Info from '@lucide/svelte/icons/info';
+	import Send from '@lucide/svelte/icons/send';
+	import Coins from '@lucide/svelte/icons/coins';
 
 	/**
 	 * "Comp-off credits" — the balance, the claims so far, and the claim form.
@@ -155,7 +157,7 @@
 
 <section class="ess-card comp-off" aria-labelledby="co-h">
 	<div class="ess-card-head">
-		<h2 id="co-h" class="ess-h2">Comp-off credits <span class="info" title="Work 7+ hours on a holiday or week off to earn one comp-off. Your reporting manager approves it; spend it within 3 months by applying for Comp-Off leave. It cannot be encashed."><Info size={15} /></span></h2>
+		<h2 id="co-h" class="ess-h2"><Coins size={16} /> Comp-off credits <span class="info" title="Work 7+ hours on a holiday or week off to earn one comp-off. Your reporting manager approves it; spend it within 3 months by applying for Comp-Off leave. It cannot be encashed."><Info size={15} /></span></h2>
 	</div>
 
 	<div class="balance">
@@ -211,7 +213,7 @@
 
 				<div class="actions">
 					<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={claim} disabled={!eligibility?.eligible || submitting}>
-						{submitting ? 'Submitting…' : 'Claim comp-off'}
+						<Send size={14} /> {submitting ? 'Submitting…' : 'Claim comp-off'}
 					</button>
 					<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={finish}>Cancel</button>
 				</div>
@@ -263,10 +265,12 @@
 </section>
 
 <style>
+	/* the heading is a flex row (it leads with an icon, like its neighbours'
+	   headings), so the gap already spaces this; the margin only trims it */
 	.info {
 		display: inline-flex;
 		vertical-align: middle;
-		margin-left: 6px;
+		margin-left: -2px;
 		color: var(--ess-text-muted);
 		cursor: help;
 	}
@@ -402,7 +406,11 @@
 				font-size: 13.5px;
 			}
 			.comp-off .info {
-				margin-left: 4px;
+				margin-left: -4px;
+			}
+			/* here the title sits beside the balance tile, which is its icon */
+			.comp-off .ess-card-head .ess-h2 > :global(svg:first-child) {
+				display: none;
 			}
 			.comp-off .balance {
 				display: contents;

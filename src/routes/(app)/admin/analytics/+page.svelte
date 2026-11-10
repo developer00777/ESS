@@ -26,6 +26,9 @@
 	import Pyramid from '$lib/components/analytics/Pyramid.svelte';
 	import CalendarHeatmap from '$lib/components/analytics/CalendarHeatmap.svelte';
 	import MatrixHeatmap from '$lib/components/analytics/MatrixHeatmap.svelte';
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 
 	let { data } = $props();
 	const a = $derived(data.analytics);
@@ -91,6 +94,11 @@
 	const groupOptions = $derived(a.department ? GROUPS.filter((g) => g.id !== 'department') : GROUPS);
 	const shownGroup = $derived(groupOptions.some((g) => g.id === groupBy) ? groupBy : 'designation');
 	const grouped = $derived(a.groups[shownGroup]);
+	const groupedView = new TableView(() => grouped, {
+		name: (g) => g.name,
+		count: (g) => g.count,
+		share: (g) => (a.totals.active ? g.count / a.totals.active : 0)
+	});
 
 	/* ---------- gender ---------- */
 	const GENDER_KEYS = [
@@ -124,6 +132,13 @@
 	const openTotal = $derived(a.status.todo + a.status.inProgress + a.status.inReview);
 	const stageRow = $derived([{ name: 'Open tasks', counts: { 'To do': a.status.todo, 'In progress': a.status.inProgress, 'In review': a.status.inReview }, total: openTotal }]);
 	const maxOpen = $derived(Math.max(1, ...a.workload.map((w) => w.open)));
+	const workloadView = new TableView(() => a.workload, {
+		name: (w) => w.name,
+		open: (w) => w.open,
+		overdue: (w) => w.overdue,
+		done: (w) => w.done,
+		meetings: (w) => w.meetings
+	});
 	const assignedTotal = $derived(a.work.reduce((s, w) => s + w.assigned, 0));
 	const completedTotal = $derived(a.work.reduce((s, w) => s + w.completed, 0));
 	const meetingsTotal = $derived(a.meetingDays.reduce((s, d) => s + d.count, 0));
@@ -294,13 +309,14 @@
 			{/snippet}
 			{#snippet table()}
 				<table>
-					<thead><tr><th>{GROUPS.find((g) => g.id === shownGroup)!.label}</th><th>People</th><th>Share</th></tr></thead>
+					<thead><tr><th aria-sort={groupedView.ariaSort('name')}><SortButton view={groupedView} key="name">{GROUPS.find((g) => g.id === shownGroup)!.label}</SortButton></th><th aria-sort={groupedView.ariaSort('count')}><SortButton view={groupedView} key="count">People</SortButton></th><th aria-sort={groupedView.ariaSort('share')}><SortButton view={groupedView} key="share">Share</SortButton></th></tr></thead>
 					<tbody>
-						{#each grouped as g (g.name)}
+						{#each groupedView.rows as g (g.name)}
 							<tr><td>{g.name}</td><td>{g.count}</td><td>{a.totals.active ? Math.round((g.count / a.totals.active) * 100) : 0}%</td></tr>
 						{/each}
 					</tbody>
 				</table>
+				<TablePager view={groupedView} noun="groups" />
 			{/snippet}
 		</ChartCard>
 
@@ -415,13 +431,14 @@
 			{/snippet}
 			{#snippet table()}
 				<table>
-					<thead><tr><th>Person</th><th>Open</th><th>Overdue</th><th>Done</th><th>Meetings</th></tr></thead>
+					<thead><tr><th aria-sort={workloadView.ariaSort('name')}><SortButton view={workloadView} key="name">Person</SortButton></th><th aria-sort={workloadView.ariaSort('open')}><SortButton view={workloadView} key="open">Open</SortButton></th><th aria-sort={workloadView.ariaSort('overdue')}><SortButton view={workloadView} key="overdue">Overdue</SortButton></th><th aria-sort={workloadView.ariaSort('done')}><SortButton view={workloadView} key="done">Done</SortButton></th><th aria-sort={workloadView.ariaSort('meetings')}><SortButton view={workloadView} key="meetings">Meetings</SortButton></th></tr></thead>
 					<tbody>
-						{#each a.workload as w (w.id)}
+						{#each workloadView.rows as w (w.id)}
 							<tr><td>{w.name}</td><td>{w.open}</td><td>{w.overdue}</td><td>{w.done}</td><td>{w.meetings}</td></tr>
 						{/each}
 					</tbody>
 				</table>
+				<TablePager view={workloadView} noun="people" />
 			{/snippet}
 		</ChartCard>
 

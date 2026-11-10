@@ -24,22 +24,23 @@
 	const mid = $derived(pad.t + plotH / 2);
 	const unit = $derived(plotH / 2 / top);
 	const slotW = $derived(labels.length ? plotW / labels.length : 0);
-	const barW = $derived(Math.max(3, Math.min(20, slotW * 0.55)));
+	const barW = $derived(Math.max(3, Math.min(44, slotW * 0.72)));
 	const cx = (i: number) => pad.l + slotW * i + slotW / 2;
 	const step = $derived(Math.max(1, Math.ceil(labels.length / Math.max(1, Math.floor(plotW / 44)))));
 
-	/** Rounded at the far end, square on the centre line. */
+	/** Rounded at the far end (shadcn's 8px), square on the centre line. */
 	function bar(i: number, v: number, dir: 1 | -1) {
 		const h = v * unit;
 		if (h <= 0) return '';
 		const x = cx(i) - barW / 2;
-		const r = Math.min(4, barW / 2, h);
+		const r = Math.min(8, barW / 2, h);
 		const end = mid - dir * h;
 		return dir === 1
 			? `M${x},${mid}V${end + r}Q${x},${end} ${x + r},${end}H${x + barW - r}Q${x + barW},${end} ${x + barW},${end + r}V${mid}Z`
 			: `M${x},${mid}V${end - r}Q${x},${end} ${x + r},${end}H${x + barW - r}Q${x + barW},${end} ${x + barW},${end - r}V${mid}Z`;
 	}
 
+	const uid = $props.id();
 	let hover = $state<number | null>(null);
 	const net = (i: number) => up.values[i] - down.values[i];
 </script>
@@ -47,12 +48,22 @@
 <div class="chart" bind:clientWidth={width} bind:clientHeight={boxH} style="min-height: {height}px">
 	{#if width > 0}
 		<svg {width} height={H} role="img" aria-label={label}>
+			<!-- Diagonal-stripe fills for the Mono theme (as in ColumnChart) -->
+			<defs>
+				{#each [up, down] as s, si (si)}
+					<pattern id="{uid}-p{si}" width="8" height="8" patternUnits="userSpaceOnUse">
+						<rect width="8" height="8" style="fill: {s.color}; opacity: 0.1" />
+						<path d="M0,8 L8,0 M-2,2 L2,-2 M6,10 L10,6" style="stroke: {s.color}; stroke-width: 1.5; opacity: 0.65" />
+						<path d="M-2,6 L6,-2 M2,10 L10,2" style="stroke: {s.color}; stroke-width: 1; opacity: 0.3" />
+					</pattern>
+				{/each}
+			</defs>
 			<text class="side" x={2} y={mid - 8}>▲ {up.name}</text>
 			<text class="side" x={2} y={mid + 14}>▼ {down.name}</text>
 			{#each labels as l, i (i)}
 				<g class:dim={hover !== null && hover !== i}>
-					<path d={bar(i, up.values[i], 1)} style="fill: {up.color}" />
-					<path d={bar(i, down.values[i], -1)} style="fill: {down.color}" />
+					<path class="bar" d={bar(i, up.values[i], 1)} style="fill: {up.color}; --bar-c: {up.color}; --bar-pat: url(#{uid}-p0)" />
+					<path class="bar" d={bar(i, down.values[i], -1)} style="fill: {down.color}; --bar-c: {down.color}; --bar-pat: url(#{uid}-p1)" />
 					{#if up.values[i] > 0 && labels.length <= 12}
 						<text class="val" x={cx(i)} y={mid - up.values[i] * unit - 4} text-anchor="middle">{up.values[i]}</text>
 					{/if}
@@ -107,21 +118,21 @@
 		display: block;
 	}
 	.mid {
-		stroke: var(--ess-border-strong);
+		stroke: var(--ess-border);
 		stroke-width: 1;
 	}
 	.tick,
 	.side {
 		fill: var(--ess-text-muted);
-		font-size: 10px;
+		font-size: 11.5px;
 	}
 	.side {
 		font-weight: 500;
 	}
 	.val {
-		fill: var(--ess-text-secondary);
-		font-size: 10px;
-		font-weight: 600;
+		fill: var(--ess-text);
+		font-size: 11.5px;
+		font-weight: 500;
 	}
 	g {
 		transition: opacity var(--ess-t-fast);
@@ -132,6 +143,12 @@
 	.hit {
 		fill: transparent;
 		outline: none;
+	}
+	/* Mono: diagonal-stripe fills with a 1px outline of the series colour */
+	:global(:root[data-ess-skin='mono']) .bar {
+		fill: var(--bar-pat) !important;
+		stroke: var(--bar-c);
+		stroke-width: 1;
 	}
 	.hit:focus-visible {
 		stroke: var(--ess-focus-ring);

@@ -5,11 +5,32 @@
 	 * with the day's code, then the sheet's totals. Hover a cell for the
 	 * biometric and ProHance hours behind it; open a row for the person.
 	 */
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 	import type { PayrollEmployee, PayrollReport } from '$lib/server/payroll';
 	import { hhmm } from '$lib/payroll';
 	import { KIND_LABEL, KIND_LEGEND, dow, fmtDate, fmtDays } from './codes';
 
 	let { report, employees, onopen }: { report: PayrollReport; employees: PayrollEmployee[]; onopen: (userId: string) => void } = $props();
+
+	/* Sorting and paging: by person and by the sheet's totals (the day columns stay as they are). */
+	const view = new TableView(() => employees, {
+		code: (e) => e.empCode,
+		name: (e) => e.name,
+		present: (e) => e.summary.present,
+		absent: (e) => e.summary.absent,
+		halfDay: (e) => e.summary.halfDay,
+		weekOff: (e) => e.summary.weekOff,
+		compOffHalf: (e) => e.summary.compOffHalf,
+		compOff: (e) => e.summary.compOff,
+		pink: (e) => e.summary.pink,
+		holidays: (e) => e.summary.holidays,
+		leave: (e) => e.summary.leave,
+		totalDays: (e) => e.summary.totalDays,
+		cycleDays: (e) => e.summary.cycleDays,
+		uncovered: (e) => e.summary.uncoveredDays
+	});
 
 	function tip(e: PayrollEmployee, i: number): string {
 		const d = e.days[i];
@@ -33,29 +54,29 @@
 		<table class="ess-table grid">
 			<thead>
 				<tr>
-					<th class="sticky s1">Emp ID</th>
-					<th class="sticky s2">Employee</th>
+					<th class="sticky s1" aria-sort={view.ariaSort('code')}><SortButton {view} key="code">Emp ID</SortButton></th>
+					<th class="sticky s2" aria-sort={view.ariaSort('name')}><SortButton {view} key="name">Employee</SortButton></th>
 					{#each report.dates as d (d)}
 						<th class="day" class:today={d === report.asOf && report.inProgress} title={fmtDate(d)}>
 							<span>{dow(d).slice(0, 2)}</span>{Number(d.slice(8))}
 						</th>
 					{/each}
-					<th class="num" title="Present">P</th>
-					<th class="num" title="Absent">A</th>
-					<th class="num" title="Half day">H</th>
-					<th class="num" title="Week off">WO</th>
-					<th class="num" title="Half-day comp off">CH</th>
-					<th class="num" title="Comp off">CO</th>
-					<th class="num" title="Pink leave">PH</th>
-					<th class="num" title="Holidays">HD</th>
-					<th class="num" title="Leave (EL, SL…)">Lv</th>
-					<th class="num strong" title="Total days: P + H/2 + WO + CH/2 + CO + HD + PH">Total</th>
-					<th class="num" title="Payroll days in the cycle">Days</th>
-					<th class="num strong" title="Actual LOP: days not covered by Total days (leave and absences)">Uncov.</th>
+					<th class="num" title="Present" aria-sort={view.ariaSort('present')}><SortButton {view} key="present">P</SortButton></th>
+					<th class="num" title="Absent" aria-sort={view.ariaSort('absent')}><SortButton {view} key="absent">A</SortButton></th>
+					<th class="num" title="Half day" aria-sort={view.ariaSort('halfDay')}><SortButton {view} key="halfDay">H</SortButton></th>
+					<th class="num" title="Week off" aria-sort={view.ariaSort('weekOff')}><SortButton {view} key="weekOff">WO</SortButton></th>
+					<th class="num" title="Half-day comp off" aria-sort={view.ariaSort('compOffHalf')}><SortButton {view} key="compOffHalf">CH</SortButton></th>
+					<th class="num" title="Comp off" aria-sort={view.ariaSort('compOff')}><SortButton {view} key="compOff">CO</SortButton></th>
+					<th class="num" title="Pink leave" aria-sort={view.ariaSort('pink')}><SortButton {view} key="pink">PH</SortButton></th>
+					<th class="num" title="Holidays" aria-sort={view.ariaSort('holidays')}><SortButton {view} key="holidays">HD</SortButton></th>
+					<th class="num" title="Leave (EL, SL…)" aria-sort={view.ariaSort('leave')}><SortButton {view} key="leave">Lv</SortButton></th>
+					<th class="num strong" title="Total days: P + H/2 + WO + CH/2 + CO + HD + PH" aria-sort={view.ariaSort('totalDays')}><SortButton {view} key="totalDays">Total</SortButton></th>
+					<th class="num" title="Payroll days in the cycle" aria-sort={view.ariaSort('cycleDays')}><SortButton {view} key="cycleDays">Days</SortButton></th>
+					<th class="num strong" title="Actual LOP: days not covered by Total days (leave and absences)" aria-sort={view.ariaSort('uncovered')}><SortButton {view} key="uncovered">Uncov.</SortButton></th>
 				</tr>
 			</thead>
 			<tbody>
-				{#each employees as e (e.userId)}
+				{#each view.rows as e (e.userId)}
 					<tr onclick={() => onopen(e.userId)} class:inactive={e.status === 'Inactive'}>
 						<td class="sticky s1 code">{e.empCode || '—'}</td>
 						<td class="sticky s2 who">
@@ -84,6 +105,7 @@
 			</tbody>
 		</table>
 	</div>
+	<TablePager {view} noun="people" />
 </div>
 
 <style>

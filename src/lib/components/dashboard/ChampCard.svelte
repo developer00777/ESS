@@ -6,6 +6,7 @@
 	 * any drafted actions and the history all live in one place.
 	 */
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
+	import PowerOff from '@lucide/svelte/icons/power-off';
 	import { goto } from '$app/navigation';
 
 	let {
@@ -58,7 +59,7 @@
 			<button type="submit" class="send" disabled={!question.trim()} aria-label="Send to Champ"><ArrowUp size={16} strokeWidth={2.4} /></button>
 		</form>
 	{:else}
-		<p class="off">Champ isn't switched on for this portal yet. An administrator can enable it.</p>
+		<p class="off"><PowerOff size={14} aria-hidden="true" /><span>Champ isn't switched on for this portal yet. An administrator can enable it.</span></p>
 	{/if}
 </section>
 
@@ -90,9 +91,15 @@
 			inset 0 -4px 10px rgba(10, 14, 60, 0.35);
 		animation: breathe 6s ease-in-out infinite;
 	}
+	/* The orb breathes with its glow, not by scaling: a running transform
+	   animation puts the orb on a GPU layer, and Chrome then lifts the top
+	   bar and other overlapping parts onto layers too, softening their text
+	   on Windows. A glow is painted in place. */
 	@keyframes breathe {
 		50% {
-			transform: scale(1.05);
+			box-shadow:
+				0 12px 30px -6px rgba(47, 67, 230, 0.75),
+				inset 0 -4px 10px rgba(10, 14, 60, 0.35);
 		}
 	}
 
@@ -175,9 +182,57 @@
 		cursor: default;
 	}
 	.off {
+		display: flex;
+		align-items: flex-start;
+		gap: 7px;
 		margin: auto 0 0;
 		font-size: 12.5px;
 		color: var(--ess-text-muted);
+	}
+	.off :global(svg) {
+		flex: none;
+		margin-top: 2px;
+	}
+
+	/* ---------- motion ----------
+	   The greeting, then each suggestion and the ask box, rise in turn.
+	   !important lengths: contained motion that plays under reduced motion
+	   too (see INTERACTION FEEDBACK in ess-components.css). */
+	@keyframes ch-rise {
+		from {
+			opacity: 0;
+			transform: translateY(6px);
+		}
+	}
+	.intro,
+	.chip,
+	.ask,
+	.off {
+		animation: ch-rise 460ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation-duration: 460ms !important;
+		animation-delay: 420ms;
+	}
+	.chip:nth-child(1) {
+		animation-delay: 500ms;
+	}
+	.chip:nth-child(2) {
+		animation-delay: 560ms;
+	}
+	.chip:nth-child(3) {
+		animation-delay: 620ms;
+	}
+	.ask,
+	.off {
+		animation-delay: 680ms;
+	}
+	.chip {
+		transition:
+			color var(--ess-t-fast),
+			border-color var(--ess-t-fast),
+			transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	.chip:hover {
+		transform: translateY(-1px);
 	}
 
 	@media (min-width: 721px) and (max-height: 820px) {

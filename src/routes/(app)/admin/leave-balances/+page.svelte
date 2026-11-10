@@ -5,8 +5,16 @@
 	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
 	import Info from '@lucide/svelte/icons/info';
 	import Save from '@lucide/svelte/icons/save';
+	import FileCheck from '@lucide/svelte/icons/file-check';
+	import Users from '@lucide/svelte/icons/users';
+	import History from '@lucide/svelte/icons/history';
+	import Scale from '@lucide/svelte/icons/scale';
+	import Tags from '@lucide/svelte/icons/tags';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import UploadSteps from '$lib/components/UploadSteps.svelte';
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
@@ -145,6 +153,14 @@
 			? (showOnlyProblems ? problemRows : preview.rows).filter((r) => matches([r.empCode, r.employeeName]) && (!typeFilter || r.leaveTypeId === typeFilter || r.leaveTypeName === typeFilter))
 			: []
 	);
+	const previewView = new TableView(() => visibleRows, {
+		employee: (r) => r.employeeName ?? r.empCode,
+		type: (r) => r.leaveTypeName ?? r.leaveTypeToken,
+		current: (r) => r.existingDays,
+		taken: (r) => r.usedDays,
+		balance: (r) => r.days,
+		effect: (r) => (!r.applicable ? 'Skipped' : r.effect === 'create' ? 'New' : r.effect === 'update' ? 'Change' : 'No change')
+	});
 	const visibleHistory = $derived(data.hrSet.filter((r) => matches([r.employeeCode, r.employeeName]) && (!typeFilter || r.leaveTypeName === balanceTypes.find((t) => t.id === typeFilter)?.name)));
 
 	const applicable = $derived(preview ? preview.createCount + preview.updateCount : 0);
@@ -196,7 +212,7 @@
 		<section class="ess-card import-card" id="import" aria-labelledby="import-h">
 			<div class="ess-card-head">
 				<div>
-					<h2 class="ess-h2" id="import-h">Import balances</h2>
+					<h2 class="ess-h2" id="import-h"><UploadCloud size={16} /> Import balances</h2>
 					<p class="ess-caption">Carry-forward from HRone or a correction, from a spreadsheet. Monthly accrual is already computed from the published policy; a balance set here is kept as set and no longer recalculated.</p>
 				</div>
 			</div>
@@ -235,6 +251,7 @@
 						<input class="ess-input" type="text" bind:value={note} placeholder="e.g. 2025 carry-forward from HRone" />
 					</label>
 					<button type="button" class="ess-btn ess-btn--primary" onclick={check} disabled={!file || checking || applying}>
+						<FileCheck size={16} />
 						{checking ? 'Checking…' : 'Check file'}
 					</button>
 				</div>
@@ -254,7 +271,7 @@
 			<section class="ess-card ess-fill-card preview-card" aria-labelledby="prev-h">
 				<div class="ess-card-head">
 					<div>
-						<h2 class="ess-h2" id="prev-h">Employee balances</h2>
+						<h2 class="ess-h2" id="prev-h"><Users size={16} /> Employee balances</h2>
 						<p class="ess-caption">
 							{preview.filename} · {preview.layout === 'wide' ? 'one column per leave type' : 'one row per entitlement'} · leave year {preview.year} · showing {visibleRows.length} of {preview.rows.length} rows
 						</p>
@@ -302,16 +319,16 @@
 					<table class="ess-table">
 						<thead>
 							<tr>
-								<th>Employee</th>
-								<th>Leave type</th>
-								<th class="ess-num">Current</th>
-								<th class="ess-num">Taken</th>
-								<th class="ess-num">New balance</th>
-								<th>Effect</th>
+								<th aria-sort={previewView.ariaSort('employee')}><SortButton view={previewView} key="employee">Employee</SortButton></th>
+								<th aria-sort={previewView.ariaSort('type')}><SortButton view={previewView} key="type">Leave type</SortButton></th>
+								<th class="ess-num" aria-sort={previewView.ariaSort('current')}><SortButton view={previewView} key="current">Current</SortButton></th>
+								<th class="ess-num" aria-sort={previewView.ariaSort('taken')}><SortButton view={previewView} key="taken">Taken</SortButton></th>
+								<th class="ess-num" aria-sort={previewView.ariaSort('balance')}><SortButton view={previewView} key="balance">New balance</SortButton></th>
+								<th aria-sort={previewView.ariaSort('effect')}><SortButton view={previewView} key="effect">Effect</SortButton></th>
 							</tr>
 						</thead>
 						<tbody>
-							{#each visibleRows as r (`${r.empCode}:${r.leaveTypeToken}`)}
+							{#each previewView.rows as r (`${r.empCode}:${r.leaveTypeToken}`)}
 								<tr class:bad={!r.applicable} class:warn-row={r.belowUsed}>
 									<td>
 										<span class="person">
@@ -348,6 +365,7 @@
 						</tbody>
 					</table>
 				</div>
+				<TablePager view={previewView} noun="rows" />
 			</section>
 		{/if}
 
@@ -355,7 +373,7 @@
 		<section class="ess-card ess-fill-card history-card" aria-labelledby="hist-h">
 			<div class="ess-card-head">
 				<div>
-					<h2 class="ess-h2" id="hist-h">Adjustment history</h2>
+					<h2 class="ess-h2" id="hist-h"><History size={16} /> Adjustment history</h2>
 					<p class="ess-caption">Balances set by hand. These are kept as set and not recalculated from the policy.</p>
 				</div>
 			</div>
@@ -390,7 +408,7 @@
 	<aside class="ess-stack aside">
 		<section class="ess-card apply-card" aria-labelledby="apply-h">
 			<div class="ess-card-head">
-				<h2 class="ess-h2" id="apply-h">Apply balances</h2>
+				<h2 class="ess-h2" id="apply-h"><Scale size={16} /> Apply balances</h2>
 			</div>
 			{#if preview}
 				<div class="summary">
@@ -416,7 +434,7 @@
 
 		<section class="ess-card ess-fill-card types-card" aria-labelledby="types-h">
 			<div class="ess-card-head">
-				<h2 class="ess-h2" id="types-h">Leave types</h2>
+				<h2 class="ess-h2" id="types-h"><Tags size={16} /> Leave types</h2>
 			</div>
 			<ul class="types ess-scroll">
 				{#each data.leaveTypes as t (t.id)}

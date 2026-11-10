@@ -7,6 +7,9 @@
 	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
 	import Info from '@lucide/svelte/icons/info';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
+	import BookOpen from '@lucide/svelte/icons/book-open';
+	import Link2 from '@lucide/svelte/icons/link-2';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { WORKPLACE_POLICIES, WORKPLACE_POLICY_INTRO } from '$lib/workplace-policies';
 
@@ -135,7 +138,7 @@
 		{:else if tab === 'leave'}
 			<div class="docs docs--leave">
 				<nav class="ess-card list list--chips" aria-label="Policy documents">
-					<h3 class="ess-h2 list-h">Policy documents</h3>
+					<h3 class="ess-h2 list-h"><BookOpen size={16} /> Policy documents</h3>
 					{#each shownLeave as lt (lt.id)}
 						<button type="button" class="doc-link" class:ess-pink-wash={!!lt.monthlyQuotaDays} aria-current={leave?.id === lt.id ? 'true' : undefined} onclick={() => (leaveId = lt.id)}>
 							<span class="ess-tile ess-tile--sm"><FileText size={16} /></span>
@@ -183,7 +186,7 @@
 		{:else}
 			<div class="docs docs--workplace">
 				<nav class="ess-card list" aria-label="Workplace policies">
-					<h3 class="ess-h2 list-h">Policy documents</h3>
+					<h3 class="ess-h2 list-h"><BookOpen size={16} /> Policy documents</h3>
 					{#each shownWorkplace as p (p.id)}
 						<button type="button" class="doc-link" aria-current={workplace?.id === p.id ? 'true' : undefined} onclick={() => (workplaceId = p.id)}>
 							<span class="ess-tile ess-tile--sm" aria-hidden="true">{p.icon}</span>
@@ -221,7 +224,7 @@
 	<aside class="fill-col">
 		<section class="ess-card ess-fill-card grow">
 			<div class="ess-card-head">
-				<h3 class="ess-h2">Upcoming holidays</h3>
+				<h3 class="ess-h2"><Umbrella size={16} /> Upcoming holidays</h3>
 				{#if tab !== 'holidays' && allHolidays.length}
 					<button type="button" class="ess-link link-btn" onclick={() => (tab = 'holidays')}>View calendar <ChevronRight size={14} /></button>
 				{/if}
@@ -246,10 +249,10 @@
 		</section>
 
 		<section class="ess-card">
-			<h3 class="ess-h2 aside-h">Related</h3>
+			<h3 class="ess-h2 aside-h"><Link2 size={16} /> Related</h3>
 			<div class="ess-rows">
 				<a class="ess-row apply-row" href="/leave/apply">
-					<span class="ess-tile ess-tile--sm"><FileText size={16} /></span>
+					<span class="ess-tile ess-tile--sm"><CalendarPlus size={16} /></span>
 					<span class="ess-row__body"><span class="ess-row__title">Apply for leave</span><span class="ess-row__meta">Uses the balances from this policy</span></span>
 					<ChevronRight size={16} class="chev" />
 				</a>
@@ -345,6 +348,10 @@
 	}
 	.doc-link[aria-current='true'] {
 		background: var(--ess-primary-soft);
+	}
+	/* on the tinted selected row the muted count fell just under AA */
+	.doc-link[aria-current='true'] .ess-row__meta {
+		color: var(--ess-text-secondary) !important;
 	}
 	.doc-link .ess-row__meta,
 	.doc-link .ess-row__title {
@@ -736,10 +743,28 @@
 	}
 
 	/* "Apply for leave" under Related reads as the page's blue button. */
+	/* The row keeps its own fill on hover: the shared row hover (a pale
+	   background, stronger in some themes) would leave its white text on
+	   near-white, so the selector is weighted to win over every theme's. */
+	/* The row is the theme's primary action: its own gradient where the
+	   theme has one (Amber, Atur), else a soft one from the primary; text,
+	   icon and chevron in the theme's on-primary ink (black on Amber's
+	   yellow, white on blue or black). */
 	.apply-row {
+		--apply-fill: var(
+			--ess-primary-grad,
+			linear-gradient(180deg, color-mix(in srgb, var(--ess-primary) 78%, #fff), var(--ess-primary) 55%, color-mix(in srgb, var(--ess-primary) 88%, #000))
+		);
 		margin-bottom: 4px;
 		border-radius: 12px;
-		background: linear-gradient(180deg, color-mix(in srgb, var(--ess-primary) 78%, #fff), var(--ess-primary) 55%, color-mix(in srgb, var(--ess-primary) 88%, #000));
+		background: var(--apply-fill);
+	}
+	/* Original (light): its gradient starts too pale for the white text
+	   (~3.7:1); a deeper fill of the same blue keeps it readable. */
+	:global(:root:not([data-ess-skin]):not([data-ess-theme='dark'])) .apply-row {
+		--apply-fill: linear-gradient(180deg, var(--ess-primary), var(--ess-primary-press));
+	}
+	.apply-row {
 		box-shadow:
 			inset 0 1px 0 rgba(255, 255, 255, 0.3),
 			0 8px 20px -8px color-mix(in srgb, var(--ess-primary) 85%, transparent);
@@ -747,21 +772,29 @@
 			filter var(--ess-t-fast),
 			transform var(--ess-t-fast);
 	}
-	.apply-row:hover {
+	.ess-rows > a.ess-row.apply-row:hover,
+	.ess-rows > a.ess-row.apply-row:focus-visible {
+		background: var(--apply-fill);
 		filter: brightness(1.07);
 		transform: translateY(-1px);
+	}
+	.ess-rows > a.ess-row.apply-row:active {
+		background: var(--apply-fill);
+		filter: brightness(0.95);
+		transform: translateY(0) scale(0.99);
 	}
 	.apply-row :global(.ess-row__title),
 	.apply-row :global(.ess-row__meta),
 	.apply-row :global(.chev) {
-		color: #fff;
+		color: var(--ess-text-on-primary);
 	}
+	/* full strength: at 0.8 the sub-line fell under AA on the coloured fill */
 	.apply-row :global(.ess-row__meta) {
-		opacity: 0.85;
+		opacity: 1;
 	}
 	.apply-row :global(.ess-tile) {
-		background: rgba(255, 255, 255, 0.2);
-		color: #fff;
+		background: color-mix(in srgb, var(--ess-text-on-primary) 16%, transparent);
+		color: var(--ess-text-on-primary);
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.apply-row:hover {

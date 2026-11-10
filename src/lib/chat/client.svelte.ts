@@ -217,6 +217,22 @@ class ChatClient {
 		}
 		return 'granted';
 	}
+
+	/** Stop web push on this device: drop the server's copy of the subscription, then the browser's. */
+	async disableAlerts(): Promise<void> {
+		try {
+			if ('serviceWorker' in navigator && 'PushManager' in window) {
+				const reg = (await navigator.serviceWorker.getRegistration('/chat-sw.js')) ?? (await navigator.serviceWorker.getRegistration());
+				const sub = await reg?.pushManager.getSubscription();
+				if (sub) {
+					await fetch('/api/chat/push', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) });
+					await sub.unsubscribe();
+				}
+			}
+		} catch (err) {
+			console.warn('[chat] push unsubscribe failed', err);
+		}
+	}
 }
 
 function urlBase64ToUint8Array(base64: string) {

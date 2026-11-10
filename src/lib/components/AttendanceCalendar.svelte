@@ -7,6 +7,9 @@
 	import { financialYearLabel } from '$lib/financial-year';
 	import { cycleDates, cycleForDate, cycleForKey, cycleLabel } from '$lib/attendance-cycle';
 	import type { ShiftDay } from '$lib/shift-hours';
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 	import {
 		makeWeekOffResolver,
 		type WeekOffRosterShape,
@@ -433,6 +436,34 @@
 		if (d.shift?.inProgress) return 'In progress';
 		return '—';
 	}
+
+	/** Minutes past midnight, as the time is shown (for sorting by clock time). */
+	function minuteOfDay(value: string | Date | null | undefined): number | null {
+		if (!value) return null;
+		const t = new Date(value);
+		return t.getHours() * 60 + t.getMinutes();
+	}
+
+	/* The attendance records table: sortable by each column, a page at a time. */
+	const recordsView = new TableView(() => recordDays, {
+		date: (c) => c.key,
+		day: (c) => WEEKDAY_NAMES.indexOf(fmtShort(c.key).day),
+		checkIn: (c) => {
+			const d = dayInfo(c.key);
+			return d.tailOf ? null : minuteOfDay(d.shift?.checkInAt);
+		},
+		checkOut: (c) => {
+			const d = dayInfo(c.key);
+			if (d.tailOf) return minuteOfDay(d.tailOf.checkOutAt);
+			const m = minuteOfDay(d.shift?.checkOutAt);
+			return m !== null && d.shift?.crossesMidnight ? m + 1440 : m;
+		},
+		hours: (c) => {
+			const d = dayInfo(c.key);
+			return d.tailOf ? null : (d.shift?.workedMinutes ?? null);
+		},
+		status: (c) => statusFor(c.key).label
+	});
 </script>
 
 {#if mode === 'grid'}
@@ -589,17 +620,17 @@
 			<table class="ess-table records">
 				<thead>
 					<tr>
-						<th>Date</th>
-						<th>Day</th>
-						<th>Check-in</th>
-						<th>Check-out</th>
-						<th>Total hours</th>
-						<th>Status</th>
+						<th aria-sort={recordsView.ariaSort('date')}><SortButton view={recordsView} key="date">Date</SortButton></th>
+						<th aria-sort={recordsView.ariaSort('day')}><SortButton view={recordsView} key="day">Day</SortButton></th>
+						<th aria-sort={recordsView.ariaSort('checkIn')}><SortButton view={recordsView} key="checkIn">Check-in</SortButton></th>
+						<th aria-sort={recordsView.ariaSort('checkOut')}><SortButton view={recordsView} key="checkOut">Check-out</SortButton></th>
+						<th aria-sort={recordsView.ariaSort('hours')}><SortButton view={recordsView} key="hours">Total hours</SortButton></th>
+						<th aria-sort={recordsView.ariaSort('status')}><SortButton view={recordsView} key="status">Status</SortButton></th>
 						<th>Actions</th>
 					</tr>
 				</thead>
 				<tbody>
-					{#each recordDays as cell (cell.key)}
+					{#each recordsView.rows as cell (cell.key)}
 						{@const d = dayInfo(cell.key)}
 						{@const status = statusFor(cell.key)}
 						{@const s = fmtShort(cell.key)}
@@ -638,12 +669,13 @@
 				</tbody>
 			</table>
 		</div>
+		<TablePager view={recordsView} noun="days" />
 	</div>
 {:else}
 	<div class="ess-card detail-box">
 		{#if selected && selectedStatus}
 			<div class="detail-head">
-				<h2 class="ess-h2">{fmtHeading(selected.key)}</h2>
+				<h2 class="ess-h2"><CalendarDays size={16} /> {fmtHeading(selected.key)}</h2>
 				<span class="ess-badge ess-badge--{selectedStatus.badge}">{selectedStatus.label}</span>
 			</div>
 
@@ -1233,6 +1265,10 @@
 		border-radius: var(--ess-radius-pill);
 		background: var(--ess-primary-soft);
 		color: var(--ess-primary-text);
+	}
+	/* dark: on today's tinted row the violet text fell to ~4.4:1 */
+	:global([data-ess-theme='dark']) .today-tag {
+		color: var(--ess-text);
 	}
 	.c-day {
 		color: var(--ess-text-secondary);

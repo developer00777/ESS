@@ -1,6 +1,11 @@
 <script lang="ts">
 	import X from '@lucide/svelte/icons/x';
 	import UserPlus from '@lucide/svelte/icons/user-plus';
+	import Plus from '@lucide/svelte/icons/plus';
+	import CircleCheck from '@lucide/svelte/icons/circle-check';
+	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+	import LogOut from '@lucide/svelte/icons/log-out';
+	import Download from '@lucide/svelte/icons/download';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import MessageItem from './MessageItem.svelte';
 	import { chat, type SidebarChannel } from '$lib/chat/client.svelte';
@@ -103,7 +108,7 @@
 								<option value={c.id}>{c.fullName}</option>
 							{/each}
 						</select>
-						<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={!addPick} onclick={async () => { if (await post(`channels/${channel.id}/members`, { add: [addPick] })) { addPick = ''; void load(); } }}>Add</button>
+						<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={!addPick} onclick={async () => { if (await post(`channels/${channel.id}/members`, { add: [addPick] })) { addPick = ''; void load(); } }}><UserPlus size={14} /> Add</button>
 					</div>
 				{:else}
 					<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" onclick={startAdding}><UserPlus size={14} /> Add people</button>
@@ -134,7 +139,7 @@
 		{:else if tab === 'todos'}
 			<form class="add" onsubmit={async (e) => { e.preventDefault(); if (todoText.trim() && (await post(`channels/${channel.id}/todos`, { text: todoText }))) { todoText = ''; void load(); } }}>
 				<input class="ess-input" bind:value={todoText} placeholder="Add a to-do for everyone here" aria-label="New to-do" maxlength="300" />
-				<button type="submit" class="ess-btn ess-btn--primary ess-btn--sm" disabled={!todoText.trim()}>Add</button>
+				<button type="submit" class="ess-btn ess-btn--primary ess-btn--sm" disabled={!todoText.trim()}><Plus size={14} /> Add</button>
 			</form>
 			<ul class="todos">
 				{#each todos as t (t.id)}
@@ -165,11 +170,12 @@
 				</label>
 				{#if channel.kind === 'desk' && can.hrDesk}
 					<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" onclick={() => post(`channels/${channel.id}/desk`, { status: channel.deskStatus === 'resolved' ? 'open' : 'resolved' })}>
+						{#if channel.deskStatus === 'resolved'}<RotateCcw size={14} />{:else}<CircleCheck size={14} />{/if}
 						{channel.deskStatus === 'resolved' ? 'Reopen this question' : 'Mark resolved'}
 					</button>
 				{/if}
 				{#if manual}
-					<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={async () => { if (await post(`channels/${channel.id}/leave`, {})) onleft(); }}>Leave this {channel.kind === 'group' ? 'group' : 'channel'}</button>
+					<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={async () => { if (await post(`channels/${channel.id}/leave`, {})) onleft(); }}><LogOut size={14} /> Leave this {channel.kind === 'group' ? 'group' : 'channel'}</button>
 				{/if}
 				{#if can.export && channel.kind !== 'announcements' && channel.kind !== 'system'}
 					<div class="export">
@@ -183,7 +189,7 @@
 							aria-disabled={exportReason.trim().length < 10}
 							download
 						>
-							Export conversation (CSV)
+							<Download size={14} /> Export conversation (CSV)
 						</a>
 					</div>
 				{/if}

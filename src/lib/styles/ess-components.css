@@ -228,6 +228,19 @@ textarea {
 .ess-card-head .ess-h2 {
 	font-size: 16px;
 }
+/* A heading may lead with a Lucide icon: it sits on the text's centre
+   line in the theme's accent ink. */
+.ess-h2:has(> svg:first-child),
+.ess-h3:has(> svg:first-child) {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.ess-h2 > svg:first-child,
+.ess-h3 > svg:first-child {
+	flex: none;
+	color: var(--ess-primary-text);
+}
 .ess-link {
 	display: inline-flex;
 	align-items: center;
@@ -613,6 +626,94 @@ button.ess-link {
 	background: var(--ess-surface);
 	font-size: var(--ess-fs-caption);
 	color: var(--ess-text-secondary);
+}
+
+/* Sortable header (SortButton): the label and an order arrow; the arrow is
+   faint until the column is sorted or hovered. */
+.ess-sort {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	margin: -4px -6px;
+	padding: 4px 6px;
+	border: 0;
+	border-radius: var(--ess-radius-xs);
+	background: none;
+	color: inherit;
+	font: inherit;
+	text-align: inherit;
+	white-space: nowrap;
+	vertical-align: middle;
+	cursor: pointer;
+	transition:
+		background var(--ess-t-fast),
+		color var(--ess-t-fast);
+}
+.ess-sort:hover {
+	background: var(--ess-sunken);
+	color: var(--ess-text);
+}
+.ess-sort__icon {
+	display: inline-grid;
+	opacity: 0.45;
+	transition: opacity var(--ess-t-fast);
+}
+.ess-sort:hover .ess-sort__icon,
+.ess-sort:not([data-dir='none']) .ess-sort__icon {
+	opacity: 1;
+}
+.ess-sort:not([data-dir='none']) {
+	color: var(--ess-text);
+}
+th.ess-num .ess-sort {
+	flex-direction: row-reverse;
+}
+
+/* Table pages (TablePager): the count on the left, the pages on the right. */
+.ess-pager__pages {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+.ess-pager__btn {
+	display: inline-grid;
+	place-items: center;
+	min-width: 30px;
+	height: 30px;
+	padding: 0 8px;
+	border: 1px solid var(--ess-border);
+	border-radius: var(--ess-radius-sm);
+	background: var(--ess-surface);
+	color: var(--ess-text-secondary);
+	font: inherit;
+	font-size: 12.5px;
+	font-variant-numeric: tabular-nums;
+	cursor: pointer;
+	transition:
+		background var(--ess-t-fast),
+		border-color var(--ess-t-fast),
+		color var(--ess-t-fast);
+}
+.ess-pager__btn:hover:not(:disabled) {
+	border-color: var(--ess-border-strong);
+	color: var(--ess-text);
+}
+.ess-pager__btn[aria-current='page'] {
+	border-color: transparent;
+	background: var(--ess-primary);
+	color: var(--ess-text-on-primary);
+	font-weight: 600;
+}
+.ess-pager__btn:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+.ess-pager__gap {
+	padding: 0 2px;
+	color: var(--ess-text-muted);
+}
+.ess-pager__count {
+	font-variant-numeric: tabular-nums;
 }
 
 /* ------------------------------------------------------------
@@ -1263,7 +1364,9 @@ button.ess-row:hover {
 	color: var(--ess-primary);
 	box-shadow: 0 0 0 3px var(--ring);
 }
-.ess-step[data-state='current'] .ess-step__dot::after {
+/* the inner dot marks an empty current step; a numbered one keeps its
+   number (drawing both made the number and dot overlap) */
+.ess-step[data-state='current'] .ess-step__dot:empty::after {
 	content: '';
 	width: 8px;
 	height: 8px;
@@ -2074,6 +2177,385 @@ html:has(.ess-shell) { scrollbar-gutter: auto; }
 	border-radius: 5px;
 	color: var(--ess-text-muted);
 	background: var(--ess-surface);
+}
+
+/* ------------------------------------------------------------
+   INTERACTION FEEDBACK — every theme
+   - Pressing a button, tab, menu row or nav item nudges it in, so a
+     click always shows it registered (hover colours stay each
+     theme's own).
+   - Content that appears (a tab or view switch, a filter, a first
+     load) fades up briefly: cards, tables and panels on mount.
+   Lengths are !important: the reduced-motion rule above shortens every
+   animation to 0.01ms, and this short, contained motion is meant to
+   play there too; only the full-page effects stop under it.
+------------------------------------------------------------ */
+.ess-btn,
+.ess-icon-btn,
+.ess-tab,
+.ess-segmented button,
+.ess-day,
+.ess-daystrip__nav {
+	transition-property: background, background-color, border-color, color, box-shadow, transform, filter;
+	transition-duration: 150ms !important;
+}
+.ess-btn:active:not(:disabled),
+.ess-segmented button:active,
+.ess-day:active,
+.ess-daystrip__nav:active {
+	transform: translateY(1px) scale(0.98);
+}
+.ess-icon-btn:active,
+.ess-tab:active {
+	transform: scale(0.96);
+}
+[role='menuitem']:active,
+[role='option']:active {
+	transform: scale(0.99);
+}
+/* the shell's own buttons: sidebar items, top-bar buttons, avatar */
+nav.rail .nav-item,
+.topbar .round,
+.topbar .add,
+.topbar .search,
+.topbar .me-btn {
+	transition-property: background, background-color, border-color, color, box-shadow, transform, filter, opacity;
+}
+nav.rail .nav-item:active,
+.topbar .round:active,
+.topbar .me-btn:active {
+	transform: scale(0.94);
+}
+.topbar .add:active,
+.topbar .search:active {
+	transform: translateY(1px) scale(0.98);
+}
+
+@keyframes ess-enter {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+}
+.ess-content .ess-card,
+.ess-content .ess-table-shell,
+.ess-content .ess-panel,
+.ess-content .ess-stat,
+.ess-content .ess-metric,
+.ess-content .ess-figures,
+.ess-content [role='tabpanel'] {
+	animation: ess-enter 380ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+	animation-duration: 380ms !important;
+}
+/* cards inside cards don't fade twice */
+.ess-content .ess-card .ess-card,
+.ess-content .ess-card .ess-table-shell {
+	animation: none;
+}
+
+/* ------------------------------------------------------------
+   SOFT MOTION — every page, every theme
+   - A page settles in: its title fades, then its cards rise one after
+     another, then table and list rows fade in top-down.
+   - Things that open (dialogs, side sheets, menus, pickers, toasts)
+     ease in from close by instead of popping; their backdrop fades.
+   - Clickable cards lift a touch on hover; empty-state icons pop.
+   Overlays move with the `translate` / `scale` properties, which add
+   to a component's own `transform` (a modal centred with one stays
+   centred). Same !important lengths as above, for the same reason.
+------------------------------------------------------------ */
+@keyframes ess-fade {
+	from {
+		opacity: 0;
+	}
+}
+@keyframes ess-pop {
+	from {
+		opacity: 0;
+		translate: 0 6px;
+		scale: 0.98;
+	}
+}
+@keyframes ess-drop {
+	from {
+		opacity: 0;
+		translate: 0 -4px;
+		scale: 0.98;
+	}
+}
+@keyframes ess-sheet-in {
+	from {
+		opacity: 0;
+		translate: 20px 0;
+	}
+}
+@keyframes ess-icon-pop {
+	from {
+		opacity: 0;
+		scale: 0.7;
+	}
+}
+
+/* the page title and breadcrumb */
+.ess-content .ess-page-head,
+.ess-breadcrumb {
+	animation: ess-fade 360ms ease-out backwards;
+	animation-duration: 360ms !important;
+}
+
+/* sibling cards rise in turn */
+.ess-content :is(.ess-card, .ess-table-shell, .ess-panel, .ess-stat, .ess-metric, .ess-figures):nth-child(2) {
+	animation-delay: 50ms;
+}
+.ess-content :is(.ess-card, .ess-table-shell, .ess-panel, .ess-stat, .ess-metric, .ess-figures):nth-child(3) {
+	animation-delay: 100ms;
+}
+.ess-content :is(.ess-card, .ess-table-shell, .ess-panel, .ess-stat, .ess-metric, .ess-figures):nth-child(4) {
+	animation-delay: 150ms;
+}
+.ess-content :is(.ess-card, .ess-table-shell, .ess-panel, .ess-stat, .ess-metric, .ess-figures):nth-child(5) {
+	animation-delay: 200ms;
+}
+.ess-content :is(.ess-card, .ess-table-shell, .ess-panel, .ess-stat, .ess-metric, .ess-figures):nth-child(n + 6) {
+	animation-delay: 240ms;
+}
+
+/* table and list rows fade in top-down (the first dozen; the rest
+   together), also when a filter or search brings new ones in */
+.ess-content .ess-table tbody tr,
+.ess-content .ess-rows > .ess-row {
+	animation: ess-fade 320ms ease-out backwards;
+	animation-duration: 320ms !important;
+	animation-delay: 120ms;
+}
+.ess-content .ess-table tbody tr:nth-child(2),
+.ess-content .ess-rows > .ess-row:nth-child(2) {
+	animation-delay: 145ms;
+}
+.ess-content .ess-table tbody tr:nth-child(3),
+.ess-content .ess-rows > .ess-row:nth-child(3) {
+	animation-delay: 170ms;
+}
+.ess-content .ess-table tbody tr:nth-child(4),
+.ess-content .ess-rows > .ess-row:nth-child(4) {
+	animation-delay: 195ms;
+}
+.ess-content .ess-table tbody tr:nth-child(5),
+.ess-content .ess-rows > .ess-row:nth-child(5) {
+	animation-delay: 220ms;
+}
+.ess-content .ess-table tbody tr:nth-child(6),
+.ess-content .ess-rows > .ess-row:nth-child(6) {
+	animation-delay: 245ms;
+}
+.ess-content .ess-table tbody tr:nth-child(7),
+.ess-content .ess-rows > .ess-row:nth-child(7) {
+	animation-delay: 270ms;
+}
+.ess-content .ess-table tbody tr:nth-child(8),
+.ess-content .ess-rows > .ess-row:nth-child(8) {
+	animation-delay: 295ms;
+}
+.ess-content .ess-table tbody tr:nth-child(9),
+.ess-content .ess-rows > .ess-row:nth-child(9) {
+	animation-delay: 320ms;
+}
+.ess-content .ess-table tbody tr:nth-child(10),
+.ess-content .ess-rows > .ess-row:nth-child(10) {
+	animation-delay: 345ms;
+}
+.ess-content .ess-table tbody tr:nth-child(n + 11),
+.ess-content .ess-rows > .ess-row:nth-child(n + 11) {
+	animation-delay: 370ms;
+}
+
+/* empty states: the icon pops in softly */
+.ess-empty__icon {
+	animation: ess-icon-pop 460ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+	animation-duration: 460ms !important;
+	animation-delay: 140ms;
+}
+
+/* things that open */
+.ess-scrim {
+	animation: ess-fade 220ms ease-out backwards;
+	animation-duration: 220ms !important;
+}
+.ess-modal,
+[role='dialog'][aria-modal='true']:not(.ess-drawer) {
+	animation: ess-pop 280ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+	animation-duration: 280ms !important;
+}
+.ess-drawer {
+	animation: ess-sheet-in 320ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+	animation-duration: 320ms !important;
+}
+[role='menu'],
+[role='listbox']:not(select) {
+	animation: ess-drop 180ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+	animation-duration: 180ms !important;
+}
+.ess-toast {
+	animation: ess-pop 300ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+	animation-duration: 300ms !important;
+}
+
+/* clickable cards lift a touch; a sidebar icon nudges on hover */
+.ess-content a.ess-card,
+.ess-content a.ess-figure,
+.ess-content a.ess-stat,
+.ess-content a.ess-panel {
+	transition:
+		translate 220ms cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 220ms ease,
+		background-color 150ms ease;
+	transition-duration: 220ms !important;
+}
+/* a deeper shadow, no movement: a card that moved would slide out from
+   under a pointer resting on its edge and back again, a flicker */
+.ess-content a.ess-card:hover,
+.ess-content a.ess-figure:hover,
+.ess-content a.ess-stat:hover,
+.ess-content a.ess-panel:hover {
+	box-shadow: var(--ess-elev-2);
+}
+nav.rail .nav-item svg {
+	transition: translate 200ms cubic-bezier(0.22, 1, 0.36, 1);
+	transition-duration: 200ms !important;
+}
+nav.rail .nav-item:hover svg {
+	translate: 1px 0;
+}
+
+/* Buttons that are links keep their own text colour on hover: the base
+   `a:hover` colour (the accent) is more specific than a button variant
+   and turned "Apply leave" blue on blue, its label vanishing. */
+a.ess-btn--primary:hover,
+a.ess-btn--primary:focus-visible {
+	color: var(--ess-text-on-primary);
+}
+a.ess-btn--danger:hover,
+a.ess-btn--danger:focus-visible {
+	color: #fff;
+}
+a.ess-btn--soft:hover {
+	color: var(--ess-primary-text);
+}
+
+/* ------------------------------------------------------------
+   TAB SCALE — one type size and height for every tab bar, every theme
+   - Tabs (a page's pill bar, a section's underline bar): 13.5px,
+     pills 32px tall, underlined 38px.
+   - In-card switches (Chart / Table, All / Approved / Pending): a
+     deliberately smaller tier, 12.5px and 28px.
+   Prefixed with :root so they win over pages' own sizes.
+------------------------------------------------------------ */
+:root .ess-tabs .ess-tab {
+	font-family: inherit;
+	font-size: 13.5px;
+}
+:root .ess-tabs:not(.ess-tabs--line) .ess-tab {
+	height: 32px;
+	padding-top: 0;
+	padding-bottom: 0;
+}
+:root .ess-tabs.ess-tabs--line .ess-tab {
+	height: 38px;
+	padding: 0 14px;
+}
+:root:root .seg > button,
+:root:root .ess-segmented button {
+	height: 28px;
+	padding-top: 0;
+	padding-bottom: 0;
+	font-family: inherit;
+	font-size: 12.5px;
+}
+
+/* ------------------------------------------------------------
+   DROPDOWNS — the open list in the theme's own look
+   Chrome's customizable select (appearance: base-select) lets the list
+   itself be styled: a rounded card with the theme's surface, border and
+   shadow; options as soft rows, the chosen one in the accent with a tick
+   at the end. Other browsers keep their native list; the closed box is
+   the same everywhere (.ess-select above).
+------------------------------------------------------------ */
+@supports (appearance: base-select) {
+	.ess-select,
+	.ess-select::picker(select) {
+		appearance: base-select;
+	}
+	/* the box keeps its own chevron (the background image) */
+	.ess-select::picker-icon {
+		display: none;
+	}
+	.ess-select::picker(select) {
+		margin-block: 6px;
+		padding: 6px;
+		min-width: anchor-size(width);
+		max-height: min(320px, 50vh);
+		overflow-y: auto;
+		border: 1px solid var(--ess-border);
+		border-radius: calc(var(--ess-radius-sm) + 6px);
+		background: var(--ess-modal-bg);
+		color: var(--ess-text);
+		box-shadow: var(--ess-elev-3);
+		opacity: 1;
+		translate: 0 0;
+		transition:
+			opacity 160ms ease-out,
+			translate 160ms ease-out,
+			display 160ms allow-discrete,
+			overlay 160ms allow-discrete;
+	}
+	.ess-select:not(:open)::picker(select) {
+		opacity: 0;
+		translate: 0 -4px;
+	}
+	@starting-style {
+		.ess-select:open::picker(select) {
+			opacity: 0;
+			translate: 0 -4px;
+		}
+	}
+	.ess-select option {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		min-height: 34px;
+		padding: 6px 10px;
+		border-radius: var(--ess-radius-sm);
+		font-size: 13.5px;
+		color: var(--ess-text);
+		cursor: pointer;
+	}
+	.ess-select option:hover,
+	.ess-select option:focus-visible {
+		outline: none;
+		box-shadow: none;
+		background: var(--ess-surface-hover);
+	}
+	.ess-select option:checked {
+		background: var(--ess-primary-soft);
+		color: var(--ess-primary-text);
+		font-weight: 600;
+	}
+	.ess-select option::checkmark {
+		order: 1;
+		margin-left: auto;
+	}
+	.ess-select option:disabled {
+		color: var(--ess-text-muted);
+		cursor: default;
+	}
+	.ess-select option:disabled:hover {
+		background: none;
+	}
+}
+
+/* Sub-page breadcrumb (app layout): only themes that use it show it. */
+.ess-breadcrumb {
+	display: none;
 }
 
 .ess-sr-only {

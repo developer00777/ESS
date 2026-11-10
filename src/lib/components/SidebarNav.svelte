@@ -1,13 +1,10 @@
 <script lang="ts">
-	import CalendarDays from '@lucide/svelte/icons/calendar-days';
-	import LayoutGrid from '@lucide/svelte/icons/layout-grid';
-	import Calendar from '@lucide/svelte/icons/calendar';
-	import Clock from '@lucide/svelte/icons/clock';
-	import FileText from '@lucide/svelte/icons/file-text';
-	import Users from '@lucide/svelte/icons/users';
-	import ShieldUser from '@lucide/svelte/icons/shield-user';
-	import Wallet from '@lucide/svelte/icons/wallet';
+	import { mainNavItems, isNavActive } from '$lib/nav-items';
 	import CircleHelp from '@lucide/svelte/icons/circle-help';
+	import PanelLeft from '@lucide/svelte/icons/panel-left';
+	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+	import Avatar from './Avatar.svelte';
+	import AccountMenu from './AccountMenu.svelte';
 	import type { Role } from '$lib/server/auth';
 
 	/**
@@ -33,6 +30,8 @@
 		adminIssueCount?: number;
 		/** Champ Hub: unread chat plus requests, minutes and due work; red when urgent. */
 		chatBadge?: { count: number; urgent: boolean };
+		/** What the person is here as, for the footer's user button (Mono). */
+		roleLabel?: string;
 	}
 
 	let {
@@ -46,7 +45,8 @@
 		canPayroll = false,
 		canTeam,
 		adminIssueCount = 0,
-		chatBadge = { count: 0, urgent: false }
+		chatBadge = { count: 0, urgent: false },
+		roleLabel = ''
 	}: Props = $props();
 
 	/* Dock behaviour (desktop and tablet): the rail hides off the left edge
@@ -65,24 +65,49 @@
 	}
 	$effect(() => () => clearTimeout(hideTimer));
 
-	type NavItem = { href: string; label: string; icon: typeof Calendar; soon?: boolean };
+	/* Collapsible sidebar, for themes that show it expanded (Mono): the
+	   full sidebar or an icon strip, kept per browser (essSidebar, applied
+	   pre-paint by app.html as <html data-ess-sidebar="collapsed">).
+	   Ctrl/⌘+B toggles it, as in shadcn, except while typing in a field. */
+	let collapsed = $state(false);
+	$effect(() => {
+		collapsed = document.documentElement.getAttribute('data-ess-sidebar') === 'collapsed';
+	});
+	function toggleCollapsed() {
+		collapsed = !collapsed;
+		if (collapsed) document.documentElement.setAttribute('data-ess-sidebar', 'collapsed');
+		else document.documentElement.removeAttribute('data-ess-sidebar');
+		try {
+			if (collapsed) localStorage.setItem('essSidebar', 'collapsed');
+			else localStorage.removeItem('essSidebar');
+		} catch {
+			/* not remembered in private mode */
+		}
+	}
+	/* The footer's user button (Mono) opens the account menu, above the
+	   footer, or beside it when the sidebar is collapsed. */
+	let userOpen = $state(false);
+	function onWindowClick(e: MouseEvent) {
+		if (userOpen && !(e.target as HTMLElement).closest('.nav-user')) userOpen = false;
+	}
 
-	const items = $derived.by((): NavItem[] => [
-		{ href: '/dashboard', label: 'Today', icon: CalendarDays },
-		{ href: '/hub', label: 'Champ Hub', icon: LayoutGrid },
-		{ href: '/leave', label: 'Leave', icon: Calendar },
-		{ href: '/attendance', label: 'Attendance', icon: Clock },
-		{ href: '/policies', label: 'Policies', icon: FileText },
-		...((canTeam ?? role !== 'employee') ? [{ href: '/team', label: 'Team', icon: Users }] : []),
-		...(canAdmin ? [{ href: '/admin', label: 'Admin Controls', icon: ShieldUser }] : []),
-		/* Payroll is live for those who run it; for everyone else payslips
-		   are not in the portal yet, and the row says so. */
-		{ href: '/payroll', label: 'Payroll', icon: Wallet, soon: !canPayroll }
-	]);
+	function onKey(e: KeyboardEvent) {
+		if (e.key === 'Escape') userOpen = false;
+		if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'b') return;
+		if (document.documentElement.getAttribute('data-ess-skin') !== 'mono') return;
+		const t = e.target as HTMLElement | null;
+		if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+		e.preventDefault();
+		toggleCollapsed();
+	}
 
-	const isActive = (href: string) =>
-		href === '/dashboard' ? activePath === '/dashboard' || activePath === '/' : activePath === href || activePath.startsWith(href + '/');
+	// The sections, shared with Atur's dock (src/lib/nav-items.ts).
+	const items = $derived(mainNavItems({ role, canTeam, canAdmin, canPayroll }));
+
+	const isActive = (href: string) => isNavActive(href, activePath);
 </script>
+
+<svelte:window onkeydown={onKey} onclick={onWindowClick} />
 
 <!-- The edge the pointer touches to bring the dock in; a faint handle
      hints that it is there. -->
@@ -109,7 +134,23 @@
 			</span>
 			<span class="brand-text">Champ HR</span>
 		</a>
+		<!-- SidebarTrigger (shown only where the sidebar can collapse: Mono). -->
+		<button
+			type="button"
+			class="sb-trigger"
+			onclick={toggleCollapsed}
+			aria-expanded={!collapsed}
+			aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+			title={collapsed ? 'Expand sidebar (Ctrl+B)' : 'Collapse sidebar (Ctrl+B)'}
+		>
+			<PanelLeft size={16} strokeWidth={2} />
+		</button>
 	</div>
+	<!-- SidebarRail: the sidebar's edge, clickable to toggle it (Mono). -->
+	<button type="button" class="sb-rail" tabindex="-1" aria-hidden="true" title="Toggle sidebar (Ctrl+B)" onclick={toggleCollapsed}></button>
+	<!-- A group heading for themes that show the sidebar expanded (Mono);
+	     hidden in the icon dock. -->
+	<span class="group-label" aria-hidden="true">Menu</span>
 
 	<div class="nav-list">
 		{#each items as item (item.href)}
@@ -141,6 +182,28 @@
 			<CircleHelp size={19} strokeWidth={1.75} />
 			<span class="nav-label">Help &amp; support</span>
 		</a>
+		<!-- NavUser: the person and the account menu (shown only where the
+		     sidebar holds the user: Mono; elsewhere it is the top bar's avatar). -->
+		<div class="nav-user">
+			<button
+				type="button"
+				class="nav-user-btn"
+				aria-haspopup="menu"
+				aria-expanded={userOpen}
+				aria-label="Your account and settings"
+				onclick={() => (userOpen = !userOpen)}
+			>
+				<Avatar {userId} {fullName} {hasPicture} size="sm" version={pictureVersion ?? undefined} />
+				<span class="nu-text">
+					<strong>{fullName}</strong>
+					<small>{roleLabel}</small>
+				</span>
+				<span class="nu-chev" aria-hidden="true"><ChevronsUpDown size={16} /></span>
+			</button>
+			{#if userOpen}
+				<AccountMenu {fullName} {roleLabel} placement={collapsed ? 'beside-end' : 'above-start'} onclose={() => (userOpen = false)} />
+			{/if}
+		</div>
 	</div>
 </nav>
 
@@ -185,8 +248,24 @@
 	}
 	.brand-text,
 	.nav-label,
-	.soon-badge {
+	.soon-badge,
+	.group-label,
+	.sb-trigger,
+	.sb-rail,
+	.nav-user {
 		display: none;
+	}
+	.sb-trigger,
+	.sb-rail,
+	.nav-user-btn {
+		border: 0;
+		background: none;
+		font: inherit;
+		color: inherit;
+		cursor: pointer;
+	}
+	.nav-user {
+		position: relative;
 	}
 
 	.nav-list,

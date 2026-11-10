@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import X from '@lucide/svelte/icons/x';
+	import ClipboardPaste from '@lucide/svelte/icons/clipboard-paste';
+	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import { api, hub } from '$lib/hub/client.svelte';
 	import { todayKey } from '$lib/hub/format';
 	import { lockPageScroll } from '$lib/scroll-lock';
@@ -42,7 +44,7 @@
 <div class="ess-scrim scrim" role="presentation" onclick={onclose}></div>
 <div class="ess-modal modal" role="dialog" aria-modal="true" aria-labelledby="paste-title">
 	<div class="ess-modal__head">
-		<h2 id="paste-title" class="ess-h2">{meetingId ? `Notes for ${knownTopic}` : 'Minutes from notes'}</h2>
+		<h2 id="paste-title" class="ess-h2"><ClipboardPaste size={16} /> {meetingId ? `Notes for ${knownTopic}` : 'Minutes from notes'}</h2>
 		<button type="button" class="ess-icon-btn" onclick={onclose} aria-label="Close"><X size={16} /></button>
 	</div>
 	<form class="ess-modal__body body" onsubmit={save}>
@@ -66,7 +68,7 @@
 		{#if err}<p class="ess-error">{err}</p>{/if}
 		<div class="actions">
 			<button type="button" class="ess-btn ess-btn--secondary" onclick={onclose}>Cancel</button>
-			<button type="submit" class="ess-btn ess-btn--primary" disabled={busy || !notes.trim()}>Find action items</button>
+			<button type="submit" class="ess-btn ess-btn--primary" disabled={busy || !notes.trim()}><ListChecks size={16} /> Find action items</button>
 		</div>
 	</form>
 </div>

@@ -1,0 +1,2407 @@
+/* ============================================================
+   ESS Design System — Skin · MONO (shadcn/ui)
+   ============================================================
+   <html data-ess-skin="mono">: the portal in shadcn/ui's design
+   language — the v4 "neutral" theme. Tokens are shadcn's exact
+   values (light and dark), mapped onto the ESS names:
+
+     background / card / popover → --ess-canvas, --ess-surface, --ess-modal-bg
+     foreground                  → --ess-text
+     muted-foreground            → --ess-text-muted
+     primary / primary-fg        → --ess-primary, --ess-text-on-primary
+     secondary / muted / accent  → --ess-sunken, --ess-surface-hover, --ess-primary-soft
+     border / input / ring       → --ess-border, --ess-field-border, --mono-ring
+     destructive                 → --ess-danger
+     sidebar                     → --ess-backdrop (the inset layout's frame)
+     --radius 0.625rem           → sm 6 · md 8 · lg 10 · xl 14
+
+   Then every shared ESS component is drawn as its shadcn
+   counterpart: Button (default, secondary, outline, ghost,
+   destructive), Input / Select / Textarea / Label, Card, Badge
+   (outline, with a status dot), Tabs, Table, Alert, Sonner toast,
+   Dialog / Sheet, Progress, Skeleton, Calendar day, Sidebar menu
+   with Tooltip, Navigation menu, Dropdown menu.
+
+   Deliberate deviation: cards use 20px padding (shadcn: 24px) so
+   the one-screen dashboard still fits.
+   ============================================================ */
+
+/* ---------- tokens (light) ---------- */
+:root[data-ess-skin='mono'] {
+	--mono-background: #ffffff;
+	--mono-foreground: #0a0a0a;
+	--mono-card: #ffffff;
+	--mono-popover: #ffffff;
+	--mono-primary: #171717;
+	--mono-primary-fg: #fafafa;
+	--mono-primary-hover: color-mix(in srgb, #171717 90%, transparent);
+	--mono-secondary: #f5f5f5;
+	--mono-secondary-hover: color-mix(in srgb, #f5f5f5 80%, transparent);
+	--mono-muted: #f5f5f5;
+	/* shadcn's #737373 is 4.35:1 on the muted grey; a shade darker for AA */
+	--mono-muted-fg: #6b6b6b;
+	--mono-accent: #f5f5f5;
+	--mono-destructive: #e7000b;
+	--mono-border: #e5e5e5;
+	--mono-input: #e5e5e5;
+	--mono-ring: #a1a1a1;
+	--mono-ring-50: rgba(161, 161, 161, 0.5);
+	--mono-sidebar: #fafafa;
+	--mono-sidebar-accent: #f5f5f5;
+	--mono-overlay: rgba(0, 0, 0, 0.5);
+	--mono-shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+	--mono-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+	--mono-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+	--mono-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+
+	/* the same values on the ESS names every page already uses */
+	--acc: var(--mono-primary);
+	--acc2: #a3a3a3;
+	--acc-soft: #a3a3a3;
+	--glow: rgba(0, 0, 0, 0.06);
+	--ring: var(--mono-ring-50);
+
+	--ess-backdrop: var(--mono-sidebar);
+	--ess-shell-border: var(--mono-border);
+	--ess-canvas: var(--mono-background);
+	--ess-surface: var(--mono-card);
+	--ess-surface-hover: var(--mono-accent);
+	--ess-sunken: var(--mono-muted);
+	--ess-inverse: var(--mono-sidebar);
+	--ess-inverse-raised: var(--mono-card);
+	--ess-pane-bg: var(--mono-sidebar);
+	--ess-pane-raised-bg: var(--mono-card);
+	--ess-modal-bg: var(--mono-popover);
+	--ess-field-bg: transparent;
+	--ess-glass-raised-bg: var(--mono-card);
+
+	--ess-border: var(--mono-border);
+	--ess-border-subtle: var(--mono-border);
+	--ess-border-strong: #d4d4d4;
+	--ess-border-inverse: var(--mono-border);
+
+	--ess-text: var(--mono-foreground);
+	--ess-text-secondary: #525252;
+	--ess-text-muted: var(--mono-muted-fg);
+	--ess-text-on-primary: var(--mono-primary-fg);
+	--ess-text-inverse: var(--mono-foreground);
+	--ess-text-inverse-secondary: var(--mono-muted-fg);
+
+	--ess-primary: var(--mono-primary);
+	--ess-primary-hover: #2e2e2e;
+	--ess-primary-press: #2e2e2e;
+	--ess-primary-soft: var(--mono-accent);
+	--ess-primary-softer: #fafafa;
+	--ess-primary-ring: var(--mono-ring-50);
+	--ess-focus-ring: 0 0 0 3px var(--mono-ring-50);
+	--ess-primary-text: var(--mono-primary);
+	--ess-primary-shadow: var(--mono-shadow-xs);
+
+	--ess-danger: var(--mono-destructive);
+	--ess-danger-bg: color-mix(in srgb, var(--mono-destructive) 8%, transparent);
+
+	--ess-cell: var(--mono-muted);
+	--ess-cell-off: #e5e5e5;
+
+	--ess-radius-xs: 4px;
+	--ess-radius-sm: 6px;
+	--ess-radius-md: 8px;
+	--ess-radius-lg: 10px;
+	--ess-radius-xl: 14px;
+
+	--ess-elev-1: var(--mono-shadow-xs);
+	--ess-elev-2: var(--mono-shadow-sm);
+	--ess-elev-3: var(--mono-shadow-md);
+	--ess-elev-4: var(--mono-shadow-lg);
+
+	--ess-font-sans: 'Geist', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--ess-font-display: 'Geist', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--ess-font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+	--ess-fs-title: 24px;
+	--ess-fs-h2: 16px;
+	--ess-fs-stat: 24px;
+}
+
+/* ---------- tokens (dark) ---------- */
+:root[data-ess-skin='mono'][data-ess-theme='dark'] {
+	/* Softer charcoal (zinc) instead of near-black (2026-11-05: "the dark
+	   theme is completely dark"): the page, cards and controls each sit a
+	   few steps lighter, cards clearly raised off the page. */
+	--mono-background: #141416;
+	--mono-foreground: #fafafa;
+	--mono-card: #1e1e21;
+	--mono-popover: #232326;
+	--mono-primary: #e5e5e5;
+	--mono-primary-fg: #171717;
+	--mono-primary-hover: color-mix(in srgb, #e5e5e5 90%, transparent);
+	--mono-secondary: #2b2b2f;
+	--mono-secondary-hover: color-mix(in srgb, #2b2b2f 80%, transparent);
+	--mono-muted: #2b2b2f;
+	/* a little brighter than shadcn's #a1a1a1 (2026-11-05: dark read dim) */
+	--mono-muted-fg: #b3b3b3;
+	--mono-accent: #2b2b2f;
+	--mono-destructive: #ff6467;
+	--mono-border: rgba(255, 255, 255, 0.12);
+	--mono-input: rgba(255, 255, 255, 0.17);
+	--mono-ring: #737373;
+	--mono-ring-50: rgba(115, 115, 115, 0.5);
+	--mono-sidebar: #1a1a1d;
+	--mono-sidebar-accent: #2b2b2f;
+	--mono-shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+	--mono-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+	--mono-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.45), 0 2px 4px -2px rgba(0, 0, 0, 0.45);
+	--mono-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+
+	--acc2: #525252;
+	--acc-soft: #525252;
+	--glow: rgba(255, 255, 255, 0.06);
+
+	/* the frame is the sidebar colour, as in shadcn's inset layout */
+	--ess-backdrop: var(--mono-sidebar);
+	--ess-canvas: var(--mono-background);
+	--ess-border-strong: rgba(255, 255, 255, 0.2);
+	--ess-text-secondary: #e0e0e0;
+	--ess-primary-hover: #d4d4d4;
+	--ess-primary-press: #d4d4d4;
+	--ess-primary-softer: #252528;
+	--ess-primary-shadow: none;
+	--ess-danger-bg: color-mix(in srgb, var(--mono-destructive) 14%, transparent);
+	--ess-cell: #2b2b2f;
+	--ess-cell-off: #222225;
+}
+/* a faint soft light across the top of the page, so the dark has depth */
+:root[data-ess-skin='mono'][data-ess-theme='dark'] .ess-main {
+	background:
+		radial-gradient(90% 55% at 50% -8%, rgba(255, 255, 255, 0.05), transparent 70%),
+		var(--mono-background);
+}
+
+/* ---------- base ---------- */
+:root[data-ess-skin='mono'] body {
+	letter-spacing: 0;
+	-webkit-font-smoothing: antialiased;
+}
+:root[data-ess-skin='mono'] ::selection {
+	background: var(--mono-primary);
+	color: var(--mono-primary-fg);
+}
+
+/* ---------- shell: the sidebar "inset" layout ----------
+   A neutral frame (sidebar colour) with the page as one white panel:
+   rounded-xl, a hairline border and shadow-sm. No glows, no glass. */
+:root[data-ess-skin='mono'] .ess-shell {
+	--glass-fill: linear-gradient(var(--mono-card), var(--mono-card));
+	--glass-edge: var(--mono-border);
+	--glass-shadow: var(--mono-shadow-sm);
+	background: var(--mono-background);
+	border-color: var(--mono-border);
+}
+@media (min-width: 721px) {
+	:root[data-ess-skin='mono'] .ess-shell {
+		box-shadow: var(--mono-shadow-sm);
+	}
+}
+
+/* ---------- typography ---------- */
+:root[data-ess-skin='mono'] .ess-page-title {
+	font-size: 24px;
+	font-weight: 600;
+	letter-spacing: -0.025em;
+	line-height: 1.2;
+}
+:root[data-ess-skin='mono'] .ess-page-sub {
+	font-size: 14px;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-h2 {
+	font-size: 16px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	line-height: 1;
+}
+:root[data-ess-skin='mono'] .ess-eyebrow,
+:root[data-ess-skin='mono'] .ess-crumb {
+	font-size: 14px;
+	font-weight: 400;
+	letter-spacing: 0;
+	text-transform: none;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-crumb a:hover {
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-crumb > * + *::before {
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-caption {
+	font-size: 14px;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-link {
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--mono-foreground);
+	text-underline-offset: 4px;
+}
+:root[data-ess-skin='mono'] .ess-link:hover {
+	color: var(--mono-foreground);
+	text-decoration: underline;
+}
+
+/* ---------- Card ---------- */
+:root[data-ess-skin='mono'] .ess-shell .ess-card,
+:root[data-ess-skin='mono'] .ess-shell .ess-panel,
+:root[data-ess-skin='mono'] .ess-shell .ess-stat,
+:root[data-ess-skin='mono'] .ess-shell .ess-metric,
+:root[data-ess-skin='mono'] .ess-shell .ess-figures {
+	--card-px: 20px;
+	--card-py: 20px;
+	background-color: var(--mono-card);
+	background-image: none;
+	border: 1px solid var(--mono-border);
+	border-radius: 14px;
+	box-shadow: var(--mono-shadow-sm);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+/* short laptop screens keep the compact padding, so pages still fit */
+@media (min-width: 721px) and (max-height: 760px) {
+	:root[data-ess-skin='mono'] .ess-shell .ess-card {
+		--card-px: 14px;
+		--card-py: 12px;
+	}
+}
+:root[data-ess-skin='mono'] .ess-shell .ess-card .ess-card {
+	box-shadow: none;
+}
+:root[data-ess-skin='mono'] .ess-card--interactive:hover,
+:root[data-ess-skin='mono'] .ess-stat:hover {
+	border-color: var(--mono-border);
+	box-shadow: var(--mono-shadow-md);
+}
+:root[data-ess-skin='mono'] .ess-card-head {
+	margin-bottom: 14px;
+}
+:root[data-ess-skin='mono'] .ess-sunken {
+	background: var(--mono-muted);
+	border-radius: 10px;
+}
+
+/* ---------- Button ----------
+   h-9 px-4 rounded-md text-sm font-medium, shadow-xs; sm h-8 px-3,
+   lg h-10 px-6; focus ring 3px ring/50; disabled at 50%. */
+:root[data-ess-skin='mono'] .ess-btn {
+	height: 36px;
+	padding: 0 16px;
+	gap: 8px;
+	border-radius: 8px;
+	font-size: 14px;
+	font-weight: 500;
+	transition:
+		background-color 150ms,
+		color 150ms,
+		border-color 150ms,
+		box-shadow 150ms;
+}
+:root[data-ess-skin='mono'] .ess-btn--sm {
+	height: 32px;
+	padding: 0 12px;
+	gap: 6px;
+	border-radius: 8px;
+	font-size: 14px;
+}
+:root[data-ess-skin='mono'] .ess-btn--lg {
+	height: 40px;
+	padding: 0 24px;
+	border-radius: 8px;
+}
+:root[data-ess-skin='mono'] .ess-btn:disabled {
+	opacity: 0.5;
+	cursor: default;
+	pointer-events: none;
+}
+:root[data-ess-skin='mono'] .ess-btn:focus-visible {
+	border-color: var(--mono-ring);
+	box-shadow: 0 0 0 3px var(--mono-ring-50);
+}
+/* default */
+:root[data-ess-skin='mono'] .ess-btn--primary {
+	background: var(--mono-primary);
+	border-color: transparent;
+	color: var(--mono-primary-fg);
+	box-shadow: var(--mono-shadow-xs);
+}
+:root[data-ess-skin='mono'] .ess-btn--primary:hover:not(:disabled),
+:root[data-ess-skin='mono'] .ess-btn--primary:active:not(:disabled) {
+	background: var(--mono-primary-hover);
+	color: var(--mono-primary-fg);
+}
+/* outline (ESS secondary and outline) */
+:root[data-ess-skin='mono'] .ess-btn--secondary,
+:root[data-ess-skin='mono'] .ess-btn--outline {
+	background: var(--mono-background);
+	border-color: var(--mono-input);
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-xs);
+}
+:root[data-ess-skin='mono'][data-ess-theme='dark'] .ess-btn--secondary,
+:root[data-ess-skin='mono'][data-ess-theme='dark'] .ess-btn--outline {
+	background: color-mix(in srgb, var(--mono-input) 30%, transparent);
+}
+:root[data-ess-skin='mono'] .ess-btn--secondary:hover:not(:disabled),
+:root[data-ess-skin='mono'] .ess-btn--outline:hover:not(:disabled) {
+	background: var(--mono-accent);
+	border-color: var(--mono-input);
+	color: var(--mono-foreground);
+}
+/* secondary (ESS soft) */
+:root[data-ess-skin='mono'] .ess-btn--soft {
+	background: var(--mono-secondary);
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-xs);
+}
+:root[data-ess-skin='mono'] .ess-btn--soft:hover:not(:disabled) {
+	background: var(--mono-secondary-hover);
+}
+/* ghost */
+:root[data-ess-skin='mono'] .ess-btn--ghost {
+	background: transparent;
+	color: var(--mono-foreground);
+	box-shadow: none;
+}
+:root[data-ess-skin='mono'] .ess-btn--ghost:hover:not(:disabled) {
+	background: var(--mono-accent);
+	color: var(--mono-foreground);
+}
+/* destructive */
+:root[data-ess-skin='mono'] .ess-btn--danger {
+	background: var(--mono-destructive);
+	color: #ffffff;
+	box-shadow: var(--mono-shadow-xs);
+}
+:root[data-ess-skin='mono'] .ess-btn--danger:hover:not(:disabled) {
+	filter: none;
+	background: color-mix(in srgb, var(--mono-destructive) 90%, transparent);
+}
+/* icon buttons: size-9, ghost; bordered = outline */
+:root[data-ess-skin='mono'] .ess-icon-btn {
+	width: 36px;
+	height: 36px;
+	border-radius: 8px;
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-icon-btn:hover {
+	background: var(--mono-accent);
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-icon-btn--bordered {
+	border-color: var(--mono-input);
+	background: var(--mono-background);
+	box-shadow: var(--mono-shadow-xs);
+}
+
+/* ---------- Input · Select · Textarea · Label ----------
+   h-9 rounded-md border-input bg-transparent px-3 text-sm shadow-xs;
+   focus: border-ring + 3px ring/50; invalid: border-destructive. */
+:root[data-ess-skin='mono'] .ess-label {
+	font-size: 14px;
+	font-weight: 500;
+	line-height: 1;
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-field {
+	gap: 8px;
+}
+:root[data-ess-skin='mono'] .ess-input,
+:root[data-ess-skin='mono'] .ess-select,
+:root[data-ess-skin='mono'] .ess-textarea {
+	min-height: 36px;
+	padding: 4px 12px;
+	border: 1px solid var(--mono-input);
+	border-radius: 8px;
+	background-color: transparent;
+	font-size: 14px;
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-xs);
+	transition:
+		color 150ms,
+		box-shadow 150ms,
+		border-color 150ms;
+}
+:root[data-ess-skin='mono'][data-ess-theme='dark'] .ess-input,
+:root[data-ess-skin='mono'][data-ess-theme='dark'] .ess-select,
+:root[data-ess-skin='mono'][data-ess-theme='dark'] .ess-textarea {
+	background-color: color-mix(in srgb, var(--mono-input) 30%, transparent);
+}
+:root[data-ess-skin='mono'] .ess-textarea {
+	min-height: 64px;
+	padding: 8px 12px;
+}
+:root[data-ess-skin='mono'] .ess-select {
+	padding-right: 32px;
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+	background-position: right 10px center;
+	background-repeat: no-repeat;
+}
+:root[data-ess-skin='mono'] .ess-input::placeholder,
+:root[data-ess-skin='mono'] .ess-textarea::placeholder {
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-input:hover,
+:root[data-ess-skin='mono'] .ess-select:hover,
+:root[data-ess-skin='mono'] .ess-textarea:hover {
+	border-color: var(--mono-input);
+}
+:root[data-ess-skin='mono'] .ess-input:focus,
+:root[data-ess-skin='mono'] .ess-select:focus,
+:root[data-ess-skin='mono'] .ess-textarea:focus {
+	border-color: var(--mono-ring);
+	box-shadow: 0 0 0 3px var(--mono-ring-50);
+}
+:root[data-ess-skin='mono'] .ess-input--invalid {
+	border-color: var(--mono-destructive);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--mono-destructive) 20%, transparent);
+}
+:root[data-ess-skin='mono'] .ess-help {
+	font-size: 14px;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-error {
+	font-size: 14px;
+	color: var(--mono-destructive);
+}
+:root[data-ess-skin='mono'] .ess-search > svg {
+	left: 10px;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-search > .ess-input {
+	padding-left: 34px;
+}
+
+/* ---------- Badge ----------
+   rounded-md border px-2 py-0.5 text-xs font-medium — the outline
+   variant, as shadcn's own data tables use for status; a small dot in
+   the status colour keeps approved / pending / rejected readable. */
+:root[data-ess-skin='mono'] .ess-badge {
+	--dot: var(--mono-muted-fg);
+	height: auto;
+	gap: 6px;
+	padding: 2px 8px;
+	border: 1px solid var(--mono-border);
+	border-radius: 6px;
+	background: transparent;
+	color: var(--mono-foreground);
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1.33;
+	text-transform: none;
+}
+:root[data-ess-skin='mono'] .ess-badge::before {
+	content: '';
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--dot);
+}
+:root[data-ess-skin='mono'] .ess-badge--approved,
+:root[data-ess-skin='mono'] .ess-badge--present,
+:root[data-ess-skin='mono'] .ess-badge--public,
+:root[data-ess-skin='mono'] .ess-badge--ok {
+	--dot: #16a34a;
+}
+:root[data-ess-skin='mono'] .ess-badge--pending,
+:root[data-ess-skin='mono'] .ess-badge--restricted,
+:root[data-ess-skin='mono'] .ess-badge--late,
+:root[data-ess-skin='mono'] .ess-badge--warn {
+	--dot: #f59e0b;
+}
+:root[data-ess-skin='mono'] .ess-badge--rejected,
+:root[data-ess-skin='mono'] .ess-badge--absent,
+:root[data-ess-skin='mono'] .ess-badge--bad {
+	--dot: var(--mono-destructive);
+}
+:root[data-ess-skin='mono'] .ess-badge--escalated,
+:root[data-ess-skin='mono'] .ess-badge--info {
+	--dot: #3b82f6;
+}
+/* the default (filled) badge */
+:root[data-ess-skin='mono'] .ess-badge--accent,
+:root[data-ess-skin='mono'] .ess-badge--new {
+	border-color: transparent;
+	background: var(--mono-primary);
+	color: var(--mono-primary-fg);
+}
+:root[data-ess-skin='mono'] .ess-badge--accent::before,
+:root[data-ess-skin='mono'] .ess-badge--new::before {
+	display: none;
+}
+
+/* ---------- Tabs ----------
+   TabsList: bg-muted rounded-lg p-[3px] h-9; TabsTrigger: rounded-md
+   px-2 py-1 text-sm font-medium; active: bg-background shadow-sm
+   (dark: bg-input/30 with a border). ESS segmented controls alike. */
+:root[data-ess-skin='mono'] .ess-tabs:not(.ess-tabs--line),
+:root[data-ess-skin='mono'] .ess-shell .ess-tabs:not(.ess-tabs--line),
+:root[data-ess-skin='mono'] .ess-segmented {
+	gap: 0;
+	height: 36px;
+	padding: 3px;
+	border: none;
+	border-radius: 10px;
+	background: var(--mono-muted);
+	box-shadow: none;
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+:root[data-ess-skin='mono'] .ess-tabs:not(.ess-tabs--line) .ess-tab,
+:root[data-ess-skin='mono'] .ess-segmented button {
+	min-width: 0;
+	height: 100%;
+	padding: 4px 10px;
+	border: 1px solid transparent;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--mono-foreground);
+	font-size: 14px;
+	font-weight: 500;
+}
+:root[data-ess-skin='mono'] .ess-tabs:not(.ess-tabs--line) .ess-tab:hover,
+:root[data-ess-skin='mono'] .ess-segmented button:hover {
+	background: transparent;
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-selected='true'],
+:root[data-ess-skin='mono'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-current='page'],
+:root[data-ess-skin='mono'] .ess-segmented button[aria-pressed='true'] {
+	background: var(--mono-background);
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-sm);
+}
+:root[data-ess-skin='mono'][data-ess-theme='dark'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-selected='true'],
+:root[data-ess-skin='mono'][data-ess-theme='dark'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-current='page'],
+:root[data-ess-skin='mono'][data-ess-theme='dark'] .ess-segmented button[aria-pressed='true'] {
+	border-color: var(--mono-input);
+	background: color-mix(in srgb, var(--mono-input) 30%, transparent);
+}
+:root[data-ess-skin='mono'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-selected='true']::after,
+:root[data-ess-skin='mono'] .ess-tabs:not(.ess-tabs--line) .ess-tab[aria-current='page']::after {
+	display: none;
+}
+:root[data-ess-skin='mono'] .ess-tab .ess-count {
+	height: 18px;
+	border-radius: 6px;
+	background: var(--mono-primary);
+	color: var(--mono-primary-fg);
+}
+/* underline tabs: foreground text, a 2px foreground line */
+:root[data-ess-skin='mono'] .ess-tabs--line {
+	border-bottom-color: var(--mono-border);
+}
+:root[data-ess-skin='mono'] .ess-tabs--line .ess-tab {
+	font-size: 14px;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-tabs--line .ess-tab:hover {
+	background: transparent;
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-tabs--line .ess-tab[aria-selected='true'],
+:root[data-ess-skin='mono'] .ess-tabs--line .ess-tab[aria-current='page'] {
+	background: transparent;
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-tabs--line .ess-tab[aria-selected='true']::after,
+:root[data-ess-skin='mono'] .ess-tabs--line .ess-tab[aria-current='page']::after {
+	background: var(--mono-foreground);
+}
+
+/* ---------- Table ----------
+   wrapped in a rounded-md border; th h-10 px-2 font-medium text-
+   foreground; td p-2; rows border-b, hover bg-muted/50, selected
+   bg-muted. */
+:root[data-ess-skin='mono'] .ess-table-shell {
+	border: 1px solid var(--mono-border);
+	border-radius: 8px;
+	background: var(--mono-card);
+	box-shadow: none;
+}
+:root[data-ess-skin='mono'] .ess-table {
+	font-size: 14px;
+}
+:root[data-ess-skin='mono'] .ess-table th {
+	height: 40px;
+	padding: 0 8px;
+	background: transparent;
+	border-bottom: 1px solid var(--mono-border);
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-table th:first-child,
+:root[data-ess-skin='mono'] .ess-table td:first-child {
+	padding-left: 12px;
+}
+:root[data-ess-skin='mono'] .ess-table td {
+	padding: 8px;
+	border-bottom: 1px solid var(--mono-border);
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-table tbody tr:hover td {
+	background: color-mix(in srgb, var(--mono-muted) 50%, transparent);
+}
+:root[data-ess-skin='mono'] .ess-table tbody tr[aria-selected='true'] td,
+:root[data-ess-skin='mono'] .ess-table tbody tr.is-selected td {
+	background: var(--mono-muted);
+}
+:root[data-ess-skin='mono'] .ess-table-foot {
+	padding: 8px 12px;
+	border-top: 1px solid var(--mono-border);
+	background: transparent;
+	font-size: 14px;
+	color: var(--mono-muted-fg);
+}
+
+/* ---------- Empty ---------- */
+:root[data-ess-skin='mono'] .ess-empty {
+	gap: 6px;
+	color: var(--mono-muted-fg);
+	font-size: 14px;
+}
+:root[data-ess-skin='mono'] .ess-empty__icon {
+	width: 40px;
+	height: 40px;
+	border-radius: 10px;
+	background: var(--mono-muted);
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-empty__title {
+	font-size: 18px;
+	font-weight: 500;
+	letter-spacing: -0.01em;
+	color: var(--mono-foreground);
+}
+
+/* ---------- Alert ----------
+   rounded-lg border px-4 py-3 text-sm on the card colour; the
+   destructive variant in the destructive colour. */
+:root[data-ess-skin='mono'] .ess-alert,
+:root[data-ess-skin='mono'] .ess-notice {
+	gap: 12px;
+	padding: 12px 16px;
+	border: 1px solid var(--mono-border);
+	border-radius: 10px;
+	background: var(--mono-card);
+	color: var(--mono-foreground);
+	font-size: 14px;
+}
+:root[data-ess-skin='mono'] .ess-alert--danger,
+:root[data-ess-skin='mono'] .ess-notice--danger {
+	color: var(--mono-destructive);
+	border-color: var(--mono-border);
+	background: var(--mono-card);
+}
+:root[data-ess-skin='mono'] .ess-notice__icon {
+	width: auto;
+	height: auto;
+	border-radius: 0;
+	background: transparent;
+	color: currentColor;
+}
+:root[data-ess-skin='mono'] .ess-notice--info .ess-notice__icon,
+:root[data-ess-skin='mono'] .ess-notice--success .ess-notice__icon {
+	background: transparent;
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-notice:not(.ess-notice--danger):not(.ess-notice--info):not(.ess-notice--success) .ess-notice__icon {
+	color: #d97706;
+}
+:root[data-ess-skin='mono'] .ess-notice__body {
+	font-size: 14px;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-notice__body strong {
+	font-weight: 500;
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-notice--danger .ess-notice__body strong {
+	color: var(--mono-destructive);
+}
+/* Sonner toast */
+:root[data-ess-skin='mono'] .ess-toast {
+	padding: 16px;
+	border: 1px solid var(--mono-border);
+	border-radius: 10px;
+	background: var(--mono-popover);
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-lg);
+	font-size: 14px;
+}
+
+/* ---------- Avatar ---------- */
+:root[data-ess-skin='mono'] .ess-avatar {
+	background: var(--mono-muted);
+	color: var(--mono-foreground);
+	font-weight: 500;
+}
+:root[data-ess-skin='mono'] .ess-user-chip__name {
+	font-size: 14px;
+	font-weight: 500;
+}
+:root[data-ess-skin='mono'] .ess-user-chip__meta {
+	font-size: 12px;
+	color: var(--mono-muted-fg);
+}
+
+/* ---------- Icon tile ---------- a muted rounded-md square; status icons keep their colour */
+:root[data-ess-skin='mono'] .ess-tile {
+	border-radius: 10px;
+	background: var(--mono-muted);
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-tile--sm {
+	border-radius: 8px;
+}
+:root[data-ess-skin='mono'] .ess-tile--round {
+	border-radius: 50%;
+}
+:root[data-ess-skin='mono'] .ess-tile--ok {
+	background: var(--mono-muted);
+	color: #16a34a;
+}
+:root[data-ess-skin='mono'] .ess-tile--warn {
+	background: var(--mono-muted);
+	color: #d97706;
+}
+:root[data-ess-skin='mono'] .ess-tile--bad {
+	background: var(--mono-muted);
+	color: var(--mono-destructive);
+}
+:root[data-ess-skin='mono'] .ess-tile--info {
+	background: var(--mono-muted);
+	color: #2563eb;
+}
+:root[data-ess-skin='mono'] .ess-tile--pink {
+	background: var(--mono-muted);
+	color: #db2777;
+}
+:root[data-ess-skin='mono'] .ess-tile--neutral {
+	background: var(--mono-muted);
+	color: var(--mono-muted-fg);
+}
+
+/* ---------- Rows · key/value · date tile ---------- */
+:root[data-ess-skin='mono'] .ess-row {
+	border-bottom-color: var(--mono-border);
+}
+:root[data-ess-skin='mono'] a.ess-row:hover,
+:root[data-ess-skin='mono'] button.ess-row:hover {
+	background: color-mix(in srgb, var(--mono-muted) 50%, transparent);
+}
+:root[data-ess-skin='mono'] .ess-row--selected {
+	background: var(--mono-muted);
+	border-radius: 8px;
+}
+:root[data-ess-skin='mono'] .ess-row__title {
+	font-size: 14px;
+	font-weight: 500;
+}
+:root[data-ess-skin='mono'] .ess-row__meta {
+	font-size: 14px;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-kv dt {
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-date-tile {
+	border: 1px solid var(--mono-border);
+	border-radius: 8px;
+	background: var(--mono-background);
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-xs);
+}
+:root[data-ess-skin='mono'] .ess-date-tile strong {
+	font-size: 18px;
+	font-weight: 600;
+}
+:root[data-ess-skin='mono'] .ess-date-tile small {
+	color: var(--mono-muted-fg);
+}
+
+/* ---------- Progress ---------- h-2 rounded-full bg-primary/20, indicator bg-primary */
+:root[data-ess-skin='mono'] .ess-meter {
+	height: 8px;
+	background: color-mix(in srgb, var(--mono-primary) 20%, transparent);
+}
+:root[data-ess-skin='mono'] .ess-meter > span {
+	background: var(--mono-primary);
+}
+:root[data-ess-skin='mono'] .ess-meter--bad > span {
+	background: var(--mono-destructive);
+}
+:root[data-ess-skin='mono'] .ess-meter--thin {
+	height: 6px;
+}
+
+/* ---------- Steppers (timeline, horizontal) ---------- */
+:root[data-ess-skin='mono'] .ess-tl-dot,
+:root[data-ess-skin='mono'] .ess-step__dot {
+	border-width: 1px;
+	border-color: var(--mono-border);
+	background: var(--mono-background);
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-tl-step[data-state='done'] .ess-tl-dot,
+:root[data-ess-skin='mono'] .ess-step[data-state='done'] .ess-step__dot {
+	background: var(--mono-primary);
+	border-color: var(--mono-primary);
+	color: var(--mono-primary-fg);
+}
+:root[data-ess-skin='mono'] .ess-tl-step[data-state='current'] .ess-tl-dot,
+:root[data-ess-skin='mono'] .ess-step[data-state='current'] .ess-step__dot {
+	border-color: var(--mono-primary);
+	color: var(--mono-primary);
+	box-shadow: 0 0 0 3px var(--mono-ring-50);
+}
+:root[data-ess-skin='mono'] .ess-step:not(:last-child)::before,
+:root[data-ess-skin='mono'] .ess-tl-step:not(:last-child)::before {
+	background: var(--mono-border);
+}
+:root[data-ess-skin='mono'] .ess-step[data-state='done']:not(:last-child)::before,
+:root[data-ess-skin='mono'] .ess-tl-step[data-state='done']:not(:last-child)::before {
+	background: var(--mono-primary);
+}
+:root[data-ess-skin='mono'] .ess-step__label,
+:root[data-ess-skin='mono'] .ess-tl-label {
+	font-size: 14px;
+	font-weight: 500;
+}
+:root[data-ess-skin='mono'] .ess-step__meta,
+:root[data-ess-skin='mono'] .ess-tl-meta {
+	font-size: 12px;
+	color: var(--mono-muted-fg);
+}
+
+/* ---------- Calendar day ---------- outline cells; selected bg-primary, today bg-accent */
+:root[data-ess-skin='mono'] .ess-daystrip__nav {
+	border-color: var(--mono-input);
+	border-radius: 8px;
+	box-shadow: var(--mono-shadow-xs);
+}
+:root[data-ess-skin='mono'] .ess-daystrip__nav:hover {
+	background: var(--mono-accent);
+	border-color: var(--mono-input);
+}
+:root[data-ess-skin='mono'] .ess-day {
+	border-color: var(--mono-border);
+	border-radius: 8px;
+	color: var(--mono-muted-fg);
+	font-size: 12px;
+}
+:root[data-ess-skin='mono'] .ess-day strong {
+	font-size: 18px;
+}
+:root[data-ess-skin='mono'] .ess-day:hover {
+	background: var(--mono-accent);
+	border-color: var(--mono-border);
+}
+:root[data-ess-skin='mono'] .ess-day[aria-current='date'] {
+	background: var(--mono-accent);
+	border-color: var(--mono-accent);
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-day[aria-current='date'] strong {
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-day[aria-pressed='true'] {
+	background: var(--mono-primary);
+	border-color: var(--mono-primary);
+	color: var(--mono-primary-fg);
+}
+:root[data-ess-skin='mono'] .ess-day[aria-pressed='true'] strong {
+	color: var(--mono-primary-fg);
+}
+
+/* ---------- Dialog · Sheet ----------
+   overlay bg-black/50; content bg-background rounded-lg border shadow-lg;
+   header and footer without rules; title text-lg font-semibold. */
+:root[data-ess-skin='mono'] .ess-scrim {
+	background: var(--mono-overlay);
+}
+:root[data-ess-skin='mono'] .ess-modal {
+	border: 1px solid var(--mono-border);
+	border-radius: 10px;
+	background: var(--mono-background);
+	box-shadow: var(--mono-shadow-lg);
+}
+:root[data-ess-skin='mono'] .ess-modal__head,
+:root[data-ess-skin='mono'] .ess-modal__foot {
+	padding: 24px 24px 0;
+	border: none;
+	background: transparent;
+}
+:root[data-ess-skin='mono'] .ess-modal__foot {
+	padding: 0 24px 24px;
+	gap: 8px;
+}
+:root[data-ess-skin='mono'] .ess-modal__head .ess-h2,
+:root[data-ess-skin='mono'] .ess-modal__head h2 {
+	font-size: 18px;
+	font-weight: 600;
+	line-height: 1;
+}
+:root[data-ess-skin='mono'] .ess-modal__body {
+	padding: 16px 24px 24px;
+	font-size: 14px;
+}
+:root[data-ess-skin='mono'] .ess-drawer {
+	border-left: 1px solid var(--mono-border);
+	background: var(--mono-background);
+	box-shadow: var(--mono-shadow-lg);
+}
+
+/* ---------- Skeleton ---------- bg-accent animate-pulse rounded-md */
+:root[data-ess-skin='mono'] .ess-skeleton {
+	border-radius: 8px;
+	background: var(--mono-accent);
+	animation: mono-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes mono-pulse {
+	50% {
+		opacity: 0.5;
+	}
+}
+
+/* ---------- Sidebar menu (ESS nav items) ----------
+   h-8 rounded-md px-2 text-sm; hover and active bg-sidebar-accent,
+   active font-medium. */
+:root[data-ess-skin='mono'] .ess-rail {
+	background: var(--mono-sidebar);
+	border-right-color: var(--mono-border);
+}
+:root[data-ess-skin='mono'] .ess-nav-item {
+	height: 32px;
+	padding: 0 8px;
+	gap: 8px;
+	border-radius: 8px;
+	color: var(--mono-foreground);
+	font-size: 14px;
+	font-weight: 400;
+}
+:root[data-ess-skin='mono'] .ess-nav-item:hover,
+:root[data-ess-skin='mono'] .ess-nav-item[aria-current='page'] {
+	background: var(--mono-sidebar-accent);
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-nav-item[aria-current='page'] {
+	font-weight: 500;
+}
+
+/* ---------- Stat cards (shadcn dashboard "section cards") ----------
+   CardDescription (text-sm muted) over a text-2xl semibold tabular
+   figure. */
+:root[data-ess-skin='mono'] .ess-stat__label,
+:root[data-ess-skin='mono'] .ess-metric__label,
+:root[data-ess-skin='mono'] .ess-figure__label {
+	font-size: 14px;
+	font-weight: 400;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-stat__value,
+:root[data-ess-skin='mono'] .ess-metric__value,
+:root[data-ess-skin='mono'] .ess-figure__value {
+	font-size: 24px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	font-variant-numeric: tabular-nums;
+}
+:root[data-ess-skin='mono'] .ess-stat__meta,
+:root[data-ess-skin='mono'] .ess-metric__meta {
+	font-size: 14px;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-figure {
+	border-right-color: var(--mono-border);
+}
+:root[data-ess-skin='mono'] .ess-kpis[data-lay='list'] {
+	border-color: var(--mono-border);
+	border-radius: 14px;
+	box-shadow: var(--mono-shadow-sm);
+}
+
+/* ============================================================
+   Shell components
+   ============================================================ */
+
+/* ---------- SidebarNav: shadcn Sidebar (variant "inset") ----------
+   Desktop and tablet: always out, full height down the left edge in the
+   sidebar colour, 15rem wide; the page sits beside it as the inset panel
+   (m-2, rounded-xl, shadow-sm). Header: the team-switcher block (logo
+   tile, name, plan line). A group label, then SidebarMenuButtons: h-8
+   rounded-md px-2 text-sm with icon and label, hover and active
+   bg-sidebar-accent (active font-medium); SidebarMenuBadge counts on the
+   right. Footer: Help & support. Phones keep the compact icon strip. */
+@media (min-width: 721px) {
+	:root[data-ess-skin='mono'] {
+		--mono-sidebar-w: 240px;
+		--ess-shell-inset: 8px;
+		--ess-shell-inset-left: var(--mono-sidebar-w);
+	}
+	:root[data-ess-skin='mono'] .dock-edge {
+		display: none;
+	}
+	:root[data-ess-skin='mono'] nav.rail {
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: var(--mono-sidebar-w);
+		max-height: none;
+		height: 100dvh;
+		transform: none;
+		opacity: 1;
+		align-items: stretch;
+		gap: 0;
+		padding: 8px;
+		border: none;
+		border-radius: 0;
+		background: var(--mono-sidebar);
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+		box-shadow: none;
+		color: var(--mono-foreground);
+		transition: none;
+	}
+	/* header: the team switcher (size lg menu button) */
+	:root[data-ess-skin='mono'] nav.rail .brand {
+		padding: 0 0 8px;
+	}
+	:root[data-ess-skin='mono'] nav.rail .brand-link {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		width: 100%;
+		height: 48px;
+		padding: 8px;
+		border-radius: 8px;
+		background: transparent;
+		color: var(--mono-foreground);
+		box-shadow: none;
+		text-decoration: none;
+	}
+	:root[data-ess-skin='mono'] nav.rail .brand-link:hover {
+		background: var(--mono-sidebar-accent);
+	}
+	:root[data-ess-skin='mono'] nav.rail .brand-mark {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 32px;
+		height: 32px;
+		border-radius: 10px;
+		background: var(--mono-primary);
+		color: var(--mono-primary-fg);
+	}
+	:root[data-ess-skin='mono'] nav.rail .brand-mark svg {
+		width: 18px;
+		height: 18px;
+	}
+	:root[data-ess-skin='mono'] nav.rail .brand-text {
+		display: grid;
+		min-width: 0;
+		font-size: 14px;
+		font-weight: 600;
+		line-height: 1.25;
+		white-space: nowrap;
+	}
+	:root[data-ess-skin='mono'] nav.rail .brand-text::after {
+		content: 'Employee Self-Service';
+		font-size: 12px;
+		font-weight: 400;
+		color: var(--mono-muted-fg);
+	}
+	/* group label: h-8 px-2 text-xs font-medium at 70% */
+	:root[data-ess-skin='mono'] nav.rail .group-label {
+		display: flex;
+		align-items: center;
+		height: 32px;
+		padding: 0 8px;
+		font-size: 12px;
+		font-weight: 500;
+		color: color-mix(in srgb, var(--mono-foreground) 70%, transparent);
+	}
+	:root[data-ess-skin='mono'] nav.rail .nav-list,
+	:root[data-ess-skin='mono'] nav.rail .rail-foot {
+		align-items: stretch;
+		gap: 4px;
+	}
+	:root[data-ess-skin='mono'] nav.rail .nav-list {
+		overflow-y: auto;
+		scrollbar-width: none;
+	}
+	:root[data-ess-skin='mono'] nav.rail .rail-foot {
+		padding-top: 8px;
+		border-top: none;
+	}
+	/* SidebarMenuButton */
+	:root[data-ess-skin='mono'] nav.rail .nav-item {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		width: 100%;
+		height: 32px;
+		padding: 0 8px;
+		border-radius: 8px;
+		color: var(--mono-foreground);
+		font-size: 14px;
+		font-weight: 400;
+		box-shadow: none;
+		transition:
+			background-color 150ms,
+			color 150ms;
+	}
+	:root[data-ess-skin='mono'] nav.rail .nav-item svg {
+		flex: none;
+		width: 16px;
+		height: 16px;
+	}
+	:root[data-ess-skin='mono'] nav.rail .nav-label {
+		display: block;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	:root[data-ess-skin='mono'] nav.rail .nav-item:hover {
+		background: var(--mono-sidebar-accent);
+		color: var(--mono-foreground);
+	}
+	:root[data-ess-skin='mono'] nav.rail .nav-item[aria-current='page'] {
+		background: var(--mono-sidebar-accent);
+		color: var(--mono-foreground);
+		font-weight: 500;
+		box-shadow: none;
+	}
+	:root[data-ess-skin='mono'] nav.rail .nav-item.soon {
+		opacity: 0.6;
+	}
+	/* labels are shown, so no tooltips */
+	:root[data-ess-skin='mono'] nav.rail .nav-item::after {
+		display: none;
+	}
+	/* SidebarMenuBadge: plain tabular count on the right */
+	:root[data-ess-skin='mono'] nav.rail .count {
+		position: static;
+		margin-left: auto;
+		min-width: 20px;
+		height: 20px;
+		padding: 0 4px;
+		border-radius: 6px;
+		background: transparent;
+		color: var(--mono-foreground);
+		font-size: 12px;
+		font-weight: 500;
+	}
+	:root[data-ess-skin='mono'] nav.rail .count.warn {
+		background: transparent;
+		color: #d97706;
+	}
+	:root[data-ess-skin='mono'] nav.rail .count.urgent {
+		background: var(--mono-destructive);
+		color: #fff;
+	}
+	:root[data-ess-skin='mono'] nav.rail .soon-badge {
+		display: inline-flex;
+		align-items: center;
+		margin-left: auto;
+		height: 20px;
+		padding: 0 6px;
+		border: 1px solid var(--mono-border);
+		border-radius: 6px;
+		font-size: 11px;
+		font-weight: 500;
+		color: var(--mono-muted-fg);
+		white-space: nowrap;
+	}
+	:root[data-ess-skin='mono'] nav.rail .soon-badge {
+		font-size: 0;
+	}
+	:root[data-ess-skin='mono'] nav.rail .soon-badge::after {
+		content: 'Soon';
+		font-size: 11px;
+	}
+}
+/* ---------- collapsible: SidebarTrigger, SidebarRail, NavUser ----------
+   The header's trigger (PanelLeft), the rail along the sidebar's edge and
+   Ctrl/⌘+B toggle <html data-ess-sidebar="collapsed">: the sidebar narrows
+   to an icon strip, labels give way to Tooltips, counts become a badge on
+   the icon. The footer holds NavUser: avatar, name and role with a
+   ChevronsUpDown, opening the account menu (above it, or beside it when
+   collapsed). The top bar's avatar and settings move here, so they are
+   hidden there. Width and the page panel ease over 200ms. */
+@media (min-width: 721px) {
+	:root[data-ess-skin='mono'] nav.rail {
+		transition: width 200ms linear;
+	}
+	:root[data-ess-skin='mono'] .ess-shell {
+		transition:
+			margin 200ms linear,
+			background var(--ess-t),
+			color var(--ess-t);
+	}
+	:root[data-ess-skin='mono'] .topbar .me,
+	:root[data-ess-skin='mono'] .topbar .settings {
+		display: none;
+	}
+
+	/* header row: team switcher + trigger */
+	:root[data-ess-skin='mono'] nav.rail .brand {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+	:root[data-ess-skin='mono'] nav.rail .brand-link {
+		flex: 1;
+		min-width: 0;
+	}
+	:root[data-ess-skin='mono'] nav.rail .sb-trigger {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 28px;
+		height: 28px;
+		border-radius: 6px;
+		color: var(--mono-foreground);
+		transition: background-color 150ms;
+	}
+	:root[data-ess-skin='mono'] nav.rail .sb-trigger:hover {
+		background: var(--mono-sidebar-accent);
+	}
+	:root[data-ess-skin='mono'] nav.rail .sb-trigger:focus-visible {
+		box-shadow: 0 0 0 2px var(--mono-ring);
+	}
+
+	/* SidebarRail: a 16px hit area on the edge; a 2px line on hover */
+	:root[data-ess-skin='mono'] nav.rail .sb-rail {
+		display: block;
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		right: -8px;
+		z-index: 2;
+		width: 16px;
+		padding: 0;
+		cursor: ew-resize;
+	}
+	:root[data-ess-skin='mono'] nav.rail .sb-rail::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 50%;
+		width: 2px;
+		margin-left: -1px;
+		background: transparent;
+		transition: background-color 150ms;
+	}
+	:root[data-ess-skin='mono'] nav.rail .sb-rail:hover::after {
+		background: var(--mono-border);
+	}
+
+	/* NavUser: SidebarMenuButton size lg */
+	:root[data-ess-skin='mono'] nav.rail .nav-user {
+		display: block;
+		width: 100%;
+	}
+	:root[data-ess-skin='mono'] nav.rail .nav-user-btn {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		width: 100%;
+		height: 48px;
+		padding: 8px;
+		border-radius: 8px;
+		text-align: left;
+		color: var(--mono-foreground);
+		transition: background-color 150ms;
+	}
+	:root[data-ess-skin='mono'] nav.rail .nav-user-btn:hover,
+	:root[data-ess-skin='mono'] nav.rail .nav-user-btn[aria-expanded='true'] {
+		background: var(--mono-sidebar-accent);
+	}
+	:root[data-ess-skin='mono'] nav.rail .nav-user-btn > :first-child {
+		flex: none;
+		width: 32px;
+		height: 32px;
+		border-radius: 8px;
+		overflow: hidden;
+	}
+	:root[data-ess-skin='mono'] nav.rail .nu-text {
+		display: grid;
+		flex: 1;
+		min-width: 0;
+		line-height: 1.25;
+	}
+	:root[data-ess-skin='mono'] nav.rail .nu-text strong {
+		font-size: 14px;
+		font-weight: 500;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	:root[data-ess-skin='mono'] nav.rail .nu-text small {
+		font-size: 12px;
+		color: var(--mono-muted-fg);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	:root[data-ess-skin='mono'] nav.rail .nu-chev {
+		display: grid;
+		margin-left: auto;
+		color: var(--mono-muted-fg);
+	}
+	/* the account menu from the footer: DropdownMenu min-w-56 rounded-lg */
+	:root[data-ess-skin='mono'] nav.rail .acct-menu {
+		width: 264px;
+		max-height: calc(100dvh - 24px);
+		overflow-y: auto;
+		border-radius: 10px;
+	}
+
+	/* collapsed: the icon strip */
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] {
+		--mono-sidebar-w: 56px;
+	}
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail {
+		padding: 8px 12px;
+	}
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .brand {
+		flex-direction: column;
+		gap: 6px;
+	}
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .brand-link {
+		flex: none;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		padding: 0;
+	}
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .brand-link:hover {
+		background: transparent;
+	}
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .sb-trigger {
+		width: 32px;
+		height: 32px;
+		border-radius: 8px;
+	}
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .brand-text,
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .group-label,
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .nav-label,
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .soon-badge,
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .nu-text,
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .nu-chev {
+		display: none;
+	}
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .nav-list,
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .rail-foot {
+		align-items: center;
+		overflow: visible;
+	}
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .nav-item {
+		position: relative;
+		justify-content: center;
+		width: 32px;
+		padding: 0;
+	}
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .nav-user {
+		width: 32px;
+	}
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .nav-user-btn {
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		padding: 0;
+	}
+	/* the count as a small badge on the icon */
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .count {
+		position: absolute;
+		top: -4px;
+		right: -6px;
+		min-width: 16px;
+		height: 16px;
+		padding: 0 4px;
+		border-radius: 6px;
+		background: var(--mono-primary);
+		color: var(--mono-primary-fg);
+		font-size: 10px;
+	}
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .count.warn {
+		background: #d97706;
+		color: #fff;
+	}
+	/* Tooltip: bg-primary text-primary-foreground rounded-md px-3 py-1.5 text-xs */
+	:root[data-ess-skin='mono'][data-ess-sidebar='collapsed'] nav.rail .nav-item::after {
+		display: block;
+		left: calc(100% + 12px);
+		padding: 6px 12px;
+		border-radius: 8px;
+		background: var(--mono-primary);
+		color: var(--mono-primary-fg);
+		font-size: 12px;
+		font-weight: 400;
+		box-shadow: none;
+	}
+}
+/* phones: the compact icon strip, in the sidebar colours */
+@media (max-width: 720px) {
+	:root[data-ess-skin='mono'] nav.rail {
+		background: var(--mono-sidebar);
+		border-color: var(--mono-border);
+	}
+	:root[data-ess-skin='mono'] nav.rail .brand-link {
+		width: 32px;
+		height: 32px;
+		border-radius: 10px;
+		background: var(--mono-primary);
+		color: var(--mono-primary-fg);
+	}
+	:root[data-ess-skin='mono'] nav.rail .nav-item {
+		width: 32px;
+		height: 32px;
+		border-radius: 8px;
+		color: var(--mono-foreground);
+	}
+	:root[data-ess-skin='mono'] nav.rail .nav-item[aria-current='page'],
+	:root[data-ess-skin='mono'] nav.rail .nav-item:hover {
+		background: var(--mono-sidebar-accent);
+		box-shadow: none;
+	}
+}
+
+/* ---------- TopBar: Navigation menu, search, buttons, Dropdown menu ---------- */
+:root[data-ess-skin='mono'] .topbar .today {
+	font-size: 14px;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .topbar .links {
+	gap: 4px;
+}
+:root[data-ess-skin='mono'] .topbar .links a {
+	height: 36px;
+	display: inline-flex;
+	align-items: center;
+	padding: 0 16px;
+	border-radius: 8px;
+	color: var(--mono-foreground);
+	font-size: 14px;
+	font-weight: 500;
+}
+:root[data-ess-skin='mono'] .topbar .links a:hover {
+	background: var(--mono-accent);
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .topbar .links a[aria-current='page'] {
+	background: color-mix(in srgb, var(--mono-accent) 50%, transparent);
+	color: var(--mono-foreground);
+	font-weight: 500;
+}
+:root[data-ess-skin='mono'] .topbar .links a[aria-current='page']::after {
+	display: none;
+}
+/* search: an outline input-button with a muted label */
+/* (padding stays the component's own: it drops to 0 when the search
+   collapses to an icon button on narrower workspaces) */
+:root[data-ess-skin='mono'] .topbar .search {
+	height: 36px;
+	border: 1px solid var(--mono-input);
+	border-radius: 8px;
+	background: var(--mono-background);
+	color: var(--mono-muted-fg);
+	font-size: 14px;
+	box-shadow: var(--mono-shadow-xs);
+}
+:root[data-ess-skin='mono'] .topbar .search:hover {
+	background: var(--mono-accent);
+	border-color: var(--mono-input);
+	color: var(--mono-foreground);
+}
+/* Add employee: the default button */
+:root[data-ess-skin='mono'] .topbar .add {
+	height: 36px;
+	padding: 0 16px 0 12px;
+	border-radius: 8px;
+	background: var(--mono-primary);
+	color: var(--mono-primary-fg);
+	box-shadow: var(--mono-shadow-xs);
+	font-size: 14px;
+	font-weight: 500;
+}
+:root[data-ess-skin='mono'] .topbar .add:hover {
+	background: var(--mono-primary-hover);
+	color: var(--mono-primary-fg);
+}
+/* settings and bell: outline icon buttons (size-9 rounded-md) */
+:root[data-ess-skin='mono'] .topbar .round {
+	width: 36px;
+	height: 36px;
+	border: 1px solid var(--mono-input);
+	border-radius: 8px;
+	background: var(--mono-background);
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-xs);
+}
+:root[data-ess-skin='mono'] .topbar .round:hover {
+	background: var(--mono-accent);
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .topbar .dot {
+	top: 6px;
+	right: 6px;
+	background: var(--mono-destructive);
+	box-shadow: 0 0 0 2px var(--mono-background);
+}
+:root[data-ess-skin='mono'] .topbar .me-btn {
+	box-shadow: none;
+}
+:root[data-ess-skin='mono'] .topbar .face,
+:root[data-ess-skin='mono'] .topbar .more {
+	box-shadow: 0 0 0 2px var(--mono-background);
+}
+:root[data-ess-skin='mono'] .topbar .more {
+	background: var(--mono-muted);
+	color: var(--mono-foreground);
+}
+/* the account menu: Dropdown menu — bg-popover rounded-md border p-1
+   shadow-md; items rounded-sm px-2 py-1.5 text-sm; separators -mx-1 my-1 */
+:root[data-ess-skin='mono'] .topbar .menu {
+	gap: 0;
+	padding: 4px;
+	border: 1px solid var(--mono-border);
+	border-radius: 8px;
+	background: var(--mono-popover);
+	box-shadow: var(--mono-shadow-md);
+}
+:root[data-ess-skin='mono'] .topbar .menu .who {
+	padding: 6px 8px;
+}
+:root[data-ess-skin='mono'] .topbar .menu .who strong {
+	font-size: 14px;
+	font-weight: 500;
+}
+:root[data-ess-skin='mono'] .topbar .menu .who span {
+	font-size: 12px;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .topbar .menu a,
+:root[data-ess-skin='mono'] .topbar .menu .logout {
+	gap: 8px;
+	padding: 6px 8px;
+	border-radius: 6px;
+	font-size: 14px;
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .topbar .menu a:hover,
+:root[data-ess-skin='mono'] .topbar .menu .logout:hover {
+	background: var(--mono-accent);
+}
+:root[data-ess-skin='mono'] .topbar .menu .logout:hover {
+	color: var(--mono-destructive);
+}
+:root[data-ess-skin='mono'] .topbar .menu-sep {
+	margin: 4px -4px;
+	background: var(--mono-border);
+}
+:root[data-ess-skin='mono'] .topbar .menu .seg {
+	gap: 0;
+	padding: 3px;
+	border-radius: 10px;
+	background: var(--mono-muted);
+}
+:root[data-ess-skin='mono'] .topbar .menu .seg button {
+	border: 1px solid transparent;
+	border-radius: 8px;
+	color: var(--mono-foreground);
+	font-size: 14px;
+}
+:root[data-ess-skin='mono'] .topbar .menu .seg button[aria-pressed='true'] {
+	background: var(--mono-background);
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-sm);
+}
+:root[data-ess-skin='mono'] .topbar .menu .pref-label {
+	padding: 0 8px;
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .topbar .menu .skin {
+	border-color: var(--mono-border);
+	border-radius: 8px;
+	background: var(--mono-background);
+}
+:root[data-ess-skin='mono'] .topbar .menu .skin:hover:not(:disabled) {
+	background: var(--mono-accent);
+}
+:root[data-ess-skin='mono'] .topbar .menu .skin[aria-pressed='true'] {
+	border-color: var(--mono-primary);
+	box-shadow: 0 0 0 1px var(--mono-primary);
+}
+:root[data-ess-skin='mono'] .topbar .menu .text-size {
+	border-radius: 10px;
+	background: var(--mono-muted);
+}
+:root[data-ess-skin='mono'] .topbar .menu .text-size .bar {
+	border-radius: 4px;
+}
+:root[data-ess-skin='mono'] .topbar .menu .text-size .bar.on {
+	background: var(--mono-primary);
+}
+
+/* ============================================================
+   Dashboard pieces
+   ============================================================ */
+
+/* the round arrow buttons on the panels: outline icon buttons */
+:root[data-ess-skin='mono'] .panel .more,
+:root[data-ess-skin='mono'] .ess-card .more {
+	border: 1px solid var(--mono-input);
+	border-radius: 8px;
+	background: var(--mono-background);
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-xs);
+}
+:root[data-ess-skin='mono'] .panel .more:hover,
+:root[data-ess-skin='mono'] .ess-card .more:hover {
+	background: var(--mono-accent);
+}
+/* panel headings: CardTitle + CardDescription */
+:root[data-ess-skin='mono'] .panel .p-head h2,
+:root[data-ess-skin='mono'] .planner .title h2 {
+	font-size: 16px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+:root[data-ess-skin='mono'] .panel .p-head p,
+:root[data-ess-skin='mono'] .planner .title p {
+	font-size: 14px;
+	color: var(--mono-muted-fg);
+}
+
+/* Absence planner: an outline month control, Tabs for the status filter,
+   outline toggles, today as the selected calendar day. */
+:root[data-ess-skin='mono'] .planner .month {
+	padding: 0;
+	gap: 0;
+	border: 1px solid var(--mono-input);
+	border-radius: 8px;
+	background: var(--mono-background);
+	box-shadow: var(--mono-shadow-xs);
+}
+:root[data-ess-skin='mono'] .planner .month-label {
+	font-size: 14px;
+	font-weight: 500;
+}
+:root[data-ess-skin='mono'] .planner .nav-btn,
+:root[data-ess-skin='mono'] .planner .today-btn {
+	height: 32px;
+	min-width: 32px;
+	border-radius: 7px;
+	background: transparent;
+	color: var(--mono-foreground);
+	box-shadow: none;
+}
+:root[data-ess-skin='mono'] .planner .nav-btn:hover,
+:root[data-ess-skin='mono'] .planner .today-btn:hover {
+	background: var(--mono-accent);
+}
+:root[data-ess-skin='mono'] .planner .seg {
+	padding: 3px;
+	border-radius: 10px;
+	background: var(--mono-muted);
+}
+/* in-card switches share one size (here and on chart cards): 13px, 26px */
+:root[data-ess-skin='mono'] .planner .seg button {
+	height: 26px;
+	padding: 0 10px;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	color: var(--mono-foreground);
+	font-size: 13px;
+	font-weight: 500;
+}
+:root[data-ess-skin='mono'] .planner .seg button[aria-pressed='true'] {
+	background: var(--mono-background);
+	box-shadow: var(--mono-shadow-sm);
+}
+:root[data-ess-skin='mono'][data-ess-theme='dark'] .planner .seg button[aria-pressed='true'] {
+	border-color: var(--mono-input);
+	background: color-mix(in srgb, var(--mono-input) 30%, transparent);
+}
+:root[data-ess-skin='mono'] .planner .chip,
+:root[data-ess-skin='mono'] .planner .find {
+	height: 32px;
+	border: 1px solid var(--mono-input);
+	border-radius: 8px;
+	background: var(--mono-background);
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-xs);
+	font-size: 14px;
+}
+:root[data-ess-skin='mono'] .planner .chip:hover {
+	background: var(--mono-accent);
+}
+:root[data-ess-skin='mono'] .planner .chip[aria-pressed='true'] {
+	background: var(--mono-accent);
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .planner .dh {
+	border-radius: 8px;
+}
+/* the expanded sidebar takes width, so the name column gives a little
+   back and all of a month's days still fit without scrolling */
+@media (min-width: 721px) {
+	:root[data-ess-skin='mono'] .planner .grid {
+		--who: 176px;
+	}
+}
+/* narrower laptops (1280 with the sidebar open): slimmer days and names so
+   a 31-day month still fits the card instead of scrolling sideways */
+@container planner (max-width: 1100px) {
+	:root[data-ess-skin='mono'] .planner .grid {
+		--who: 170px;
+		--cell-min: 20px;
+	}
+}
+:root[data-ess-skin='mono'] .planner .dh.today {
+	background: var(--mono-primary);
+	box-shadow: none;
+}
+:root[data-ess-skin='mono'] .planner .dh.today .dn,
+:root[data-ess-skin='mono'] .planner .dh.today .dow {
+	color: var(--mono-primary-fg);
+}
+:root[data-ess-skin='mono'] .planner .cell {
+	border-radius: 6px;
+}
+:root[data-ess-skin='mono'] .planner .bar {
+	border-radius: 6px;
+}
+:root[data-ess-skin='mono'] .planner .legend .key,
+:root[data-ess-skin='mono'] .planner .legend .key-note {
+	height: 24px;
+	border-radius: 6px;
+	font-size: 12px;
+}
+
+/* Dashboard header and timeline: today as the selected day */
+:root[data-ess-skin='mono'] .week .wk {
+	border-radius: 8px;
+}
+:root[data-ess-skin='mono'] .week .wk[aria-current='date'] {
+	background: var(--mono-primary);
+	color: var(--mono-primary-fg);
+}
+:root[data-ess-skin='mono'] .figures .fig {
+	border-radius: 8px;
+}
+:root[data-ess-skin='mono'] .figures .fig:hover {
+	background: var(--mono-accent);
+}
+:root[data-ess-skin='mono'] .figures .fig .k {
+	font-size: 12px;
+	color: var(--mono-muted-fg);
+}
+/* the highlighted next event: a default-button-coloured card */
+:root[data-ess-skin='mono'] .panel .lead {
+	border-radius: 10px;
+	background: var(--mono-primary);
+	color: var(--mono-primary-fg);
+	box-shadow: none;
+}
+:root[data-ess-skin='mono'] .panel .lead:hover {
+	background: var(--mono-primary-hover);
+	color: var(--mono-primary-fg);
+}
+:root[data-ess-skin='mono'] .panel .rows .tile {
+	border: 1px solid var(--mono-border);
+	border-radius: 8px;
+	background: var(--mono-background);
+	box-shadow: var(--mono-shadow-xs);
+}
+/* attendance heatmap: the chart palette (one hue, rising) */
+:root[data-ess-skin='mono'] .panel [data-level='1'] {
+	background: color-mix(in srgb, #f59e0b 28%, var(--mono-card)) !important;
+	border-color: #f59e0b !important;
+}
+:root[data-ess-skin='mono'] .panel [data-level='2'] {
+	background: color-mix(in srgb, var(--mono-primary) 22%, var(--mono-card)) !important;
+}
+:root[data-ess-skin='mono'] .panel [data-level='3'] {
+	background: color-mix(in srgb, var(--mono-primary) 55%, var(--mono-card)) !important;
+}
+:root[data-ess-skin='mono'] .panel [data-level='4'] {
+	background: var(--mono-primary) !important;
+}
+:root[data-ess-skin='mono'] .panel .stats > div {
+	border: 1px solid var(--mono-border);
+	border-radius: 8px;
+	background: var(--mono-background);
+}
+:root[data-ess-skin='mono'] .panel .stats > div.warn {
+	border-color: color-mix(in srgb, #f59e0b 45%, var(--mono-border));
+}
+/* onboarding: Progress segments and Checkbox ticks in the primary */
+:root[data-ess-skin='mono'] .panel .cards .card {
+	border: 1px solid var(--mono-border);
+	border-radius: 10px;
+	background: var(--mono-background);
+}
+:root[data-ess-skin='mono'] .panel .segs span {
+	background: color-mix(in srgb, var(--mono-primary) 20%, transparent);
+}
+:root[data-ess-skin='mono'] .panel .segs span.on,
+:root[data-ess-skin='mono'] .panel .steps li.done .tick {
+	background: var(--mono-primary);
+	border-color: var(--mono-primary);
+}
+:root[data-ess-skin='mono'] .panel .tick {
+	border-radius: 4px;
+}
+/* Champ: the input as an Input, send as a default icon button */
+:root[data-ess-skin='mono'] .panel .chip {
+	border: 1px solid var(--mono-input);
+	border-radius: 8px;
+	background: var(--mono-background);
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-xs);
+	font-size: 12px;
+}
+:root[data-ess-skin='mono'] .panel .chip:hover {
+	background: var(--mono-accent);
+	border-color: var(--mono-input);
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .panel .ask {
+	border: 1px solid var(--mono-input);
+	border-radius: 8px;
+	background: transparent;
+	box-shadow: var(--mono-shadow-xs);
+}
+:root[data-ess-skin='mono'] .panel .ask:focus-within {
+	border-color: var(--mono-ring);
+	box-shadow: 0 0 0 3px var(--mono-ring-50);
+	background: transparent;
+}
+:root[data-ess-skin='mono'] .panel .send {
+	border-radius: 6px;
+	background: var(--mono-primary);
+	color: var(--mono-primary-fg);
+	box-shadow: none;
+}
+:root[data-ess-skin='mono'] .panel .send:disabled {
+	opacity: 0.5;
+	background: var(--mono-primary);
+}
+/* the analytics hours bars: the primary */
+:root[data-ess-skin='mono'] .ins-card .bars .bar {
+	border-radius: 3px 3px 1px 1px;
+	background: var(--mono-primary);
+	opacity: 1;
+}
+:root[data-ess-skin='mono'] .ins-card .bars .bar.open {
+	background: #f59e0b;
+}
+:root[data-ess-skin='mono'] .ins-card .bars .bar.future {
+	background: var(--mono-muted);
+}
+
+/* ============================================================
+   Overlays — by role, so every dialog, sheet, dropdown, listbox
+   and tooltip in the app follows shadcn, whatever its own classes
+   ============================================================ */
+
+/* Overlay behind dialogs and sheets: bg-black/50 */
+:root[data-ess-skin='mono'] .ess-scrim,
+:root[data-ess-skin='mono'] .scrim,
+:root[data-ess-skin='mono'] .jump-scrim {
+	background: var(--mono-overlay);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+
+/* Dialog / AlertDialog: bg-background rounded-lg border p-6 shadow-lg */
+:root[data-ess-skin='mono'] [role='dialog']:not(.ess-drawer),
+:root[data-ess-skin='mono'] [role='alertdialog'] {
+	border: 1px solid var(--mono-border);
+	border-radius: 10px;
+	background: var(--mono-popover);
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-lg);
+}
+:root[data-ess-skin='mono'] [role='dialog'] h2,
+:root[data-ess-skin='mono'] [role='alertdialog'] h2 {
+	font-size: 18px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+}
+
+/* Sheet (side panel): bg-background, border-l, shadow-lg, square edge;
+   header p-4 with a font-semibold title and a muted description */
+:root[data-ess-skin='mono'] .ess-drawer,
+:root[data-ess-skin='mono'] .ess-drawer[role='dialog'] {
+	border: none;
+	border-left: 1px solid var(--mono-border);
+	border-radius: 0;
+	background: var(--mono-background);
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-lg);
+}
+:root[data-ess-skin='mono'] .ess-drawer h2 {
+	font-size: 16px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+:root[data-ess-skin='mono'] .ess-drawer header p,
+:root[data-ess-skin='mono'] .ess-drawer .sheet-head p {
+	font-size: 14px;
+	color: var(--mono-muted-fg);
+}
+/* the close "x": a ghost icon button at 70% that brightens on hover */
+:root[data-ess-skin='mono'] .ess-drawer button[aria-label^='Close'],
+:root[data-ess-skin='mono'] [role='dialog'] button[aria-label^='Close'] {
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--mono-foreground);
+	opacity: 0.7;
+	box-shadow: none;
+}
+:root[data-ess-skin='mono'] .ess-drawer button[aria-label^='Close']:hover,
+:root[data-ess-skin='mono'] [role='dialog'] button[aria-label^='Close']:hover {
+	opacity: 1;
+	background: var(--mono-accent);
+}
+
+/* Dropdown menu / Popover / Select content: bg-popover rounded-md border
+   p-1 shadow-md; items rounded-sm px-2 py-1.5 text-sm, highlighted bg-accent */
+:root[data-ess-skin='mono'] [role='menu'],
+:root[data-ess-skin='mono'] [role='listbox'] {
+	padding: 4px;
+	border: 1px solid var(--mono-border);
+	border-radius: 8px;
+	background: var(--mono-popover);
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-md);
+}
+:root[data-ess-skin='mono'] [role='option'],
+:root[data-ess-skin='mono'] [role='menuitem'],
+:root[data-ess-skin='mono'] [role='listbox'] > li > button,
+:root[data-ess-skin='mono'] [role='listbox'] > button {
+	border: none;
+	border-radius: 6px;
+	padding: 6px 8px;
+	background: transparent;
+	color: var(--mono-foreground);
+	font-size: 14px;
+}
+:root[data-ess-skin='mono'] [role='option']:hover,
+:root[data-ess-skin='mono'] [role='option'][aria-selected='true'],
+:root[data-ess-skin='mono'] [role='menuitem']:hover,
+:root[data-ess-skin='mono'] [role='menuitem']:focus-visible,
+:root[data-ess-skin='mono'] [role='listbox'] > li > button:hover,
+:root[data-ess-skin='mono'] [role='listbox'] > li > button.on,
+:root[data-ess-skin='mono'] [role='listbox'] > li > button[aria-selected='true'],
+:root[data-ess-skin='mono'] [role='listbox'] > button:hover {
+	background: var(--mono-accent);
+	color: var(--mono-foreground);
+}
+
+/* Command (the search palette and admin jump list): the list sits inside
+   the dialog without its own box; the input row has a bottom border */
+:root[data-ess-skin='mono'] .pal [role='listbox'],
+:root[data-ess-skin='mono'] .jump [role='listbox'] {
+	padding: 4px;
+	border: none;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+}
+:root[data-ess-skin='mono'] .pal input,
+:root[data-ess-skin='mono'] .jump input {
+	border: none;
+	border-bottom: 1px solid var(--mono-border);
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	font-size: 14px;
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .pal input:focus,
+:root[data-ess-skin='mono'] .jump input:focus {
+	box-shadow: none;
+	outline: none;
+}
+
+/* Hover card / chart tooltip: rounded-lg border bg-background px-2.5
+   py-1.5 text-xs shadow-xl */
+:root[data-ess-skin='mono'] .tip[role='status'] {
+	padding: 8px 10px;
+	border: 1px solid color-mix(in srgb, var(--mono-border) 50%, transparent);
+	border-radius: 10px;
+	background: var(--mono-background);
+	color: var(--mono-foreground);
+	box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+	font-size: 12px;
+}
+:root[data-ess-skin='mono'] .tip[role='status'] .tip-title {
+	font-weight: 500;
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .tip[role='status'] .tip-row span {
+	color: var(--mono-muted-fg);
+}
+/* any native-role tooltip */
+:root[data-ess-skin='mono'] [role='tooltip'] {
+	padding: 6px 12px;
+	border-radius: 8px;
+	background: var(--mono-primary);
+	color: var(--mono-primary-fg);
+	font-size: 12px;
+	box-shadow: none;
+}
+
+/* The approval pop-up (bottom corner): a Sonner toast card */
+:root[data-ess-skin='mono'] aside.pop[aria-live] {
+	border: 1px solid var(--mono-border);
+	border-radius: 10px;
+	background: var(--mono-popover);
+	color: var(--mono-foreground);
+	box-shadow: var(--mono-shadow-lg);
+}
+
+/* Native form controls: checkbox and radio in the primary, as shadcn's
+   Checkbox / RadioGroup */
+:root[data-ess-skin='mono'] input[type='checkbox'],
+:root[data-ess-skin='mono'] input[type='radio'] {
+	accent-color: var(--mono-primary);
+}
+:root[data-ess-skin='mono'] input[type='range'] {
+	accent-color: var(--mono-primary);
+}
+
+/* Scrollbars: thin and neutral */
+:root[data-ess-skin='mono'] * {
+	scrollbar-color: color-mix(in srgb, var(--mono-muted-fg) 40%, transparent) transparent;
+}
+
+/* ============================================================
+   Breadcrumb — sub-pages (Home › Admin Controls › People)
+   text-sm muted, ChevronRight separators, the current page in the
+   foreground; links brighten on hover. On those pages the top-bar
+   cluster moves down with the page header so they still line up.
+   ============================================================ */
+:root[data-ess-skin='mono'] .ess-breadcrumb {
+	display: block;
+	flex: none;
+	margin: 0 0 10px;
+	padding: 0 2px;
+	font-size: 14px;
+	line-height: 20px;
+}
+:root[data-ess-skin='mono'] .ess-breadcrumb ol {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 10px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-breadcrumb li {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+}
+:root[data-ess-skin='mono'] .ess-breadcrumb li + li::before {
+	content: '';
+	width: 14px;
+	height: 14px;
+	background: currentColor;
+	-webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m9 18 6-6-6-6'/></svg>") center / contain no-repeat;
+	mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m9 18 6-6-6-6'/></svg>") center / contain no-repeat;
+}
+:root[data-ess-skin='mono'] .ess-breadcrumb a {
+	color: var(--mono-muted-fg);
+	text-decoration: none;
+	transition: color 150ms;
+}
+:root[data-ess-skin='mono'] .ess-breadcrumb a:hover {
+	color: var(--mono-foreground);
+}
+:root[data-ess-skin='mono'] .ess-breadcrumb [aria-current='page'] {
+	color: var(--mono-foreground);
+	font-weight: 400;
+}
+@media (min-width: 1101px) {
+	:root[data-ess-skin='mono'] .ess-main:has(> .ess-content > .ess-breadcrumb) .topbar {
+		top: calc(var(--bar-top, 14px) + 30px);
+	}
+}
+
+/* ============================================================
+   Charts — shadcn's chart palette and chart anatomy
+   ============================================================ */
+/* the admin analytics palette (categorical, stages, counts) */
+:root[data-ess-skin='mono'] .hra {
+	--hra-1: #f54a00;
+	--hra-2: #009689;
+	--hra-3: #104e64;
+	--hra-4: #ffb900;
+	--hra-none: #e5e5e5;
+	--hra-o1: #d4d4d4;
+	--hra-o2: #737373;
+	--hra-o3: #262626;
+	--hra-q1: #e5e5e5;
+	--hra-q2: #a3a3a3;
+	--hra-q3: #525252;
+	--hra-q4: #171717;
+	--hra-q-ink-12: #171717;
+	--hra-q-ink-34: #ffffff;
+}
+:root[data-ess-skin='mono'][data-ess-theme='dark'] .hra {
+	--hra-1: #1447e6;
+	--hra-2: #00bc7d;
+	--hra-3: #fe9a00;
+	--hra-4: #ad46ff;
+	--hra-none: #262626;
+	--hra-o1: #404040;
+	--hra-o2: #a3a3a3;
+	--hra-o3: #f5f5f5;
+	--hra-q1: #262626;
+	--hra-q2: #525252;
+	--hra-q3: #a3a3a3;
+	--hra-q4: #f5f5f5;
+	--hra-q-ink-12: #fafafa;
+	--hra-q-ink-34: #0a0a0a;
+}
+/* payroll charts in shadcn's chart palette, by meaning */
+:root[data-ess-skin='mono'] .pr-overview {
+	--pr-1: #009689;
+	--pr-2: #f54a00;
+	--pr-3: #104e64;
+	--pr-4: #ffb900;
+	--pr-none: #e5e5e5;
+}
+:root[data-ess-skin='mono'][data-ess-theme='dark'] .pr-overview {
+	--pr-1: #00bc7d;
+	--pr-2: #f54a00;
+	--pr-3: #1447e6;
+	--pr-4: #fe9a00;
+	--pr-none: #262626;
+}
+/* CartesianGrid (horizontal only, solid hairlines), muted 12px axis ticks,
+   no axis line, a dashed crosshair */
+:root[data-ess-skin='mono'] .chart .grid {
+	stroke: var(--mono-border);
+	stroke-dasharray: none;
+	stroke-width: 1;
+}
+:root[data-ess-skin='mono'] .chart .base,
+:root[data-ess-skin='mono'] .chart .mid {
+	stroke: var(--mono-border);
+}
+:root[data-ess-skin='mono'] .chart .tick,
+:root[data-ess-skin='mono'] .chart .side,
+:root[data-ess-skin='mono'] .chart .cap,
+:root[data-ess-skin='mono'] .chart .val,
+:root[data-ess-skin='mono'] .chart .end {
+	fill: var(--mono-muted-fg);
+	font-size: 12px;
+	font-family: var(--ess-font-sans);
+}
+:root[data-ess-skin='mono'] .chart .cross {
+	stroke: var(--mono-border);
+	stroke-dasharray: 4 4;
+}
+:root[data-ess-skin='mono'] .chart .line {
+	stroke-width: 2;
+}
+:root[data-ess-skin='mono'] .chart .area {
+	opacity: 0.2;
+}
+/* pie / donut: track in muted, the total bold in the centre */
+:root[data-ess-skin='mono'] .donut .track {
+	stroke: var(--mono-muted);
+}
+:root[data-ess-skin='mono'] .donut .gap {
+	stroke: var(--mono-card);
+}
+:root[data-ess-skin='mono'] .donut .big {
+	fill: var(--mono-foreground);
+	font-weight: 700;
+}
+:root[data-ess-skin='mono'] .donut .small {
+	fill: var(--mono-muted-fg);
+	font-size: 12px;
+}
+/* bar lists and share bars: rounded-sm bars on a muted track */
+:root[data-ess-skin='mono'] .bars .track,
+:root[data-ess-skin='mono'] .share .bar {
+	border-radius: 4px;
+	background: var(--mono-muted);
+}
+:root[data-ess-skin='mono'] .bars .fill {
+	border-radius: 4px;
+	background: var(--mono-primary);
+}
+/* the chart card: CardHeader (title + description), Tabs for Chart / Table */
+:root[data-ess-skin='mono'] .ess-card.card h2 {
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+}
+:root[data-ess-skin='mono'] .ess-card.card .titles p {
+	font-size: 12px;
+	color: var(--mono-muted-fg);
+}
+:root[data-ess-skin='mono'] .ess-card.card .seg {
+	padding: 3px;
+	border-radius: 8px;
+	background: var(--mono-muted);
+}
+:root[data-ess-skin='mono'] .ess-card.card .seg button {
+	height: 26px;
+	padding: 0 10px;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	color: var(--mono-foreground);
+	font-size: 13px;
+	font-weight: 500;
+}
+:root[data-ess-skin='mono'] .ess-card.card .seg button[aria-pressed='true'] {
+	background: var(--mono-background);
+	box-shadow: var(--mono-shadow-sm);
+}
+
+/* ============================================================
+   Tables built by individual pages: shadcn's border, header and
+   hover colours (layouts and spacing stay the page's own)
+   ============================================================ */
+:root[data-ess-skin='mono'] .ess-shell table:not(.ess-table) th {
+	color: var(--mono-foreground);
+	font-weight: 500;
+	border-color: var(--mono-border);
+}
+:root[data-ess-skin='mono'] .ess-shell table:not(.ess-table) td {
+	border-color: var(--mono-border);
+}
+:root[data-ess-skin='mono'] .ess-shell table:not(.ess-table) tbody tr:hover > td {
+	background-color: color-mix(in srgb, var(--mono-muted) 50%, transparent);
+}
+
+/* ============================================================
+   Alignment pass (2026-11-03): fixes found by walking every page
+   in Mono, light and dark, at 1440×860.
+   ============================================================ */
+
+/* Card titles that wrap (a long date, "Headcount by department")
+   read as one block, not two lines touching. */
+:root[data-ess-skin='mono'] .ess-h2 {
+	line-height: 1.2;
+}
+
+/* Side-by-side cards start their titles on the same line: when one
+   card's header holds a control (a select, a button), every header in
+   that row takes the control's height. (Leave: "Leave requests" with
+   its filter beside "Request progress".) */
+:root[data-ess-skin='mono'] .ess-split:has(.ess-card-head > :is(.ess-select, .ess-btn, select)) .ess-card-head {
+	min-height: 36px;
+}
+
+/* A page with the breadcrumb row shows the trail once: the page
+   header's own "Leave /" back link is the same step. */
+:root[data-ess-skin='mono'] .ess-content:has(> .ess-breadcrumb) .ess-page-head .back {
+	display: none;
+}
+
+/* Figure strips (Payroll, Team, Admin): values line up across the
+   strip even when one label wraps to two lines; the status dot stays
+   on the value's centre line. */
+:root[data-ess-skin='mono'] .ess-figure {
+	align-items: flex-start;
+}
+:root[data-ess-skin='mono'] .ess-figure__dot {
+	margin-top: 7px;
+}
+/* Payroll's toolbar: the action button matches the fields' height. */
+:root[data-ess-skin='mono'] .toolbar:has(> label.month) > .ess-btn--sm {
+	height: 36px;
+}
+
+/* People tables (Team, Admin › People): the row actions stay in view
+   at the right edge while the wider columns scroll underneath. */
+:root[data-ess-skin='mono'] .ess-table:has(td.actions-cell) th:last-child,
+:root[data-ess-skin='mono'] .ess-table td.actions-cell {
+	position: sticky;
+	right: 0;
+	z-index: 1;
+	background: var(--mono-card);
+	box-shadow: inset 1px 0 0 var(--mono-border);
+}
+:root[data-ess-skin='mono'] .ess-table:has(td.actions-cell) thead th:last-child {
+	z-index: 2;
+}
+:root[data-ess-skin='mono'] .ess-table tbody tr:hover td.actions-cell {
+	background: color-mix(in srgb, var(--mono-muted) 50%, var(--mono-card));
+}
+:root[data-ess-skin='mono'] .ess-table tbody tr.is-selected td.actions-cell,
+:root[data-ess-skin='mono'] .ess-table tbody tr[aria-selected='true'] td.actions-cell {
+	background: var(--mono-muted);
+}
+
+/* Champ Hub quick actions: a longer label ("Schedule a meeting")
+   wraps inside its button instead of being cut short. */
+:root[data-ess-skin='mono'] .quick .qa > span:last-child {
+	white-space: normal;
+	line-height: 1.25;
+	text-overflow: clip;
+}
+
+/* Champ Hub chats: the six filters fit on one line. */
+:root[data-ess-skin='mono'] .filters[aria-label='Show'] {
+	flex-wrap: nowrap;
+	gap: 4px;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+:root[data-ess-skin='mono'] .filters[aria-label='Show'] > button {
+	flex: none;
+	padding: 3px 7px;
+	white-space: nowrap;
+}
+
+/* Roles & access: the capability list scrolls inside the card, so the
+   note under it gets a rule and some room instead of butting into the
+   last visible row. */
+:root[data-ess-skin='mono'] .role-detail .detail-scroll + .ess-help {
+	margin-top: 10px;
+	padding-top: 10px;
+	border-top: 1px solid var(--mono-border);
+}
+
+/* 1280-wide laptops: Mono's larger type pushed the planner's "Leave
+   Overview" 11px past the card. Tighter gaps and a slimmer button keep
+   the whole row inside. */
+@media (min-width: 721px) and (max-width: 1366px) {
+	:root[data-ess-skin='mono'] .planner .head {
+		column-gap: 12px;
+	}
+	:root[data-ess-skin='mono'] .planner .overview-btn {
+		width: 148px;
+	}
+	:root[data-ess-skin='mono'] .planner .seg button {
+		padding-inline: 8px;
+	}
+}

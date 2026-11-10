@@ -42,8 +42,9 @@
 	{#if asTable}
 		<div class="table-wrap">{@render table()}</div>
 	{:else}
-		{@render legend?.()}
 		{@render chart()}
+		<!-- shadcn's ChartLegend: under the chart, centred -->
+		{#if legend}<div class="legend-row">{@render legend()}</div>{/if}
 	{/if}
 	{#if note}<p class="note">{note}</p>{/if}
 </section>
@@ -71,16 +72,23 @@
 		flex: 1;
 		min-width: 0;
 	}
+	/* shadcn's CardTitle and CardDescription */
 	h2 {
 		margin: 0;
-		font-size: 13.5px;
-		font-weight: 650;
+		font-size: 15px;
+		font-weight: 600;
 		letter-spacing: -0.01em;
+		line-height: 1.3;
 	}
 	.titles p {
-		margin: 1px 0 0;
-		font-size: 11.5px;
+		margin: 2px 0 0;
+		font-size: 12.5px;
 		color: var(--ess-text-muted);
+	}
+	.legend-row {
+		display: flex;
+		justify-content: center;
+		padding-top: 2px;
 	}
 	.actions {
 		display: flex;

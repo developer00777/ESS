@@ -59,16 +59,18 @@
 		height: 100%;
 		min-height: 16px;
 	}
+	/* slim capsules rounded at both ends */
 	.fill {
-		min-width: 2px;
-		height: 55%;
-		min-height: 11px;
-		max-height: 18px;
-		border-radius: 0 4px 4px 0;
+		min-width: 10px;
+		height: 10px;
+		border-radius: 999px;
 		transition: width var(--ess-t-slow);
 	}
 	b {
+		flex: none;
 		font-weight: 600;
+		font-size: 12px;
+		white-space: nowrap;
 		font-variant-numeric: tabular-nums;
 		color: var(--ess-text);
 	}

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Check from '@lucide/svelte/icons/check';
+	import X from '@lucide/svelte/icons/x';
 	import { approve } from '$lib/hub/actions';
 	import type { TaskView } from '$lib/tasks/types';
 
@@ -24,13 +26,13 @@
 	{#if rejecting}
 		<input class="ess-input" bind:value={note} placeholder="Why not? {task.createdBy.fullName.split(' ')[0]} sees this" aria-label="Reason for not approving" />
 		<div class="row">
-			<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" disabled={busy || !note.trim()} onclick={(e) => { e.stopPropagation(); void go('reject'); }}>Don't approve</button>
+			<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" disabled={busy || !note.trim()} onclick={(e) => { e.stopPropagation(); void go('reject'); }}><X size={14} /> Don't approve</button>
 			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={(e) => { e.stopPropagation(); rejecting = false; }}>Back</button>
 		</div>
 	{:else}
 		<div class="row">
-			<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy} onclick={(e) => { e.stopPropagation(); void go('approve'); }}>Approve</button>
-			<button type="button" class="ess-btn ess-btn--outline ess-btn--sm" disabled={busy} onclick={(e) => { e.stopPropagation(); rejecting = true; }}>Don't approve</button>
+			<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={busy} onclick={(e) => { e.stopPropagation(); void go('approve'); }}><Check size={14} /> Approve</button>
+			<button type="button" class="ess-btn ess-btn--outline ess-btn--sm" disabled={busy} onclick={(e) => { e.stopPropagation(); rejecting = true; }}><X size={14} /> Don't approve</button>
 		</div>
 	{/if}
 </div>

@@ -7,6 +7,10 @@
 	 * own setup instead.
 	 */
 	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
+	import ListChecks from '@lucide/svelte/icons/list-checks';
+	import UserPlus from '@lucide/svelte/icons/user-plus';
+	import UserCheck from '@lucide/svelte/icons/user-check';
+	import Check from '@lucide/svelte/icons/check';
 	import Avatar from '$lib/components/Avatar.svelte';
 
 	type Person = {
@@ -30,9 +34,12 @@
 </script>
 
 <section class="ess-card panel" aria-labelledby="onboarding-h">
+	<div class="fit">
 	<header class="p-head">
 		<div>
-			<h2 id="onboarding-h">{mode === 'self' ? 'Your setup' : 'Onboarding'}</h2>
+			<h2 id="onboarding-h">
+				{#if mode === 'self'}<ListChecks size={15} aria-hidden="true" />{:else}<UserPlus size={15} aria-hidden="true" />{/if}{mode === 'self' ? 'Your setup' : 'Onboarding'}
+			</h2>
 			<p>
 				{#if mode === 'self'}
 					What's set up on your account
@@ -45,7 +52,7 @@
 	</header>
 
 	{#if shown.length === 0}
-		<p class="quiet">No one has joined in the last 90 days.</p>
+		<p class="quiet"><UserCheck size={15} aria-hidden="true" />No one has joined in the last 90 days.</p>
 	{:else}
 		<ul class="cards" class:solo={mode === 'self'}>
 			{#each shown as p (p.id)}
@@ -61,14 +68,14 @@
 					</div>
 					{#if mode === 'self'}
 						<ul class="steps">
-							{#each p.steps as s (s.label)}
-								<li class:done={s.done}><span class="tick" aria-hidden="true"></span>{s.label}<span class="ess-sr-only">{s.done ? ', done' : ', not done'}</span></li>
+							{#each p.steps as s, i (s.label)}
+								<li class:done={s.done} style="--i: {i}"><span class="tick" aria-hidden="true">{#if s.done}<Check size={9} strokeWidth={3.5} />{/if}</span>{s.label}<span class="ess-sr-only">{s.done ? ', done' : ', not done'}</span></li>
 							{/each}
 						</ul>
 					{/if}
 					<div class="progress">
 						<span class="segs" aria-hidden="true">
-							{#each p.steps as s, i (i)}<span class:on={s.done}></span>{/each}
+							{#each p.steps as s, i (i)}<span class:on={s.done} style="--i: {i}"></span>{/each}
 						</span>
 						<span class="count"><b>{done}</b>/{p.steps.length}<span class="ess-sr-only"> setup steps done</span></span>
 					</div>
@@ -76,6 +83,7 @@
 			{/each}
 		</ul>
 	{/if}
+	</div>
 </section>
 
 <style>
@@ -94,10 +102,17 @@
 		gap: 8px;
 	}
 	.p-head h2 {
+		display: flex;
+		align-items: center;
+		gap: 7px;
 		margin: 0;
 		font-size: 15px;
 		font-weight: 650;
 		letter-spacing: -0.01em;
+	}
+	.p-head h2 :global(svg) {
+		flex: none;
+		color: var(--ess-primary-text);
 	}
 	.p-head p {
 		margin: 1px 0 0;
@@ -212,8 +227,10 @@
 		min-width: 0;
 	}
 	.tick {
-		width: 12px;
-		height: 12px;
+		display: grid;
+		place-items: center;
+		width: 13px;
+		height: 13px;
 		flex-shrink: 0;
 		border-radius: 50%;
 		border: 1.5px solid var(--ess-border-strong);
@@ -221,15 +238,101 @@
 	.steps li.done .tick {
 		border-color: var(--ess-primary);
 		background: var(--ess-primary);
-		box-shadow: inset 0 0 0 2px var(--ess-sunken);
+		color: var(--ess-text-on-primary);
 	}
 	.steps li.done {
 		color: var(--ess-text-muted);
 	}
 	.quiet {
+		display: flex;
+		align-items: center;
+		gap: 7px;
 		margin: 0;
 		color: var(--ess-text-muted);
 		font-size: 13px;
+	}
+
+	/* ---------- motion ----------
+	   Each card rises and the progress segments fill left to right.
+	   !important lengths: contained motion that plays under reduced motion
+	   too (see INTERACTION FEEDBACK in ess-components.css). */
+	@keyframes ob-rise {
+		from {
+			opacity: 0;
+			transform: translateY(6px);
+		}
+	}
+	@keyframes ob-fill {
+		from {
+			transform: scaleX(0);
+		}
+	}
+	.card {
+		animation: ob-rise 460ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation-duration: 460ms !important;
+		animation-delay: 320ms;
+	}
+	/* The steps themselves don't animate: their fit-to-height rules (the
+	   setup container) re-style them, and Chrome restarted their entrance
+	   each time, so they flickered on a loop. */
+	.segs span.on {
+		transform-origin: left center;
+		animation: ob-fill 520ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation-duration: 520ms !important;
+		animation-delay: calc(560ms + var(--i, 0) * 90ms);
+	}
+
+	/* Laptop dashboard: the panel is as tall as its row, so its contents
+	   size to the room inside it (like My attendance) and it never scrolls:
+	   a short panel takes the steps to one tight column (your own name, on
+	   your own setup, gives way), a very short one keeps just the progress
+	   (what's left is in the tooltip). */
+	.fit {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		gap: 10px;
+		min-height: 0;
+	}
+	/* The measuring box is this inner wrapper, clipping its own contents,
+	   never the panel: the panel may scroll (the dashboard lets panels
+	   scroll as a last resort), and a scrolling size container re-styles
+	   itself each time an entrance animation nudges its content, which
+	   restarted the steps' animation in a loop (the flicker). */
+	@media (min-width: 1101px) and (min-height: 480px) {
+		/* only in the fit-to-screen layout (ess-fill), where the row gives
+		   it a height; with large text the page flows and it sizes itself */
+		@container ess-fill (min-width: 0px) {
+			.fit {
+				container: setup / size;
+				overflow: hidden;
+			}
+		}
+	}
+	@container setup (max-height: 300px) {
+		.p-head p,
+		.cards.solo .who {
+			display: none;
+		}
+		.card {
+			padding: 8px 10px;
+			gap: 6px;
+		}
+		.steps {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 2px;
+			font-size: 11.5px;
+		}
+		.steps li {
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+	}
+	@container setup (max-height: 190px) {
+		.steps {
+			display: none;
+		}
 	}
 
 	/* Short laptop screens (about 1280×580): tighter so the dashboard fits. */

@@ -10,6 +10,9 @@
 	import Calendar from '@lucide/svelte/icons/calendar';
 	import Flag from '@lucide/svelte/icons/flag';
 	import Ban from '@lucide/svelte/icons/ban';
+	import Undo2 from '@lucide/svelte/icons/undo-2';
+	import ListChecks from '@lucide/svelte/icons/list-checks';
+	import Activity from '@lucide/svelte/icons/activity';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import AssigneeSelect from './AssigneeSelect.svelte';
 	import { chat } from '$lib/chat/client.svelte';
@@ -204,7 +207,7 @@
 			{#if confirmDelete}
 				<div class="ess-notice ess-notice--danger">
 					<div class="ess-notice__body"><strong>Delete this task for everyone?</strong>This cannot be undone.</div>
-					<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" onclick={remove}>Delete</button>
+					<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" onclick={remove}><Trash2 size={14} /> Delete</button>
 					<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (confirmDelete = false)}>Keep</button>
 				</div>
 			{/if}
@@ -230,7 +233,7 @@
 						<label class="ess-label" for="ts-decline">Why can't you take it?</label>
 						<input id="ts-decline" class="ess-input" bind:value={declineNote} placeholder="For example: on leave until the 14th" />
 						<div class="row">
-							<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={!declineNote.trim()} onclick={decline}>Hand it back</button>
+							<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" disabled={!declineNote.trim()} onclick={decline}><Undo2 size={14} /> Hand it back</button>
 							<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (declining = false)}>Cancel</button>
 						</div>
 					</div>
@@ -289,7 +292,7 @@
 
 			<section>
 				<div class="sec-head">
-					<h3 class="ess-h2 sec">Checklist{#if subsTotal} ({subsDone} of {subsTotal}){/if}</h3>
+					<h3 class="ess-h2 sec"><ListChecks size={16} /> Checklist{#if subsTotal} ({subsDone} of {subsTotal}){/if}</h3>
 					{#if subsTotal}
 						<span class="pct">{pct}%</span>
 						<span class="ess-meter ess-meter--thin meter"><span style="width:{pct}%"></span></span>
@@ -313,7 +316,7 @@
 			</section>
 
 			<section>
-				<h3 class="ess-h2 sec">Activity</h3>
+				<h3 class="ess-h2 sec"><Activity size={16} /> Activity</h3>
 				<ol class="days">
 					{#each days as d (d.day)}
 						<li class="day">

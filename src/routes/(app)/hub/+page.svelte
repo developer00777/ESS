@@ -7,6 +7,10 @@
 	import Users from '@lucide/svelte/icons/users';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
+	import Inbox from '@lucide/svelte/icons/inbox';
+	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
+	import Zap from '@lucide/svelte/icons/zap';
+	import Video from '@lucide/svelte/icons/video';
 	import NeedCard from '$lib/components/hub/NeedCard.svelte';
 	import TaskRow from '$lib/components/hub/TaskRow.svelte';
 	import DayStrip from '$lib/components/hub/DayStrip.svelte';
@@ -35,7 +39,7 @@
 	<div class="ess-stack">
 		<section class="ess-card ess-fill-card grow" class:is-empty={!t.needs.length} aria-labelledby="needs-h">
 			<div class="ess-card-head">
-				<h2 id="needs-h" class="ess-h2">Needs you{#if t.needs.length}<span class="n">{t.needs.length}</span>{/if}</h2>
+				<h2 id="needs-h" class="ess-h2"><Inbox size={16} /> Needs you{#if t.needs.length}<span class="n">{t.needs.length}</span>{/if}</h2>
 				<a class="ess-link" href="/hub/tasks">All tasks <ChevronRight size={14} /></a>
 			</div>
 			<div class="ess-rows ess-scroll body">
@@ -49,7 +53,7 @@
 
 		<section class="ess-card ess-fill-card grow" class:is-empty={!t.dueThisWeek.length} aria-labelledby="week-h">
 			<div class="ess-card-head">
-				<h2 id="week-h" class="ess-h2">Due this week</h2>
+				<h2 id="week-h" class="ess-h2"><CalendarClock size={16} /> Due this week</h2>
 				<a class="ess-link" href="/hub/tasks">View all tasks <ChevronRight size={14} /></a>
 			</div>
 			<ol class="timeline ess-scroll body">
@@ -67,7 +71,7 @@
 		</section>
 
 		<section class="ess-card fixed quick-card" aria-labelledby="quick-h">
-			<h2 id="quick-h" class="ess-h2">Quick actions</h2>
+			<h2 id="quick-h" class="ess-h2"><Zap size={16} /> Quick actions</h2>
 			<div class="quick">
 				<button type="button" class="qa" onclick={() => (hub.newTaskOpen = true)}>
 					<span class="ess-tile ess-tile--sm"><FileText size={16} /></span>
@@ -88,7 +92,7 @@
 	<aside class="ess-stack">
 		<section class="ess-card ess-fill-card meet" aria-labelledby="meet-h">
 			<div class="ess-card-head">
-				<h2 id="meet-h" class="ess-h2">Upcoming meeting</h2>
+				<h2 id="meet-h" class="ess-h2"><Video size={16} /> Upcoming meeting</h2>
 				<a class="ess-link" href="/hub/meetings">View calendar <ChevronRight size={14} /></a>
 			</div>
 			<div class="strip-wrap">
@@ -98,7 +102,7 @@
 
 		<section class="ess-card ess-fill-card grow chats" class:is-empty={!t.unreadChats.length} aria-labelledby="chats-h">
 			<div class="ess-card-head">
-				<h2 id="chats-h" class="ess-h2">Unread chats</h2>
+				<h2 id="chats-h" class="ess-h2"><MessageSquare size={16} /> Unread chats</h2>
 				<a class="ess-link" href="/hub/chats">View all chats <ChevronRight size={14} /></a>
 			</div>
 			<div class="ess-rows ess-scroll body">

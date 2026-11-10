@@ -9,6 +9,8 @@
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import CalendarCheck from '@lucide/svelte/icons/calendar-check';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
+	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
+	import ClipboardCheck from '@lucide/svelte/icons/clipboard-check';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import TaskBoard, { type BoardColumn } from '$lib/components/hub/TaskBoard.svelte';
 	import TaskRow from '$lib/components/hub/TaskRow.svelte';
@@ -149,7 +151,7 @@
 				<strong>{suggestion.hi.fullName.split(' ')[0]}</strong> has {open(suggestion.hi).length} open tasks and <strong>{suggestion.lo.fullName.split(' ')[0]}</strong> has {open(suggestion.lo).length}.
 				Move "{short(suggestion.task.title)}" ({suggestion.task.priority}{suggestion.task.dueDate ? `, due ${dueLabel(suggestion.task.dueDate)}` : ''}) to {suggestion.lo.fullName.split(' ')[0]}?
 			</p>
-			<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={() => suggestion && drop(suggestion.task, { zone: `person:${suggestion.lo.id}`, beforeId: null, afterId: null })}>Move it</button>
+			<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={() => suggestion && drop(suggestion.task, { zone: `person:${suggestion.lo.id}`, beforeId: null, afterId: null })}><ArrowRightLeft size={14} /> Move it</button>
 			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (dismissed = true)}>Dismiss</button>
 		</div>
 	{/if}
@@ -201,7 +203,7 @@
 
 				<section class="ess-card ess-fill-card work-card" aria-labelledby="work-h">
 					<div class="ess-card-head">
-						<h2 id="work-h" class="ess-h2">Team workload</h2>
+						<h2 id="work-h" class="ess-h2"><Users size={16} /> Team workload</h2>
 						<button type="button" class="ess-link" onclick={() => (view = 'board')}>Open the board <ChevronRight size={14} /></button>
 					</div>
 					<p class="ess-help counts-note">Task counts for each person, not a measure of how well they work. Open a row to see their tasks; the Board view moves work between people.</p>
@@ -269,7 +271,7 @@
 
 				<section class="ess-card ess-fill-card dl-card" aria-labelledby="dl-h">
 					<div class="ess-card-head">
-						<h2 id="dl-h" class="ess-h2">Upcoming deadlines</h2>
+						<h2 id="dl-h" class="ess-h2"><CalendarClock size={16} /> Upcoming deadlines</h2>
 						<a class="ess-link" href="/hub/tasks">All tasks <ChevronRight size={14} /></a>
 					</div>
 					<ol class="tl ess-scroll">
@@ -295,7 +297,7 @@
 
 			<aside class="ess-card ess-fill-card" aria-labelledby="rev-h">
 				<div class="ess-card-head">
-					<h2 id="rev-h" class="ess-h2">Needs review{#if review.length}<span class="n">{review.length}</span>{/if}</h2>
+					<h2 id="rev-h" class="ess-h2"><ClipboardCheck size={16} /> Needs review{#if review.length}<span class="n">{review.length}</span>{/if}</h2>
 				</div>
 				<div class="ess-rows ess-scroll rev-body">
 					{#each review as t (t.id)}

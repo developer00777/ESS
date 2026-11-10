@@ -8,6 +8,9 @@
 	import Check from '@lucide/svelte/icons/check';
 	import X from '@lucide/svelte/icons/x';
 	import Gift from '@lucide/svelte/icons/gift';
+	import ClipboardPen from '@lucide/svelte/icons/clipboard-pen';
+	import Plus from '@lucide/svelte/icons/plus';
+	import Send from '@lucide/svelte/icons/send';
 
 	/**
 	 * "Raise attendance correction" — a right-hand drawer over the Attendance
@@ -167,7 +170,7 @@
 	<div class="ess-drawer drawer" role="dialog" aria-modal="true" aria-labelledby="dev-title">
 		<header class="head">
 			<div>
-				<h2 id="dev-title" class="ess-h2">Raise attendance correction</h2>
+				<h2 id="dev-title" class="ess-h2"><ClipboardPen size={20} /> Raise attendance correction</h2>
 				<p class="sub">Request a correction for a missing or incorrect check-in / check-out. Your request is reviewed by HR and, past the monthly limit, your manager.</p>
 			</div>
 			<button type="button" class="ess-icon-btn" onclick={close} aria-label="Close"><X size={18} /></button>
@@ -229,7 +232,7 @@
 					<span class="ess-tile"><Gift size={20} strokeWidth={1.75} /></span>
 					<h3 class="ess-h3">Worked on a holiday or week off?</h3>
 					<p>That is not a correction — it earns a comp-off. Work 7+ hours on a holiday or your week off, claim it, and your reporting manager approves it. Spend it within 3 months by applying for Comp-Off leave.</p>
-					<button type="button" class="ess-btn ess-btn--primary" onclick={() => { close(); oncompoff?.(); }}>Request comp-off</button>
+					<button type="button" class="ess-btn ess-btn--primary" onclick={() => { close(); oncompoff?.(); }}><Plus size={16} /> Request comp-off</button>
 				</div>
 			{:else}
 				<div class="ess-notice ess-notice--info">
@@ -326,7 +329,7 @@
 			{:else if tab === 'correction'}
 				<button type="button" class="ess-btn ess-btn--secondary" onclick={close}>Cancel</button>
 				<button type="button" class="ess-btn ess-btn--primary" onclick={submit} disabled={!canSubmit}>
-					{submitting ? 'Submitting…' : 'Submit for review'}
+					<Send size={16} /> {submitting ? 'Submitting…' : 'Submit for review'}
 				</button>
 			{:else}
 				<button type="button" class="ess-btn ess-btn--secondary" onclick={close}>Cancel</button>

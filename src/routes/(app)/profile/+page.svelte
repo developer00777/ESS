@@ -18,7 +18,11 @@
 	import Info from '@lucide/svelte/icons/info';
 	import Check from '@lucide/svelte/icons/check';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import UserCheck from '@lucide/svelte/icons/user-check';
+	import Eye from '@lucide/svelte/icons/eye';
+	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import ProfileCard from '$lib/components/ProfileCard.svelte';
+	import DelegationsCard from '$lib/components/DelegationsCard.svelte';
 	import AvatarUpload from '$lib/components/AvatarUpload.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { enhance } from '$app/forms';
@@ -206,7 +210,7 @@
 				<div class="identity-actions">
 					{#if editing}
 						<button type="button" class="ess-btn ess-btn--secondary" onclick={cancel} disabled={saving}>Cancel</button>
-						<button type="submit" class="ess-btn ess-btn--primary" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
+						<button type="submit" class="ess-btn ess-btn--primary" disabled={saving}><Check size={16} /> {saving ? 'Saving…' : 'Save changes'}</button>
 					{:else}
 						<button type="button" class="ess-btn ess-btn--primary" onclick={startEditing}>
 							<PenLine size={16} /> Edit details
@@ -348,6 +352,12 @@
 				<ProfileCard icon={Shield} title="Benefits">
 					<p class="plain">Insurance, PF, ESI, Gratuity</p>
 				</ProfileCard>
+
+				<!-- Approval cover (/api/delegations); not part of the profile form:
+				     its fields carry no name and it saves on its own. -->
+				<ProfileCard icon={UserCheck} title="Cover my approvals" note="While you are away, someone else can approve your team's requests for you.">
+					<DelegationsCard viewerId={data.userRow.id} bare />
+				</ProfileCard>
 			</div>
 
 			<!-- ===== Bank & IDs ===== -->
@@ -457,7 +467,7 @@
 		<aside class="ess-stack aside">
 			{#if tab === 'bank'}
 				<section class="ess-card grow-card">
-					<h3 class="ess-h2 aside-h">Visibility &amp; updates</h3>
+					<h3 class="ess-h2 aside-h"><Eye size={16} /> Visibility &amp; updates</h3>
 					<div class="privacy">
 						<span class="ess-tile ess-tile--round"><Lock size={20} strokeWidth={1.75} /></span>
 						<strong>Only you and authorised HR can view these details.</strong>
@@ -477,7 +487,7 @@
 			{:else}
 				<section class="ess-card">
 					<div class="completion-head">
-						<h3 class="ess-h2 aside-h">Profile completion</h3>
+						<h3 class="ess-h2 aside-h"><ListChecks size={16} /> Profile completion</h3>
 						<span class="pct">{completion}%</span>
 					</div>
 					<div class="ess-meter" role="progressbar" aria-valuenow={completion} aria-valuemin="0" aria-valuemax="100"><span style="width:{completion}%"></span></div>
@@ -499,7 +509,7 @@
 				</section>
 
 				<section class="ess-card grow-card">
-					<h3 class="ess-h2 aside-h">Emergency contact</h3>
+					<h3 class="ess-h2 aside-h"><Phone size={16} /> Emergency contact</h3>
 					<div class="form-rows form-rows--narrow">
 						<label class="form-row">
 							<span>Name</span>
@@ -520,7 +530,7 @@
 			{#if editing}
 				<div class="footer-actions">
 					<button type="button" class="ess-btn ess-btn--secondary" onclick={cancel} disabled={saving}>Cancel</button>
-					<button type="submit" class="ess-btn ess-btn--primary" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
+					<button type="submit" class="ess-btn ess-btn--primary" disabled={saving}><Check size={16} /> {saving ? 'Saving…' : 'Save changes'}</button>
 				</div>
 			{/if}
 		</aside>

@@ -314,10 +314,10 @@
 	   shows just its icon until there's room for its label. */
 	/* Desktop: the top bar's search opens this same palette, so the page
 	   row doesn't repeat it. */
-	@media (min-width: 1101px) {
-		.search {
-			display: none !important;
-		}
+	/* The top bar's search opens this same palette on every screen size, so
+	   the header's copy stays hidden rather than showing two searches. */
+	.search {
+		display: none !important;
 	}
 	@container ess-main (max-width: 1474px) {
 		.search {

@@ -5,6 +5,8 @@
 	import BarChart3 from '@lucide/svelte/icons/bar-chart-3';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import Inbox from '@lucide/svelte/icons/inbox';
+	import ClipboardList from '@lucide/svelte/icons/clipboard-list';
+	import ClipboardPen from '@lucide/svelte/icons/clipboard-pen';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import AttendanceCalendar from '$lib/components/AttendanceCalendar.svelte';
 	import CompOffClaim from '$lib/components/CompOffClaim.svelte';
@@ -208,12 +210,12 @@
 
 		<section class="ess-card ess-fill-card dev-card" aria-labelledby="dev-h">
 			<div class="ess-card-head">
-				<h2 id="dev-h" class="ess-h2">Recent deviations</h2>
+				<h2 id="dev-h" class="ess-h2"><ClipboardList size={16} /> Recent deviations</h2>
 				<button type="button" class="ess-link as-btn" onclick={() => (view = 'records')}>View all records <ChevronRight size={14} /></button>
 			</div>
 			<div class="allowance-row">
 				<p class="allowance">Corrections allowance · <strong>{data.deviationMonthlyUsed} of {data.deviationMonthlyCap}</strong> used this month</p>
-				<button type="button" class="ess-btn ess-btn--outline ess-btn--sm raise-any" onclick={() => raise(selectedKey ?? '')}>Raise correction</button>
+				<button type="button" class="ess-btn ess-btn--outline ess-btn--sm raise-any" onclick={() => raise(selectedKey ?? '')}><ClipboardPen size={14} /> Raise correction</button>
 			</div>
 			<div class="ess-rows ess-scroll dev-list">
 				{#each data.myDeviations.slice(0, 5) as d (d.id)}

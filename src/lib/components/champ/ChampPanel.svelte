@@ -6,6 +6,9 @@
 	import X from '@lucide/svelte/icons/x';
 	import Send from '@lucide/svelte/icons/send-horizontal';
 	import Download from '@lucide/svelte/icons/download';
+	import Eraser from '@lucide/svelte/icons/eraser';
+	import CircleCheck from '@lucide/svelte/icons/circle-check';
+	import Undo2 from '@lucide/svelte/icons/undo-2';
 	import { chat } from '$lib/chat/client.svelte';
 	import type { ChampCard, ChampMessage, ChampReport, ChampResult } from '$lib/champ';
 	import { CHAMP_LIMITS } from '$lib/champ';
@@ -216,7 +219,7 @@
 				<strong>Champ</strong>
 				<span>Answers from ESS records only</span>
 			</div>
-			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={clear}>Clear</button>
+			<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={clear}><Eraser size={14} /> Clear</button>
 		</header>
 		<div class="tabs" role="tablist">
 			<button type="button" role="tab" aria-selected={tab === 'chat'} onclick={() => (tab = 'chat')}>Chat</button>
@@ -298,7 +301,7 @@
 							<input class="ess-input" bind:value={declineNote} placeholder="What's stopping it?" aria-label="Reason" />
 						{/if}
 						<div class="btns">
-							<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={() => decide(t, 'done')}>Mark done</button>
+							<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={() => decide(t, 'done')}><CircleCheck size={14} /> Mark done</button>
 							<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={declineFor === t.id && !declineNote.trim()} onclick={() => decide(t, 'decline')}>
 								{declineFor === t.id ? 'Send' : "Can't do this"}
 							</button>
@@ -317,7 +320,7 @@
 							<strong>{t.title}</strong>
 							{#if t.note}<span class="line">"{t.note}"</span>{/if}
 							{#if t.status === 'open'}
-								<div class="btns"><button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => decide(t, 'withdraw')}>Withdraw</button></div>
+								<div class="btns"><button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => decide(t, 'withdraw')}><Undo2 size={14} /> Withdraw</button></div>
 							{/if}
 						</div>
 					{/each}

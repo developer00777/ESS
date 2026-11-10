@@ -11,6 +11,10 @@
 	import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import Info from '@lucide/svelte/icons/info';
+	import CheckCheck from '@lucide/svelte/icons/check-check';
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 	import type { ReconResult, ReconSheetResult } from '$lib/server/payroll-reconcile';
 
 	let { cycleKey, label, canManage }: { cycleKey: string; label: string; canManage: boolean } = $props();
@@ -125,6 +129,27 @@
 
 	const sheetMismatches = (s: ReconSheetResult) => s.mismatches.map((m) => ({ ...m, sheet: s.sheet }));
 	const fmtWhen = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+	/* Sorting and paging. A figure that reads as a number sorts as one. */
+	const asValue = (s: string | null | undefined) => {
+		const t = (s ?? '').trim();
+		return t !== '' && !Number.isNaN(Number(t)) ? Number(t) : t;
+	};
+	const diffView = new TableView(() => mismatches, {
+		sheet: (m) => m.title,
+		name: (m) => m.name,
+		column: (m) => m.label,
+		portal: (m) => asValue(m.portal),
+		manual: (m) => asValue(m.manual),
+		detail: (m) => m.detail ?? ''
+	});
+	const runView = new TableView(() => runs, {
+		when: (run) => new Date(run.createdAt),
+		file: (run) => run.fileName,
+		by: (run) => run.by,
+		cells: (run) => run.compared,
+		match: (run) => run.accuracy
+	});
 </script>
 
 <div class="ab">
@@ -204,15 +229,25 @@
 				<span class="spacer"></span>
 				{#if canManage && mismatches.some((m) => m.rowKey && m.portalColumn && !accepted.has(key(m.sheet, m)))}
 					<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={accepting} onclick={() => accept(mismatches)}>
-						Use manual values for all {mismatches.length} shown
+						<CheckCheck size={14} /> Use manual values for all {mismatches.length} shown
 					</button>
 				{/if}
 			</div>
 			<div class="ess-table-shell ess-scroll table">
 				<table class="ess-table">
-					<thead><tr><th>Sheet</th><th>Employee</th><th>Column</th><th>Portal</th><th>Manual</th><th>Behind it</th>{#if canManage}<th></th>{/if}</tr></thead>
+					<thead>
+						<tr>
+							<th aria-sort={diffView.ariaSort('sheet')}><SortButton view={diffView} key="sheet">Sheet</SortButton></th>
+							<th aria-sort={diffView.ariaSort('name')}><SortButton view={diffView} key="name">Employee</SortButton></th>
+							<th aria-sort={diffView.ariaSort('column')}><SortButton view={diffView} key="column">Column</SortButton></th>
+							<th aria-sort={diffView.ariaSort('portal')}><SortButton view={diffView} key="portal">Portal</SortButton></th>
+							<th aria-sort={diffView.ariaSort('manual')}><SortButton view={diffView} key="manual">Manual</SortButton></th>
+							<th aria-sort={diffView.ariaSort('detail')}><SortButton view={diffView} key="detail">Behind it</SortButton></th>
+							{#if canManage}<th></th>{/if}
+						</tr>
+					</thead>
 					<tbody>
-						{#each mismatches.slice(0, 600) as m (`${m.sheet}|${m.code}|${m.column}`)}
+						{#each diffView.rows as m (`${m.sheet}|${m.code}|${m.column}`)}
 							<tr class:done={accepted.has(key(m.sheet, m))}>
 								<td>{m.title}</td>
 								<td><strong>{m.name || '—'}</strong><span class="code">{m.code}</span></td>
@@ -235,8 +270,8 @@
 						{/each}
 					</tbody>
 				</table>
-				{#if mismatches.length > 600}<p class="more">Showing 600 of {mismatches.length}. Narrow by sheet, column or employee.</p>{/if}
 			</div>
+			<TablePager view={diffView} noun="differences" />
 		</section>
 	{:else if !uploading}
 		<section class="ess-card empty-state">No manual report has been compared for {label} yet.</section>
@@ -246,9 +281,18 @@
 		<section class="ess-card history">
 			<h3>Checks for {label}</h3>
 			<table class="ess-table">
-				<thead><tr><th>When</th><th>File</th><th>By</th><th class="ess-num">Cells</th><th class="ess-num">Match</th><th></th></tr></thead>
+				<thead>
+					<tr>
+						<th aria-sort={runView.ariaSort('when')}><SortButton view={runView} key="when">When</SortButton></th>
+						<th aria-sort={runView.ariaSort('file')}><SortButton view={runView} key="file">File</SortButton></th>
+						<th aria-sort={runView.ariaSort('by')}><SortButton view={runView} key="by">By</SortButton></th>
+						<th class="ess-num" aria-sort={runView.ariaSort('cells')}><SortButton view={runView} key="cells">Cells</SortButton></th>
+						<th class="ess-num" aria-sort={runView.ariaSort('match')}><SortButton view={runView} key="match">Match</SortButton></th>
+						<th></th>
+					</tr>
+				</thead>
 				<tbody>
-					{#each runs as run (run.id)}
+					{#each runView.rows as run (run.id)}
 						<tr class:on={current?.id === run.id}>
 							<td>{fmtWhen(run.createdAt)}</td><td>{run.fileName}</td><td>{run.by ?? '—'}</td>
 							<td class="ess-num">{run.compared.toLocaleString()}</td>
@@ -258,6 +302,7 @@
 					{/each}
 				</tbody>
 			</table>
+			<TablePager view={runView} noun="checks" />
 		</section>
 	{/if}
 </div>
@@ -435,7 +480,6 @@
 		font-size: 12px;
 		font-weight: 600;
 	}
-	.more,
 	.empty,
 	.empty-state {
 		text-align: center;

@@ -1,5 +1,8 @@
 <script lang="ts">
 	import X from '@lucide/svelte/icons/x';
+	import Settings from '@lucide/svelte/icons/settings';
+	import Bell from '@lucide/svelte/icons/bell';
+	import BellOff from '@lucide/svelte/icons/bell-off';
 	import { chat } from '$lib/chat/client.svelte';
 	import { lockPageScroll } from '$lib/scroll-lock';
 
@@ -24,10 +27,24 @@
 		setTimeout(() => (saved = false), 2000);
 	}
 
+	let busy = $state(false);
+
 	async function enable() {
+		busy = true;
 		alerts = await chat.enableAlerts();
 		prefs.push = alerts === 'granted';
 		await save();
+		busy = false;
+	}
+
+	// Off on this device: the push subscription goes; the browser keeps its
+	// permission, so turning it back on needs no new prompt.
+	async function disable() {
+		busy = true;
+		await chat.disableAlerts();
+		prefs.push = false;
+		await save();
+		busy = false;
 	}
 </script>
 
@@ -36,7 +53,7 @@
 <div class="scrim" role="presentation" onclick={onclose}></div>
 <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="prefs-h">
 	<header>
-		<h2 id="prefs-h" class="ess-h3">Chat settings</h2>
+		<h2 id="prefs-h" class="ess-h3"><Settings size={16} /> Chat settings</h2>
 		<button type="button" class="ess-icon-btn" onclick={onclose} aria-label="Close"><X size={18} /></button>
 	</header>
 	<div class="body">
@@ -45,14 +62,17 @@
 				<strong>Alerts on this device</strong>
 				<p>Pop-ups for DMs and mentions, including when the portal is closed. They wait outside your shift hours.</p>
 			</div>
-			{#if alerts === 'granted'}
-				<span class="ok">On</span>
+			{#if alerts === 'granted' && prefs.push}
+				<span class="end">
+					<span class="ok">On</span>
+					<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" onclick={disable} disabled={busy}><BellOff size={14} /> {busy ? 'Turning off…' : 'Turn off'}</button>
+				</span>
 			{:else if alerts === 'denied'}
 				<span class="off">Blocked in the browser</span>
 			{:else if alerts === 'unsupported'}
 				<span class="off">Not supported here</span>
 			{:else}
-				<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={enable}>Turn on</button>
+				<button type="button" class="ess-btn ess-btn--primary ess-btn--sm" onclick={enable} disabled={busy}><Bell size={14} /> {busy ? 'Turning on…' : 'Turn on'}</button>
 			{/if}
 		</div>
 		<label class="row">
@@ -127,6 +147,12 @@
 		width: 18px;
 		height: 18px;
 		accent-color: var(--ess-primary);
+		flex-shrink: 0;
+	}
+	.end {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
 		flex-shrink: 0;
 	}
 	.ok {

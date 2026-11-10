@@ -8,7 +8,7 @@
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link
-			href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500&display=swap"
+			href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=Plus+Jakarta+Sans:wght@400..800&family=Geist:wght@400..700&family=Manrope:wght@400..800&family=Jost:wght@400..700&family=Geist+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap"
 			rel="stylesheet"
 		/>
 		<script>
@@ -21,6 +21,13 @@
 							? 'dark'
 							: 'light';
 				if (theme === 'dark') document.documentElement.setAttribute('data-ess-theme', 'dark');
+				// The look (Original, Mono, Atur, …), from the account menu.
+				var skin = localStorage.getItem('essSkin');
+				if (skin === 'mono' || skin === 'atur' || skin === 'amber')
+					document.documentElement.setAttribute('data-ess-skin', skin);
+				// Collapsed sidebar (themes with an expanding sidebar: Mono).
+				if (localStorage.getItem('essSidebar') === 'collapsed')
+					document.documentElement.setAttribute('data-ess-sidebar', 'collapsed');
 				if (localStorage.getItem('essShell') === 'rail')
 					document.documentElement.setAttribute('data-ess-shell', 'rail');
 				// Text size and dock, from the account menu (TopBar).
@@ -32,6 +39,13 @@
 				}
 				if (localStorage.getItem('essDock') === 'fixed')
 					document.documentElement.setAttribute('data-ess-dock', 'fixed');
+
+				// The app's opening corridor plays once per browser session; after
+				// that, a refresh or a new page opens straight away ((app)/+layout).
+				try {
+					if (sessionStorage.getItem('essIntroSeen'))
+						document.documentElement.setAttribute('data-ess-intro-seen', '');
+				} catch (e) {}
 
 				// Appearance settings (Super Admin only, set at /admin/tweaks).
 				// Applied pre-paint so previewing never flashes the default first.

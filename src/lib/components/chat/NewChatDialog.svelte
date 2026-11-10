@@ -1,5 +1,9 @@
 <script lang="ts">
 	import X from '@lucide/svelte/icons/x';
+	import LogIn from '@lucide/svelte/icons/log-in';
+	import MessageSquarePlus from '@lucide/svelte/icons/message-square-plus';
+	import Users from '@lucide/svelte/icons/users';
+	import Hash from '@lucide/svelte/icons/hash';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import { lockPageScroll } from '$lib/scroll-lock';
 
@@ -108,7 +112,7 @@
 			{#each browse as c (c.id)}
 				<div class="chan">
 					<span><strong>#{c.name}</strong><small>{c.topic || 'No topic'} · {c.members} members</small></span>
-					<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={busy} onclick={async () => { if (await post(`channels/${c.id}/join`, {})) onopen(c.id); }}>Join</button>
+					<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={busy} onclick={async () => { if (await post(`channels/${c.id}/join`, {})) onopen(c.id); }}><LogIn size={14} /> Join</button>
 				</div>
 			{:else}
 				<p class="note">No public channels to join right now. Team and shift channels you belong to are already in your sidebar.</p>
@@ -158,11 +162,11 @@
 		<footer>
 			<span class="note">{picked.length} selected</span>
 			{#if tab === 'message'}
-				<button type="button" class="ess-btn ess-btn--primary" disabled={busy || picked.length !== 1} onclick={start}>Start chat</button>
+				<button type="button" class="ess-btn ess-btn--primary" disabled={busy || picked.length !== 1} onclick={start}><MessageSquarePlus size={16} /> Start chat</button>
 			{:else if tab === 'group'}
-				<button type="button" class="ess-btn ess-btn--primary" disabled={busy || picked.length < 2 || picked.length > 20} onclick={startGroup}>Create group</button>
+				<button type="button" class="ess-btn ess-btn--primary" disabled={busy || picked.length < 2 || picked.length > 20} onclick={startGroup}><Users size={16} /> Create group</button>
 			{:else}
-				<button type="button" class="ess-btn ess-btn--primary" disabled={busy || !name.trim()} onclick={create}>Create channel</button>
+				<button type="button" class="ess-btn ess-btn--primary" disabled={busy || !name.trim()} onclick={create}><Hash size={16} /> Create channel</button>
 			{/if}
 		</footer>
 	{/if}

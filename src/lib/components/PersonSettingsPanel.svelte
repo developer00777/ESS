@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { CHIEF_LABEL, CHIEF_PICK } from '$lib/chief';
 	import X from '@lucide/svelte/icons/x';
+	import Save from '@lucide/svelte/icons/save';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import { lockPageScroll } from '$lib/scroll-lock';
 	import { overlayIn, overlayOut } from '$lib/motion';
+	import { invalidateAll } from '$app/navigation';
 
 	/**
 	 * Every org setting for one employee, edited together and saved once.
@@ -45,6 +47,10 @@
 		canEditRole: boolean;
 		/** Whether this viewer may set someone to report to Chief. Admins only. */
 		canPickChief?: boolean;
+		/** Holds people.employee_code: may set the company code attendance joins on. */
+		canSetEmployeeCode?: boolean;
+		/** Holds people.edit_settings: may override pink-leave eligibility. */
+		canSetPinkLeave?: boolean;
 		currentUserId: string;
 		onclose: () => void;
 		onsaved: () => void;
@@ -60,6 +66,8 @@
 		roles,
 		canEditRole,
 		canPickChief = false,
+		canSetEmployeeCode = false,
+		canSetPinkLeave = false,
 		currentUserId,
 		onclose,
 		onsaved,
@@ -89,6 +97,81 @@
 
 	let saving = $state(false);
 	let saveError = $state('');
+
+	/*
+		Employee code and pink leave save on their own, straight away, rather than
+		with the rest of the form: each has its own endpoint, and the code is the
+		key attendance joins on, so a clash (409) has to be shown against the field
+		that caused it. A save refreshes the page data behind, so the directory's
+		"No code" badge clears without closing the panel.
+	*/
+	// svelte-ignore state_referenced_locally
+	let savedCode = $state(person.employeeCode ?? '');
+	// svelte-ignore state_referenced_locally
+	let code = $state(person.employeeCode ?? '');
+	let codeSaving = $state(false);
+	let codeError = $state('');
+	let codeSaved = $state(false);
+	const codeDirty = $derived(code.trim().toUpperCase() !== savedCode);
+
+	async function saveCode() {
+		codeError = '';
+		codeSaved = false;
+		const value = code.trim().toUpperCase();
+		if (!value) {
+			codeError = 'Enter the employee code.';
+			return;
+		}
+		codeSaving = true;
+		try {
+			const res = await fetch(`/api/admin/users/${person.id}/employee-code`, {
+				method: 'PUT',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ employeeCode: value })
+			});
+			const body = await res.json().catch(() => ({}));
+			if (!res.ok) {
+				codeError = body.message ?? 'Could not save the employee code';
+				return;
+			}
+			savedCode = body.profile?.employeeCode ?? value;
+			code = savedCode;
+			codeSaved = true;
+			await invalidateAll();
+		} finally {
+			codeSaving = false;
+		}
+	}
+
+	/*
+		The page data doesn't carry the current override, so no choice shows as
+		pressed until one is made here; the help line says so. null hands the
+		decision back to the automatic rule.
+	*/
+	let pink = $state<'auto' | 'yes' | 'no' | null>(null);
+	let pinkSaving = $state(false);
+	let pinkError = $state('');
+
+	async function savePink(next: 'auto' | 'yes' | 'no') {
+		pinkError = '';
+		pinkSaving = true;
+		try {
+			const res = await fetch(`/api/admin/users/${person.id}/pink-leave`, {
+				method: 'PUT',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ eligible: next === 'auto' ? null : next === 'yes' })
+			});
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				pinkError = body.message ?? 'Could not save pink leave eligibility';
+				return;
+			}
+			pink = next;
+			await invalidateAll();
+		} finally {
+			pinkSaving = false;
+		}
+	}
 
 	let scrimEl: HTMLElement;
 	let panelEl: HTMLElement;
@@ -221,7 +304,7 @@
 			<Avatar userId={person.id} fullName={person.fullName} hasPicture={person.hasPicture} size="md" />
 			<div class="who-text">
 				<h2 class="ess-h2">{person.fullName}</h2>
-				<span class="meta">{person.employeeCode ?? 'No code'} · {person.email}</span>
+				<span class="meta">{savedCode || 'No code'} · {person.email}</span>
 			</div>
 		</div>
 		<button type="button" class="ess-icon-btn" onclick={() => requestClose(onclose)} aria-label="Close">
@@ -329,6 +412,70 @@
 				<span class="ess-help">Reflects on this employee's leave and attendance calendars.</span>
 			</label>
 		</section>
+
+		{#if canSetEmployeeCode || canSetPinkLeave}
+			<section class="group">
+				<h3>Records</h3>
+
+				{#if canSetEmployeeCode}
+					<div class="ess-field field">
+						<label class="ess-label" for="ps-code">Employee code</label>
+						<div class="inline">
+							<input
+								id="ps-code"
+								class="ess-input code-input"
+								class:ess-input--invalid={!!codeError}
+								bind:value={code}
+								oninput={() => {
+									code = code.toUpperCase();
+									codeSaved = false;
+								}}
+								onkeydown={(e) => e.key === 'Enter' && codeDirty && !codeSaving && saveCode()}
+								maxlength="32"
+								placeholder="e.g. CIPL2666"
+								autocomplete="off"
+								spellcheck="false"
+							/>
+							<button type="button" class="ess-btn ess-btn--secondary" onclick={saveCode} disabled={codeSaving || !codeDirty}>
+								<Save size={16} />
+								{codeSaving ? 'Saving…' : 'Save code'}
+							</button>
+						</div>
+						{#if codeError}
+							<span class="ess-error" role="alert">{codeError}</span>
+						{:else if codeSaved}
+							<span class="ess-help saved" role="status">Saved. Attendance now matches on {savedCode}.</span>
+						{:else}
+							<span class="ess-help">The code biometric, EasyTime and ProHance punches are matched on. Must be unique.</span>
+						{/if}
+					</div>
+				{/if}
+
+				{#if canSetPinkLeave}
+					<div class="ess-field field">
+						<span class="ess-label" id="ps-pink">Pink leave</span>
+						<div class="ess-segmented" role="group" aria-labelledby="ps-pink">
+							<button type="button" aria-pressed={pink === 'auto'} disabled={pinkSaving} onclick={() => savePink('auto')}>Automatic</button>
+							<button type="button" aria-pressed={pink === 'yes'} disabled={pinkSaving} onclick={() => savePink('yes')}>Eligible</button>
+							<button type="button" aria-pressed={pink === 'no'} disabled={pinkSaving} onclick={() => savePink('no')}>Not eligible</button>
+						</div>
+						{#if pinkError}
+							<span class="ess-error" role="alert">{pinkError}</span>
+						{:else if pinkSaving}
+							<span class="ess-help" role="status">Saving…</span>
+						{:else if pink}
+							<span class="ess-help saved" role="status">
+								Saved: {pink === 'auto' ? 'the automatic rule decides (female and confirmed, or 6 months’ service)' : pink === 'yes' ? 'eligible, whatever the records say' : 'not eligible, whatever the records say'}.
+							</span>
+						{:else}
+							<span class="ess-help">
+								Choose to override. Automatic follows the rule (female and confirmed, or 6 months’ service); the current choice isn’t shown here. Saves straight away.
+							</span>
+						{/if}
+					</div>
+				{/if}
+			</section>
+		{/if}
 	</div>
 
 	<footer class="panel-foot">
@@ -350,6 +497,7 @@
 				onclick={save}
 				disabled={saving || !dirty}
 			>
+				<Save size={16} />
 				{saving ? 'Saving…' : dirty ? 'Save changes' : 'No changes'}
 			</button>
 		</div>
@@ -451,6 +599,24 @@
 
 	.field {
 		margin-bottom: 14px;
+	}
+
+	/* Employee code: the field and its own Save side by side */
+	.inline {
+		display: flex;
+		gap: 8px;
+	}
+	.inline .ess-input {
+		flex: 1;
+		min-width: 0;
+	}
+	.code-input {
+		text-transform: uppercase;
+		font-variant-numeric: tabular-nums;
+		letter-spacing: 0.02em;
+	}
+	.ess-help.saved {
+		color: var(--ess-success);
 	}
 
 	.static-value {

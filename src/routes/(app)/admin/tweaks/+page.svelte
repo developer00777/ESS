@@ -17,6 +17,9 @@
 	import CalendarDays from '@lucide/svelte/icons/calendar-days';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
+	import Eye from '@lucide/svelte/icons/eye';
+	import ListChecks from '@lucide/svelte/icons/list-checks';
 
 	/**
 	 * Each setting maps to a data-* attribute on <html>. `null` means "don't
@@ -138,7 +141,7 @@
 <div class="ess-split ess-split--wide layout">
 	<section class="ess-card ess-fill-card settings-card">
 		<div class="ess-card-head">
-			<h2 class="ess-h2">Interface style</h2>
+			<h2 class="ess-h2"><SlidersHorizontal size={16} /> Interface style</h2>
 		</div>
 		<div class="settings ess-scroll">
 			{#each TWEAKS as tweak (tweak.key)}
@@ -165,7 +168,7 @@
 
 	<aside class="ess-card preview-card">
 		<div class="ess-card-head">
-			<h2 class="ess-h2">Live preview</h2>
+			<h2 class="ess-h2"><Eye size={16} /> Live preview</h2>
 			<span class="ess-caption"><em>This preview reflects your current selections.</em></span>
 		</div>
 		<div class="preview" {...previewAttrs} data-theme={current.palette ?? 'light'}>
@@ -208,7 +211,7 @@
 	<section class="ess-card summary">
 		<div class="ess-card-head">
 			<div>
-				<h2 class="ess-h2">Current selection summary</h2>
+				<h2 class="ess-h2"><ListChecks size={16} /> Current selection summary</h2>
 				<p class="ess-caption">
 					{changed.length === 0 ? 'Everything is at its shipped default. These settings apply to this browser only.' : `${changed.length} setting${changed.length === 1 ? '' : 's'} changed from default, in this browser only.`}
 				</p>

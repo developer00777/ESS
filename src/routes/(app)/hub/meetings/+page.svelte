@@ -7,6 +7,13 @@
 	import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import CalendarDays from '@lucide/svelte/icons/calendar-days';
+	import CalendarCheck from '@lucide/svelte/icons/calendar-check';
+	import CalendarX from '@lucide/svelte/icons/calendar-x';
+	import Clock from '@lucide/svelte/icons/clock';
+	import ClipboardCheck from '@lucide/svelte/icons/clipboard-check';
+	import FileText from '@lucide/svelte/icons/file-text';
+	import SquareCheck from '@lucide/svelte/icons/square-check';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import PasteNotesDialog from '$lib/components/hub/PasteNotesDialog.svelte';
 	import ScheduleMeetingDialog from '$lib/components/hub/ScheduleMeetingDialog.svelte';
@@ -14,6 +21,9 @@
 	import { longDay, timeIst, todayKey } from '$lib/hub/format';
 	import { istDateKey } from '$lib/chat/rules';
 	import type { MeetingRowView } from '$lib/tasks/types';
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 
 	let { data } = $props();
 
@@ -60,6 +70,12 @@
 		no_summary: { label: 'Not available', tone: 'neutral' },
 		cancelled: { label: 'Cancelled', tone: 'neutral' }
 	};
+	/* The past meetings table: sortable by each column, a page at a time. */
+	const pastView = new TableView(() => past, {
+		topic: (m) => m.topic,
+		date: (m) => m.startedAt,
+		minutes: (m) => MINUTES[m.state].label
+	});
 	const endOf = (m: MeetingRowView) => timeIst(new Date(Date.parse(m.startedAt) + (m.durationMin ?? 30) * 60_000).toISOString());
 </script>
 
@@ -102,20 +118,20 @@
 				{#if m.canJoin}<a class="ess-btn ess-btn--primary" href="/hub/meetings/{m.id}/join" target="_blank" rel="noopener" data-sveltekit-reload><Video size={16} /> {m.isHost ? 'Start' : 'Join'}{data.hub.zoom ? ' Zoom' : ''}</a>{/if}
 				{#if m.isHost}
 					{#if cancelling === m.id}
-						<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" onclick={() => cancel(m.id)}>Cancel meeting</button>
+						<button type="button" class="ess-btn ess-btn--danger ess-btn--sm" onclick={() => cancel(m.id)}><CalendarX size={14} /> Cancel meeting</button>
 						<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (cancelling = null)}>Keep</button>
 					{:else}
 						<button type="button" class="ess-btn ess-btn--ghost ess-btn--sm" onclick={() => (cancelling = m.id)}>Cancel</button>
 					{/if}
 				{/if}
 			{:else if m.isHost && m.state === 'ready'}
-				<a class="ess-btn ess-btn--primary ess-btn--sm" href="/hub/meetings/{m.id}">Review minutes</a>
+				<a class="ess-btn ess-btn--primary ess-btn--sm" href="/hub/meetings/{m.id}"><ClipboardCheck size={14} /> Review minutes</a>
 			{:else if m.isHost && m.state === 'published'}
-				<a class="ess-btn ess-btn--secondary ess-btn--sm" href="/hub/meetings/{m.id}">View summary</a>
+				<a class="ess-btn ess-btn--secondary ess-btn--sm" href="/hub/meetings/{m.id}"><FileText size={14} /> View summary</a>
 			{:else if m.isHost && (m.state === 'no_summary' || m.state === 'waiting')}
 				<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" onclick={() => (pasteFor = { id: m.id, topic: m.topic })}><ClipboardPaste size={14} /> Paste notes</button>
 			{:else if m.mine.length}
-				<a class="ess-btn ess-btn--secondary ess-btn--sm" href="/hub/tasks?task={m.mine[0].taskId}">Open my task</a>
+				<a class="ess-btn ess-btn--secondary ess-btn--sm" href="/hub/tasks?task={m.mine[0].taskId}"><SquareCheck size={14} /> Open my task</a>
 			{/if}
 		</div>
 	</article>
@@ -154,7 +170,7 @@
 		<div class="ess-stack">
 			<section class="ess-card ess-fill-card day-card" aria-labelledby="day-h">
 				<div class="ess-card-head">
-					<h2 id="day-h" class="ess-h2">{selected === today ? 'Today’s meetings' : selected > today ? 'Upcoming meetings' : 'Meetings that day'}</h2>
+					<h2 id="day-h" class="ess-h2"><CalendarDays size={16} /> {selected === today ? 'Today’s meetings' : selected > today ? 'Upcoming meetings' : 'Meetings that day'}</h2>
 					<span class="ess-caption">{onDay.length ? `${onDay.length} ${onDay.length === 1 ? 'meeting' : 'meetings'}` : ''}</span>
 				</div>
 				<div class="ess-scroll day-body">
@@ -184,17 +200,17 @@
 
 			<section class="ess-card ess-fill-card past-card" aria-labelledby="past-h">
 				<div class="ess-card-head">
-					<h2 id="past-h" class="ess-h2">Past meetings</h2>
+					<h2 id="past-h" class="ess-h2"><CalendarCheck size={16} /> Past meetings</h2>
 					<span class="ess-caption">Last 45 days</span>
 				</div>
 				{#if past.length}
 					<div class="table-wrap ess-scroll">
 						<table class="ess-table past">
 							<thead>
-								<tr><th>Topic</th><th>Date</th><th>Minutes status</th><th>Action</th></tr>
+								<tr><th aria-sort={pastView.ariaSort('topic')}><SortButton view={pastView} key="topic">Topic</SortButton></th><th aria-sort={pastView.ariaSort('date')}><SortButton view={pastView} key="date">Date</SortButton></th><th aria-sort={pastView.ariaSort('minutes')}><SortButton view={pastView} key="minutes">Minutes status</SortButton></th><th>Action</th></tr>
 							</thead>
 							<tbody>
-								{#each past as m (m.id)}
+								{#each pastView.rows as m (m.id)}
 									{@const s = MINUTES[m.state]}
 									<tr>
 										<td>
@@ -228,6 +244,7 @@
 							</tbody>
 						</table>
 					</div>
+					<TablePager view={pastView} noun="meetings" />
 				{:else}
 					<p class="empty ess-scroll">No meetings yet. Schedule one, or use Paste notes to turn a meeting into tasks.</p>
 				{/if}
@@ -236,7 +253,7 @@
 
 		<aside class="ess-card ess-fill-card sched" aria-labelledby="sched-h">
 			<div class="ess-card-head">
-				<h2 id="sched-h" class="ess-h2">Today’s schedule</h2>
+				<h2 id="sched-h" class="ess-h2"><Clock size={16} /> Today’s schedule</h2>
 			</div>
 			<ol class="tl ess-scroll">
 				{#each todays as m (m.id)}

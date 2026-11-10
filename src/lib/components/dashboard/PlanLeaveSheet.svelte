@@ -11,6 +11,7 @@
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import Users from '@lucide/svelte/icons/users';
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
+	import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
 	import SideSheet from '$lib/components/hub/SideSheet.svelte';
 	import { makeWeekOffResolver, workingDaysInRange } from '$lib/week-off';
 	import { addDays, daysBetween, type MyLeave } from '$lib/leave-planning';
@@ -191,7 +192,7 @@
 		<div class="actions">
 			<button type="button" class="ess-btn ess-btn--secondary" onclick={onclose}>Close</button>
 			<a class="ess-btn ess-btn--primary" class:disabled={!valid} aria-disabled={!valid} href={valid ? applyHref : undefined}>
-				Continue to apply
+				<CalendarPlus size={16} /> Continue to apply
 			</a>
 		</div>
 	</div>

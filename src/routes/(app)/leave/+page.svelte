@@ -11,9 +11,19 @@
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import CircleX from '@lucide/svelte/icons/circle-x';
 	import User from '@lucide/svelte/icons/user';
+	import ClipboardList from '@lucide/svelte/icons/clipboard-list';
+	import Umbrella from '@lucide/svelte/icons/umbrella';
+	import Route from '@lucide/svelte/icons/route';
+	import ChartColumn from '@lucide/svelte/icons/chart-column';
+	import Inbox from '@lucide/svelte/icons/inbox';
+	import ListChecks from '@lucide/svelte/icons/list-checks';
+	import Undo2 from '@lucide/svelte/icons/undo-2';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import LeaveCalendar from '$lib/components/LeaveCalendar.svelte';
+	import SortButton from '$lib/components/table/SortButton.svelte';
+	import TablePager from '$lib/components/table/TablePager.svelte';
+	import { TableView } from '$lib/ui/table-view.svelte';
 
 	let { data } = $props();
 
@@ -96,6 +106,13 @@
 			filter === 'all' ? true : filter === 'pending' ? r.application.status === 'pending' || r.application.status === 'escalated' : r.application.status === filter
 		)
 	);
+	/* The leave requests table: sortable by each column, a page at a time. */
+	const requestsView = new TableView(() => visibleApplications, {
+		type: (r) => r.type.name,
+		dates: (r) => r.application.startDate,
+		days: (r) => Number(r.application.days),
+		status: (r) => statusLabel(r.application.status)
+	});
 
 	// The request the progress panel follows: whichever the person clicks,
 	// otherwise the newest one that is still live, otherwise the newest.
@@ -262,7 +279,7 @@
 			<!-- Requests -->
 			<section class="ess-card ess-fill-card grow">
 				<div class="ess-card-head">
-					<h2 class="ess-h2">Leave requests</h2>
+					<h2 class="ess-h2"><ClipboardList size={16} /> Leave requests</h2>
 					<select class="ess-select filter" bind:value={filter} aria-label="Filter requests">
 						<option value="all">All leaves</option>
 						<option value="pending">Pending</option>
@@ -275,15 +292,15 @@
 						<table class="ess-table requests">
 							<thead>
 								<tr>
-									<th>Type</th>
-									<th>Dates</th>
-									<th>Days</th>
-									<th>Status</th>
+									<th aria-sort={requestsView.ariaSort('type')}><SortButton view={requestsView} key="type">Type</SortButton></th>
+									<th aria-sort={requestsView.ariaSort('dates')}><SortButton view={requestsView} key="dates">Dates</SortButton></th>
+									<th aria-sort={requestsView.ariaSort('days')}><SortButton view={requestsView} key="days">Days</SortButton></th>
+									<th aria-sort={requestsView.ariaSort('status')}><SortButton view={requestsView} key="status">Status</SortButton></th>
 									<th><span class="ess-sr-only">Open</span></th>
 								</tr>
 							</thead>
 							<tbody>
-								{#each visibleApplications as row (row.application.id)}
+								{#each requestsView.rows as row (row.application.id)}
 									{@const look = typeLook(row.type)}
 									<tr class:is-selected={selected?.application.id === row.application.id} onclick={() => (pickedId = row.application.id)}>
 										<td>
@@ -303,6 +320,7 @@
 							</tbody>
 						</table>
 					</div>
+					<TablePager view={requestsView} noun="requests" />
 				{:else}
 					<div class="ess-empty fill-empty">
 						<span class="ess-empty__icon"><Calendar size={22} strokeWidth={1.75} /></span>
@@ -315,7 +333,7 @@
 			<!-- Holidays -->
 			<section class="ess-card holidays">
 				<div class="ess-card-head">
-					<h2 class="ess-h2">Upcoming holidays</h2>
+					<h2 class="ess-h2"><Umbrella size={16} /> Upcoming holidays</h2>
 					<button type="button" class="ess-link" onclick={() => (tab = 'calendar')}>View calendar <ChevronRight size={15} /></button>
 				</div>
 				<div class="ess-rows holiday-strip">
@@ -340,7 +358,7 @@
 			<!-- Progress -->
 			<section class="ess-card ess-fill-card grow">
 				<div class="ess-card-head">
-					<h2 class="ess-h2">Request progress</h2>
+					<h2 class="ess-h2"><Route size={16} /> Request progress</h2>
 				</div>
 				<div class="ess-scroll">
 				{#if selected}
@@ -393,7 +411,7 @@
 			{#if data.allocations.length > 0 || data.monthlyBalances.length > 0}
 				<section class="ess-card usage-card">
 					<div class="ess-card-head">
-						<h2 class="ess-h2">Leave usage</h2>
+						<h2 class="ess-h2"><ChartColumn size={16} /> Leave usage</h2>
 					</div>
 					<div class="usage">
 						{#each data.allocations as row (row.allocation.id)}
@@ -442,7 +460,7 @@
 			<section class="ess-card ess-fill-card grow">
 				<div class="ess-card-head">
 					<div>
-						<h2 class="ess-h2">Awaiting your review</h2>
+						<h2 class="ess-h2"><Inbox size={16} /> Awaiting your review</h2>
 						<p class="quiet small">
 							{queueSorted.length} {queueSorted.length === 1 ? 'request' : 'requests'}{#if oldestAge} · Oldest {oldestAge.toLowerCase()}{/if}
 						</p>
@@ -478,7 +496,7 @@
 			{#if data.canReverseDecisions}
 				<section class="ess-card ess-fill-card grow">
 					<div class="ess-card-head">
-						<h2 class="ess-h2">Recent decisions</h2>
+						<h2 class="ess-h2"><ListChecks size={16} /> Recent decisions</h2>
 					</div>
 					<p class="quiet small reverse-note">
 						A decision can be overturned here. Reversing an approval returns the days to the employee's balance; re-approving spends them again, so it is refused if the balance no longer covers it.
@@ -505,12 +523,12 @@
 									<span class="ess-badge ess-badge--{status}">{status === 'rejected' ? 'Declined' : status}</span>
 									{#if confirmingReversal === row.application.id}
 										<button class="ess-btn ess-btn--sm ess-btn--danger" onclick={() => reverse(row.application.id, status)} disabled={reversingId === row.application.id}>
-											{reversingId === row.application.id ? 'Reversing…' : status === 'approved' ? 'Confirm reject' : 'Confirm approve'}
+											<Undo2 size={14} /> {reversingId === row.application.id ? 'Reversing…' : status === 'approved' ? 'Confirm reject' : 'Confirm approve'}
 										</button>
 										<button class="ess-btn ess-btn--sm ess-btn--ghost" onclick={() => (confirmingReversal = null)} disabled={reversingId === row.application.id}>Cancel</button>
 									{:else}
 										<button class="ess-btn ess-btn--sm ess-btn--ghost" onclick={() => (confirmingReversal = row.application.id)}>
-											{status === 'approved' ? 'Reverse to rejected' : 'Reverse to approved'}
+											<Undo2 size={14} /> {status === 'approved' ? 'Reverse to rejected' : 'Reverse to approved'}
 										</button>
 									{/if}
 								</span>

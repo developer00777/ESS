@@ -1,0 +1,1259 @@
+/* ============================================================
+   ESS — per-theme PAGE LAYOUTS (Mono, Atur, Amber)
+   ============================================================
+   The three themes share the app's pages, but each lays them out
+   in its own way. Original is untouched, and so are the login page
+   (AuthLayout) and the dashboard: every rule below is scoped to
+   .ess-content:not([data-section='dashboard']) (data-section is set
+   in routes/(app)/+layout.svelte).
+
+     MONO   "workspace document" (shadcn): a header with a bordered
+            page icon, the page name and its description, and the
+            page's tabs as an underlined row of their own. Flat
+            cards whose head is a grey band, small-caps table
+            headers, dashed empty states. Motion: a quiet fade-up.
+
+     ATUR   "floating blocks": the header is a white block with a
+            pastel icon tile per section, the name in Jost and the
+            page's headline, the tabs as black pills on its right.
+            Heading icons sit in pastel tiles, table rows are
+            separate rounded strips. Motion: blocks rise in turn.
+
+     AMBER  "bold banner" (Hirely): the header is a near-black
+            banner with a yellow icon disc, the section as a yellow
+            kicker over a big headline, and yellow tabs. The side
+            panel moves to the LEFT of the page, cards get the
+            biggest curves, icons sit in yellow discs.
+            Motion: the banner drops in, the icon spins in, the
+            columns slide in from the sides.
+
+   The app shortens every animation to 0.01ms under reduced motion
+   (ess-components.css); this machine reports reduced motion, so the
+   small, contained entrance animations here set their own length
+   with !important. They fill "backwards" only, so no transform is
+   left on the text once they finish (keeps text crisp, see
+   theme-skins notes on GPU layers).
+   ============================================================ */
+
+/* All three: a back link ("Leave /") shares the name's line. */
+@media (min-width: 721px) {
+	:root:is([data-ess-skin='mono'], [data-ess-skin='atur'], [data-ess-skin='amber']) .ess-content:not([data-section='dashboard']) .ess-page-head .bar-text:has(> .back) {
+		grid-template-columns: auto minmax(0, 1fr);
+		column-gap: 8px;
+		align-items: baseline;
+		& > :is(.bar-line, .bar-desc) {
+			grid-column: 1 / -1;
+		}
+	}
+}
+
+/* ------------------------------------------------------------
+   MONO
+------------------------------------------------------------ */
+@media (min-width: 721px) {
+	:root[data-ess-skin='mono'] .ess-content:not([data-section='dashboard']) {
+		/* Header: icon · name + description · actions, tabs underneath. */
+		& .ess-page-head.bar {
+			--reserve: 0px;
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr) auto var(--reserve);
+			align-items: center;
+			column-gap: 14px;
+			row-gap: 0;
+			min-height: 0;
+			padding: 0;
+			margin: 0 0 16px;
+			animation: ess-mono-in 320ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+			animation-duration: 320ms !important;
+		}
+		& .ess-page-head .bar-icon {
+			display: grid;
+			place-items: center;
+			grid-row: 1;
+			grid-column: 1;
+			width: 42px;
+			height: 42px;
+			border: 1px solid var(--mono-border, var(--ess-border));
+			border-radius: 11px;
+			background: var(--mono-card, var(--ess-surface));
+			color: var(--ess-text);
+			box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+		}
+		& .ess-page-head .bar-text {
+			display: grid;
+			grid-row: 1;
+			grid-column: 2;
+			align-content: center;
+			gap: 3px;
+			min-width: 0;
+		}
+		& .ess-page-head .bar-title {
+			font-size: 22px;
+			font-weight: 650;
+			letter-spacing: -0.025em;
+			line-height: 1.15;
+		}
+		& .ess-page-head .bar-desc {
+			display: block;
+			margin: 0;
+			font-size: 13px;
+			line-height: 1.35;
+			color: var(--mono-muted-fg, var(--ess-text-muted));
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		& .ess-page-head .back {
+			margin: 0;
+			font-size: 12.5px;
+		}
+		& .ess-page-head .bar-actions {
+			grid-row: 1;
+			grid-column: 3;
+			margin: 0;
+		}
+		& .ess-page-head .bar-tabs {
+			grid-row: 2;
+			grid-column: 1 / -1;
+			margin-top: 14px;
+			border-bottom: 1px solid var(--mono-border, var(--ess-border));
+		}
+		& .ess-page-head .bar-extra {
+			grid-row: 3;
+			grid-column: 1 / -1;
+			margin-top: 12px;
+		}
+
+		/* The page's tabs: an underlined row (the shadcn "line" tabs). */
+		& .bar-tabs .ess-tabs:not(.ess-tabs--line) {
+			gap: 22px;
+			padding: 0;
+			border: 0;
+			border-radius: 0;
+			background: transparent;
+			box-shadow: none;
+		}
+		& .bar-tabs .ess-tabs:not(.ess-tabs--line) .ess-tab {
+			height: auto;
+			padding: 6px 2px 11px;
+			border: 0;
+			border-radius: 0;
+			background: transparent;
+			color: var(--mono-muted-fg, var(--ess-text-muted));
+			box-shadow: inset 0 -2px 0 transparent;
+			transition:
+				color 180ms ease,
+				box-shadow 220ms ease;
+			transition-duration: 180ms, 220ms !important;
+		}
+		& .bar-tabs .ess-tabs:not(.ess-tabs--line) .ess-tab:hover {
+			background: transparent;
+			color: var(--ess-text);
+			box-shadow: inset 0 -2px 0 var(--mono-border, var(--ess-border));
+		}
+		& .bar-tabs .ess-tabs:not(.ess-tabs--line) .ess-tab:is([aria-selected='true'], [aria-current='page']) {
+			background: transparent;
+			color: var(--ess-text);
+			box-shadow: inset 0 -2px 0 var(--ess-text);
+		}
+		& .bar-tabs .ess-tabs--line {
+			border-bottom: 0;
+		}
+
+		/* Cards: flat, with the head as a grey band across the top. */
+		& .ess-card {
+			border-radius: 12px;
+			box-shadow: none;
+		}
+		& .ess-card > .ess-card-head:first-child {
+			margin: calc(var(--card-py, 20px) * -1) calc(var(--card-px, 20px) * -1) 16px;
+			padding: 12px var(--card-px, 20px);
+			border-bottom: 1px solid var(--mono-border, var(--ess-border));
+			border-radius: 11px 11px 0 0;
+			background: var(--mono-muted, var(--ess-sunken));
+		}
+		& .ess-card :is(.ess-h2, .ess-h3) > svg:first-child {
+			box-sizing: content-box;
+			width: 15px;
+			height: 15px;
+			padding: 6px;
+			border: 1px solid var(--mono-border, var(--ess-border));
+			border-radius: 8px;
+			background: var(--mono-card, var(--ess-surface));
+			color: var(--ess-text);
+		}
+
+		/* Tables: small-caps column names over hairline rows. */
+		& .ess-table th {
+			font-size: 11.5px;
+			font-weight: 600;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+			color: var(--mono-muted-fg, var(--ess-text-muted));
+		}
+
+		/* Empty states: a dashed drop-zone panel. */
+		& .ess-empty {
+			margin-inline: 6px;
+			border: 1.5px dashed var(--mono-border, var(--ess-border-strong));
+			border-radius: 12px;
+		}
+		& .ess-empty__icon {
+			border: 1px solid var(--mono-border, var(--ess-border));
+			background: var(--mono-card, var(--ess-surface));
+			box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+		}
+
+		/* Motion: the page body fades up just after the header. */
+		& > :not(.ess-page-head, .ess-breadcrumb) {
+			animation: ess-mono-in 360ms cubic-bezier(0.2, 0.7, 0.2, 1) 70ms backwards;
+			animation-duration: 360ms !important;
+		}
+		& .ess-card {
+			transition:
+				border-color 200ms ease,
+				box-shadow 200ms ease;
+			transition-duration: 200ms !important;
+		}
+		& .ess-card:hover {
+			border-color: color-mix(in srgb, var(--ess-text) 22%, var(--mono-border, var(--ess-border)));
+		}
+	}
+
+	/* Short screens: a tighter header so the page keeps its height. */
+	@media (max-height: 760px) {
+		:root[data-ess-skin='mono'] .ess-content:not([data-section='dashboard']) {
+			& .ess-page-head.bar {
+				margin-bottom: 10px;
+			}
+			& .ess-page-head .bar-icon {
+				width: 34px;
+				height: 34px;
+				border-radius: 9px;
+			}
+			& .ess-page-head .bar-title {
+				font-size: 19px;
+			}
+			& .ess-page-head .bar-desc {
+				font-size: 12px;
+			}
+			& .ess-page-head .bar-tabs {
+				margin-top: 8px;
+			}
+			& .bar-tabs .ess-tabs:not(.ess-tabs--line) .ess-tab {
+				padding: 4px 2px 8px;
+			}
+			& .ess-card > .ess-card-head:first-child {
+				padding-block: 9px;
+				margin-bottom: 12px;
+			}
+		}
+	}
+}
+/* The floating top-bar cluster shares the header's first row. */
+@media (min-width: 1101px) {
+	@container ess-fill (min-width: 1075px) {
+		:root[data-ess-skin='mono'] .ess-content:not([data-section='dashboard']) .ess-page-head.bar {
+			--reserve: var(--topbar-w, 380px);
+		}
+	}
+}
+@keyframes ess-mono-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+}
+
+/* ------------------------------------------------------------
+   ATUR
+------------------------------------------------------------ */
+:root[data-ess-skin='atur'] .ess-content:not([data-section='dashboard']) {
+	--sec-bg: #efe9ff;
+	--sec-fg: #6a45c9;
+}
+:root[data-ess-skin='atur'] .ess-content:is([data-section='leave'], [data-section='profile']) {
+	--sec-bg: #ffe4ef;
+	--sec-fg: #c2306d;
+}
+:root[data-ess-skin='atur'] .ess-content:is([data-section='attendance'], [data-section='hr-contacts']) {
+	--sec-bg: #ffead9;
+	--sec-fg: #c25a12;
+}
+:root[data-ess-skin='atur'] .ess-content:is([data-section='policies'], [data-section='payroll']) {
+	--sec-bg: #dcf7ec;
+	--sec-fg: #1d8a64;
+}
+:root[data-ess-skin='atur'] .ess-content:is([data-section='admin'], [data-section='announcements']) {
+	--sec-bg: #fff1cc;
+	--sec-fg: #9a6700;
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .ess-content:not([data-section='dashboard']) {
+	--sec-bg: rgba(169, 139, 255, 0.18);
+	--sec-fg: #c7b6ff;
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .ess-content:is([data-section='leave'], [data-section='profile']) {
+	--sec-bg: rgba(236, 95, 155, 0.18);
+	--sec-fg: #f59ac0;
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .ess-content:is([data-section='attendance'], [data-section='hr-contacts']) {
+	--sec-bg: rgba(255, 138, 92, 0.18);
+	--sec-fg: #ffb08a;
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .ess-content:is([data-section='policies'], [data-section='payroll']) {
+	--sec-bg: rgba(47, 199, 157, 0.18);
+	--sec-fg: #7fe0bf;
+}
+:root[data-ess-skin='atur'][data-ess-theme='dark'] .ess-content:is([data-section='admin'], [data-section='announcements']) {
+	--sec-bg: rgba(246, 178, 58, 0.18);
+	--sec-fg: #f8cd7a;
+}
+
+@media (min-width: 721px) {
+	:root[data-ess-skin='atur'] .ess-content:not([data-section='dashboard']) {
+		/* Header: one white block — icon tile, name and headline, then
+		   the tabs and the actions on the right. */
+		& .ess-page-head.bar {
+			position: relative;
+			flex-wrap: wrap;
+			gap: 10px 14px;
+			min-height: 66px;
+			padding: 10px 12px 10px 10px;
+			margin: 0 0 14px;
+			border-radius: 20px;
+			background: var(--ess-surface);
+			box-shadow: var(--atur-block-shadow);
+			animation: atur-rise 460ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+			animation-duration: 460ms !important;
+		}
+		& .ess-page-head .bar-icon {
+			display: grid;
+			place-items: center;
+			flex: none;
+			width: 46px;
+			height: 46px;
+			border-radius: 15px;
+			background: var(--sec-bg);
+			color: var(--sec-fg);
+			animation: atur-pop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 120ms backwards;
+			animation-duration: 520ms !important;
+		}
+		& .ess-page-head .bar-text {
+			display: grid;
+			align-content: center;
+			gap: 2px;
+			min-width: 0;
+			flex: 0 1 auto;
+		}
+		& .ess-page-head .bar-title {
+			font-family: var(--ess-font-display);
+			font-size: 21px;
+			font-weight: 600;
+			letter-spacing: -0.01em;
+			line-height: 1.15;
+		}
+		& .ess-page-head .bar-line {
+			display: block;
+			margin: 0;
+			font-size: 12.5px;
+			line-height: 1.3;
+			color: var(--ess-text-muted);
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		& .ess-page-head .back {
+			margin: 0;
+			font-size: 12px;
+		}
+		& .ess-page-head .bar-tabs {
+			margin-left: auto;
+		}
+		& .ess-page-head.has-tabs .bar-actions {
+			margin-left: 0;
+		}
+		/* The tabs: a grey track inside the block, the open one black. */
+		& .ess-page-head .bar-tabs .ess-tabs:not(.ess-tabs--line) {
+			border: 0;
+			border-radius: 999px;
+			background: var(--ess-sunken);
+			box-shadow: none;
+		}
+		& .ess-page-head .bar-tabs .ess-tabs:not(.ess-tabs--line) .ess-tab {
+			border-radius: 999px;
+			transition:
+				background-color 200ms ease,
+				color 200ms ease,
+				box-shadow 200ms ease;
+			transition-duration: 200ms !important;
+		}
+		& .ess-page-head .bar-tabs .ess-tabs:not(.ess-tabs--line) .ess-tab:not([aria-selected='true']):hover {
+			background: var(--ess-surface);
+			color: var(--ess-text);
+		}
+
+		/* Heading icons: pastel tiles in the section's colour. */
+		& .ess-card :is(.ess-h2, .ess-h3) > svg:first-child {
+			box-sizing: content-box;
+			width: 15px;
+			height: 15px;
+			padding: 7px;
+			border-radius: 10px;
+			background: var(--sec-bg);
+			color: var(--sec-fg);
+		}
+		& .ess-empty__icon {
+			border-radius: 18px;
+			background: var(--sec-bg);
+			color: var(--sec-fg);
+		}
+
+		/* Tables: each row its own rounded strip under the grey header band. */
+		& .ess-table {
+			border-collapse: separate;
+			border-spacing: 0 5px;
+		}
+		& .ess-table td {
+			border-bottom: 0;
+			background: color-mix(in srgb, var(--ess-sunken) 55%, var(--ess-surface));
+			transition: background-color 180ms ease;
+			transition-duration: 180ms !important;
+		}
+		& .ess-table tbody tr > td:first-child {
+			border-radius: 12px 0 0 12px;
+		}
+		& .ess-table tbody tr > td:last-child {
+			border-radius: 0 12px 12px 0;
+		}
+		& .ess-table tbody tr:hover td {
+			background: var(--ess-primary-softer);
+		}
+
+		/* Motion: the blocks rise in, one after the other. */
+		& .ess-split > *,
+		& .ess-fill > .ess-card,
+		& .ess-figures > *,
+		& .admin-body > * {
+			animation: atur-rise 480ms cubic-bezier(0.2, 0.8, 0.2, 1) 90ms backwards;
+			animation-duration: 480ms !important;
+		}
+		& :is(.ess-split, .ess-figures, .admin-body, .ess-fill) > :nth-child(2) {
+			animation-delay: 170ms;
+		}
+		& :is(.ess-split, .ess-figures, .admin-body, .ess-fill) > :nth-child(3) {
+			animation-delay: 240ms;
+		}
+		& :is(.ess-split, .ess-figures, .admin-body, .ess-fill) > :nth-child(n + 4) {
+			animation-delay: 300ms;
+		}
+		& .ess-card {
+			transition: box-shadow 220ms ease;
+			transition-duration: 220ms !important;
+		}
+		& .ess-card:hover {
+			box-shadow:
+				var(--atur-block-shadow),
+				0 14px 30px -18px rgba(28, 29, 34, 0.28);
+		}
+	}
+
+	@media (max-height: 760px) {
+		:root[data-ess-skin='atur'] .ess-content:not([data-section='dashboard']) {
+			& .ess-page-head.bar {
+				min-height: 54px;
+				padding: 6px 10px 6px 6px;
+				margin-bottom: 10px;
+				border-radius: 16px;
+			}
+			& .ess-page-head .bar-icon {
+				width: 40px;
+				height: 40px;
+				border-radius: 13px;
+			}
+			& .ess-page-head .bar-title {
+				font-size: 19px;
+			}
+			& .ess-page-head .bar-line {
+				font-size: 12px;
+			}
+		}
+	}
+}
+@keyframes atur-rise {
+	from {
+		opacity: 0;
+		transform: translateY(12px);
+	}
+}
+@keyframes atur-pop {
+	from {
+		opacity: 0;
+		transform: scale(0.6) rotate(-8deg);
+	}
+}
+
+/* ------------------------------------------------------------
+   AMBER
+------------------------------------------------------------ */
+@media (min-width: 721px) {
+	:root[data-ess-skin='amber'] .ess-content:not([data-section='dashboard']) {
+		/* the blue banner (was near-black, 2026-11-09); everything on it is
+		   white or near-white, since faded white and yellow text fall under
+		   4.5:1 on this blue */
+		--banner-bg:
+			radial-gradient(70% 160% at 100% 0%, rgba(255, 255, 255, 0.16), transparent 62%),
+			radial-gradient(40% 120% at 0% 100%, rgba(10, 30, 140, 0.25), transparent 70%),
+			#2055ff;
+		--banner-fg: #ffffff;
+		--banner-muted: rgba(255, 255, 255, 0.92);
+		--banner-chip: rgba(10, 30, 140, 0.28);
+
+		/* Header: the dark banner — yellow disc, kicker, big headline. */
+		& .ess-page-head.bar {
+			flex-wrap: wrap;
+			gap: 10px 16px;
+			min-height: 76px;
+			padding: 12px 14px 12px 12px;
+			margin: 0 0 16px;
+			border-radius: 26px;
+			background: var(--banner-bg);
+			color: var(--banner-fg);
+			box-shadow: 0 18px 36px -24px rgba(20, 50, 200, 0.55);
+			animation: amb-drop 480ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+			animation-duration: 480ms !important;
+		}
+		& .ess-page-head .bar-icon {
+			display: grid;
+			place-items: center;
+			flex: none;
+			width: 52px;
+			height: 52px;
+			border-radius: 50%;
+			background: var(--amb-yellow);
+			color: #161616;
+			box-shadow:
+				0 0 0 5px rgba(255, 202, 32, 0.16),
+				0 8px 18px -8px rgba(255, 183, 3, 0.7);
+			animation: amb-spin 640ms cubic-bezier(0.34, 1.56, 0.64, 1) 140ms backwards;
+			animation-duration: 640ms !important;
+		}
+		& .ess-page-head .bar-text {
+			display: grid;
+			align-content: center;
+			gap: 3px;
+			min-width: 0;
+			flex: 0 1 auto;
+		}
+		/* The section's name is the small yellow kicker… */
+		& .ess-page-head .bar-title {
+			order: -1;
+			font-size: 11.5px;
+			font-weight: 700;
+			letter-spacing: 0.12em;
+			line-height: 1.2;
+			text-transform: uppercase;
+			color: var(--banner-fg);
+		}
+		/* …and the page's headline is the big line. */
+		& .ess-page-head .bar-line {
+			display: block;
+			margin: 0;
+			font-size: 22px;
+			font-weight: 700;
+			letter-spacing: -0.02em;
+			line-height: 1.15;
+			color: var(--banner-fg);
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		& .ess-page-head .back {
+			order: -2;
+			margin: 0;
+			font-size: 12px;
+			color: var(--banner-muted);
+		}
+		& .ess-page-head .back:hover {
+			color: var(--banner-fg);
+			text-decoration: underline;
+		}
+		& .ess-page-head .bar-tabs {
+			margin-left: auto;
+		}
+		& .ess-page-head.has-tabs .bar-actions {
+			margin-left: 0;
+		}
+
+		/* Tabs on the banner: a smoky track, the open one yellow. */
+		& .ess-page-head .ess-tabs:not(.ess-tabs--line) {
+			border: 0;
+			background: var(--banner-chip);
+			box-shadow: none;
+		}
+		& .ess-page-head .ess-tabs:not(.ess-tabs--line) .ess-tab {
+			color: var(--banner-muted);
+			transition:
+				background-color 200ms ease,
+				color 200ms ease;
+			transition-duration: 200ms !important;
+		}
+		& .ess-page-head .ess-tabs:not(.ess-tabs--line) .ess-tab:hover {
+			background: rgba(255, 255, 255, 0.14);
+			color: var(--banner-fg);
+		}
+		& .ess-page-head .ess-tabs:not(.ess-tabs--line) .ess-tab:is([aria-selected='true'], [aria-current='page']) {
+			background: var(--amb-yellow);
+			color: #161616;
+			box-shadow: 0 6px 14px -8px rgba(242, 188, 18, 0.8);
+		}
+		& .ess-page-head .ess-tabs:not(.ess-tabs--line) .ess-tab:is([aria-selected='true'], [aria-current='page']) .ess-count {
+			background: rgba(22, 22, 22, 0.14);
+			color: #161616;
+		}
+		/* Admin's long section row: a second line across the banner. */
+		& .ess-page-head:has(nav.admin-tabs) .bar-tabs {
+			order: 5;
+			flex: 1 1 100%;
+			margin: 2px 0 -4px;
+			padding-top: 8px;
+			border-top: 1px solid rgba(255, 255, 255, 0.1);
+		}
+		& .ess-page-head:has(nav.admin-tabs) .bar-actions {
+			margin-left: auto;
+		}
+		& .ess-page-head .ess-tabs--line {
+			border: 0;
+			background: transparent;
+			box-shadow: none;
+		}
+		& .ess-page-head .ess-tabs--line .ess-tab {
+			color: var(--banner-muted);
+		}
+		& .ess-page-head .ess-tabs--line .ess-tab:hover {
+			color: var(--banner-fg);
+		}
+		& .ess-page-head .ess-tabs--line .ess-tab:is([aria-selected='true'], [aria-current='page']) {
+			color: var(--banner-fg);
+			font-weight: 700;
+		}
+		& .ess-page-head .ess-tabs--line .ess-tab:is([aria-selected='true'], [aria-current='page'])::after {
+			background: var(--amb-yellow);
+		}
+		& .ess-page-head .group-sep {
+			background: rgba(255, 255, 255, 0.14);
+		}
+		& .ess-page-head .bar-actions :is(.ess-btn--secondary, .ess-btn--ghost, button.search) {
+			border-color: rgba(255, 255, 255, 0.12);
+			background: rgba(255, 255, 255, 0.08);
+			color: var(--banner-fg);
+		}
+		& .ess-page-head .bar-actions :is(.ess-btn--secondary, .ess-btn--ghost, button.search):hover {
+			background: rgba(255, 255, 255, 0.14);
+		}
+		& .ess-page-head .bar-actions .ess-kbd {
+			border-color: rgba(255, 255, 255, 0.16);
+			background: rgba(255, 255, 255, 0.06);
+			color: var(--banner-muted);
+		}
+
+		/* Layout: the side panel moves to the left of the page. The grid
+		   is mirrored, its columns keep their own widths. */
+		& .ess-split {
+			direction: rtl;
+		}
+		& .ess-split > * {
+			direction: ltr;
+		}
+
+		/* Cards: the biggest curves; heading icons in yellow discs. */
+		& .ess-card {
+			border-radius: 28px;
+		}
+		& .ess-card :is(.ess-h2, .ess-h3) > svg:first-child {
+			box-sizing: content-box;
+			width: 15px;
+			height: 15px;
+			padding: 7px;
+			border-radius: 50%;
+			background: var(--ess-primary-soft);
+			color: var(--ess-text);
+		}
+		& .ess-empty__icon {
+			border-radius: 50%;
+			box-shadow: 0 0 0 8px var(--ess-primary-softer);
+			animation: amb-ring 2.8s ease-in-out infinite;
+			animation-duration: 2.8s !important;
+		}
+
+		/* Tables: a cream header pill, dashed row lines. */
+		& .ess-table th {
+			background: var(--ess-primary-softer);
+			border-bottom-color: transparent;
+			color: var(--ess-text-secondary);
+			font-weight: 700;
+		}
+		& .ess-table thead tr > th:first-child {
+			border-radius: 999px 0 0 999px;
+		}
+		& .ess-table thead tr > th:last-child {
+			border-radius: 0 999px 999px 0;
+		}
+		& .ess-table td {
+			border-bottom: 1px dashed var(--ess-border-strong);
+		}
+		& .ess-table tbody tr:hover td {
+			background: var(--ess-primary-softer);
+		}
+
+		/* Motion: the columns slide in from their own sides. */
+		& .ess-split > :first-child {
+			animation: amb-from-right 520ms cubic-bezier(0.2, 0.8, 0.2, 1) 120ms backwards;
+			animation-duration: 520ms !important;
+		}
+		& .ess-split > :not(:first-child) {
+			animation: amb-from-left 520ms cubic-bezier(0.2, 0.8, 0.2, 1) 200ms backwards;
+			animation-duration: 520ms !important;
+		}
+		& :is(.ess-fill, .admin-body) > :not(.ess-split),
+		& .ess-figures {
+			animation: amb-grow 460ms cubic-bezier(0.2, 0.8, 0.2, 1) 100ms backwards;
+			animation-duration: 460ms !important;
+		}
+		& .ess-card {
+			transition: box-shadow 220ms ease;
+			transition-duration: 220ms !important;
+		}
+		& .ess-card:hover {
+			box-shadow:
+				var(--ess-elev-1),
+				0 18px 34px -22px rgba(120, 80, 20, 0.45);
+		}
+	}
+	:root[data-ess-skin='amber'][data-ess-theme='dark'] .ess-content:not([data-section='dashboard']) {
+		--banner-bg:
+			radial-gradient(70% 160% at 100% 0%, rgba(255, 255, 255, 0.12), transparent 62%),
+			#2055ff;
+	}
+
+	@media (max-height: 760px) {
+		:root[data-ess-skin='amber'] .ess-content:not([data-section='dashboard']) {
+			& .ess-page-head.bar {
+				min-height: 60px;
+				padding: 8px 12px 8px 8px;
+				margin-bottom: 10px;
+				border-radius: 22px;
+			}
+			& .ess-page-head .bar-icon {
+				width: 42px;
+				height: 42px;
+			}
+			& .ess-page-head .bar-line {
+				font-size: 18px;
+			}
+		}
+	}
+}
+/* ------------------------------------------------------------
+   PAYROLL in Atur and Amber: the taller themed header (and the top nav
+   these two use instead of a sidebar) pushed the overview ~22px past the
+   screen. Win the room back from spacing only — the page's own 16px
+   bottom pad (the content area already has one), and slightly tighter
+   gaps between header, toolbar and the chart rows.
+------------------------------------------------------------ */
+@media (min-width: 721px) {
+	:root:is([data-ess-skin='atur'], [data-ess-skin='amber']) .ess-content[data-section='payroll'] {
+		& .ess-page-head.bar {
+			margin-bottom: 10px;
+		}
+		& .toolbar {
+			margin-bottom: 8px;
+		}
+		& .pr-overview {
+			gap: 10px;
+			padding-bottom: 0;
+		}
+		& .pr-overview .grid {
+			gap: 10px;
+		}
+	}
+}
+/* Short screens (1280×800 and the like): a slimmer header, a shorter
+   "who turned up" chart and a smaller donut so the overview still ends on
+   the screen. The chart sets its least height inline, hence !important. */
+@media (min-width: 721px) and (max-height: 840px) {
+	:root:is([data-ess-skin='atur'], [data-ess-skin='amber']) .ess-content[data-section='payroll'] {
+		& .ess-page-head.bar {
+			min-height: 54px;
+			padding-block: 6px;
+		}
+		& .ess-page-head .bar-icon {
+			width: 40px;
+			height: 40px;
+		}
+		& .pr-overview .chart {
+			min-height: 128px !important;
+		}
+		& .pr-overview .donut {
+			padding: 0;
+		}
+		& .pr-overview .donut svg {
+			width: 104px;
+			height: 104px;
+		}
+	}
+	:root[data-ess-skin='amber'] .ess-content[data-section='payroll'] .ess-page-head .bar-line {
+		font-size: 18px;
+	}
+}
+@media (min-width: 721px) and (max-height: 780px) {
+	:root:is([data-ess-skin='atur'], [data-ess-skin='amber']) .ess-content[data-section='payroll'] .pr-overview .chart {
+		min-height: 108px !important;
+	}
+}
+
+@keyframes amb-drop {
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+}
+@keyframes amb-spin {
+	from {
+		opacity: 0;
+		transform: rotate(-120deg) scale(0.4);
+	}
+}
+@keyframes amb-from-left {
+	from {
+		opacity: 0;
+		transform: translateX(-18px);
+	}
+}
+@keyframes amb-from-right {
+	from {
+		opacity: 0;
+		transform: translateX(18px);
+	}
+}
+@keyframes amb-grow {
+	from {
+		opacity: 0;
+		transform: scale(0.985);
+	}
+}
+@keyframes amb-ring {
+	50% {
+		box-shadow: 0 0 0 13px var(--ess-primary-softer);
+	}
+}
+
+/* ------------------------------------------------------------
+   ORANGE ACCENT for Atur and Mono (2026-11-05, by request: "use orange
+   for the highlight and link underline"). These two themes are black /
+   white only, so links, underline indicators, text selection and the
+   keyboard focus ring take a warm orange. Darker in light mode so link
+   text stays AA on white; brighter in dark mode.
+------------------------------------------------------------ */
+:root:is([data-ess-skin='atur'], [data-ess-skin='mono']) {
+	--hl: #c2410c;
+	--hl-line: #f97316;
+	--hl-soft: rgba(249, 115, 22, 0.22);
+	--ess-primary-ring: rgba(249, 115, 22, 0.45);
+}
+:root:is([data-ess-skin='atur'], [data-ess-skin='mono'])[data-ess-theme='dark'] {
+	--hl: #fb923c;
+	--hl-line: #fb923c;
+	--hl-soft: rgba(251, 146, 60, 0.28);
+	--ess-primary-ring: rgba(251, 146, 60, 0.5);
+}
+:root:is([data-ess-skin='atur'], [data-ess-skin='mono']) ::selection {
+	background: var(--hl-soft);
+	color: inherit;
+}
+/* text links: orange with an orange underline that firms up on hover */
+:root:is([data-ess-skin='atur'], [data-ess-skin='mono']) .ess-shell :is(.ess-link, .ess-content p a:not([class]), .ess-content li a:not([class])) {
+	color: var(--hl);
+	text-decoration: underline;
+	text-decoration-color: color-mix(in srgb, var(--hl-line) 45%, transparent);
+	text-decoration-thickness: 1.5px;
+	text-underline-offset: 3px;
+	transition: text-decoration-color 160ms ease, color 160ms ease;
+}
+:root:is([data-ess-skin='atur'], [data-ess-skin='mono']) .ess-shell :is(.ess-link, .ess-content p a:not([class]), .ess-content li a:not([class])):hover {
+	color: var(--hl);
+	text-decoration-color: var(--hl-line);
+}
+/* keyboard focus: an orange ring */
+:root:is([data-ess-skin='atur'], [data-ess-skin='mono']) .ess-shell :is(a, button, [tabindex]):focus-visible {
+	outline: 2px solid var(--hl-line);
+	outline-offset: 2px;
+}
+/* underline tabs: the active line is orange */
+:root:is([data-ess-skin='atur'], [data-ess-skin='mono']) .ess-tabs--line .ess-tab:is([aria-selected='true'], [aria-current='page'])::after {
+	background: var(--hl-line);
+}
+@media (min-width: 721px) {
+	:root[data-ess-skin='mono'] .ess-content:not([data-section='dashboard']) .bar-tabs .ess-tabs:not(.ess-tabs--line) .ess-tab:is([aria-selected='true'], [aria-current='page']) {
+		box-shadow: inset 0 -2px 0 var(--hl-line);
+	}
+}
+
+/* Page headers never shrink (fix 2026-11-05): their min-height replaced
+   the content-based minimum, so on long pages (HR analytics) the scroll
+   column squeezed Amber's banner to 76px and its second row of admin
+   tabs spilled out over the page. */
+:root:is([data-ess-skin='mono'], [data-ess-skin='atur'], [data-ess-skin='amber']) .ess-content:not([data-section='dashboard']) .ess-page-head {
+	flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------
+   DASHBOARD ENTRANCES (2026-11-05, by request: "must add animations").
+   The per-theme page layouts above leave the dashboard alone; here it
+   gets the same soft, theme-flavoured entrances — header, planner, then
+   the lower panels one after another; the small figure cards pop in.
+   Backwards fill only (no transform lingers to soften text), durations
+   !important to outlast the global reduced-motion rule, and hovers move
+   shadows, never positions.
+------------------------------------------------------------ */
+/* Mono: a quiet fade-up */
+:root[data-ess-skin='mono'] .ess-content[data-section='dashboard'] {
+	& .home > .top {
+		animation: ess-mono-in 340ms ease-out backwards;
+		animation-duration: 340ms !important;
+	}
+	& .home > .planner {
+		animation: ess-mono-in 380ms ease-out 80ms backwards;
+		animation-duration: 380ms !important;
+	}
+	& .home .lower > * {
+		animation: ess-mono-in 380ms ease-out 150ms backwards;
+		animation-duration: 380ms !important;
+	}
+	& .home .lower > :nth-child(2) { animation-delay: 200ms; }
+	& .home .lower > :nth-child(3) { animation-delay: 250ms; }
+	& .home .lower > :nth-child(4) { animation-delay: 300ms; }
+}
+/* Atur: blocks rise in, the pastel figures pop */
+:root[data-ess-skin='atur'] .ess-content[data-section='dashboard'] {
+	& .home > .top,
+	& .home > .planner,
+	& .home .lower > * {
+		animation: atur-rise 480ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+		animation-duration: 480ms !important;
+	}
+	& .home > .planner { animation-delay: 90ms; }
+	& .home .lower > :nth-child(1) { animation-delay: 170ms; }
+	& .home .lower > :nth-child(2) { animation-delay: 230ms; }
+	& .home .lower > :nth-child(3) { animation-delay: 290ms; }
+	& .home .lower > :nth-child(4) { animation-delay: 350ms; }
+	& .home > .top .fig {
+		animation: atur-fig-pop 460ms cubic-bezier(0.3, 1.4, 0.5, 1) 120ms backwards;
+		animation-duration: 460ms !important;
+	}
+	& .home > .top .fig:nth-child(2) { animation-delay: 180ms; }
+	& .home > .top .fig:nth-child(3) { animation-delay: 240ms; }
+	& aside.rail > .blk {
+		animation: atur-rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 200ms backwards;
+		animation-duration: 420ms !important;
+	}
+	& aside.rail > .blk:nth-child(2) { animation-delay: 250ms; }
+	& aside.rail > .blk:nth-child(3) { animation-delay: 300ms; }
+	& aside.rail > .blk:nth-child(4) { animation-delay: 350ms; }
+	& .home .lower > .panel {
+		transition: box-shadow 220ms ease;
+		transition-duration: 220ms !important;
+	}
+	& .home .lower > .panel:hover {
+		box-shadow: var(--atur-block-shadow), 0 16px 32px -18px rgba(28, 29, 34, 0.32);
+	}
+}
+/* Amber: the header drops, the planner grows, the panels rise, the
+   yellow / black chips pop one by one */
+:root[data-ess-skin='amber'] .ess-content[data-section='dashboard'] {
+	& .home > .top {
+		animation: amb-drop 460ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+		animation-duration: 460ms !important;
+	}
+	& .home > .planner {
+		animation: amb-grow 520ms cubic-bezier(0.2, 0.8, 0.2, 1) 90ms backwards;
+		animation-duration: 520ms !important;
+	}
+	& .home .lower > * {
+		animation: amb-rise 520ms cubic-bezier(0.2, 0.8, 0.2, 1) 180ms backwards;
+		animation-duration: 520ms !important;
+	}
+	& .home .lower > :nth-child(2) { animation-delay: 240ms; }
+	& .home .lower > :nth-child(3) { animation-delay: 300ms; }
+	& .home .lower > :nth-child(4) { animation-delay: 360ms; }
+	& .home > .top .fig,
+	& aside.rail > .blk {
+		animation: atur-fig-pop 460ms cubic-bezier(0.3, 1.4, 0.5, 1) 160ms backwards;
+		animation-duration: 460ms !important;
+	}
+	& .home > .top .fig:nth-child(2),
+	& aside.rail > .blk:nth-child(2) { animation-delay: 220ms; }
+	& .home > .top .fig:nth-child(3),
+	& aside.rail > .blk:nth-child(3) { animation-delay: 280ms; }
+	& aside.rail > .blk:nth-child(4) { animation-delay: 340ms; }
+	& .home .lower > .panel {
+		transition: box-shadow 220ms ease;
+		transition-duration: 220ms !important;
+	}
+	& .home .lower > .panel:hover {
+		box-shadow: 0 18px 34px -20px rgba(120, 80, 20, 0.5);
+	}
+}
+@keyframes atur-fig-pop {
+	from {
+		opacity: 0;
+		transform: scale(0.92) translateY(6px);
+	}
+}
+@keyframes amb-rise {
+	from {
+		opacity: 0;
+		transform: translateY(16px);
+	}
+}
+
+/* ------------------------------------------------------------
+   MONO — the "waitlist" look on every page (2026-11-05, by request:
+   "the same design as the login for the other Mono pages"). From the
+   login: a soft pastel mesh (pink · butter · sky · mint) glowing from the
+   page corners; the page's tagline as a small pill with a teal dot over
+   a big, tight headline; and cards as clean white rounded panels with a
+   soft deep shadow (no grey head band). Dark keeps it all, dimmed, on
+   Mono's charcoal.
+------------------------------------------------------------ */
+:root[data-ess-skin='mono'] .ess-main {
+	background:
+		radial-gradient(34% 30% at 100% 0%, rgba(255, 226, 140, 0.34), transparent 70%),
+		radial-gradient(30% 28% at 74% -4%, rgba(255, 182, 196, 0.3), transparent 70%),
+		radial-gradient(30% 34% at 102% 42%, rgba(160, 214, 255, 0.26), transparent 70%),
+		radial-gradient(32% 30% at -2% 104%, rgba(150, 236, 200, 0.24), transparent 70%),
+		var(--mono-background);
+}
+:root[data-ess-skin='mono'][data-ess-theme='dark'] .ess-main {
+	background:
+		radial-gradient(34% 30% at 100% 0%, rgba(255, 210, 110, 0.09), transparent 70%),
+		radial-gradient(30% 28% at 74% -4%, rgba(255, 140, 170, 0.1), transparent 70%),
+		radial-gradient(30% 34% at 102% 42%, rgba(110, 180, 255, 0.09), transparent 70%),
+		radial-gradient(32% 30% at -2% 104%, rgba(90, 220, 170, 0.08), transparent 70%),
+		radial-gradient(90% 55% at 50% -8%, rgba(255, 255, 255, 0.04), transparent 70%),
+		var(--mono-background);
+}
+/* cards: white rounded panels with a soft, deep shadow */
+:root[data-ess-skin='mono'] .ess-shell .ess-card {
+	border-radius: 20px;
+	border-color: var(--mono-border);
+	background: var(--mono-card);
+	box-shadow:
+		0 1px 2px rgba(0, 0, 0, 0.04),
+		0 24px 48px -34px rgba(40, 30, 60, 0.3);
+}
+:root[data-ess-skin='mono'][data-ess-theme='dark'] .ess-shell .ess-card {
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.05),
+		0 24px 48px -30px rgba(0, 0, 0, 0.7);
+}
+:root[data-ess-skin='mono'] .ess-shell .ess-card > .ess-card-head:first-child {
+	background: transparent !important;
+	border-bottom-color: transparent !important;
+}
+@media (min-width: 721px) {
+	:root[data-ess-skin='mono'] .ess-content:not([data-section='dashboard']) {
+		/* the tagline as the login's status pill, over a big tight title */
+		& .ess-page-head .bar-line {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			order: -1;
+			width: fit-content;
+			max-width: 100%;
+			margin: 0 0 6px;
+			padding: 3px 11px 3px 9px;
+			border: 1px solid var(--mono-border);
+			border-radius: 999px;
+			background: var(--mono-card);
+			font-size: 12px;
+			font-weight: 500;
+			line-height: 1.4;
+			color: var(--ess-text);
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		& .ess-page-head .bar-line::before {
+			content: '';
+			flex: none;
+			width: 6px;
+			height: 6px;
+			border-radius: 50%;
+			background: #14b8a6;
+			box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.18);
+		}
+		& .ess-page-head .bar-title {
+			font-size: 30px;
+			font-weight: 600;
+			letter-spacing: -0.035em;
+			line-height: 1.05;
+		}
+		& .ess-page-head .bar-desc {
+			font-size: 14px;
+		}
+		& .ess-page-head .bar-icon {
+			align-self: end;
+			width: 46px;
+			height: 46px;
+			border-radius: 14px;
+		}
+	}
+	@media (max-height: 760px) {
+		:root[data-ess-skin='mono'] .ess-content:not([data-section='dashboard']) {
+			& .ess-page-head .bar-title {
+				font-size: 24px;
+			}
+			& .ess-page-head .bar-line {
+				margin-bottom: 4px;
+				padding-block: 2px;
+			}
+		}
+	}
+}
+
+/* ------------------------------------------------------------
+   MONO — gradient-blob summary cards (2026-11-06, by request: the
+   user's React/Tailwind "GradientBlobCard", ported to plain CSS since
+   this app is SvelteKit). A soft neumorphic card; a pink → red → yellow
+   blob, blurred, travels round its corners behind a near-opaque glass
+   panel with a thin white line, so the colour shows as a moving rim.
+   Used on the summary cards: the dashboard header figures and the
+   .ess-figures strips (Payroll, Team, Admin, Insights), now separate
+   cards. No markup change.
+   - The blob moves by left/top, not transform, and the panel has no
+     backdrop-filter: neither makes a GPU layer, so the text on the
+     panel keeps its crisp (ClearType) rendering.
+   - The loop's duration is !important to outlast the global
+     reduced-motion rule (it is small, slow and contained).
+------------------------------------------------------------ */
+:root[data-ess-skin='mono'] {
+	--gb-blob: linear-gradient(90deg, #ec4899, #ef4444, #eab308);
+	--gb-panel: rgba(255, 255, 255, 0.94);
+	--gb-panel-hover: rgba(255, 255, 255, 0.86);
+	--gb-line: #ffffff;
+	--gb-shadow: 6px 6px 18px rgba(70, 70, 82, 0.16), -6px -6px 18px rgba(255, 255, 255, 0.85);
+	--gb-shadow-hover: 8px 8px 22px rgba(70, 70, 82, 0.22), -8px -8px 22px rgba(255, 255, 255, 0.9);
+}
+:root[data-ess-skin='mono'][data-ess-theme='dark'] {
+	--gb-panel: rgba(30, 30, 33, 0.93);
+	--gb-panel-hover: rgba(30, 30, 33, 0.86);
+	--gb-line: rgba(255, 255, 255, 0.1);
+	--gb-shadow: 6px 6px 18px rgba(0, 0, 0, 0.5), -6px -6px 18px rgba(255, 255, 255, 0.03);
+	--gb-shadow-hover: 8px 8px 22px rgba(0, 0, 0, 0.6), -8px -8px 22px rgba(255, 255, 255, 0.045);
+}
+:root[data-ess-skin='mono'] :is(.home > .top .fig, .ess-shell .ess-figures > .ess-figure) {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	border: 0;
+	border-radius: 14px;
+	background: var(--mono-card);
+	box-shadow: var(--gb-shadow);
+	transition: box-shadow 220ms ease;
+	transition-duration: 220ms !important;
+
+	/* the blob */
+	&::before {
+		content: '';
+		position: absolute;
+		z-index: 0;
+		left: 0;
+		top: 0;
+		width: max(56px, 62%);
+		aspect-ratio: 1;
+		border-radius: 50%;
+		background: var(--gb-blob);
+		filter: blur(12px);
+		translate: -50% -50%;
+		pointer-events: none;
+		animation: mono-gb-blob 6s ease-in-out infinite;
+		animation-duration: 6s !important;
+	}
+	/* the glass panel */
+	&::after {
+		content: '';
+		position: absolute;
+		z-index: 1;
+		inset: 4px;
+		border-radius: 10px;
+		background: var(--gb-panel);
+		box-shadow: 0 0 0 1.5px var(--gb-line);
+		pointer-events: none;
+		transition: background 220ms ease;
+		transition-duration: 220ms !important;
+	}
+	& > * {
+		position: relative;
+		z-index: 2;
+	}
+	&:hover {
+		box-shadow: var(--gb-shadow-hover);
+	}
+	&:hover::after {
+		background: var(--gb-panel-hover);
+	}
+	&:nth-child(2)::before { animation-delay: -1.5s; }
+	&:nth-child(3)::before { animation-delay: -3s; }
+	&:nth-child(4)::before { animation-delay: -4.5s; }
+	&:nth-child(5)::before { animation-delay: -0.75s; }
+}
+@keyframes mono-gb-blob {
+	0%,
+	100% {
+		left: 0;
+		top: 0;
+	}
+	25% {
+		left: 100%;
+		top: 0;
+	}
+	50% {
+		left: 100%;
+		top: 100%;
+	}
+	75% {
+		left: 0;
+		top: 100%;
+	}
+}
+/* Dashboard header figures: single-line chips (value · label), as tall
+   as the top bar's buttons, so the header row keeps its one-line height. */
+:root[data-ess-skin='mono'] .home > .top .figures {
+	gap: 10px;
+	padding-inline: 8px;
+}
+:root[data-ess-skin='mono'] .home > .top .fig {
+	flex-direction: row;
+	align-items: center;
+	gap: 7px;
+	height: 34px;
+	padding: 0 14px;
+	& .v b {
+		font-size: 16px;
+	}
+	& .k {
+		color: var(--mono-muted-fg);
+	}
+}
+/* Figure strips: separate cards in place of one divided strip */
+:root[data-ess-skin='mono'] .ess-shell .ess-figures {
+	gap: 14px;
+	padding: 2px;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+}
+:root[data-ess-skin='mono'] .ess-shell .ess-figures > .ess-figure {
+	border: 0;
+}
