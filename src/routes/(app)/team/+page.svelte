@@ -628,7 +628,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 	refresh or a shared link lands on the same part.
 -->
 {#snippet viewTabs()}
-	<div class="ess-tabs view-tabs" role="tablist" aria-label="Show">
+	<div class="ess-tabs view-tabs" role="tablist" aria-label="Show" data-tour="people-tabs">
 		{#each views as v (v.id)}
 			<button type="button" role="tab" class="ess-tab" aria-selected={view === v.id} onclick={() => setView(v.id)}>
 				{v.label}
@@ -741,7 +741,7 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 	{/if}
 
 	<div class="ess-split ess-split--narrow people-split ess-fill">
-		<section class="ess-card directory ess-fill-card">
+		<section class="ess-card directory ess-fill-card" data-tour="team-directory">
 			<div class="ess-card-head">
 				<div>
 					<h2 class="ess-h2">{embedded ? 'Employee directory' : 'People'}</h2>

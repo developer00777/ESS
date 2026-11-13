@@ -212,7 +212,7 @@
 			<button type="button" role="tab" class="ess-tab" aria-selected={view === 'today'} onclick={() => (view = 'today')}>Today</button>
 			<button type="button" role="tab" class="ess-tab" aria-selected={view === 'insights'} onclick={() => (view = 'insights')}>Timeline &amp; analytics</button>
 		</div>
-		<div class="figures" class:hide={view === 'insights'} role="group" aria-label="At a glance">
+		<div class="figures" class:hide={view === 'insights'} role="group" aria-label="At a glance" data-tour="today-figures">
 			<a class="fig" href="/leave" title="{fmtNum(data.leaveAllocated)} days allocated this year">
 				<span class="v"><b>{fmtNum(data.leaveBalance)}</b><span>days</span></span>
 				<span class="k">Leave balance</span>
@@ -232,13 +232,13 @@
 				</a>
 			{/if}
 		</div>
-		<a href="/leave/apply" class="ess-btn ess-btn--primary apply"><Calendar size={16} /> Apply leave</a>
+		<a href="/leave/apply" class="ess-btn ess-btn--primary apply" data-tour="apply-leave"><Calendar size={16} /> Apply leave</a>
 	</header>
 
 	{#if view === 'today'}
 		<AbsencePlanner planner={data.planner} me={data.leaveOverview} />
 
-	<div class="lower">
+	<div class="lower" data-tour="today-cards">
 		<FutureEvents events={data.events} />
 		<AttendanceHeatmap analytics={data.analytics} missingCheckOuts={data.missingCheckOuts.length} />
 		<OnboardingPanel people={data.planner.onboarding} mode={data.planner.onboardingMode} />

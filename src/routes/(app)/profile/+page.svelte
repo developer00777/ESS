@@ -214,7 +214,7 @@
 					{/if}
 				</div>
 			</section>
-			<div class="ess-tabs tabs" role="tablist" aria-label="Profile sections">
+			<div class="ess-tabs tabs" role="tablist" aria-label="Profile sections" data-tour="profile-tabs">
 				{#each TABS as t (t.id)}
 					<button type="button" role="tab" class="ess-tab" aria-selected={tab === t.id} onclick={() => (tab = t.id)}>{t.label}</button>
 				{/each}

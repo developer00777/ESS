@@ -121,7 +121,7 @@
 
 <div class="ess-split ess-fill org">
 	<div class="ess-stack">
-		<section class="ess-card ess-fill-card chart-card">
+		<section class="ess-card ess-fill-card chart-card" data-tour="org-chart">
 			<div class="ess-card-head">
 				<h2 class="ess-h2">Organisation chart</h2>
 				<span class="ess-caption">{stats.total} active {stats.total === 1 ? 'person' : 'people'}</span>

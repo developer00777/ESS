@@ -4,6 +4,7 @@
 	import TopBar from '$lib/components/TopBar.svelte';
 	import ApprovalPopup from '$lib/components/hub/ApprovalPopup.svelte';
 	import ShiftReminder from '$lib/components/ShiftReminder.svelte';
+	import ProductTour from '$lib/components/tour/ProductTour.svelte';
 	import { chat } from '$lib/chat/client.svelte';
 	import { hub } from '$lib/hub/client.svelte';
 	import { cardSpotlight } from '$lib/ui/spotlight';
@@ -101,6 +102,15 @@
 <ApprovalPopup />
 <!-- Checked in: punch-out reminder at 9h, missed-punch prompt at 9h 30m. -->
 <ShiftReminder />
+
+<!-- The guided tour (avatar menu › Take the tour, or ?tour). Outside the
+     zoomed shell so its measurements are the screen's own. Not offered
+     inside a blue-collar worker's portal. -->
+{#if !data.actingFor}
+	<ProductTour
+		access={{ canAdmin: data.canAdmin, canTeam: data.canTeam, canPayroll: data.canPayroll, canCreateLogin: !!data.addEmployeeHref }}
+	/>
+{/if}
 
 <style>
 	.acting-bar {
