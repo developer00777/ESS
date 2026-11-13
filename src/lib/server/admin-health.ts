@@ -49,7 +49,8 @@ export async function loadAdminFacts(now = new Date()): Promise<AdminFacts> {
 				role: users.role,
 				reportsTo: users.reportsTo,
 				teamId: users.teamId,
-				reportsToChief: employeeProfiles.reportsToChief
+				reportsToChief: employeeProfiles.reportsToChief,
+				shiftGroupId: employeeProfiles.shiftGroupId
 			})
 			.from(users)
 			.leftJoin(employeeProfiles, eq(employeeProfiles.userId, users.id))
@@ -122,6 +123,7 @@ export async function loadAdminFacts(now = new Date()): Promise<AdminFacts> {
 	return {
 		activePeople: roster.length,
 		withoutManager: roster.filter((p) => !p.reportsTo && !p.reportsToChief && p.role !== 'super_admin').length,
+		withoutShift: roster.filter((p) => !p.shiftGroupId && p.role !== 'super_admin').length,
 		loopMemberNames: chart.cycleMemberIds.map((id) => nameById.get(id) ?? 'Unknown'),
 		lastAttendanceImportAt: lastImport?.createdAt.toISOString() ?? null,
 		lastManualUpload: lastManual

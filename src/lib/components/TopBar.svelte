@@ -41,6 +41,8 @@
 		teamPeek?: { people: { id: string; fullName: string; hasPicture: boolean }[]; total: number } | null;
 		/** Where Add employee goes, or null when this login cannot create logins. */
 		addEmployeeHref?: string | null;
+		/** False inside a blue-collar worker's portal: they have no login. */
+		canChangePassword?: boolean;
 	}
 
 	let {
@@ -55,7 +57,8 @@
 		canAdmin = false,
 		canTeam,
 		teamPeek = null,
-		addEmployeeHref = null
+		addEmployeeHref = null,
+		canChangePassword = true
 	}: Props = $props();
 
 	// The same sections as the rail, as text links.
@@ -228,7 +231,9 @@
 					</div>
 					<div class="menu-sep"></div>
 					<a role="menuitem" href="/profile" onclick={() => (menuOpen = false)}><User size={15} /> My profile</a>
-					<a role="menuitem" href="/change-password" onclick={() => (menuOpen = false)}><KeyRound size={15} /> Change password</a>
+					{#if canChangePassword}
+						<a role="menuitem" href="/change-password" onclick={() => (menuOpen = false)}><KeyRound size={15} /> Change password</a>
+					{/if}
 					<button
 						type="button"
 						role="menuitem"

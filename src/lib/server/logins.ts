@@ -120,7 +120,8 @@ export async function createLogin(actor: SessionUser, input: NewLogin, opts: { s
 	// --- Team
 	let teamId: string | null = null;
 	if (actor.role === 'team_lead') {
-		const [team] = await db.select().from(teams).where(eq(teams.id, actor.teamId ?? '')).limit(1);
+		// No team: nothing to look up (an empty id is not a uuid and errored).
+		const [team] = actor.teamId ? await db.select().from(teams).where(eq(teams.id, actor.teamId)).limit(1) : [];
 		if (!team?.canCreateEmployeeLogins) {
 			return fail('This Team Lead does not have permission to create employee logins');
 		}

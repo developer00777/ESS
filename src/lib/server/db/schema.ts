@@ -663,6 +663,9 @@ export const bulkImportRows = pgTable('bulk_import_rows', {
 	/** Data-quality notes from the parser, shown in the review screen. */
 	repairNotes: jsonb('repair_notes').$type<string[]>(),
 	reportsToRowId: uuid('reports_to_row_id').references((): any => bulkImportRows.id),
+	// A manager already in the portal (not a row of this sheet): set when the
+	// sheet names someone onboarded earlier. Only one of the two is ever set.
+	reportsToUserId: uuid('reports_to_user_id').references(() => users.id, { onDelete: 'set null' }),
 	role: roleEnum('role').default('employee').notNull(),
 	status: bulkImportRowStatusEnum('status').default('ready').notNull(),
 	existingUserId: uuid('existing_user_id').references(() => users.id),

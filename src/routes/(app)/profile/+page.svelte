@@ -295,6 +295,8 @@
 					</div>
 				</ProfileCard>
 
+				<!-- A blue-collar worker has no login, so no password to change. -->
+				{#if !data.actingFor}
 				<ProfileCard icon={Lock} title="Security">
 					<a href="/change-password" class="security-row">
 						<span class="ess-tile ess-tile--sm ess-tile--neutral"><LockKeyhole size={16} /></span>
@@ -305,6 +307,7 @@
 						<span class="ess-btn ess-btn--soft ess-btn--sm">Change password <ChevronRight size={14} /></span>
 					</a>
 				</ProfileCard>
+				{/if}
 				</div>
 			</div>
 

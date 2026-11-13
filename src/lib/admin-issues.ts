@@ -14,6 +14,8 @@ export type AdminFacts = {
 	activePeople: number;
 	/** Active people with no reporting manager, Super Admins excluded. */
 	withoutManager: number;
+	/** Active people with no shift group (so no holiday calendar), Super Admins excluded. */
+	withoutShift?: number;
 	/** Names of people whose chain of managers loops back on itself. */
 	loopMemberNames: string[];
 	/** ISO timestamp of the latest attendance import, device feed or manual. */
@@ -142,6 +144,19 @@ export function deriveAdminIssues(facts: AdminFacts, caps: readonly string[], no
 			tab: 'org',
 			href: '/admin/org-chart',
 			cta: 'Review'
+		});
+	}
+
+	if ((facts.withoutShift ?? 0) > 0) {
+		const n = facts.withoutShift ?? 0;
+		issues.push({
+			id: `people-no-shift-${n}`,
+			severity: 'warn',
+			title: `${plural(n, 'person has', 'people have')} no shift group`,
+			detail: 'They see no holiday calendar, and their holidays are not counted in attendance or payroll. Set it in each person’s settings.',
+			tab: 'people',
+			href: '/admin/people',
+			cta: 'Open people'
 		});
 	}
 

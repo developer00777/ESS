@@ -75,6 +75,7 @@
 			canTeam={data.canTeam}
 			teamPeek={data.teamPeek}
 			addEmployeeHref={data.addEmployeeHref}
+			canChangePassword={!data.actingFor}
 		/>
 		<div class="ess-content" tabindex="0" role="region" aria-label="Page content">
 			{@render children()}

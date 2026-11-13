@@ -246,6 +246,20 @@
       "when": 1793032380822,
       "tag": "0034_bulk_import_blue_collar",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794582748714,
+      "tag": "0035_shift_group_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794583037315,
+      "tag": "0036_bulk_import_existing_manager",
+      "breakpoints": true
     }
   ]
 }

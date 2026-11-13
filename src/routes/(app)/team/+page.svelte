@@ -144,6 +144,9 @@
 		officialEmail: string;
 		reportingAuthorityRaw: string | null;
 		reportsToRowId: string | null;
+		/** A manager already in the portal, when the sheet's manager isn't a row of it. */
+		reportsToUserId: string | null;
+		reportsToName?: string | null;
 		existingUserId: string | null;
 		existingUser: { id: string; fullName: string; email: string } | null;
 		role: 'super_admin' | 'admin' | 'team_lead' | 'employee';
@@ -159,6 +162,9 @@
 	let issuesFirst = $state<string[]>([]);
 	const displayRows = $derived(issuesFirst.map((id) => rowById.get(id)).filter((r): r is ReviewRow => Boolean(r)));
 	let reviewRows = $state<ReviewRow[]>([]);
+	/** People already in the portal a row can report to (api/admin/bulk-imports/[id]). */
+	let portalManagers = $state<{ id: string; fullName: string }[]>([]);
+	const PORTAL_PICK = 'user:';
 	let loadingReview = $state(false);
 	let savingRowId = $state<string | null>(null);
 	let applyingBulk = $state(false);
@@ -183,6 +189,7 @@
 			if (res.ok) {
 				reviewImport = body.import;
 				reviewRows = body.rows;
+				portalManagers = body.managers ?? [];
 				// Rows that need attention first. Fixed once per load, so a row
 				// doesn't jump away the moment it is fixed.
 				issuesFirst = [...(body.rows as ReviewRow[])]
@@ -239,12 +246,13 @@
 		const value = (e.target as HTMLSelectElement).value;
 		const top = topFromPick(value);
 		if (top) patchRow(rowId, { reportsToChief: true, topPosition: top });
-		else patchRow(rowId, { reportsToRowId: value === '' ? null : value });
+		else if (value.startsWith(PORTAL_PICK)) patchRow(rowId, { reportsToUserId: value.slice(PORTAL_PICK.length) });
+		else patchRow(rowId, { reportsToRowId: value === '' ? null : value, reportsToUserId: null });
 	}
 
 	/** The top position (Chief or Mam) the sheet put this row under, unless a person was picked instead. */
 	function topOfRow(row: ReviewRow) {
-		return row.reportsToRowId ? null : topPositionReference(row.reportingAuthorityRaw);
+		return row.reportsToRowId || row.reportsToUserId ? null : topPositionReference(row.reportingAuthorityRaw);
 	}
 
 	/** No work email and still waiting for the blue-collar question. */
@@ -256,12 +264,17 @@
 	async function confirmAllBlueCollar() {
 		confirmingAll = true;
 		try {
-			for (const row of awaitingBlueCollar.filter((r) => r.reportsToRowId)) {
+			for (const row of awaitingBlueCollar.filter(hasManager)) {
 				await patchRow(row.id, { blueCollar: true });
 			}
 		} finally {
 			confirmingAll = false;
 		}
+	}
+
+	/** A manager picked: a row of this sheet or someone already in the portal. */
+	function hasManager(row: ReviewRow) {
+		return Boolean(row.reportsToRowId || row.reportsToUserId);
 	}
 
 	function resolveDuplicate(rowId: string, decision: 'link' | 'create_new') {
@@ -295,6 +308,7 @@
 	}
 
 	function managerName(row: ReviewRow): string {
+		if (row.reportsToUserId) return portalManagers.find((m) => m.id === row.reportsToUserId)?.fullName ?? row.reportsToName ?? 'Unknown';
 		if (!row.reportsToRowId) {
 			const top = topOfRow(row);
 			return top ? topLabel(top) : '—';
@@ -1591,8 +1605,8 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 									<strong>{awaitingBlueCollar.length} {awaitingBlueCollar.length === 1 ? 'person has' : 'people have'} no work email. Are they blue collar?</strong>
 									Blue-collar workers get no login. Their reporting manager, or an admin, opens their portal for them. Each needs a manager who can sign in; pick one on the row, or type a work email instead.
 								</div>
-								<button type="button" class="ess-btn ess-btn--sm ess-btn--secondary" onclick={confirmAllBlueCollar} disabled={confirmingAll || !awaitingBlueCollar.some((r) => r.reportsToRowId)}>
-									{confirmingAll ? 'Confirming…' : `Yes, all ${awaitingBlueCollar.filter((r) => r.reportsToRowId).length} with a manager`}
+								<button type="button" class="ess-btn ess-btn--sm ess-btn--secondary" onclick={confirmAllBlueCollar} disabled={confirmingAll || !awaitingBlueCollar.some(hasManager)}>
+									{confirmingAll ? 'Confirming…' : `Yes, all ${awaitingBlueCollar.filter(hasManager).length} with a manager`}
 								</button>
 							</div>
 						{/if}
@@ -1639,13 +1653,22 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 												{#if locked || row.status === 'skipped_existing'}
 													{managerName(row)}
 												{:else}
-													<select class="ess-select" value={row.reportsToRowId ?? (topOfRow(row) ? topPick(topOfRow(row)) : '')} onchange={(e) => onManagerChange(row.id, e)} disabled={savingRowId === row.id}>
+													<select class="ess-select" value={row.reportsToRowId ?? (row.reportsToUserId ? PORTAL_PICK + row.reportsToUserId : topOfRow(row) ? topPick(topOfRow(row)) : '')} onchange={(e) => onManagerChange(row.id, e)} disabled={savingRowId === row.id}>
 														<option value="">— none —</option>
 														<option value={CHIEF_PICK}>Chief</option>
 														<option value={MAM_PICK}>Mam</option>
-														{#each reviewRows.filter((r) => r.id !== row.id) as candidate (candidate.id)}
-															<option value={candidate.id}>{candidate.fullName}</option>
-														{/each}
+														<optgroup label="In this sheet">
+															{#each reviewRows.filter((r) => r.id !== row.id) as candidate (candidate.id)}
+																<option value={candidate.id}>{candidate.fullName}</option>
+															{/each}
+														</optgroup>
+														{#if portalManagers.length}
+															<optgroup label="Already in the portal">
+																{#each portalManagers as m (m.id)}
+																	<option value={PORTAL_PICK + m.id}>{m.fullName}</option>
+																{/each}
+															</optgroup>
+														{/if}
 													</select>
 													{#if row.reportingAuthorityRaw}
 														<span class="raw-hint">sheet said: "{row.reportingAuthorityRaw}"</span>
@@ -1689,10 +1712,10 @@ Delete it anyway? Those employees go back to Sat/Sun week offs until they are gi
 														{:else}
 															<span>
 																No work email. Is "{row.fullName}" blue collar?
-																{#if !row.reportsToRowId}Pick their reporting manager first.{/if}
+																{#if !hasManager(row)}Pick their reporting manager first.{/if}
 															</span>
 															<div class="btn-row">
-																<button type="button" class="ess-btn ess-btn--sm ess-btn--secondary" onclick={() => patchRow(row.id, { blueCollar: true })} disabled={savingRowId === row.id || !row.reportsToRowId}>Yes, blue collar</button>
+																<button type="button" class="ess-btn ess-btn--sm ess-btn--secondary" onclick={() => patchRow(row.id, { blueCollar: true })} disabled={savingRowId === row.id || !hasManager(row)}>Yes, blue collar</button>
 															</div>
 														{/if}
 													</div>

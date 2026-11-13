@@ -1,4 +1,5 @@
 import { redirect } from '@sveltejs/kit';
+import { matchShiftGroup } from '$lib/shift-group-match';
 import { isTopReference, topPositionReference, TOP_REFERENCE_SPELLINGS } from '$lib/chief';
 import { isNoLoginEmail } from '$lib/no-login';
 import { NO_LOGIN } from '$lib/server/password-state';
@@ -77,7 +78,8 @@ function generateTemporaryPassword(): string {
  */
 async function backfillProfile(
 	userId: string,
-	row: { employeeCode: string | null; designation: string | null; teamAndFloor: string | null; profileData: unknown }
+	row: { employeeCode: string | null; designation: string | null; teamAndFloor: string | null; profileData: unknown },
+	shiftGroupId: string | null = null
 ): Promise<string[]> {
 	const [profile] = await db
 		.select()
@@ -90,7 +92,8 @@ async function backfillProfile(
 		...profileValuesFromImport(row.profileData as Record<string, unknown> | null),
 		...(row.employeeCode ? { employeeCode: row.employeeCode.trim().toUpperCase() } : {}),
 		...(row.designation ? { designation: row.designation } : {}),
-		...(row.teamAndFloor ? { teamAndFloor: row.teamAndFloor } : {})
+		...(row.teamAndFloor ? { teamAndFloor: row.teamAndFloor } : {}),
+		...(shiftGroupId ? { shiftGroupId } : {})
 	};
 
 	const patch: Record<string, unknown> = {};
@@ -188,7 +191,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 						// Employee-role manager gets their reports, not their teammates.
 						user.role === 'employee'
 							? inArray(users.id, reach ?? [user.id])
-							: or(eq(users.teamId, user.teamId ?? ''), inArray(users.id, reach ?? [user.id]))
+							: user.teamId
+								? or(eq(users.teamId, user.teamId), inArray(users.id, reach ?? [user.id]))
+								: inArray(users.id, reach ?? [user.id])
 					)
 				);
 
@@ -616,7 +621,9 @@ export const actions: Actions = {
 		// the case where the sheet lists a different email for someone who already has a
 		// real login (e.g. their actual account uses a different domain). Surfaced as a
 		// review flag rather than silently creating a duplicate account for the same person.
-		const allExistingUsers = await db.select({ id: users.id, fullName: users.fullName, email: users.email }).from(users).where(notHidden);
+		const allExistingUsers = await db.select({ id: users.id, fullName: users.fullName, email: users.email, isActive: users.isActive }).from(users).where(notHidden);
+		// People already in the portal who could manage someone from this sheet.
+		const existingManagers = allExistingUsers.filter((u) => u.isActive && !isNoLoginEmail(u.email));
 
 		// The employee code is unique and is the attendance join key, so a code
 		// already taken by someone else has to be caught before apply — otherwise
@@ -719,16 +726,22 @@ export const actions: Actions = {
 		for (let i = 0; i < parsedRows.length; i++) {
 			const suggestedIndex = suggestReportsToIndex(parsedRows[i].reportingAuthorityRaw, parsedRows, i);
 			const hasRawAuthority = Boolean(parsedRows[i].reportingAuthorityRaw);
+			const isTop = isTopReference(parsedRows[i].reportingAuthorityRaw);
+			// Not in this sheet: someone already in the portal by that name.
+			const existingManager =
+				suggestedIndex === null && hasRawAuthority && !isTop
+					? suggestExistingUserMatch(parsedRows[i].reportingAuthorityRaw!, existingManagers)
+					: null;
 			// "Chief" or "Mam" is not a row to find: it is recorded as reporting to that position.
-			const needsReviewForReportingLine =
-				hasRawAuthority && suggestedIndex === null && !isTopReference(parsedRows[i].reportingAuthorityRaw);
+			const needsReviewForReportingLine = hasRawAuthority && suggestedIndex === null && !existingManager && !isTop;
 			const alreadyDecided = insertedRows[i].status !== 'ready';
 
-			if (suggestedIndex !== null || (needsReviewForReportingLine && !alreadyDecided)) {
+			if (suggestedIndex !== null || existingManager || (needsReviewForReportingLine && !alreadyDecided)) {
 				await db
 					.update(bulkImportRows)
 					.set({
 						reportsToRowId: suggestedIndex !== null ? insertedRows[suggestedIndex].id : null,
+						reportsToUserId: existingManager?.id ?? null,
 						status: needsReviewForReportingLine && !alreadyDecided ? 'needs_review' : insertedRows[i].status
 					})
 					.where(eq(bulkImportRows.id, insertedRows[i].id));
@@ -814,7 +827,7 @@ export const actions: Actions = {
 		}
 		// The review screen keeps these on the list; checked again here because a
 		// no-login account nobody looks after would be unreachable.
-		const unconfirmed = rows.filter((r) => r.status === 'ready' && isNoLoginEmail(r.officialEmail) && (!r.blueCollar || !r.reportsToRowId));
+		const unconfirmed = rows.filter((r) => r.status === 'ready' && isNoLoginEmail(r.officialEmail) && (!r.blueCollar || (!r.reportsToRowId && !r.reportsToUserId)));
 		if (unconfirmed.length > 0) {
 			return { bulkImportError: `${unconfirmed.length} row(s) have no work email: confirm each as blue collar with a reporting manager, or add an email` };
 		}
@@ -825,6 +838,11 @@ export const actions: Actions = {
 		const redirectAllMailTo = String(form.get('sendCredentialsTo') ?? '').trim().toLowerCase();
 
 		const rowIdToUserId = new Map<string, string>();
+		// Each person's shift group, from the sheet's "Type of shift" (or the
+		// only group there is): without one they see no holiday calendar.
+		const shiftGroupRefs = await db.select({ id: shiftGroups.id, key: shiftGroups.key, name: shiftGroups.name }).from(shiftGroups);
+		const shiftFor = (row: { profileData: unknown }) =>
+			matchShiftGroup(((row.profileData ?? {}) as Record<string, unknown>).shiftType as string | null | undefined, shiftGroupRefs);
 		// Existing people whose blank profile columns this run filled in.
 		let backfilledCount = 0;
 		// Credentials handover, reported back so the Super Admin can see who still
@@ -846,7 +864,7 @@ export const actions: Actions = {
 					// column null forever, since re-uploading only ever skips the row.
 					// Fills blanks only: a value HR has since corrected in the portal
 					// is never overwritten by an older spreadsheet.
-					const filled = await backfillProfile(row.existingUserId, row);
+					const filled = await backfillProfile(row.existingUserId, row, shiftFor(row));
 					if (filled.length > 0) backfilledCount++;
 				}
 				continue;
@@ -900,11 +918,12 @@ export const actions: Actions = {
 				directReportingAuthority: row.reportingAuthorityRaw,
 				// "Chief" or "Mam" in the sheet is a head of the company, not a
 				// person to link — recorded as a flag so approvals go straight to HR.
-				reportsToChief: !row.reportsToRowId && isTopReference(row.reportingAuthorityRaw),
+				reportsToChief: !row.reportsToRowId && !row.reportsToUserId && isTopReference(row.reportingAuthorityRaw),
 				topPosition: topPositionReference(row.reportingAuthorityRaw) ?? 'chief',
 				dottedLineReportingAuthority: row.dottedLineAuthorityRaw,
 				// Everything else the spreadsheet carried.
-				...profileValuesFromImport(row.profileData)
+				...profileValuesFromImport(row.profileData),
+				shiftGroupId: shiftFor(row)
 			});
 
 			await db.update(bulkImportRows).set({ status: 'created', createdUserId: createdUser.id }).where(eq(bulkImportRows.id, row.id));
@@ -936,7 +955,7 @@ export const actions: Actions = {
 			const userId = rowIdToUserId.get(row.id);
 			if (!userId) continue;
 
-			const managerUserId = row.reportsToRowId ? rowIdToUserId.get(row.reportsToRowId) ?? null : null;
+			const managerUserId = row.reportsToRowId ? rowIdToUserId.get(row.reportsToRowId) ?? null : (row.reportsToUserId ?? null);
 
 			let teamId: string | null = null;
 			if (row.role === 'team_lead') {
@@ -950,7 +969,7 @@ export const actions: Actions = {
 		for (const row of rows) {
 			if (row.status !== 'ready' || row.role === 'team_lead') continue;
 			const userId = rowIdToUserId.get(row.id);
-			const managerUserId = row.reportsToRowId ? rowIdToUserId.get(row.reportsToRowId) ?? null : null;
+			const managerUserId = row.reportsToRowId ? rowIdToUserId.get(row.reportsToRowId) ?? null : (row.reportsToUserId ?? null);
 			if (!userId || !managerUserId) continue;
 
 			const [manager] = await db.select({ teamId: users.teamId }).from(users).where(eq(users.id, managerUserId)).limit(1);

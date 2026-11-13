@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
 	import Calendar from '@lucide/svelte/icons/calendar';
 	import Heart from '@lucide/svelte/icons/heart';
 	import HeartPulse from '@lucide/svelte/icons/heart-pulse';
@@ -106,6 +107,26 @@
 			data.myApplications[0] ||
 			null
 	);
+
+	// Withdraw a request still waiting on a decision (api/leave/[id]/withdraw).
+	let withdrawing = $state(false);
+	let withdrawError = $state('');
+	async function withdraw(id: string) {
+		if (!confirm('Withdraw this leave request? Your approvers will no longer see it.')) return;
+		withdrawing = true;
+		withdrawError = '';
+		try {
+			const res = await fetch(`/api/leave/${id}/withdraw`, { method: 'POST' });
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				withdrawError = body.message ?? 'The request could not be withdrawn. Try again.';
+				return;
+			}
+			await invalidateAll();
+		} finally {
+			withdrawing = false;
+		}
+	}
 
 	type StepState = 'done' | 'current' | 'todo';
 	const progress = $derived.by((): { label: string; meta: string; state: StepState }[] => {
@@ -380,6 +401,14 @@
 							<dd>{selected.application.decisionNote}</dd>
 						{/if}
 					</dl>
+					{#if selected.application.status === 'pending' || selected.application.status === 'escalated'}
+						<div class="withdraw">
+							{#if withdrawError}<p class="ess-alert ess-alert--danger" role="alert">{withdrawError}</p>{/if}
+							<button type="button" class="ess-btn ess-btn--secondary ess-btn--sm" disabled={withdrawing} onclick={() => withdraw(selected.application.id)}>
+								{withdrawing ? 'Withdrawing…' : 'Withdraw request'}
+							</button>
+						</div>
+					{/if}
 				{:else}
 					<div class="ess-empty fill-empty">
 						<span class="ess-empty__icon"><Clock size={20} strokeWidth={1.75} /></span>
@@ -801,6 +830,12 @@
 
 	.progress {
 		margin: 2px 0 14px;
+	}
+	.withdraw {
+		display: grid;
+		gap: 8px;
+		justify-items: start;
+		margin-top: 12px;
 	}
 	.selected-head {
 		display: flex;
